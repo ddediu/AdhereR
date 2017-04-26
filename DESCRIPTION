@@ -1,6 +1,6 @@
 Package: AdhereR
 Type: Package
-Title: Adherence to Medication
+Title: Adherence to Medications
 Version: 0.1.0
 Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
                      email = "ddediu@gmail.com"),
@@ -9,12 +9,12 @@ Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
 Author: Dan Dediu [aut, cre],
         Alexandra Dima [aut]
 Maintainer: Dan Dediu <ddediu@gmail.com>
-Description: Computation of adherence estimates from Electronic Health care Data 
-    and visualization of individual medication histories and adherence patterns.
-    The package implements a set of S3 classes and
+Description: Computation of adherence to medications from Electronic Health care 
+    Data and visualization of individual medication histories and adherence 
+    patterns. The package implements a set of S3 classes and
     functions consistent with current adherence guidelines and definitions. 
-    It allows the computation of different types of
-    adherence (as defined in the literature, but also several original types), 
+    It allows the computation of different measures of
+    adherence (as defined in the literature, but also several original ones), 
     their publication-quality plotting,
     the interactive exploration of patient medication history and 
     the real-time estimation of adherence given various parameter settings. 
