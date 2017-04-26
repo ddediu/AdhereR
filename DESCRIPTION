@@ -1,0 +1,33 @@
+Package: AdhereR
+Type: Package
+Title: Adherence to Medication
+Version: 0.1.0
+Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
+                     email = "ddediu@gmail.com"),
+              person("Alexandra", "Dima", role = "aut",
+                     email = "alexadima@gmail.com"))
+Author: Dan Dediu [aut, cre],
+        Alexandra Dima [aut]
+Maintainer: Dan Dediu <ddediu@gmail.com>
+Description: Computation of adherence estimates from Electronic Health care Data 
+    and visualization of individual medication histories and adherence patterns.
+    The package implements a set of S3 classes and
+    functions consistent with current adherence guidelines and definitions. 
+    It allows the computation of different types of
+    adherence (as defined in the literature, but also several original types), 
+    their publication-quality plotting,
+    the interactive exploration of patient medication history and 
+    the real-time estimation of adherence given various parameter settings. 
+URL: https://github.com/ddediu/AdhereR 
+License: GPL (>= 2)
+LazyData: TRUE
+RoxygenNote: 6.0.1
+Imports: lubridate (>= 1.5),
+    parallel (>= 3.0),
+    data.table (>= 1.9),
+    manipulate (>= 1.0),
+    snow (>= 0.4)
+Depends: R (>= 3.0)
+Suggests: knitr (>= 1.15),
+    rmarkdown (>= 1.1),
+VignetteBuilder: knitr
