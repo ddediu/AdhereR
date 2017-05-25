@@ -646,6 +646,13 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   # Check compatibility between subtypes of plots:
   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
 
+  # Make sure the dates are strings in the right format:
+  if( inherits(cma$data[,cma$event.date.colname], "Date") )
+  {
+    cma$date.format <- "%m/%d/%Y"; # use the default format
+    cma$data[,cma$event.date.colname] <- as.character(cma$data[,cma$event.date.colname], format=cma$date.format);
+  }
+
   # The patients:
   patids <- unique(as.character(cma$data[,cma$ID.colname])); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
@@ -2244,6 +2251,13 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 
   # Check compatibility between subtypes of plots:
   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
+
+  # Make sure the dates are strings of the right fomat:
+  if( inherits(cma$data[,cma$event.date.colname], "Date") )
+  {
+    cma$date.format <- "%m/%d/%Y"; # use the default format
+    cma$data[,cma$event.date.colname] <- as.character(cma$data[,cma$event.date.colname], format=cma$date.format);
+  }
 
   # The patients (use event.info as it contains all the info required, plus the specifics of the CMA):
   patids <- unique(cma$event.info[,cma$ID.colname]); patids <- patids[!is.na(patids)];
@@ -6379,6 +6393,13 @@ print.CMA_per_episode <- function(x,                                     # the C
     cma$event.info[s,c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
   })));
 
+  # Make sure the dates are strings of the right fomat:
+  if( inherits(cma$data[,cma$event.date.colname], "Date") )
+  {
+    cma$date.format <- "%m/%d/%Y"; # use the default format
+    cma$data[,cma$event.date.colname] <- as.character(cma$data[,cma$event.date.colname], format=cma$date.format);
+  }
+
   # The patients:
   patids <- unique(cmas[,cma$ID.colname]); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
@@ -6421,7 +6442,13 @@ print.CMA_per_episode <- function(x,                                     # the C
   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
 
   # Make sure we are using actual dates:
-  cma$data$.DATE.as.Date <- as.Date(cma$data[,cma$event.date.colname],format=cma$date.format);
+  if( !inherits(cma$data[,cma$event.date.colname], "Date") )
+  {
+    cma$data$.DATE.as.Date <- as.Date(cma$data[,cma$event.date.colname],format=cma$date.format);
+  } else
+  {
+    cma$data$.DATE.as.Date <- cma$data[,cma$event.date.colname];
+  }
   # Find the earliest date:
   earliest.date <- min(cma$data$.DATE.as.Date, cmas$start, cmas$.OBS.START.DATE, cmas$.FU.START.DATE);
 
