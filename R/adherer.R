@@ -865,19 +865,48 @@ getCMA.CMA0 <- function(x)
   }
   time.interval <- round(time.interval);
 
+  # return (switch( as.character(unit),
+  #                 "days"  = (start.date + time.interval),
+  #                 "weeks" = (start.date + time.interval*7),
+  #                 "months" = {tmp <- (start.date + months(time.interval));
+  #                             i <- which(is.na(tmp));
+  #                             if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + months(time.interval);
+  #                             tmp;},
+  #                 "years"  = {tmp <- (start.date + lubridate::years(time.interval));
+  #                             i <- which(is.na(tmp));
+  #                             if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + lubridate::years(time.interval);
+  #                             tmp;},
+  #                 {if( !suppress.warnings ) warning(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n")); NA;} # default
+  # ));
+
+  # Faster but assumes that the internal representation of "Date" object is in number of days since the begining of time (probably stably true):
   return (switch( as.character(unit),
-                  "days"  = (start.date + time.interval),
-                  "weeks" = (start.date + time.interval*7),
-                  "months" = {tmp <- (start.date + months(time.interval));
-                              i <- which(is.na(tmp));
-                              if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + months(time.interval);
-                              tmp;},
-                  "years"  = {tmp <- (start.date + lubridate::years(time.interval));
-                              i <- which(is.na(tmp));
-                              if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + lubridate::years(time.interval);
-                              tmp;},
-                  {if( !suppress.warnings ) warning(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n")); NA;} # default
+                            "days"  = structure(unclass(start.date) + time.interval, class="Date"),
+                            "weeks" = structure(unclass(start.date) + time.interval*7, class="Date"),
+                            "months" = {tmp <- (start.date + months(time.interval)); # this needs to be done using Date as months may have different lengths
+                                        i <- which(is.na(tmp));
+                                        if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + months(time.interval);
+                                        tmp;},
+                            "years"  = {tmp <- (start.date + lubridate::years(time.interval)); # this needs to be done using Date as years may have different lengths
+                                        i <- which(is.na(tmp));
+                                        if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + lubridate::years(time.interval);
+                                        tmp;},
+                            {if( !suppress.warnings ) warning(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n")); NA;} # default
   ));
+}
+
+# Auxiliary function: subtract two dates to obtain the number of days in between:
+# WARNING! Faster than difftime() but makes the assumption that the internal representation of Date objects is the number of days since a given begining of time
+# (true as of R 3.4 and probably conserved in the future versions)
+.difftime.Dates.as.days <- function( start.dates, end.dates, suppress.warnings=FALSE )
+{
+  # Checks
+  if( !inherits(start.dates,"Date") || !inherits(end.dates,"Date") )
+  {
+    if( !suppress.warnings ) warning("start.dates and end.dates to '.difftime.Dates.as.days' must be a Date() objects.\n");
+    return (NA);
+  }
+  return (unclass(start.dates) - unclass(end.dates)); # the difference between the raw internal representations of Date objects is in days
 }
 
 # Auxiliary function generating colors for bw plotting:
@@ -1543,19 +1572,36 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     # Auxliary internal function: For a given patient, compute the gaps and return the required columns:
     .process.patient <- function(data4ID)
     {
+      # Number of events:
       n.events <- nrow(data4ID);
-      # Cache used columns:
-      event.date2.column    <- data4ID[,get(event.date2.colname)];
-      event.duration.column <- data4ID[,get(event.duration.colname)];
-      if( !is.na(medication.class.colname) ) medication.class.column <- data4ID[,get(medication.class.colname)];
-      if( !is.na(event.daily.dose.colname) ) event.daily.dose.column <- data4ID[,get(event.daily.dose.colname)];
+
+      # Force the selection, evaluation of promises and caching of the needed columns:
+      # ... which columns to select (with their indices):
+      columns.to.cache <- c(event.date2.colname, event.duration.colname); event.date2.colname.index <- 1; event.duration.colname.index <- 2;
+      curr.index <- 3;
+      if( !is.na(medication.class.colname) ){ columns.to.cache <- c(columns.to.cache, medication.class.colname); medication.class.colname.index <- curr.index; curr.index <- curr.index + 1;}
+      if( !is.na(event.daily.dose.colname) ){ columns.to.cache <- c(columns.to.cache, event.daily.dose.colname); event.daily.dose.colname.index <- curr.index; curr.index <- curr.index + 1;}
+      if( followup.window.start.type %in% c(2,3) ){ columns.to.cache <- c(columns.to.cache, followup.window.start); followup.window.start.index <- curr.index; curr.index <- curr.index + 1;}
+      if( !followup.window.duration.is.number ){ columns.to.cache <- c(columns.to.cache, followup.window.duration); followup.window.duration.index <- curr.index; curr.index <- curr.index + 1;}
+      if( observation.window.start.type %in% c(2,3) ){ columns.to.cache <- c(columns.to.cache, observation.window.start); observation.window.start.index <- curr.index; curr.index <- curr.index + 1;}
+      if( !observation.window.duration.is.number ){ columns.to.cache <- c(columns.to.cache, observation.window.duration); observation.window.duration.index <- curr.index; curr.index <- curr.index + 1;}
+      # ... select these columns:
+      data4ID.selected.columns <- data4ID[,..columns.to.cache];
+      # ... cache the columns based on their indices:
+      event.date2.column <- data4ID.selected.columns[[event.date2.colname.index]]; event.duration.column <- data4ID.selected.columns[[event.duration.colname.index]];
+      if( !is.na(medication.class.colname) ) medication.class.column <- data4ID.selected.columns[[medication.class.colname.index]];
+      if( !is.na(event.daily.dose.colname) ) event.daily.dose.column <- data4ID.selected.columns[[event.daily.dose.colname.index]];
+      if( followup.window.start.type %in% c(2,3) ) followup.window.start.column <- data4ID.selected.columns[[followup.window.start.index]];
+      if( !followup.window.duration.is.number ) followup.window.duration.column <- data4ID.selected.columns[[followup.window.duration.index]];
+      if( observation.window.start.type %in% c(2,3) ) observation.window.start.column <- data4ID.selected.columns[[observation.window.start.index]];
+      if( !observation.window.duration.is.number ) observation.window.duration.column <- data4ID.selected.columns[[observation.window.duration.index]];
 
       # Cache also follow-up window start and end dates:
       # start dates
       .FU.START.DATE <- switch(followup.window.start.type,
                                .add.time.interval.to.date(event.date2.column[1], followup.window.start, followup.window.start.unit, suppress.warnings),                 # 1
-                               data4ID[1,get(followup.window.start)],                                                                                                   # 2
-                               .add.time.interval.to.date(event.date2.column[1], data4ID[1,get(followup.window.start)], followup.window.start.unit, suppress.warnings), # 3
+                               followup.window.start.column[1],                                                                                                         # 2
+                               .add.time.interval.to.date(event.date2.column[1], followup.window.start.column[1], followup.window.start.unit, suppress.warnings),       # 3
                                followup.window.start);                                                                                                                  # 4
       if( is.na(.FU.START.DATE) )
       {
@@ -1566,7 +1612,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                      ".OBS.END.DATE"=as.Date(NA),
                      ".EVENT.STARTS.BEFORE.OBS.WINDOW"=NA,
                      ".EVENT.STARTS.AFTER.OBS.WINDOW"=NA,
-                     ".EVENT.WITHIN.FU.WINDOW"=.EVENT.WITHIN.FU.WINDOW,
+                     ".EVENT.WITHIN.FU.WINDOW"=NA,
                      ".TDIFF1"=NA_real_,
                      ".TDIFF2"=NA_real_,
                      ".OBS.WITHIN.FU"=FALSE,
@@ -1576,7 +1622,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       }
       # end dates
       .FU.END.DATE <- .add.time.interval.to.date(.FU.START.DATE,
-                                                 ifelse(followup.window.duration.is.number, followup.window.duration, data4ID[1,get(followup.window.duration)]),
+                                                 ifelse(followup.window.duration.is.number, followup.window.duration, followup.window.duration.column[1]),
                                                  followup.window.duration.unit,
                                                  suppress.warnings);
       if( is.na(.FU.END.DATE) )
@@ -1588,7 +1634,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                      ".OBS.END.DATE"=as.Date(NA),
                      ".EVENT.STARTS.BEFORE.OBS.WINDOW"=NA,
                      ".EVENT.STARTS.AFTER.OBS.WINDOW"=NA,
-                     ".EVENT.WITHIN.FU.WINDOW"=.EVENT.WITHIN.FU.WINDOW,
+                     ".EVENT.WITHIN.FU.WINDOW"=NA,
                      ".TDIFF1"=NA_real_,
                      ".TDIFF2"=NA_real_,
                      ".OBS.WITHIN.FU"=FALSE,
@@ -1603,8 +1649,8 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       # start dates
       .OBS.START.DATE <- switch(observation.window.start.type,
                                 .add.time.interval.to.date(.FU.START.DATE, observation.window.start, observation.window.start.unit, suppress.warnings),                 # 1
-                                data4ID[1,get(observation.window.start)],                                                                                               # 2
-                                .add.time.interval.to.date(.FU.START.DATE, data4ID[1,get(observation.window.start)], observation.window.start.unit, suppress.warnings), # 3
+                                observation.window.start.column[1],                                                                                                     # 2
+                                .add.time.interval.to.date(.FU.START.DATE, observation.window.start.column[1], observation.window.start.unit, suppress.warnings),       # 3
                                 observation.window.start);                                                                                                              # 4
       if( is.na(.OBS.START.DATE) )
       {
@@ -1625,7 +1671,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       }
       # end dates
       .OBS.END.DATE <- .add.time.interval.to.date(.OBS.START.DATE,
-                                                  ifelse(observation.window.duration.is.number, observation.window.duration, data4ID[1,get(observation.window.duration)]),
+                                                  ifelse(observation.window.duration.is.number, observation.window.duration, observation.window.duration.column[1]),
                                                   observation.window.duration.unit,
                                                   suppress.warnings);
       if( is.na(.OBS.END.DATE) )
@@ -1652,11 +1698,11 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 
       # Cache some time differences:
       # event.duration.colname - (.OBS.START.DATE - event.date2.colname):
-      .TDIFF1 <- (event.duration.column - as.numeric(difftime(.OBS.START.DATE, event.date2.column, units="days")));
+      .TDIFF1 <- (event.duration.column - .difftime.Dates.as.days(.OBS.START.DATE, event.date2.column));
       # event.date2.colname[current+1] - event.date2.colname[current]:
       if( n.events > 1 )
       {
-        .TDIFF2 <- c(as.numeric(difftime(event.date2.column[-1], event.date2.column[-n.events], units="days")),NA_real_);
+        .TDIFF2 <- c(.difftime.Dates.as.days(event.date2.column[-1], event.date2.column[-n.events]),NA_real_);
       } else
       {
         .TDIFF2 <- NA_real_;
@@ -1697,7 +1743,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       if( slen == 1 ) # only one event in the observation window
       {
         # Computations happen within the observation window
-        .EVENT.INTERVAL[s] <- as.numeric(difftime(.OBS.END.DATE, event.date2.column[s], units="days")); # for last event, the interval ends at the end of OW
+        .EVENT.INTERVAL[s] <- .difftime.Dates.as.days(.OBS.END.DATE, event.date2.column[s]); # for last event, the interval ends at the end of OW
         .CARRY.OVER.FROM.BEFORE[s] <- 0.0; # no carry-over into this unique event
         .GAP.DAYS[s] <- max(0.0, (.EVENT.INTERVAL[s] - event.duration.column[s])); # the actual gap cannot be negative
       } else if( slen > 1 ) # at least one event in the observation window
@@ -1706,7 +1752,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
         # was there a change in medication?
         if( !is.na(medication.class.colname) )
         {
-          medication.changed <- c((medication.class.column[s[1:(slen-1)]] != medication.class.column[s[2:slen]]), FALSE);
+          medication.changed <- c((medication.class.column[s[-slen]] != medication.class.column[s[-1]]), FALSE);
         } else
         {
           medication.changed <- rep(FALSE,slen);
@@ -1714,14 +1760,14 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
         # was there a change in dosage?
         if( !is.na(event.daily.dose.colname) )
         {
-          dosage.change.ratio <- c((event.daily.dose.column[s[1:(slen-1)]] / event.daily.dose.column[s[2:slen]]), 1.0);
+          dosage.change.ratio <- c((event.daily.dose.column[s[-slen-1]] / event.daily.dose.column[s[-1]]), 1.0);
         } else
         {
           dosage.change.ratio <- rep(1.0,slen);
         }
         # event intervals:
         .EVENT.INTERVAL[s]       <- .TDIFF2[s]; # save the time difference between next and current event start dates, but
-        .EVENT.INTERVAL[s[slen]] <- as.numeric(difftime(.OBS.END.DATE, event.date2.column[s[slen]], units="days")); # for last event, the interval ends at the end of OW
+        .EVENT.INTERVAL[s[slen]] <- .difftime.Dates.as.days(.OBS.END.DATE, event.date2.column[s[slen]]); # for last event, the interval ends at the end of OW
         # event.interval - event.duration:
         .event.interval.minus.duration <- (.EVENT.INTERVAL[s] - event.duration.column[s]);
         # cache various medication and dosage change conditions:
@@ -1730,7 +1776,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 
         carry.over <- 0; # Initially, no carry-over into the first event
         # for each event:
-        for( i in seq_along(s) )
+        for( i in seq_along(s) ) # this for loop is not a performance bottleneck!
         {
           si <- s[i]; # caching s[i] as it's used a lot
 
@@ -2866,17 +2912,29 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
     # Auxliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
-      sel.data4ID <- data4ID[ !.EVENT.STARTS.BEFORE.OBS.WINDOW & !.EVENT.STARTS.AFTER.OBS.WINDOW, ]; # select the events within the observation window only
-      n.events <- nrow(sel.data4ID); # cache number of events
-      if( n.events < 2 || sel.data4ID$.DATE.as.Date[1] == sel.data4ID$.DATE.as.Date[n.events] )
+      # Force the selection, evaluation of promises and caching of the needed columns:
+      # ... which columns to select (with their indices):
+      columns.to.cache <- c(".EVENT.STARTS.BEFORE.OBS.WINDOW", ".EVENT.STARTS.AFTER.OBS.WINDOW", ".DATE.as.Date", event.duration.colname);
+      # ... select these columns:
+      data4ID.selected.columns <- data4ID[,..columns.to.cache];
+      # ... cache the columns based on their indices:
+      .EVENT.STARTS.BEFORE.OBS.WINDOW <- data4ID.selected.columns[[1]];
+      .EVENT.STARTS.AFTER.OBS.WINDOW <- data4ID.selected.columns[[2]];
+      .DATE.as.Date <- data4ID.selected.columns[[3]];
+      event.duration.column <- data4ID.selected.columns[[4]];
+
+      # which data to consider:
+      s <- which(!(.EVENT.STARTS.BEFORE.OBS.WINDOW | .EVENT.STARTS.AFTER.OBS.WINDOW));
+      s.len <- length(s); s1 <- s[1]; ss.len <- s[s.len];
+
+      if( s.len < 2 || (.date.diff <- .difftime.Dates.as.days(.DATE.as.Date[ss.len], .DATE.as.Date[s1])) == 0 )
       {
         # For less than two events or when the first and the last events are on the same day, CMA1 does not make sense
         return (NA_real_);
       } else
       {
         # Otherwise, the sum of durations of the events excluding the last divided by the number of days between the first and the last event
-        return (as.numeric(sum(sel.data4ID[-n.events, get(event.duration.colname)],na.rm=TRUE) /
-                                 (as.numeric(difftime(sel.data4ID$.DATE.as.Date[n.events], sel.data4ID$.DATE.as.Date[1], units="days")))));
+        return (as.numeric(sum(event.duration.column[s[-s.len]],na.rm=TRUE) / .date.diff));
       }
     }
 
