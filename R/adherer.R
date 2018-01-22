@@ -883,14 +883,8 @@ getCMA.CMA0 <- function(x)
   return (switch( as.character(unit),
                             "days"  = structure(unclass(start.date) + time.interval, class="Date"),
                             "weeks" = structure(unclass(start.date) + time.interval*7, class="Date"),
-                            "months" = {tmp <- (start.date + months(time.interval)); # this needs to be done using Date as months may have different lengths
-                                        i <- which(is.na(tmp));
-                                        if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + months(time.interval);
-                                        tmp;},
-                            "years"  = {tmp <- (start.date + lubridate::years(time.interval)); # this needs to be done using Date as years may have different lengths
-                                        i <- which(is.na(tmp));
-                                        if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + lubridate::years(time.interval);
-                                        tmp;},
+                            "months" = lubridate::add_with_rollback(start.date, lubridate::period(time.interval,"months"), roll_to_first=TRUE), # take care of cases such as 2001/01/29 + 1 month
+                            "years"  = lubridate::add_with_rollback(start.date, lubridate::period(time.interval,"years"),  roll_to_first=TRUE), # take care of cases such as 2000/02/29 + 1 year
                             {if( !suppress.warnings ) warning(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n")); NA;} # default
   ));
 }
