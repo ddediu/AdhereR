@@ -8,7 +8,7 @@ context("Date & time")
 
 # rubbish input:
 test_that("wrong start.date", {
-  expect_warning(as.character(.add.time.interval.to.date("2001/01/01",1,"days"), format="%Y/%m/%d"))
+  expect_warning(.add.time.interval.to.date("2001/01/01",1,"days"))
   expect_warning(as.character(.add.time.interval.to.date(NA,1,"days"), format="%Y/%m/%d"))
 })
 

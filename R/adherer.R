@@ -1339,37 +1339,36 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                    return.data.table=FALSE  # should the result be converted to data.frame (default) or returned as a data.table (keyed by patient ID and event date)?
 )
 {
-  data.names <- names(data); # cache names(data) as it is used a lot
-
   # preconditions concerning column names:
   if( is.null(data) || !inherits(data,"data.frame") || nrow(data) < 1 )
   {
     if( !suppress.warnings ) warning("Event data must be a non-empty data.frame!\n")
     return (NULL);
   }
-  if( !(ID.colname %in% data.names) )
+  data.names <- names(data); # cache names(data) as it is used a lot
+  if( is.null(ID.colname) || is.na(ID.colname) || length(ID.colname) != 1 || !(ID.colname %in% data.names) )
   {
-    if( !suppress.warnings ) warning("The patient ID column \"",ID.colname,"\" cannot be empty and must be present in the event data!\n")
+    if( !suppress.warnings ) warning("The patient ID column \"",ID.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
     return (NULL);
   }
-  if( !(event.date.colname %in% data.names) )
+  if( is.null(event.date.colname) || is.na(event.date.colname) || length(event.date.colname) != 1 || !(event.date.colname %in% data.names) )
   {
-    if( !suppress.warnings ) warning("The event date column \"",event.date.colname,"\" cannot be empty and must be present in the event data!\n")
+    if( !suppress.warnings ) warning("The event date column \"",event.date.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
     return (NULL);
   }
-  if( !(event.duration.colname %in% data.names) )
+  if( is.null(event.duration.colname) || is.na(event.duration.colname) || length(event.duration.colname) != 1 || !(event.duration.colname %in% data.names) )
   {
-    if( !suppress.warnings ) warning("The event duration column \"",event.duration.colname,"\" cannot be empty and must be present in the event data!\n")
+    if( !suppress.warnings ) warning("The event duration column \"",event.duration.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
     return (NULL);
   }
-  if( !is.na(event.daily.dose.colname) && !(event.daily.dose.colname %in% data.names) )
+  if( !is.null(event.daily.dose.colname) && !is.na(event.daily.dose.colname) && (length(event.daily.dose.colname) != 1 || !(event.daily.dose.colname %in% data.names)) )
   {
-    if( !suppress.warnings ) warning("If given, the event daily dose column \"",event.daily.dose.colname,"\" must be present in the event data!\n")
+    if( !suppress.warnings ) warning("If given, the event daily dose column \"",event.daily.dose.colname,"\" must be a single value and must be present in the event data!\n")
     return (NULL);
   }
-  if( !is.na(medication.class.colname) && !(medication.class.colname %in% data.names) )
+  if( !is.null(medication.class.colname) && !is.na(medication.class.colname) && (length(medication.class.colname) != 1 || !(medication.class.colname %in% data.names)) )
   {
-    if( !suppress.warnings ) warning("If given, the event type column \"",medication.class.colname,"\" must be present in the event data!\n")
+    if( !suppress.warnings ) warning("If given, the event type column \"",medication.class.colname,"\" must be a single value and must be present in the event data!\n")
     return (NULL);
   }
 
