@@ -57,5 +57,62 @@ test_that("wrong medication.class.colname", {
 })
 
 test_that("wrong carry overs", {
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.within.obs.window=NA), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.within.obs.window=NULL), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.within.obs.window="a"), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.within.obs.window=1), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.within.obs.window=c(TRUE,FALSE)), "Carry over arguments must be single value logicals!")
+
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.into.obs.window=NA), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.into.obs.window=NULL), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.into.obs.window="a"), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.into.obs.window=1), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.into.obs.window=c(TRUE,FALSE)), "Carry over arguments must be single value logicals!")
+
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carry.only.for.same.medication=NA), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carry.only.for.same.medication=NULL), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carry.only.for.same.medication="a"), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carry.only.for.same.medication=1), "Carry over arguments must be single value logicals!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carry.only.for.same.medication=c(TRUE,FALSE)), "Carry over arguments must be single value logicals!")
+
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", carryover.within.obs.window=FALSE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=TRUE), "Cannot carry over only for same medication when no carry over at all is considered!")
 })
+
+test_that("wrong consider.dosage.change", {
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", consider.dosage.change=NA), "Consider dosage change must be single value logical!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", consider.dosage.change=NULL), "Consider dosage change must be single value logical!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", consider.dosage.change="a"), "Consider dosage change must be single value logical!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", consider.dosage.change=1), "Consider dosage change must be single value logical!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", consider.dosage.change=c(TRUE,FALSE)), "Consider dosage change must be single value logical!")
+})
+
+test_that("follow-up window start", {
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=NULL), "The follow-up window start must be defined!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=NA), "The follow-up window start must be defined!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=factor(c("a"))), "The follow-up window start must be a valid column name!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=data.frame("a"=1)), "The follow-up window start must be a valid column name!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start="2001-01-01"), "The follow-up window start must be a valid column name!")
+})
+
+test_that("follow-up window start unit", {
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=0, followup.window.start.unit=NA), "The follow-up window start unit is not recognized!")
+})
+
+test_that("follow-up window duration", {
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=0, followup.window.start.unit="days", followup.window.duration=NA), "The follow-up window duration must be a positive number of a valid column name!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=0, followup.window.start.unit="days", followup.window.duration=NULL), "The follow-up window duration must be a positive number of a valid column name!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=0, followup.window.start.unit="days", followup.window.duration=-3), "The follow-up window duration must be greater than 0!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=0, followup.window.start.unit="days", followup.window.duration=c(1,2)), "The follow-up window duration must be greater than 0!")
+})
+
+test_that("follow-up window duration unit", {
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=0, followup.window.start.unit="days", followup.window.duration=100, followup.window.duration.unit="années"), "The follow-up window duration unit is not recognized!")
+})
+
+test_that("observation window start", {
+})
+
+
+
+
 

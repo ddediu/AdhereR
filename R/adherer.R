@@ -1225,7 +1225,7 @@ getCMA.CMA0 <- function(x)
 #' dates (in which case the column must be of type \code{Date}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
-#' participant's first event; or \code{NA} if not defined.
+#' participant's first event.
 #' @param followup.window.start.unit can be either \emph{"days"},
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
@@ -1346,69 +1346,127 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     return (NULL);
   }
   data.names <- names(data); # cache names(data) as it is used a lot
-  if( is.null(ID.colname) || is.na(ID.colname) || length(ID.colname) != 1 || !(ID.colname %in% data.names) )
+  if( is.null(ID.colname) || is.na(ID.colname) ||                                           # avoid empty stuff
+      !(is.character(ID.colname) ||                                                         # it must be a character...
+        (is.factor(ID.colname) && is.character(ID.colname <- as.character(ID.colname)))) || # ...or a factor (in which case it is forced to character)
+      length(ID.colname) != 1 ||                                                            # make sure it's a single value
+      !(ID.colname %in% data.names)                                                         # make sure it's a valid column name
+      )
   {
     if( !suppress.warnings ) warning("The patient ID column \"",ID.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
     return (NULL);
   }
-  if( is.null(event.date.colname) || is.na(event.date.colname) || length(event.date.colname) != 1 || !(event.date.colname %in% data.names) )
+  if( is.null(event.date.colname) || is.na(event.date.colname) ||                                                   # avoid empty stuff
+      !(is.character(event.date.colname) ||                                                                         # it must be a character...
+        (is.factor(event.date.colname) && is.character(event.date.colname <- as.character(event.date.colname)))) || # ...or a factor (in which case it is forced to character)
+      length(event.date.colname) != 1 ||                                                                            # make sure it's a single value
+      !(event.date.colname %in% data.names)                                                                         # make sure it's a valid column name
+      )
   {
     if( !suppress.warnings ) warning("The event date column \"",event.date.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
     return (NULL);
   }
-  if( is.null(event.duration.colname) || is.na(event.duration.colname) || length(event.duration.colname) != 1 || !(event.duration.colname %in% data.names) )
+  if( is.null(event.duration.colname) || is.na(event.duration.colname) ||                                                       # avoid empty stuff
+      !(is.character(event.duration.colname) ||                                                                                 # it must be a character...
+        (is.factor(event.duration.colname) && is.character(event.duration.colname <- as.character(event.duration.colname)))) || # ...or a factor (in which case it is forced to character)
+      length(event.duration.colname) != 1 ||                                                                                    # make sure it's a single value
+      !(event.duration.colname %in% data.names)                                                                                 # make sure it's a valid column name
+      )
   {
     if( !suppress.warnings ) warning("The event duration column \"",event.duration.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
     return (NULL);
   }
-  if( !is.null(event.daily.dose.colname) && !is.na(event.daily.dose.colname) && (length(event.daily.dose.colname) != 1 || !(event.daily.dose.colname %in% data.names)) )
+  if( is.null(event.daily.dose.colname) || is.na(event.daily.dose.colname) ||                                                         # avoid empty stuff
+      !(is.character(event.daily.dose.colname) ||                                                                                     # it must be a character...
+        (is.factor(event.daily.dose.colname) && is.character(event.daily.dose.colname <- as.character(event.daily.dose.colname)))) || # ...or a factor (in which case it is forced to character)
+      length(event.daily.dose.colname) != 1 ||                                                                                        # make sure it's a single value
+      !(event.daily.dose.colname %in% data.names)                                                                                     # make sure it's a valid column name
+      )
   {
     if( !suppress.warnings ) warning("If given, the event daily dose column \"",event.daily.dose.colname,"\" must be a single value and must be present in the event data!\n")
     return (NULL);
   }
-  if( !is.null(medication.class.colname) && !is.na(medication.class.colname) && (length(medication.class.colname) != 1 || !(medication.class.colname %in% data.names)) )
+  if( is.null(medication.class.colname) || is.na(medication.class.colname) ||                                                         # avoid empty stuff
+      !(is.character(medication.class.colname) ||                                                                                     # it must be a character...
+        (is.factor(medication.class.colname) && is.character(medication.class.colname <- as.character(medication.class.colname)))) || # ...or a factor (in which case it is forced to character)
+      length(medication.class.colname) != 1 ||                                                                                        # make sure it's a single value
+      !(medication.class.colname %in% data.names)                                                                                     # make sure it's a valid column name
+      )
   {
     if( !suppress.warnings ) warning("If given, the event type column \"",medication.class.colname,"\" must be a single value and must be present in the event data!\n")
     return (NULL);
   }
 
   # preconditions concerning carry-over:
+  if( !is.logical(carryover.within.obs.window)    || is.na(carryover.within.obs.window)    || length(carryover.within.obs.window) != 1    ||
+      !is.logical(carryover.into.obs.window)      || is.na(carryover.into.obs.window)      || length(carryover.into.obs.window) != 1      ||
+      !is.logical(carry.only.for.same.medication) || is.na(carry.only.for.same.medication) || length(carry.only.for.same.medication) != 1 )
+  {
+    if( !suppress.warnings ) warning("Carry over arguments must be single value logicals!\n")
+    return (NULL);
+  }
   if( !carryover.within.obs.window && !carryover.into.obs.window && carry.only.for.same.medication )
   {
     if( !suppress.warnings ) warning("Cannot carry over only for same medication when no carry over at all is considered!\n")
     return (NULL);
   }
-  # preconditions concerning follow-up window:
-  if( is.numeric(followup.window.start) && followup.window.start < 0 )
+
+  # preconditions concerning dosage change:
+  if( !is.logical(consider.dosage.change) || is.na(consider.dosage.change) || length(consider.dosage.change) != 1 )
   {
-    if( !suppress.warnings ) warning("The follow-up window must start a positive number of time units after the first event!\n")
+    if( !suppress.warnings ) warning("Consider dosage change must be single value logical!\n")
     return (NULL);
   }
-  if( !inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) && !(followup.window.start %in% data.names) )
+
+  # preconditions concerning follow-up window:
+  if( is.null(followup.window.start) || is.na(followup.window.start) )
+  {
+    if( !suppress.warnings ) warning("The follow-up window start must be defined!\n")
+    return (NULL);
+  }
+  if( is.numeric(followup.window.start) && (followup.window.start < 0 || length(followup.window.start) != 1) )
+  {
+    if( !suppress.warnings ) warning("The follow-up window start must be a single positive number of time units after the first event!\n")
+    return (NULL);
+  }
+  if( !inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) &&                                        # not a Date or number:
+      (!(is.character(followup.window.start) ||                                                                               # it must be a character...
+         (is.factor(followup.window.start) && is.character(followup.window.start <- as.character(followup.window.start)))) || # ...or a factor (in which case it is forced to character)
+       length(followup.window.start) != 1 ||                                                                                  # make sure it's a single value
+       !(followup.window.start %in% data.names)))                                                                             # make sure it's a valid column name
   {
     if( !suppress.warnings ) warning("The follow-up window start must be a valid column name!\n")
     return (NULL);
   }
-  if( !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
+  if( is.null(followup.window.start.unit) || is.na(followup.window.start.unit) ||
+      length(followup.window.start.unit) != 1 ||
+      !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
   {
     if( !suppress.warnings ) warning("The follow-up window start unit is not recognized!\n")
     return (NULL);
   }
-  if( is.numeric(followup.window.duration) && followup.window.duration <= 0 )
+  if( is.numeric(followup.window.duration) && (followup.window.duration <= 0 || length(followup.window.duration) != 1) )
   {
     if( !suppress.warnings ) warning("The follow-up window duration must be greater than 0!\n")
     return (NULL);
   }
-  if( !is.numeric(followup.window.duration) && !(followup.window.duration %in% data.names) )
+  if( !is.numeric(followup.window.duration) &&
+      (!(is.character(followup.window.duration) ||                                                                                     # it must be a character...
+         (is.factor(followup.window.duration) && is.character(followup.window.duration <- as.character(followup.window.duration)))) || # ...or a factor (in which case it is forced to character)
+       length(followup.window.duration) != 1 ||                                                                                        # make sure it's a single value
+       !(followup.window.duration %in% data.names)))                                                                                   # make sure it's a valid column name
   {
     if( !suppress.warnings ) warning("The follow-up window duration must be a positive number of a valid column name!\n")
     return (NULL);
   }
-  if( !(followup.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
+  if( is.null(followup.window.duration.unit) || is.na(followup.window.duration.unit) ||
+      length(followup.window.duration.unit) != 1 ||
+      !(followup.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
   {
     if( !suppress.warnings ) warning("The follow-up window duration unit is not recognized!\n")
     return (NULL);
   }
+
   # preconditions concerning observation window:
   if( is.numeric(observation.window.start) && observation.window.start < 0 )
   {
@@ -1753,7 +1811,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
         # was there a change in dosage?
         if( !is.na(event.daily.dose.colname) )
         {
-          dosage.change.ratio <- c((event.daily.dose.column[s[-slen-1]] / event.daily.dose.column[s[-1]]), 1.0);
+          dosage.change.ratio <- c((event.daily.dose.column[s[-slen]] / event.daily.dose.column[s[-1]]), 1.0);
         } else
         {
           dosage.change.ratio <- rep(1.0,slen);
