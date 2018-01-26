@@ -1342,13 +1342,13 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   # preconditions concerning column names:
   if( is.null(data) || !inherits(data,"data.frame") || nrow(data) < 1 )
   {
-    if( !suppress.warnings ) warning("Event data must be a non-empty data.frame!\n")
+    if( !suppress.warnings ) warning("Event data must be a non-empty data frame!\n")
     return (NULL);
   }
   data.names <- names(data); # cache names(data) as it is used a lot
   if( is.null(ID.colname) || is.na(ID.colname) ||                                           # avoid empty stuff
       !(is.character(ID.colname) ||                                                         # it must be a character...
-        (is.factor(ID.colname) && is.character(ID.colname <- as.character(ID.colname)))) || # ...or a factor (in which case it is forced to character)
+        (is.factor(ID.colname) && is.character(ID.colname <- as.character(ID.colname)))) || # ...or a factor (forced to character)
       length(ID.colname) != 1 ||                                                            # make sure it's a single value
       !(ID.colname %in% data.names)                                                         # make sure it's a valid column name
       )
@@ -1358,7 +1358,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
   if( is.null(event.date.colname) || is.na(event.date.colname) ||                                                   # avoid empty stuff
       !(is.character(event.date.colname) ||                                                                         # it must be a character...
-        (is.factor(event.date.colname) && is.character(event.date.colname <- as.character(event.date.colname)))) || # ...or a factor (in which case it is forced to character)
+        (is.factor(event.date.colname) && is.character(event.date.colname <- as.character(event.date.colname)))) || # ...or a factor (forced to character)
       length(event.date.colname) != 1 ||                                                                            # make sure it's a single value
       !(event.date.colname %in% data.names)                                                                         # make sure it's a valid column name
       )
@@ -1368,7 +1368,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
   if( is.null(event.duration.colname) || is.na(event.duration.colname) ||                                                       # avoid empty stuff
       !(is.character(event.duration.colname) ||                                                                                 # it must be a character...
-        (is.factor(event.duration.colname) && is.character(event.duration.colname <- as.character(event.duration.colname)))) || # ...or a factor (in which case it is forced to character)
+        (is.factor(event.duration.colname) && is.character(event.duration.colname <- as.character(event.duration.colname)))) || # ...or a factor (forced to character)
       length(event.duration.colname) != 1 ||                                                                                    # make sure it's a single value
       !(event.duration.colname %in% data.names)                                                                                 # make sure it's a valid column name
       )
@@ -1378,7 +1378,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
   if( is.null(event.daily.dose.colname) || is.na(event.daily.dose.colname) ||                                                         # avoid empty stuff
       !(is.character(event.daily.dose.colname) ||                                                                                     # it must be a character...
-        (is.factor(event.daily.dose.colname) && is.character(event.daily.dose.colname <- as.character(event.daily.dose.colname)))) || # ...or a factor (in which case it is forced to character)
+        (is.factor(event.daily.dose.colname) && is.character(event.daily.dose.colname <- as.character(event.daily.dose.colname)))) || # ...or a factor (forced to character)
       length(event.daily.dose.colname) != 1 ||                                                                                        # make sure it's a single value
       !(event.daily.dose.colname %in% data.names)                                                                                     # make sure it's a valid column name
       )
@@ -1388,7 +1388,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
   if( is.null(medication.class.colname) || is.na(medication.class.colname) ||                                                         # avoid empty stuff
       !(is.character(medication.class.colname) ||                                                                                     # it must be a character...
-        (is.factor(medication.class.colname) && is.character(medication.class.colname <- as.character(medication.class.colname)))) || # ...or a factor (in which case it is forced to character)
+        (is.factor(medication.class.colname) && is.character(medication.class.colname <- as.character(medication.class.colname)))) || # ...or a factor (forced to character)
       length(medication.class.colname) != 1 ||                                                                                        # make sure it's a single value
       !(medication.class.colname %in% data.names)                                                                                     # make sure it's a valid column name
       )
@@ -1418,84 +1418,73 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     return (NULL);
   }
 
-  # preconditions concerning follow-up window:
-  if( is.null(followup.window.start) || is.na(followup.window.start) )
+  # preconditions concerning follow-up window (as all violations result in the same error, aggregate them in a single if):
+  if( (is.null(followup.window.start) || is.na(followup.window.start) || length(followup.window.start) != 1) ||                   # cannot be missing or have more than one values
+      (is.numeric(followup.window.start) && (followup.window.start < 0)) ||                                                       # if a number, must be a single positive one
+      (!inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) &&                                           # not a Date or number:
+          (!(is.character(followup.window.start) ||                                                                               # it must be a character...
+             (is.factor(followup.window.start) && is.character(followup.window.start <- as.character(followup.window.start)))) || # ...or a factor (forced to character)
+           !(followup.window.start %in% data.names))) )                                                                           # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The follow-up window start must be defined!\n")
-    return (NULL);
-  }
-  if( is.numeric(followup.window.start) && (followup.window.start < 0 || length(followup.window.start) != 1) )
-  {
-    if( !suppress.warnings ) warning("The follow-up window start must be a single positive number of time units after the first event!\n")
-    return (NULL);
-  }
-  if( !inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) &&                                        # not a Date or number:
-      (!(is.character(followup.window.start) ||                                                                               # it must be a character...
-         (is.factor(followup.window.start) && is.character(followup.window.start <- as.character(followup.window.start)))) || # ...or a factor (in which case it is forced to character)
-       length(followup.window.start) != 1 ||                                                                                  # make sure it's a single value
-       !(followup.window.start %in% data.names)))                                                                             # make sure it's a valid column name
-  {
-    if( !suppress.warnings ) warning("The follow-up window start must be a valid column name!\n")
+    if( !suppress.warnings ) warning("The follow-up window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n")
     return (NULL);
   }
   if( is.null(followup.window.start.unit) || is.na(followup.window.start.unit) ||
       length(followup.window.start.unit) != 1 ||
       !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The follow-up window start unit is not recognized!\n")
+    if( !suppress.warnings ) warning("The follow-up window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
     return (NULL);
   }
-  if( is.numeric(followup.window.duration) && (followup.window.duration <= 0 || length(followup.window.duration) != 1) )
+  if( is.numeric(followup.window.duration) && (followup.window.duration <= 0 || length(followup.window.duration) != 1) ||               # cannot be missing or have more than one values
+      (!is.numeric(followup.window.duration) &&
+       (!(is.character(followup.window.duration) ||                                                                                     # it must be a character...
+          (is.factor(followup.window.duration) && is.character(followup.window.duration <- as.character(followup.window.duration)))) || # ...or a factor (forced to character)
+        !(followup.window.duration %in% data.names))))                                                                                  # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The follow-up window duration must be greater than 0!\n")
-    return (NULL);
-  }
-  if( !is.numeric(followup.window.duration) &&
-      (!(is.character(followup.window.duration) ||                                                                                     # it must be a character...
-         (is.factor(followup.window.duration) && is.character(followup.window.duration <- as.character(followup.window.duration)))) || # ...or a factor (in which case it is forced to character)
-       length(followup.window.duration) != 1 ||                                                                                        # make sure it's a single value
-       !(followup.window.duration %in% data.names)))                                                                                   # make sure it's a valid column name
-  {
-    if( !suppress.warnings ) warning("The follow-up window duration must be a positive number of a valid column name!\n")
+    if( !suppress.warnings ) warning("The follow-up window duration must be a single value, either a positive number, or a string giving a column name in the data!\n")
     return (NULL);
   }
   if( is.null(followup.window.duration.unit) || is.na(followup.window.duration.unit) ||
       length(followup.window.duration.unit) != 1 ||
       !(followup.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The follow-up window duration unit is not recognized!\n")
+    if( !suppress.warnings ) warning("The follow-up window duration unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
     return (NULL);
   }
 
-  # preconditions concerning observation window:
-  if( is.numeric(observation.window.start) && observation.window.start < 0 )
+  # preconditions concerning observation window (as all violations result in the same error, aggregate them in a single if):
+  if( (is.null(observation.window.start) || is.na(observation.window.start) || length(observation.window.start) != 1) ||                   # cannot be missing or have more than one values
+      (is.numeric(observation.window.start) && (observation.window.start < 0)) ||                                                          # if a number, must be a single positive one
+      (!inherits(observation.window.start,"Date") && !is.numeric(observation.window.start) &&                                              # not a Date or number:
+          (!(is.character(observation.window.start) ||                                                                                     # it must be a character...
+             (is.factor(observation.window.start) && is.character(observation.window.start <- as.character(observation.window.start)))) || # ...or a factor (forced to character)
+           !(observation.window.start %in% data.names))) )                                                                                 # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The observation window must start a positive number of time units after the first event!\n")
+    if( !suppress.warnings ) warning("The observation window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n")
     return (NULL);
   }
-  if( !inherits(observation.window.start,"Date") && !is.numeric(observation.window.start) && !(observation.window.start %in% data.names) )
+  if( is.null(observation.window.start.unit) || is.na(observation.window.start.unit) ||
+      length(observation.window.start.unit) != 1 ||
+      !(observation.window.start.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The observation window start must be a valid column name!\n")
+    if( !suppress.warnings ) warning("The observation window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
     return (NULL);
   }
-  if( !(observation.window.start.unit %in% c("days", "weeks", "months", "years") ) )
+  if( is.numeric(observation.window.duration) && (observation.window.duration <= 0 || length(observation.window.duration) != 1) ||               # cannot be missing or have more than one values
+      (!is.numeric(observation.window.duration) &&
+       (!(is.character(observation.window.duration) ||                                                                                           # it must be a character...
+          (is.factor(observation.window.duration) && is.character(observation.window.duration <- as.character(observation.window.duration)))) || # ...or a factor (forced to character)
+        !(observation.window.duration %in% data.names))))                                                                                        # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The observation window start unit is not recognized!\n")
+    if( !suppress.warnings ) warning("The observation window duration must be a single value, either a positive number, or a string giving a column name in the data!\n")
     return (NULL);
   }
-  if( is.numeric(observation.window.duration) && observation.window.duration <= 0 )
+  if( is.null(observation.window.duration.unit) || is.na(observation.window.duration.unit) ||
+      length(observation.window.duration.unit) != 1 ||
+      !(observation.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The observation window duration must be greater than 0!\n")
-    return (NULL);
-  }
-  if( !is.numeric(observation.window.duration) && !(observation.window.duration %in% data.names) )
-  {
-    if( !suppress.warnings ) warning("The obervation window duration must be a positive number of a valid column name!\n")
-    return (NULL);
-  }
-  if( !(observation.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
-  {
-    if( !suppress.warnings ) warning("The observation window duration unit is not recognized!\n")
+    if( !suppress.warnings ) warning("The observation window duration unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
     return (NULL);
   }
 
