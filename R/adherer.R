@@ -1376,21 +1376,21 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     if( !suppress.warnings ) warning("The event duration column \"",event.duration.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
     return (NULL);
   }
-  if( is.null(event.daily.dose.colname) || is.na(event.daily.dose.colname) ||                                                         # avoid empty stuff
-      !(is.character(event.daily.dose.colname) ||                                                                                     # it must be a character...
-        (is.factor(event.daily.dose.colname) && is.character(event.daily.dose.colname <- as.character(event.daily.dose.colname)))) || # ...or a factor (forced to character)
-      length(event.daily.dose.colname) != 1 ||                                                                                        # make sure it's a single value
-      !(event.daily.dose.colname %in% data.names)                                                                                     # make sure it's a valid column name
+  if( (!is.null(event.daily.dose.colname) && !is.na(event.daily.dose.colname)) &&                                                      # if actually given:
+      (!(is.character(event.daily.dose.colname) ||                                                                                     # it must be a character...
+         (is.factor(event.daily.dose.colname) && is.character(event.daily.dose.colname <- as.character(event.daily.dose.colname)))) || # ...or a factor (forced to character)
+       length(event.daily.dose.colname) != 1 ||                                                                                        # make sure it's a single value
+       !(event.daily.dose.colname %in% data.names))                                                                                    # make sure it's a valid column name
       )
   {
     if( !suppress.warnings ) warning("If given, the event daily dose column \"",event.daily.dose.colname,"\" must be a single value and must be present in the event data!\n")
     return (NULL);
   }
-  if( is.null(medication.class.colname) || is.na(medication.class.colname) ||                                                         # avoid empty stuff
-      !(is.character(medication.class.colname) ||                                                                                     # it must be a character...
-        (is.factor(medication.class.colname) && is.character(medication.class.colname <- as.character(medication.class.colname)))) || # ...or a factor (forced to character)
-      length(medication.class.colname) != 1 ||                                                                                        # make sure it's a single value
-      !(medication.class.colname %in% data.names)                                                                                     # make sure it's a valid column name
+  if( (!is.null(medication.class.colname) && !is.na(medication.class.colname)) &&                                                      # if actually given:
+      (!(is.character(medication.class.colname) ||                                                                                     # it must be a character...
+         (is.factor(medication.class.colname) && is.character(medication.class.colname <- as.character(medication.class.colname)))) || # ...or a factor (forced to character)
+       length(medication.class.colname) != 1 ||                                                                                        # make sure it's a single value
+       !(medication.class.colname %in% data.names))                                                                                    # make sure it's a valid column name
       )
   {
     if( !suppress.warnings ) warning("If given, the event type column \"",medication.class.colname,"\" must be a single value and must be present in the event data!\n")
@@ -1489,43 +1489,49 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
 
   # Check the patient IDs:
-  if( any(s <- (is.na(data[,ID.colname]))) )
+  if( anyNA(data[,ID.colname]) )
   {
-    if( !suppress.warnings ) warning(paste0("The patient unique identifiers in the \"",ID.colname,"\" column must be non-missing; first issue occurs on row ",min(which(s)),".\n"));
+    if( !suppress.warnings ) warning(paste0("The patient unique identifiers in the \"",ID.colname,"\" column must not contain NAs; the first occurs on row ",min(which(is.na(data[,ID.colname]))),"!\n"));
     return (NULL);
   }
 
   # Check the date format (and save the conversion to Date() for later use):
-  if( any(s <- is.na(Date.converted.to.DATE <- as.Date(data[,event.date.colname],format=date.format))) )
+  if( is.na(date.format) || is.null(date.format) || length(date.format) != 1 || !is.character(date.format) )
   {
-    if( !suppress.warnings ) warning(paste0("Not all entries in the event date \"",event.date.colname,"\" column are valid dates or conform to the date format \"",date.format,"\"; first issue occurs on row ",min(which(s)),".\n"));
+    if( !suppress.warnings ) warning(paste0("The date format must be a single string!\n"));
+    return (NULL);
+  }
+  if( anyNA(Date.converted.to.DATE <- as.Date(data[,event.date.colname],format=date.format)) )
+  {
+    if( !suppress.warnings ) warning(paste0("Not all entries in the event date \"",event.date.colname,"\" column are valid dates or conform to the date format \"",date.format,"\"; first issue occurs on row ",min(which(is.na(Date.converted.to.DATE))),"!\n"));
     return (NULL);
   }
 
   # Check the duration:
-  s <- 1;
-  if( !is.numeric(data[,event.duration.colname]) || any(s <- (is.na(data[,event.duration.colname]) || data[,event.duration.colname] <= 0)) )
+  tmp <- data[,event.duration.colname]; # caching for speed
+  if( !is.numeric(tmp) || any(is.na(tmp) | tmp <= 0) )
   {
-    if( !suppress.warnings ) warning(paste0("The event duration in the \"",event.duration.colname,"\" column must be non-missing strictly positive numbers; first issue occurs on row ",min(which(s)),".\n"));
+    if( !suppress.warnings ) warning(paste0("The event durations in the \"",event.duration.colname,"\" column must be non-missing strictly positive numbers!\n"));
     return (NULL);
   }
 
   # Check the event daily dose:
-  if( !is.na(event.daily.dose.colname) && (!is.numeric(data[,event.daily.dose.colname]) || any(data[,event.daily.dose.colname] < 0)) )
+  if( !is.na(event.daily.dose.colname) && !is.null(event.daily.dose.colname) &&             # if actually given:
+      (!is.numeric(tmp <- data[,event.daily.dose.colname]) || any(is.na(tmp) | tmp <= 0)) ) # must be a non-missing strictly positive number (and cache it for speed)
   {
-    if( !suppress.warnings ) warning(paste0("If given, the event daily dose in the \"",event.daily.dose.colname,"\" column must be a positive number.\n"));
+    if( !suppress.warnings ) warning(paste0("If given, the event daily dose in the \"",event.daily.dose.colname,"\" column must be a non-missing strictly positive numbers!\n"));
     return (NULL);
   }
 
   # Check the newly created columns:
-  if( is.na(event.interval.colname) || (event.interval.colname %in% data.names) )
+  if( is.na(event.interval.colname) || is.null(event.interval.colname) || !is.character(event.interval.colname) || (event.interval.colname %in% data.names) )
   {
-    if( !suppress.warnings ) warning(paste0("The column name where the event interval will be stored \"",event.interval.colname,"\" cannot be NA nor already present in the event data.\n"));
+    if( !suppress.warnings ) warning(paste0("The column name where the event interval will be stored \"",event.interval.colname,"\" cannot be missing nor already present in the event data!\n"));
     return (NULL);
   }
-  if( is.na(gap.days.colname) || (gap.days.colname %in% data.names) )
+  if( is.na(gap.days.colname) || is.null(gap.days.colname) || !is.character(gap.days.colname) || (gap.days.colname %in% data.names) )
   {
-    if( !suppress.warnings ) warning(paste0("The column name where the gap days will be stored \"",gap.days.colname,"\" cannot be NA nor already present in the event data.\n"));
+    if( !suppress.warnings ) warning(paste0("The column name where the gap days will be stored \"",gap.days.colname,"\" cannot be mising nor already present in the event data.\n"));
     return (NULL);
   }
 
