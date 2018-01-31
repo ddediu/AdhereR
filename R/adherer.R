@@ -1322,7 +1322,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                    followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)
                                    # The observation window (embedded in the follow-up window):
                                    observation.window.start=0, # the number of time units relative to followup.window.start, otherwise a date.format date or variable date
-                                   observation.window.start.unit="days", # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)
+                                   observation.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)
                                    observation.window.duration=365*2, # the duration of the observation window in time units
                                    observation.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)
                                    # Date format:

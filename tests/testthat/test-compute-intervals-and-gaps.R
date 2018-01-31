@@ -171,6 +171,82 @@ test_that("internally created columns for storing the event intervals and the ga
 
 
 # Test exected results for various parameter combinations using the included med.events data:
+# Given that we expect to obtain large data.frames, we will test the major properties of the result (class, nrow, ncols, column names),
+# the number/distribution of values per columns, and some rows chosen either at random or due to some interesting properties.
+# General rules:
+#  - integer columns: check number of unique values (if not too many), table (if not too big), and sample of values
+#  - numeric columns: check number of NAs, min, max, mean, median, sd (all exluding NAs), number <0, ==0 and >0, and sample of values
+#  - character columns: check MD5 (this is probably ok across platforms, internal representations, etc) and sample of values
+library(digest); # for computing hashes
+
+test_that("compute.event.int.gaps() on default values", {
+  # compute the return value, to be used throughout:
+  d <- compute.event.int.gaps(data=med.events,
+  														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
+  														event.daily.dose.colname=NA, medication.class.colname=NA,
+  														carryover.within.obs.window=FALSE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														consider.dosage.change=FALSE,
+  														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														followup.window.duration=365*2, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.start=0, observation.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.duration=365*2, observation.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														date.format="%m/%d/%Y",
+  														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
+  														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[1], parallel.threads="auto",
+  														suppress.warnings=FALSE, return.data.table=FALSE);
+
+  expect_is(d, "data.frame") # is a data.frame
+  expect_equal(dim(d), c(1066,7)) # 1066 events and 7 columns
+  expect_equal(names(d), c("PATIENT_ID","DATE","PERDAY","CATEGORY","DURATION","event.interval","gap.days")) # the names of the columns
+  # PATIENT_ID:
+  expect_is(d$PATIENT_ID, "integer") # PATIENT_ID's are integers
+  expect_equal(unique(d$PATIENT_ID), 1:100) # PATIENT_ID's are integers from 1 to 100
+  expect_equal(as.numeric(table(d$PATIENT_ID)), c(24,8,28,6,8,9,6,14,9,14,6,7,5,24,12,22,9,6,6,11,10,6,11,9,10,12,13,10,14,11,3,6,4,11,11,11,8,9,9,11,6,7,20,7,10,18,10,12,6,9,6,7,4,5,5,11,4,16,18,7,10,8,6,11,19,20,14,8,6,9,11,6,9,7,13,11,6,24,22,19,7,9,8,12,9,13,10,14,6,12,6,18,7,11,11,22,12,8,5,16)) # the distribution of PATIENT_ID's
+  expect_equal(d$PATIENT_ID[c(54,210,423,424,755,1050)], c(3,17,40,41,74,99)) # a selection of individual rows
+  # DATE:
+  expect_is(d$DATE, "character") # DATE's are characters
+  expect_equal(digest(d$DATE,"md5",serialize=TRUE,ascii=TRUE), "378d1ede8d6699c84633c0ca5c757fc2") # digest is probably safe for characters
+  expect_equal(d$DATE[c(54,210,423,424,755,1050)], c("11/10/2043", "07/07/2037", "06/22/2037", "04/11/2041", "08/03/2032", "08/01/2033")) # a selection of individual rows
+  # PERDAY:
+  expect_is(d$PERDAY, "integer") # PERDAY's are integers
+  expect_equal(unique(d$PERDAY), c(4,2,8,6,20)) # PERDAY's are integers
+  expect_equal(as.numeric(table(d$PERDAY)), c(374, 533, 123, 26, 10)) # the distribution of PERDAY's
+  expect_equal(d$PERDAY[c(54,210,423,424,755,1050)], c(2, 4, 6, 4, 2, 4)) # a selection of individual rows
+  # CATEGORY:
+  expect_is(d$CATEGORY, "character") # CATEGORY's are characters
+  expect_equal(digest(d$CATEGORY,"md5",serialize=TRUE,ascii=TRUE), "7411863b7ceb60f19f8a9b8480063a0a") # digest is probably safe for characters
+  expect_equal(d$CATEGORY[c(54,210,423,424,755,1050)], c("medB", "medB", "medB", "medA", "medB", "medB")) # a selection of individual rows
+  # DURATION:
+  expect_is(d$DURATION, "integer") # DURATION's are integers
+  expect_equal(unique(d$DURATION), c(50, 30, 60, 100, 20, 150)) # DURATION's are integers
+  expect_equal(as.numeric(table(d$DURATION)), c(54, 404, 368, 131, 105, 4)) # the distribution of DURATION's
+  expect_equal(d$DURATION[c(54,210,423,424,755,1050)], c(50, 60, 60, 50, 60, 30)) # a selection of individual rows
+  # event.interval:
+  expect_is(d$event.interval, "numeric") # event.interval's are numbers
+  expect_equal(min(d$event.interval,na.rm=TRUE), 0) # event.interval's summaries
+  expect_equal(max(d$event.interval,na.rm=TRUE), 544)
+  expect_equal(sum(is.na(d$event.interval)), 0)
+  expect_equal(round(mean(d$event.interval,na.rm=TRUE),5), 68.4803)
+  expect_equal(round(median(d$event.interval,na.rm=TRUE),5), 47.5)
+  expect_equal(round(sd(d$event.interval,na.rm=TRUE),5), 64.80363)
+  expect_equal(sum(d$event.interval == 0,na.rm=TRUE), 3)
+  expect_equal(sum(d$event.interval < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$event.interval > 0,na.rm=TRUE), 1063)
+  expect_equal(d$event.interval[c(54,210,423,424,755,1050)], c(2, 76, 62, 47, 48, 98)) # a selection of individual rows
+  # gap.days
+  expect_is(d$gap.days, "numeric") # gap.days's are numbers
+  expect_equal(min(d$gap.days,na.rm=TRUE), 0) # gap.days's summaries
+  expect_equal(max(d$gap.days,na.rm=TRUE), 491)
+  expect_equal(sum(is.na(d$gap.days)), 0)
+  expect_equal(round(mean(d$gap.days,na.rm=TRUE),5), 25.95779)
+  expect_equal(round(median(d$gap.days,na.rm=TRUE),5), 0)
+  expect_equal(round(sd(d$gap.days,na.rm=TRUE),5), 54.84098)
+  expect_equal(sum(d$gap.days == 0,na.rm=TRUE), 666)
+  expect_equal(sum(d$gap.days < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 400)
+  expect_equal(d$gap.days[c(54,210,423,424,755,1050)], c(0, 16, 0, 0, 0, 68)) # a selection of individual rows
+})
+
 
 
 
