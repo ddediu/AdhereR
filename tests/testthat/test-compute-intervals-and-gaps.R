@@ -184,7 +184,7 @@ test_that("compute.event.int.gaps() on default values", {
   d <- compute.event.int.gaps(data=med.events,
   														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
   														event.daily.dose.colname=NA, medication.class.colname=NA,
-  														carryover.within.obs.window=FALSE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
   														consider.dosage.change=FALSE,
   														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
   														followup.window.duration=365*2, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
@@ -252,7 +252,7 @@ test_that("compute.event.int.gaps() on default values + window durations in week
   d <- compute.event.int.gaps(data=med.events,
   														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
   														event.daily.dose.colname=NA, medication.class.colname=NA,
-  														carryover.within.obs.window=FALSE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
   														consider.dosage.change=FALSE,
   														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
   														followup.window.duration=50*2, followup.window.duration.unit=c("days", "weeks", "months", "years")[2],
@@ -320,7 +320,7 @@ test_that("compute.event.int.gaps() on default values + window durations in mont
   d <- compute.event.int.gaps(data=med.events,
   														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
   														event.daily.dose.colname=NA, medication.class.colname=NA,
-  														carryover.within.obs.window=FALSE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
   														consider.dosage.change=FALSE,
   														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
   														followup.window.duration=12*2, followup.window.duration.unit=c("days", "weeks", "months", "years")[3],
@@ -388,7 +388,7 @@ test_that("compute.event.int.gaps() on default values + window durations in year
   d <- compute.event.int.gaps(data=med.events,
   														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
   														event.daily.dose.colname=NA, medication.class.colname=NA,
-  														carryover.within.obs.window=FALSE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
   														consider.dosage.change=FALSE,
   														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
   														followup.window.duration=1*2, followup.window.duration.unit=c("days", "weeks", "months", "years")[4],
@@ -456,7 +456,7 @@ test_that("compute.event.int.gaps() on default values + smaller observation wind
   d <- compute.event.int.gaps(data=med.events,
   														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
   														event.daily.dose.colname=NA, medication.class.colname=NA,
-  														carryover.within.obs.window=FALSE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
   														consider.dosage.change=FALSE,
   														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
   														followup.window.duration=2, followup.window.duration.unit=c("days", "weeks", "months", "years")[4],
@@ -524,7 +524,7 @@ test_that("compute.event.int.gaps() on default values + smaller follow-up window
   d <- compute.event.int.gaps(data=med.events,
   														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
   														event.daily.dose.colname=NA, medication.class.colname=NA,
-  														carryover.within.obs.window=FALSE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
   														consider.dosage.change=FALSE,
   														followup.window.start=1, followup.window.start.unit=c("days", "weeks", "months", "years")[3],
   														followup.window.duration=1.5, followup.window.duration.unit=c("days", "weeks", "months", "years")[4],
@@ -592,7 +592,7 @@ test_that("compute.event.int.gaps() on default values + observation and follow-u
   d <- compute.event.int.gaps(data=med.events,
   														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
   														event.daily.dose.colname=NA, medication.class.colname=NA,
-  														carryover.within.obs.window=FALSE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
   														consider.dosage.change=FALSE,
   														followup.window.start=as.Date("01/01/2034",format="%d/%m/%Y"), followup.window.start.unit=c("days", "weeks", "months", "years")[3],
   														followup.window.duration=1.5, followup.window.duration.unit=c("days", "weeks", "months", "years")[4],
@@ -654,6 +654,621 @@ test_that("compute.event.int.gaps() on default values + observation and follow-u
   expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 30)
   expect_equal(d$gap.days[c(3,21,46,47,121,155)], c(0, 0, 84, 148, 0, 3)) # a selection of individual rows
 })
+
+test_that("compute.event.int.gaps() parallel processing with multicore", {
+  # compute the return value, to be used throughout:
+  d <- compute.event.int.gaps(data=med.events,
+  														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
+  														event.daily.dose.colname=NA, medication.class.colname=NA,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														consider.dosage.change=FALSE,
+  														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														followup.window.duration=365*2, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.start=0, observation.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.duration=365*2, observation.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														date.format="%m/%d/%Y",
+  														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
+  														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[2], parallel.threads=2,
+  														suppress.warnings=FALSE, return.data.table=FALSE);
+
+  expect_is(d, "data.frame") # is a data.frame
+  expect_equal(dim(d), c(1066,7)) # number of events and columns
+  expect_equal(names(d), c("PATIENT_ID","DATE","PERDAY","CATEGORY","DURATION","event.interval","gap.days")) # the names of the columns
+  # PATIENT_ID:
+  expect_is(d$PATIENT_ID, "integer") # PATIENT_ID's are integers
+  expect_equal(unique(d$PATIENT_ID), 1:100) # PATIENT_ID's are integers from 1 to 100
+  expect_equal(as.numeric(table(d$PATIENT_ID)), c(24,8,28,6,8,9,6,14,9,14,6,7,5,24,12,22,9,6,6,11,10,6,11,9,10,12,13,10,14,11,3,6,4,11,11,11,8,9,9,11,6,7,20,7,10,18,10,12,6,9,6,7,4,5,5,11,4,16,18,7,10,8,6,11,19,20,14,8,6,9,11,6,9,7,13,11,6,24,22,19,7,9,8,12,9,13,10,14,6,12,6,18,7,11,11,22,12,8,5,16)) # the distribution of PATIENT_ID's
+  expect_equal(d$PATIENT_ID[c(54,210,423,424,755,1050)], c(3,17,40,41,74,99)) # a selection of individual rows
+  # DATE:
+  expect_is(d$DATE, "character") # DATE's are characters
+  expect_equal(digest(d$DATE,"md5",serialize=TRUE,ascii=TRUE), "378d1ede8d6699c84633c0ca5c757fc2") # digest is probably safe for characters
+  expect_equal(d$DATE[c(54,210,423,424,755,1050)], c("11/10/2043", "07/07/2037", "06/22/2037", "04/11/2041", "08/03/2032", "08/01/2033")) # a selection of individual rows
+  # PERDAY:
+  expect_is(d$PERDAY, "integer") # PERDAY's are integers
+  expect_equal(unique(d$PERDAY), c(4,2,8,6,20)) # PERDAY's are integers
+  expect_equal(as.numeric(table(d$PERDAY)), c(374, 533, 123, 26, 10)) # the distribution of PERDAY's
+  expect_equal(d$PERDAY[c(54,210,423,424,755,1050)], c(2, 4, 6, 4, 2, 4)) # a selection of individual rows
+  # CATEGORY:
+  expect_is(d$CATEGORY, "character") # CATEGORY's are characters
+  expect_equal(digest(d$CATEGORY,"md5",serialize=TRUE,ascii=TRUE), "7411863b7ceb60f19f8a9b8480063a0a") # digest is probably safe for characters
+  expect_equal(d$CATEGORY[c(54,210,423,424,755,1050)], c("medB", "medB", "medB", "medA", "medB", "medB")) # a selection of individual rows
+  # DURATION:
+  expect_is(d$DURATION, "integer") # DURATION's are integers
+  expect_equal(unique(d$DURATION), c(50, 30, 60, 100, 20, 150)) # DURATION's are integers
+  expect_equal(as.numeric(table(d$DURATION)), c(54, 404, 368, 131, 105, 4)) # the distribution of DURATION's
+  expect_equal(d$DURATION[c(54,210,423,424,755,1050)], c(50, 60, 60, 50, 60, 30)) # a selection of individual rows
+  # event.interval:
+  expect_is(d$event.interval, "numeric") # event.interval's are numbers
+  expect_equal(min(d$event.interval,na.rm=TRUE), 0) # event.interval's summaries
+  expect_equal(max(d$event.interval,na.rm=TRUE), 544)
+  expect_equal(sum(is.na(d$event.interval)), 0)
+  expect_equal(round(mean(d$event.interval,na.rm=TRUE),5), 68.4803)
+  expect_equal(round(median(d$event.interval,na.rm=TRUE),5), 47.5)
+  expect_equal(round(sd(d$event.interval,na.rm=TRUE),5), 64.80363)
+  expect_equal(sum(d$event.interval == 0,na.rm=TRUE), 3)
+  expect_equal(sum(d$event.interval < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$event.interval > 0,na.rm=TRUE), 1063)
+  expect_equal(d$event.interval[c(54,210,423,424,755,1050)], c(2, 76, 62, 47, 48, 98)) # a selection of individual rows
+  # gap.days
+  expect_is(d$gap.days, "numeric") # gap.days's are numbers
+  expect_equal(min(d$gap.days,na.rm=TRUE), 0) # gap.days's summaries
+  expect_equal(max(d$gap.days,na.rm=TRUE), 491)
+  expect_equal(sum(is.na(d$gap.days)), 0)
+  expect_equal(round(mean(d$gap.days,na.rm=TRUE),5), 25.95779)
+  expect_equal(round(median(d$gap.days,na.rm=TRUE),5), 0)
+  expect_equal(round(sd(d$gap.days,na.rm=TRUE),5), 54.84098)
+  expect_equal(sum(d$gap.days == 0,na.rm=TRUE), 666)
+  expect_equal(sum(d$gap.days < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 400)
+  expect_equal(d$gap.days[c(54,210,423,424,755,1050)], c(0, 16, 0, 0, 0, 68)) # a selection of individual rows
+})
+
+test_that("compute.event.int.gaps() parallel processing with snow", {
+  # compute the return value, to be used throughout:
+  d <- compute.event.int.gaps(data=med.events,
+  														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
+  														event.daily.dose.colname=NA, medication.class.colname=NA,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														consider.dosage.change=FALSE,
+  														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														followup.window.duration=365*2, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.start=0, observation.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.duration=365*2, observation.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														date.format="%m/%d/%Y",
+  														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
+  														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[3], parallel.threads=2,
+  														suppress.warnings=FALSE, return.data.table=FALSE);
+
+  expect_is(d, "data.frame") # is a data.frame
+  expect_equal(dim(d), c(1066,7)) # number of events and columns
+  expect_equal(names(d), c("PATIENT_ID","DATE","PERDAY","CATEGORY","DURATION","event.interval","gap.days")) # the names of the columns
+  # PATIENT_ID:
+  expect_is(d$PATIENT_ID, "integer") # PATIENT_ID's are integers
+  expect_equal(unique(d$PATIENT_ID), 1:100) # PATIENT_ID's are integers from 1 to 100
+  expect_equal(as.numeric(table(d$PATIENT_ID)), c(24,8,28,6,8,9,6,14,9,14,6,7,5,24,12,22,9,6,6,11,10,6,11,9,10,12,13,10,14,11,3,6,4,11,11,11,8,9,9,11,6,7,20,7,10,18,10,12,6,9,6,7,4,5,5,11,4,16,18,7,10,8,6,11,19,20,14,8,6,9,11,6,9,7,13,11,6,24,22,19,7,9,8,12,9,13,10,14,6,12,6,18,7,11,11,22,12,8,5,16)) # the distribution of PATIENT_ID's
+  expect_equal(d$PATIENT_ID[c(54,210,423,424,755,1050)], c(3,17,40,41,74,99)) # a selection of individual rows
+  # DATE:
+  expect_is(d$DATE, "character") # DATE's are characters
+  expect_equal(digest(d$DATE,"md5",serialize=TRUE,ascii=TRUE), "378d1ede8d6699c84633c0ca5c757fc2") # digest is probably safe for characters
+  expect_equal(d$DATE[c(54,210,423,424,755,1050)], c("11/10/2043", "07/07/2037", "06/22/2037", "04/11/2041", "08/03/2032", "08/01/2033")) # a selection of individual rows
+  # PERDAY:
+  expect_is(d$PERDAY, "integer") # PERDAY's are integers
+  expect_equal(unique(d$PERDAY), c(4,2,8,6,20)) # PERDAY's are integers
+  expect_equal(as.numeric(table(d$PERDAY)), c(374, 533, 123, 26, 10)) # the distribution of PERDAY's
+  expect_equal(d$PERDAY[c(54,210,423,424,755,1050)], c(2, 4, 6, 4, 2, 4)) # a selection of individual rows
+  # CATEGORY:
+  expect_is(d$CATEGORY, "character") # CATEGORY's are characters
+  expect_equal(digest(d$CATEGORY,"md5",serialize=TRUE,ascii=TRUE), "7411863b7ceb60f19f8a9b8480063a0a") # digest is probably safe for characters
+  expect_equal(d$CATEGORY[c(54,210,423,424,755,1050)], c("medB", "medB", "medB", "medA", "medB", "medB")) # a selection of individual rows
+  # DURATION:
+  expect_is(d$DURATION, "integer") # DURATION's are integers
+  expect_equal(unique(d$DURATION), c(50, 30, 60, 100, 20, 150)) # DURATION's are integers
+  expect_equal(as.numeric(table(d$DURATION)), c(54, 404, 368, 131, 105, 4)) # the distribution of DURATION's
+  expect_equal(d$DURATION[c(54,210,423,424,755,1050)], c(50, 60, 60, 50, 60, 30)) # a selection of individual rows
+  # event.interval:
+  expect_is(d$event.interval, "numeric") # event.interval's are numbers
+  expect_equal(min(d$event.interval,na.rm=TRUE), 0) # event.interval's summaries
+  expect_equal(max(d$event.interval,na.rm=TRUE), 544)
+  expect_equal(sum(is.na(d$event.interval)), 0)
+  expect_equal(round(mean(d$event.interval,na.rm=TRUE),5), 68.4803)
+  expect_equal(round(median(d$event.interval,na.rm=TRUE),5), 47.5)
+  expect_equal(round(sd(d$event.interval,na.rm=TRUE),5), 64.80363)
+  expect_equal(sum(d$event.interval == 0,na.rm=TRUE), 3)
+  expect_equal(sum(d$event.interval < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$event.interval > 0,na.rm=TRUE), 1063)
+  expect_equal(d$event.interval[c(54,210,423,424,755,1050)], c(2, 76, 62, 47, 48, 98)) # a selection of individual rows
+  # gap.days
+  expect_is(d$gap.days, "numeric") # gap.days's are numbers
+  expect_equal(min(d$gap.days,na.rm=TRUE), 0) # gap.days's summaries
+  expect_equal(max(d$gap.days,na.rm=TRUE), 491)
+  expect_equal(sum(is.na(d$gap.days)), 0)
+  expect_equal(round(mean(d$gap.days,na.rm=TRUE),5), 25.95779)
+  expect_equal(round(median(d$gap.days,na.rm=TRUE),5), 0)
+  expect_equal(round(sd(d$gap.days,na.rm=TRUE),5), 54.84098)
+  expect_equal(sum(d$gap.days == 0,na.rm=TRUE), 666)
+  expect_equal(sum(d$gap.days < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 400)
+  expect_equal(d$gap.days[c(54,210,423,424,755,1050)], c(0, 16, 0, 0, 0, 68)) # a selection of individual rows
+})
+
+test_that("compute.event.int.gaps() parallel processing with snow(SOCK)", {
+  # compute the return value, to be used throughout:
+  d <- compute.event.int.gaps(data=med.events,
+  														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
+  														event.daily.dose.colname=NA, medication.class.colname=NA,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														consider.dosage.change=FALSE,
+  														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														followup.window.duration=365*2, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.start=0, observation.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.duration=365*2, observation.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														date.format="%m/%d/%Y",
+  														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
+  														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[3], parallel.threads=2,
+  														suppress.warnings=FALSE, return.data.table=FALSE);
+
+  expect_is(d, "data.frame") # is a data.frame
+  expect_equal(dim(d), c(1066,7)) # number of events and columns
+  expect_equal(names(d), c("PATIENT_ID","DATE","PERDAY","CATEGORY","DURATION","event.interval","gap.days")) # the names of the columns
+  # PATIENT_ID:
+  expect_is(d$PATIENT_ID, "integer") # PATIENT_ID's are integers
+  expect_equal(unique(d$PATIENT_ID), 1:100) # PATIENT_ID's are integers from 1 to 100
+  expect_equal(as.numeric(table(d$PATIENT_ID)), c(24,8,28,6,8,9,6,14,9,14,6,7,5,24,12,22,9,6,6,11,10,6,11,9,10,12,13,10,14,11,3,6,4,11,11,11,8,9,9,11,6,7,20,7,10,18,10,12,6,9,6,7,4,5,5,11,4,16,18,7,10,8,6,11,19,20,14,8,6,9,11,6,9,7,13,11,6,24,22,19,7,9,8,12,9,13,10,14,6,12,6,18,7,11,11,22,12,8,5,16)) # the distribution of PATIENT_ID's
+  expect_equal(d$PATIENT_ID[c(54,210,423,424,755,1050)], c(3,17,40,41,74,99)) # a selection of individual rows
+  # DATE:
+  expect_is(d$DATE, "character") # DATE's are characters
+  expect_equal(digest(d$DATE,"md5",serialize=TRUE,ascii=TRUE), "378d1ede8d6699c84633c0ca5c757fc2") # digest is probably safe for characters
+  expect_equal(d$DATE[c(54,210,423,424,755,1050)], c("11/10/2043", "07/07/2037", "06/22/2037", "04/11/2041", "08/03/2032", "08/01/2033")) # a selection of individual rows
+  # PERDAY:
+  expect_is(d$PERDAY, "integer") # PERDAY's are integers
+  expect_equal(unique(d$PERDAY), c(4,2,8,6,20)) # PERDAY's are integers
+  expect_equal(as.numeric(table(d$PERDAY)), c(374, 533, 123, 26, 10)) # the distribution of PERDAY's
+  expect_equal(d$PERDAY[c(54,210,423,424,755,1050)], c(2, 4, 6, 4, 2, 4)) # a selection of individual rows
+  # CATEGORY:
+  expect_is(d$CATEGORY, "character") # CATEGORY's are characters
+  expect_equal(digest(d$CATEGORY,"md5",serialize=TRUE,ascii=TRUE), "7411863b7ceb60f19f8a9b8480063a0a") # digest is probably safe for characters
+  expect_equal(d$CATEGORY[c(54,210,423,424,755,1050)], c("medB", "medB", "medB", "medA", "medB", "medB")) # a selection of individual rows
+  # DURATION:
+  expect_is(d$DURATION, "integer") # DURATION's are integers
+  expect_equal(unique(d$DURATION), c(50, 30, 60, 100, 20, 150)) # DURATION's are integers
+  expect_equal(as.numeric(table(d$DURATION)), c(54, 404, 368, 131, 105, 4)) # the distribution of DURATION's
+  expect_equal(d$DURATION[c(54,210,423,424,755,1050)], c(50, 60, 60, 50, 60, 30)) # a selection of individual rows
+  # event.interval:
+  expect_is(d$event.interval, "numeric") # event.interval's are numbers
+  expect_equal(min(d$event.interval,na.rm=TRUE), 0) # event.interval's summaries
+  expect_equal(max(d$event.interval,na.rm=TRUE), 544)
+  expect_equal(sum(is.na(d$event.interval)), 0)
+  expect_equal(round(mean(d$event.interval,na.rm=TRUE),5), 68.4803)
+  expect_equal(round(median(d$event.interval,na.rm=TRUE),5), 47.5)
+  expect_equal(round(sd(d$event.interval,na.rm=TRUE),5), 64.80363)
+  expect_equal(sum(d$event.interval == 0,na.rm=TRUE), 3)
+  expect_equal(sum(d$event.interval < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$event.interval > 0,na.rm=TRUE), 1063)
+  expect_equal(d$event.interval[c(54,210,423,424,755,1050)], c(2, 76, 62, 47, 48, 98)) # a selection of individual rows
+  # gap.days
+  expect_is(d$gap.days, "numeric") # gap.days's are numbers
+  expect_equal(min(d$gap.days,na.rm=TRUE), 0) # gap.days's summaries
+  expect_equal(max(d$gap.days,na.rm=TRUE), 491)
+  expect_equal(sum(is.na(d$gap.days)), 0)
+  expect_equal(round(mean(d$gap.days,na.rm=TRUE),5), 25.95779)
+  expect_equal(round(median(d$gap.days,na.rm=TRUE),5), 0)
+  expect_equal(round(sd(d$gap.days,na.rm=TRUE),5), 54.84098)
+  expect_equal(sum(d$gap.days == 0,na.rm=TRUE), 666)
+  expect_equal(sum(d$gap.days < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 400)
+  expect_equal(d$gap.days[c(54,210,423,424,755,1050)], c(0, 16, 0, 0, 0, 68)) # a selection of individual rows
+})
+
+test_that("compute.event.int.gaps() parallel processing with snow(MPI)", {
+  # compute the return value, to be used throughout:
+  d <- compute.event.int.gaps(data=med.events,
+  														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
+  														event.daily.dose.colname=NA, medication.class.colname=NA,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														consider.dosage.change=FALSE,
+  														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														followup.window.duration=365*2, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.start=0, observation.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.duration=365*2, observation.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														date.format="%m/%d/%Y",
+  														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
+  														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[4], parallel.threads=2,
+  														suppress.warnings=FALSE, return.data.table=FALSE);
+
+  expect_is(d, "data.frame") # is a data.frame
+  expect_equal(dim(d), c(1066,7)) # number of events and columns
+  expect_equal(names(d), c("PATIENT_ID","DATE","PERDAY","CATEGORY","DURATION","event.interval","gap.days")) # the names of the columns
+  # PATIENT_ID:
+  expect_is(d$PATIENT_ID, "integer") # PATIENT_ID's are integers
+  expect_equal(unique(d$PATIENT_ID), 1:100) # PATIENT_ID's are integers from 1 to 100
+  expect_equal(as.numeric(table(d$PATIENT_ID)), c(24,8,28,6,8,9,6,14,9,14,6,7,5,24,12,22,9,6,6,11,10,6,11,9,10,12,13,10,14,11,3,6,4,11,11,11,8,9,9,11,6,7,20,7,10,18,10,12,6,9,6,7,4,5,5,11,4,16,18,7,10,8,6,11,19,20,14,8,6,9,11,6,9,7,13,11,6,24,22,19,7,9,8,12,9,13,10,14,6,12,6,18,7,11,11,22,12,8,5,16)) # the distribution of PATIENT_ID's
+  expect_equal(d$PATIENT_ID[c(54,210,423,424,755,1050)], c(3,17,40,41,74,99)) # a selection of individual rows
+  # DATE:
+  expect_is(d$DATE, "character") # DATE's are characters
+  expect_equal(digest(d$DATE,"md5",serialize=TRUE,ascii=TRUE), "378d1ede8d6699c84633c0ca5c757fc2") # digest is probably safe for characters
+  expect_equal(d$DATE[c(54,210,423,424,755,1050)], c("11/10/2043", "07/07/2037", "06/22/2037", "04/11/2041", "08/03/2032", "08/01/2033")) # a selection of individual rows
+  # PERDAY:
+  expect_is(d$PERDAY, "integer") # PERDAY's are integers
+  expect_equal(unique(d$PERDAY), c(4,2,8,6,20)) # PERDAY's are integers
+  expect_equal(as.numeric(table(d$PERDAY)), c(374, 533, 123, 26, 10)) # the distribution of PERDAY's
+  expect_equal(d$PERDAY[c(54,210,423,424,755,1050)], c(2, 4, 6, 4, 2, 4)) # a selection of individual rows
+  # CATEGORY:
+  expect_is(d$CATEGORY, "character") # CATEGORY's are characters
+  expect_equal(digest(d$CATEGORY,"md5",serialize=TRUE,ascii=TRUE), "7411863b7ceb60f19f8a9b8480063a0a") # digest is probably safe for characters
+  expect_equal(d$CATEGORY[c(54,210,423,424,755,1050)], c("medB", "medB", "medB", "medA", "medB", "medB")) # a selection of individual rows
+  # DURATION:
+  expect_is(d$DURATION, "integer") # DURATION's are integers
+  expect_equal(unique(d$DURATION), c(50, 30, 60, 100, 20, 150)) # DURATION's are integers
+  expect_equal(as.numeric(table(d$DURATION)), c(54, 404, 368, 131, 105, 4)) # the distribution of DURATION's
+  expect_equal(d$DURATION[c(54,210,423,424,755,1050)], c(50, 60, 60, 50, 60, 30)) # a selection of individual rows
+  # event.interval:
+  expect_is(d$event.interval, "numeric") # event.interval's are numbers
+  expect_equal(min(d$event.interval,na.rm=TRUE), 0) # event.interval's summaries
+  expect_equal(max(d$event.interval,na.rm=TRUE), 544)
+  expect_equal(sum(is.na(d$event.interval)), 0)
+  expect_equal(round(mean(d$event.interval,na.rm=TRUE),5), 68.4803)
+  expect_equal(round(median(d$event.interval,na.rm=TRUE),5), 47.5)
+  expect_equal(round(sd(d$event.interval,na.rm=TRUE),5), 64.80363)
+  expect_equal(sum(d$event.interval == 0,na.rm=TRUE), 3)
+  expect_equal(sum(d$event.interval < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$event.interval > 0,na.rm=TRUE), 1063)
+  expect_equal(d$event.interval[c(54,210,423,424,755,1050)], c(2, 76, 62, 47, 48, 98)) # a selection of individual rows
+  # gap.days
+  expect_is(d$gap.days, "numeric") # gap.days's are numbers
+  expect_equal(min(d$gap.days,na.rm=TRUE), 0) # gap.days's summaries
+  expect_equal(max(d$gap.days,na.rm=TRUE), 491)
+  expect_equal(sum(is.na(d$gap.days)), 0)
+  expect_equal(round(mean(d$gap.days,na.rm=TRUE),5), 25.95779)
+  expect_equal(round(median(d$gap.days,na.rm=TRUE),5), 0)
+  expect_equal(round(sd(d$gap.days,na.rm=TRUE),5), 54.84098)
+  expect_equal(sum(d$gap.days == 0,na.rm=TRUE), 666)
+  expect_equal(sum(d$gap.days < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 400)
+  expect_equal(d$gap.days[c(54,210,423,424,755,1050)], c(0, 16, 0, 0, 0, 68)) # a selection of individual rows
+})
+
+test_that("compute.event.int.gaps() parallel processing with snow(NWS)", {
+  # compute the return value, to be used throughout:
+  d <- compute.event.int.gaps(data=med.events,
+  														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
+  														event.daily.dose.colname=NA, medication.class.colname=NA,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														consider.dosage.change=FALSE,
+  														followup.window.start=0, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														followup.window.duration=365*2, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.start=0, observation.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.duration=365*2, observation.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														date.format="%m/%d/%Y",
+  														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
+  														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[4], parallel.threads=2,
+  														suppress.warnings=FALSE, return.data.table=FALSE);
+
+  expect_is(d, "data.frame") # is a data.frame
+  expect_equal(dim(d), c(1066,7)) # number of events and columns
+  expect_equal(names(d), c("PATIENT_ID","DATE","PERDAY","CATEGORY","DURATION","event.interval","gap.days")) # the names of the columns
+  # PATIENT_ID:
+  expect_is(d$PATIENT_ID, "integer") # PATIENT_ID's are integers
+  expect_equal(unique(d$PATIENT_ID), 1:100) # PATIENT_ID's are integers from 1 to 100
+  expect_equal(as.numeric(table(d$PATIENT_ID)), c(24,8,28,6,8,9,6,14,9,14,6,7,5,24,12,22,9,6,6,11,10,6,11,9,10,12,13,10,14,11,3,6,4,11,11,11,8,9,9,11,6,7,20,7,10,18,10,12,6,9,6,7,4,5,5,11,4,16,18,7,10,8,6,11,19,20,14,8,6,9,11,6,9,7,13,11,6,24,22,19,7,9,8,12,9,13,10,14,6,12,6,18,7,11,11,22,12,8,5,16)) # the distribution of PATIENT_ID's
+  expect_equal(d$PATIENT_ID[c(54,210,423,424,755,1050)], c(3,17,40,41,74,99)) # a selection of individual rows
+  # DATE:
+  expect_is(d$DATE, "character") # DATE's are characters
+  expect_equal(digest(d$DATE,"md5",serialize=TRUE,ascii=TRUE), "378d1ede8d6699c84633c0ca5c757fc2") # digest is probably safe for characters
+  expect_equal(d$DATE[c(54,210,423,424,755,1050)], c("11/10/2043", "07/07/2037", "06/22/2037", "04/11/2041", "08/03/2032", "08/01/2033")) # a selection of individual rows
+  # PERDAY:
+  expect_is(d$PERDAY, "integer") # PERDAY's are integers
+  expect_equal(unique(d$PERDAY), c(4,2,8,6,20)) # PERDAY's are integers
+  expect_equal(as.numeric(table(d$PERDAY)), c(374, 533, 123, 26, 10)) # the distribution of PERDAY's
+  expect_equal(d$PERDAY[c(54,210,423,424,755,1050)], c(2, 4, 6, 4, 2, 4)) # a selection of individual rows
+  # CATEGORY:
+  expect_is(d$CATEGORY, "character") # CATEGORY's are characters
+  expect_equal(digest(d$CATEGORY,"md5",serialize=TRUE,ascii=TRUE), "7411863b7ceb60f19f8a9b8480063a0a") # digest is probably safe for characters
+  expect_equal(d$CATEGORY[c(54,210,423,424,755,1050)], c("medB", "medB", "medB", "medA", "medB", "medB")) # a selection of individual rows
+  # DURATION:
+  expect_is(d$DURATION, "integer") # DURATION's are integers
+  expect_equal(unique(d$DURATION), c(50, 30, 60, 100, 20, 150)) # DURATION's are integers
+  expect_equal(as.numeric(table(d$DURATION)), c(54, 404, 368, 131, 105, 4)) # the distribution of DURATION's
+  expect_equal(d$DURATION[c(54,210,423,424,755,1050)], c(50, 60, 60, 50, 60, 30)) # a selection of individual rows
+  # event.interval:
+  expect_is(d$event.interval, "numeric") # event.interval's are numbers
+  expect_equal(min(d$event.interval,na.rm=TRUE), 0) # event.interval's summaries
+  expect_equal(max(d$event.interval,na.rm=TRUE), 544)
+  expect_equal(sum(is.na(d$event.interval)), 0)
+  expect_equal(round(mean(d$event.interval,na.rm=TRUE),5), 68.4803)
+  expect_equal(round(median(d$event.interval,na.rm=TRUE),5), 47.5)
+  expect_equal(round(sd(d$event.interval,na.rm=TRUE),5), 64.80363)
+  expect_equal(sum(d$event.interval == 0,na.rm=TRUE), 3)
+  expect_equal(sum(d$event.interval < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$event.interval > 0,na.rm=TRUE), 1063)
+  expect_equal(d$event.interval[c(54,210,423,424,755,1050)], c(2, 76, 62, 47, 48, 98)) # a selection of individual rows
+  # gap.days
+  expect_is(d$gap.days, "numeric") # gap.days's are numbers
+  expect_equal(min(d$gap.days,na.rm=TRUE), 0) # gap.days's summaries
+  expect_equal(max(d$gap.days,na.rm=TRUE), 491)
+  expect_equal(sum(is.na(d$gap.days)), 0)
+  expect_equal(round(mean(d$gap.days,na.rm=TRUE),5), 25.95779)
+  expect_equal(round(median(d$gap.days,na.rm=TRUE),5), 0)
+  expect_equal(round(sd(d$gap.days,na.rm=TRUE),5), 54.84098)
+  expect_equal(sum(d$gap.days == 0,na.rm=TRUE), 666)
+  expect_equal(sum(d$gap.days < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 400)
+  expect_equal(d$gap.days[c(54,210,423,424,755,1050)], c(0, 16, 0, 0, 0, 68)) # a selection of individual rows
+})
+
+
+test_that("compute.event.int.gaps() with daily dose (small offset observation window)", {
+  # compute the return value, to be used throughout:
+  d <- compute.event.int.gaps(data=med.events,
+  														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
+  														event.daily.dose.colname="PERDAY", medication.class.colname=NA,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														consider.dosage.change=FALSE,
+  														followup.window.start=30, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														followup.window.duration=365*2-30, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.start=60, observation.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.duration=365*1, observation.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														date.format="%m/%d/%Y",
+  														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
+  														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[1], parallel.threads=2,
+  														suppress.warnings=FALSE, return.data.table=FALSE);
+
+  expect_is(d, "data.frame") # is a data.frame
+  expect_equal(dim(d), c(954,7)) # number of events and columns
+  expect_equal(names(d), c("PATIENT_ID","DATE","PERDAY","CATEGORY","DURATION","event.interval","gap.days")) # the names of the columns
+  # PATIENT_ID:
+  expect_is(d$PATIENT_ID, "integer") # PATIENT_ID's are integers
+  expect_equal(unique(d$PATIENT_ID), 1:100) # PATIENT_ID's are integers from 1 to 100
+  expect_equal(as.numeric(table(d$PATIENT_ID)), c(23,7,27,5,7,8,5,13,8,13,5,6,4,23,11,20,8,5,5,10,9,5,10,8,9,11,11,9,13,10,2,5,3,10,10,10,7,7,8,10,5,6,18,6,9,17,9,11,4,8,5,6,3,4,4,9,3,15,17,6,9,7,5,10,18,19,12,7,4,8,10,5,7,6,12,10,5,23,20,18,6,7,7,11,8,11,9,13,5,11,5,17,6,10,10,21,11,7,4,15)) # the distribution of PATIENT_ID's
+  expect_equal(d$PATIENT_ID[c(54,210,423,424,755,913)], c(3,20,45,45,80,96)) # a selection of individual rows
+  # DATE:
+  expect_is(d$DATE, "character") # DATE's are characters
+  expect_equal(digest(d$DATE,"md5",serialize=TRUE,ascii=TRUE), "ba2466219a1587cd6857bee8576b7491") # digest is probably safe for characters
+  expect_equal(d$DATE[c(54,210,423,424,755,913)], c("01/03/2044", "12/08/2036", "12/10/2043", "01/29/2044", "09/30/2042", "10/23/2043")) # a selection of individual rows
+  # PERDAY:
+  expect_is(d$PERDAY, "integer") # PERDAY's are integers
+  expect_equal(unique(d$PERDAY), c(4,2,8,6,20)) # PERDAY's are integers
+  expect_equal(as.numeric(table(d$PERDAY)), c(338, 472, 115, 21, 8)) # the distribution of PERDAY's
+  expect_equal(d$PERDAY[c(54,210,423,424,755,913)], c(4, 4, 2, 2, 6, 2)) # a selection of individual rows
+  # CATEGORY:
+  expect_is(d$CATEGORY, "character") # CATEGORY's are characters
+  expect_equal(digest(d$CATEGORY,"md5",serialize=TRUE,ascii=TRUE), "55bf840983b1c93726548617fbd9b5e8") # digest is probably safe for characters
+  expect_equal(d$CATEGORY[c(54,210,423,424,755,913)], c("medB", "medB", "medA", "medA", "medB", "medB")) # a selection of individual rows
+  # DURATION:
+  expect_is(d$DURATION, "integer") # DURATION's are integers
+  expect_equal(unique(d$DURATION), c(30,  50,  60, 100,  20, 150)) # DURATION's are integers
+  expect_equal(as.numeric(table(d$DURATION)), c(49, 394, 298, 128,  83,   2)) # the distribution of DURATION's
+  expect_equal(d$DURATION[c(54,210,423,424,755,913)], c(30, 30, 50, 50, 30, 60)) # a selection of individual rows
+  # event.interval:
+  expect_is(d$event.interval, "numeric") # event.interval's are numbers
+  expect_equal(min(d$event.interval,na.rm=TRUE), 0) # event.interval's summaries
+  expect_equal(max(d$event.interval,na.rm=TRUE), 349)
+  expect_equal(sum(is.na(d$event.interval)), 504)
+  expect_equal(round(mean(d$event.interval,na.rm=TRUE),5), 63.94)
+  expect_equal(round(median(d$event.interval,na.rm=TRUE),5), 45)
+  expect_equal(round(sd(d$event.interval,na.rm=TRUE),5), 55.78533)
+  expect_equal(sum(d$event.interval == 0,na.rm=TRUE), 1)
+  expect_equal(sum(d$event.interval < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$event.interval > 0,na.rm=TRUE), 449)
+  expect_equal(d$event.interval[c(64,233,416,418,725,901)], c(39,  6, 27, 33, 31, 43)) # a selection of individual rows
+  # gap.days
+  expect_is(d$gap.days, "numeric") # gap.days's are numbers
+  expect_equal(min(d$gap.days,na.rm=TRUE), 0) # gap.days's summaries
+  expect_equal(max(d$gap.days,na.rm=TRUE), 299)
+  expect_equal(sum(is.na(d$gap.days)), 504)
+  expect_equal(round(mean(d$gap.days,na.rm=TRUE),5), 23.53333)
+  expect_equal(round(median(d$gap.days,na.rm=TRUE),5), 0)
+  expect_equal(round(sd(d$gap.days,na.rm=TRUE),5), 45.40999)
+  expect_equal(sum(d$gap.days == 0,na.rm=TRUE), 258)
+  expect_equal(sum(d$gap.days < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 192)
+  expect_equal(d$gap.days[c(64,233,416,418,725,901)], c(9, 0, 0, 0, 0, 0)) # a selection of individual rows
+})
+
+test_that("compute.event.int.gaps() with daily dose (small offset observation window) without carry over within", {
+  # compute the return value, to be used throughout:
+  d <- compute.event.int.gaps(data=med.events,
+  														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
+  														event.daily.dose.colname="PERDAY", medication.class.colname=NA,
+  														carryover.within.obs.window=FALSE, carryover.into.obs.window=FALSE, carry.only.for.same.medication=FALSE,
+  														consider.dosage.change=FALSE,
+  														followup.window.start=30, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														followup.window.duration=365*2-30, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.start=60, observation.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.duration=365*1, observation.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														date.format="%m/%d/%Y",
+  														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
+  														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[1], parallel.threads=2,
+  														suppress.warnings=FALSE, return.data.table=FALSE);
+
+  expect_is(d, "data.frame") # is a data.frame
+  expect_equal(dim(d), c(954,7)) # number of events and columns
+  expect_equal(names(d), c("PATIENT_ID","DATE","PERDAY","CATEGORY","DURATION","event.interval","gap.days")) # the names of the columns
+  # PATIENT_ID:
+  expect_is(d$PATIENT_ID, "integer") # PATIENT_ID's are integers
+  expect_equal(unique(d$PATIENT_ID), 1:100) # PATIENT_ID's are integers from 1 to 100
+  expect_equal(as.numeric(table(d$PATIENT_ID)), c(23,7,27,5,7,8,5,13,8,13,5,6,4,23,11,20,8,5,5,10,9,5,10,8,9,11,11,9,13,10,2,5,3,10,10,10,7,7,8,10,5,6,18,6,9,17,9,11,4,8,5,6,3,4,4,9,3,15,17,6,9,7,5,10,18,19,12,7,4,8,10,5,7,6,12,10,5,23,20,18,6,7,7,11,8,11,9,13,5,11,5,17,6,10,10,21,11,7,4,15)) # the distribution of PATIENT_ID's
+  expect_equal(d$PATIENT_ID[c(54,210,423,424,755,913)], c(3,20,45,45,80,96)) # a selection of individual rows
+  # DATE:
+  expect_is(d$DATE, "character") # DATE's are characters
+  expect_equal(digest(d$DATE,"md5",serialize=TRUE,ascii=TRUE), "ba2466219a1587cd6857bee8576b7491") # digest is probably safe for characters
+  expect_equal(d$DATE[c(54,210,423,424,755,913)], c("01/03/2044", "12/08/2036", "12/10/2043", "01/29/2044", "09/30/2042", "10/23/2043")) # a selection of individual rows
+  # PERDAY:
+  expect_is(d$PERDAY, "integer") # PERDAY's are integers
+  expect_equal(unique(d$PERDAY), c(4,2,8,6,20)) # PERDAY's are integers
+  expect_equal(as.numeric(table(d$PERDAY)), c(338, 472, 115, 21, 8)) # the distribution of PERDAY's
+  expect_equal(d$PERDAY[c(54,210,423,424,755,913)], c(4, 4, 2, 2, 6, 2)) # a selection of individual rows
+  # CATEGORY:
+  expect_is(d$CATEGORY, "character") # CATEGORY's are characters
+  expect_equal(digest(d$CATEGORY,"md5",serialize=TRUE,ascii=TRUE), "55bf840983b1c93726548617fbd9b5e8") # digest is probably safe for characters
+  expect_equal(d$CATEGORY[c(54,210,423,424,755,913)], c("medB", "medB", "medA", "medA", "medB", "medB")) # a selection of individual rows
+  # DURATION:
+  expect_is(d$DURATION, "integer") # DURATION's are integers
+  expect_equal(unique(d$DURATION), c(30,  50,  60, 100,  20, 150)) # DURATION's are integers
+  expect_equal(as.numeric(table(d$DURATION)), c(49, 394, 298, 128,  83,   2)) # the distribution of DURATION's
+  expect_equal(d$DURATION[c(54,210,423,424,755,913)], c(30, 30, 50, 50, 30, 60)) # a selection of individual rows
+  # event.interval:
+  expect_is(d$event.interval, "numeric") # event.interval's are numbers
+  expect_equal(min(d$event.interval,na.rm=TRUE), 0) # event.interval's summaries
+  expect_equal(max(d$event.interval,na.rm=TRUE), 349)
+  expect_equal(sum(is.na(d$event.interval)), 504)
+  expect_equal(round(mean(d$event.interval,na.rm=TRUE),5), 63.94)
+  expect_equal(round(median(d$event.interval,na.rm=TRUE),5), 45)
+  expect_equal(round(sd(d$event.interval,na.rm=TRUE),5), 55.78533)
+  expect_equal(sum(d$event.interval == 0,na.rm=TRUE), 1)
+  expect_equal(sum(d$event.interval < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$event.interval > 0,na.rm=TRUE), 449)
+  expect_equal(d$event.interval[c(64,233,416,418,725,901)], c(39,  6, 27, 33, 31, 43)) # a selection of individual rows
+  # gap.days
+  expect_is(d$gap.days, "numeric") # gap.days's are numbers
+  expect_equal(min(d$gap.days,na.rm=TRUE), 0) # gap.days's summaries
+  expect_equal(max(d$gap.days,na.rm=TRUE), 299)
+  expect_equal(sum(is.na(d$gap.days)), 504)
+  expect_equal(round(mean(d$gap.days,na.rm=TRUE),5), 26.76667)
+  expect_equal(round(median(d$gap.days,na.rm=TRUE),5), 3)
+  expect_equal(round(sd(d$gap.days,na.rm=TRUE),5), 45.73704)
+  expect_equal(sum(d$gap.days == 0,na.rm=TRUE), 205)
+  expect_equal(sum(d$gap.days < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 245)
+  expect_equal(d$gap.days[c(64,233,416,418,725,901)], c(9, 0, 0, 0, 0, 0)) # a selection of individual rows
+})
+
+test_that("compute.event.int.gaps() with daily dose (small offset observation window) with carry over into and within", {
+  # compute the return value, to be used throughout:
+  d <- compute.event.int.gaps(data=med.events,
+  														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
+  														event.daily.dose.colname="PERDAY", medication.class.colname=NA,
+  														carryover.within.obs.window=TRUE, carryover.into.obs.window=TRUE, carry.only.for.same.medication=FALSE,
+  														consider.dosage.change=FALSE,
+  														followup.window.start=30, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														followup.window.duration=365*2-30, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.start=60, observation.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.duration=365*1, observation.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														date.format="%m/%d/%Y",
+  														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
+  														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[1], parallel.threads=2,
+  														suppress.warnings=FALSE, return.data.table=FALSE);
+
+  expect_is(d, "data.frame") # is a data.frame
+  expect_equal(dim(d), c(954,7)) # number of events and columns
+  expect_equal(names(d), c("PATIENT_ID","DATE","PERDAY","CATEGORY","DURATION","event.interval","gap.days")) # the names of the columns
+  # PATIENT_ID:
+  expect_is(d$PATIENT_ID, "integer") # PATIENT_ID's are integers
+  expect_equal(unique(d$PATIENT_ID), 1:100) # PATIENT_ID's are integers from 1 to 100
+  expect_equal(as.numeric(table(d$PATIENT_ID)), c(23,7,27,5,7,8,5,13,8,13,5,6,4,23,11,20,8,5,5,10,9,5,10,8,9,11,11,9,13,10,2,5,3,10,10,10,7,7,8,10,5,6,18,6,9,17,9,11,4,8,5,6,3,4,4,9,3,15,17,6,9,7,5,10,18,19,12,7,4,8,10,5,7,6,12,10,5,23,20,18,6,7,7,11,8,11,9,13,5,11,5,17,6,10,10,21,11,7,4,15)) # the distribution of PATIENT_ID's
+  expect_equal(d$PATIENT_ID[c(54,210,423,424,755,913)], c(3,20,45,45,80,96)) # a selection of individual rows
+  # DATE:
+  expect_is(d$DATE, "character") # DATE's are characters
+  expect_equal(digest(d$DATE,"md5",serialize=TRUE,ascii=TRUE), "ba2466219a1587cd6857bee8576b7491") # digest is probably safe for characters
+  expect_equal(d$DATE[c(54,210,423,424,755,913)], c("01/03/2044", "12/08/2036", "12/10/2043", "01/29/2044", "09/30/2042", "10/23/2043")) # a selection of individual rows
+  # PERDAY:
+  expect_is(d$PERDAY, "integer") # PERDAY's are integers
+  expect_equal(unique(d$PERDAY), c(4,2,8,6,20)) # PERDAY's are integers
+  expect_equal(as.numeric(table(d$PERDAY)), c(338, 472, 115, 21, 8)) # the distribution of PERDAY's
+  expect_equal(d$PERDAY[c(54,210,423,424,755,913)], c(4, 4, 2, 2, 6, 2)) # a selection of individual rows
+  # CATEGORY:
+  expect_is(d$CATEGORY, "character") # CATEGORY's are characters
+  expect_equal(digest(d$CATEGORY,"md5",serialize=TRUE,ascii=TRUE), "55bf840983b1c93726548617fbd9b5e8") # digest is probably safe for characters
+  expect_equal(d$CATEGORY[c(54,210,423,424,755,913)], c("medB", "medB", "medA", "medA", "medB", "medB")) # a selection of individual rows
+  # DURATION:
+  expect_is(d$DURATION, "integer") # DURATION's are integers
+  expect_equal(unique(d$DURATION), c(30,  50,  60, 100,  20, 150)) # DURATION's are integers
+  expect_equal(as.numeric(table(d$DURATION)), c(49, 394, 298, 128,  83,   2)) # the distribution of DURATION's
+  expect_equal(d$DURATION[c(54,210,423,424,755,913)], c(30, 30, 50, 50, 30, 60)) # a selection of individual rows
+  # event.interval:
+  expect_is(d$event.interval, "numeric") # event.interval's are numbers
+  expect_equal(min(d$event.interval,na.rm=TRUE), 0) # event.interval's summaries
+  expect_equal(max(d$event.interval,na.rm=TRUE), 349)
+  expect_equal(sum(is.na(d$event.interval)), 504)
+  expect_equal(round(mean(d$event.interval,na.rm=TRUE),5), 63.94)
+  expect_equal(round(median(d$event.interval,na.rm=TRUE),5), 45)
+  expect_equal(round(sd(d$event.interval,na.rm=TRUE),5), 55.78533)
+  expect_equal(sum(d$event.interval == 0,na.rm=TRUE), 1)
+  expect_equal(sum(d$event.interval < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$event.interval > 0,na.rm=TRUE), 449)
+  expect_equal(d$event.interval[c(64,233,416,418,725,901)], c(39,  6, 27, 33, 31, 43)) # a selection of individual rows
+  # gap.days
+  expect_is(d$gap.days, "numeric") # gap.days's are numbers
+  expect_equal(min(d$gap.days,na.rm=TRUE), 0) # gap.days's summaries
+  expect_equal(max(d$gap.days,na.rm=TRUE), 358)
+  expect_equal(sum(is.na(d$gap.days)), 429)
+  expect_equal(round(mean(d$gap.days,na.rm=TRUE),5), 23.12571)
+  expect_equal(round(median(d$gap.days,na.rm=TRUE),5), 0)
+  expect_equal(round(sd(d$gap.days,na.rm=TRUE),5), 47.41742)
+  expect_equal(sum(d$gap.days == 0,na.rm=TRUE), 308)
+  expect_equal(sum(d$gap.days < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 217)
+  expect_equal(d$gap.days[c(64,233,416,418,725,901)], c(8, 0, 0, 0, 0, 0)) # a selection of individual rows
+})
+
+test_that("compute.event.int.gaps() with daily dose (small offset observation window) with carry over into but not within", {
+  # compute the return value, to be used throughout:
+  d <- compute.event.int.gaps(data=med.events,
+  														ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION",
+  														event.daily.dose.colname="PERDAY", medication.class.colname=NA,
+  														carryover.within.obs.window=FALSE, carryover.into.obs.window=TRUE, carry.only.for.same.medication=FALSE,
+  														consider.dosage.change=FALSE,
+  														followup.window.start=30, followup.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														followup.window.duration=365*2-30, followup.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.start=60, observation.window.start.unit=c("days", "weeks", "months", "years")[1],
+  														observation.window.duration=365*1, observation.window.duration.unit=c("days", "weeks", "months", "years")[1],
+  														date.format="%m/%d/%Y",
+  														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
+  														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[1], parallel.threads=2,
+  														suppress.warnings=FALSE, return.data.table=FALSE);
+
+  expect_is(d, "data.frame") # is a data.frame
+  expect_equal(dim(d), c(954,7)) # number of events and columns
+  expect_equal(names(d), c("PATIENT_ID","DATE","PERDAY","CATEGORY","DURATION","event.interval","gap.days")) # the names of the columns
+  # PATIENT_ID:
+  expect_is(d$PATIENT_ID, "integer") # PATIENT_ID's are integers
+  expect_equal(unique(d$PATIENT_ID), 1:100) # PATIENT_ID's are integers from 1 to 100
+  expect_equal(as.numeric(table(d$PATIENT_ID)), c(23,7,27,5,7,8,5,13,8,13,5,6,4,23,11,20,8,5,5,10,9,5,10,8,9,11,11,9,13,10,2,5,3,10,10,10,7,7,8,10,5,6,18,6,9,17,9,11,4,8,5,6,3,4,4,9,3,15,17,6,9,7,5,10,18,19,12,7,4,8,10,5,7,6,12,10,5,23,20,18,6,7,7,11,8,11,9,13,5,11,5,17,6,10,10,21,11,7,4,15)) # the distribution of PATIENT_ID's
+  expect_equal(d$PATIENT_ID[c(54,210,423,424,755,913)], c(3,20,45,45,80,96)) # a selection of individual rows
+  # DATE:
+  expect_is(d$DATE, "character") # DATE's are characters
+  expect_equal(digest(d$DATE,"md5",serialize=TRUE,ascii=TRUE), "ba2466219a1587cd6857bee8576b7491") # digest is probably safe for characters
+  expect_equal(d$DATE[c(54,210,423,424,755,913)], c("01/03/2044", "12/08/2036", "12/10/2043", "01/29/2044", "09/30/2042", "10/23/2043")) # a selection of individual rows
+  # PERDAY:
+  expect_is(d$PERDAY, "integer") # PERDAY's are integers
+  expect_equal(unique(d$PERDAY), c(4,2,8,6,20)) # PERDAY's are integers
+  expect_equal(as.numeric(table(d$PERDAY)), c(338, 472, 115, 21, 8)) # the distribution of PERDAY's
+  expect_equal(d$PERDAY[c(54,210,423,424,755,913)], c(4, 4, 2, 2, 6, 2)) # a selection of individual rows
+  # CATEGORY:
+  expect_is(d$CATEGORY, "character") # CATEGORY's are characters
+  expect_equal(digest(d$CATEGORY,"md5",serialize=TRUE,ascii=TRUE), "55bf840983b1c93726548617fbd9b5e8") # digest is probably safe for characters
+  expect_equal(d$CATEGORY[c(54,210,423,424,755,913)], c("medB", "medB", "medA", "medA", "medB", "medB")) # a selection of individual rows
+  # DURATION:
+  expect_is(d$DURATION, "integer") # DURATION's are integers
+  expect_equal(unique(d$DURATION), c(30,  50,  60, 100,  20, 150)) # DURATION's are integers
+  expect_equal(as.numeric(table(d$DURATION)), c(49, 394, 298, 128,  83,   2)) # the distribution of DURATION's
+  expect_equal(d$DURATION[c(54,210,423,424,755,913)], c(30, 30, 50, 50, 30, 60)) # a selection of individual rows
+  # event.interval:
+  expect_is(d$event.interval, "numeric") # event.interval's are numbers
+  expect_equal(min(d$event.interval,na.rm=TRUE), 0) # event.interval's summaries
+  expect_equal(max(d$event.interval,na.rm=TRUE), 349)
+  expect_equal(sum(is.na(d$event.interval)), 504)
+  expect_equal(round(mean(d$event.interval,na.rm=TRUE),5), 63.94)
+  expect_equal(round(median(d$event.interval,na.rm=TRUE),5), 45)
+  expect_equal(round(sd(d$event.interval,na.rm=TRUE),5), 55.78533)
+  expect_equal(sum(d$event.interval == 0,na.rm=TRUE), 1)
+  expect_equal(sum(d$event.interval < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$event.interval > 0,na.rm=TRUE), 449)
+  expect_equal(d$event.interval[c(64,233,416,418,725,901)], c(39,  6, 27, 33, 31, 43)) # a selection of individual rows
+  # gap.days
+  expect_is(d$gap.days, "numeric") # gap.days's are numbers
+  expect_equal(min(d$gap.days,na.rm=TRUE), 0) # gap.days's summaries
+  expect_equal(max(d$gap.days,na.rm=TRUE), 358)
+  expect_equal(sum(is.na(d$gap.days)), 429)
+  expect_equal(round(mean(d$gap.days,na.rm=TRUE),5), 27.05714)
+  expect_equal(round(median(d$gap.days,na.rm=TRUE),5), 3)
+  expect_equal(round(sd(d$gap.days,na.rm=TRUE),5), 47.9592)
+  expect_equal(sum(d$gap.days == 0,na.rm=TRUE), 240)
+  expect_equal(sum(d$gap.days < 0,na.rm=TRUE), 0)
+  expect_equal(sum(d$gap.days > 0,na.rm=TRUE), 285)
+  expect_equal(d$gap.days[c(64,233,416,418,725,901)], c(9, 0, 0, 0, 0, 0)) # a selection of individual rows
+})
+
+
 
 
 

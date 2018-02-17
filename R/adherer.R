@@ -1795,58 +1795,90 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       } else if( slen > 1 ) # at least one event in the observation window
       {
         # Computations happen within the observation window
-        # was there a change in medication?
-        if( !is.na(medication.class.colname) )
+        if( carryover.within.obs.window )
         {
-          medication.changed <- c((medication.class.column[s[-slen]] != medication.class.column[s[-1]]), FALSE);
-        } else
-        {
-          medication.changed <- rep(FALSE,slen);
-        }
-        # was there a change in dosage?
-        if( !is.na(event.daily.dose.colname) )
-        {
-          dosage.change.ratio <- c((event.daily.dose.column[s[-slen]] / event.daily.dose.column[s[-1]]), 1.0);
-        } else
-        {
-          dosage.change.ratio <- rep(1.0,slen);
-        }
-        # event intervals:
-        .EVENT.INTERVAL[s]       <- .TDIFF2[s]; # save the time difference between next and current event start dates, but
-        .EVENT.INTERVAL[s[slen]] <- .difftime.Dates.as.days(.OBS.END.DATE, event.date2.column[s[slen]]); # for last event, the interval ends at the end of OW
-        # event.interval - event.duration:
-        .event.interval.minus.duration <- (.EVENT.INTERVAL[s] - event.duration.column[s]);
-        # cache various medication and dosage change conditions:
-        cond1 <- (carry.only.for.same.medication & medication.changed);
-        cond2 <- ((carry.only.for.same.medication & consider.dosage.change & !medication.changed) | (!carry.only.for.same.medication & consider.dosage.change));
+          # do carry over within the observation window:
 
-        carry.over <- 0; # Initially, no carry-over into the first event
-        # for each event:
-        for( i in seq_along(s) ) # this for loop is not a performance bottleneck!
-        {
-          si <- s[i]; # caching s[i] as it's used a lot
-
-          # Save the carry-over into the event:
-          .CARRY.OVER.FROM.BEFORE[si] <- carry.over;
-
-          # Computing the gap between events:
-          gap <- (.event.interval.minus.duration[i] - carry.over); # subtract the event duration and carry-over from event interval
-          if( gap < 0.0 ) # the actual gap cannot be negative
+          # was there a change in medication?
+          if( !is.na(medication.class.colname) )
           {
-            .GAP.DAYS[si] <- 0.0; carry.over <- (-gap);
+            medication.changed <- c((medication.class.column[s[-slen]] != medication.class.column[s[-1]]), FALSE);
           } else
           {
-            .GAP.DAYS[si] <- gap; carry.over <- 0.0;
+            medication.changed <- rep(FALSE,slen);
           }
+          # was there a change in dosage?
+          if( !is.na(event.daily.dose.colname) )
+          {
+            dosage.change.ratio <- c((event.daily.dose.column[s[-slen]] / event.daily.dose.column[s[-1]]), 1.0);
+          } else
+          {
+            dosage.change.ratio <- rep(1.0,slen);
+          }
+          # event intervals:
+          .EVENT.INTERVAL[s]       <- .TDIFF2[s]; # save the time difference between next and current event start dates, but
+          .EVENT.INTERVAL[s[slen]] <- .difftime.Dates.as.days(.OBS.END.DATE, event.date2.column[s[slen]]); # for last event, the interval ends at the end of OW
+          # event.interval - event.duration:
+          .event.interval.minus.duration <- (.EVENT.INTERVAL[s] - event.duration.column[s]);
+          # cache various medication and dosage change conditions:
+          cond1 <- (carry.only.for.same.medication & medication.changed);
+          cond2 <- ((carry.only.for.same.medication & consider.dosage.change & !medication.changed) | (!carry.only.for.same.medication & consider.dosage.change));
 
-          if( cond1[i] )
+          carry.over <- 0; # Initially, no carry-over into the first event
+          # for each event:
+          for( i in seq_along(s) ) # this for loop is not a performance bottleneck!
           {
-            # Do not carry over across medication changes:
-            carry.over <- 0;
-          } else if( cond2[i] )
+            si <- s[i]; # caching s[i] as it's used a lot
+
+            # Save the carry-over into the event:
+            .CARRY.OVER.FROM.BEFORE[si] <- carry.over;
+
+            # Computing the gap between events:
+            gap <- (.event.interval.minus.duration[i] - carry.over); # subtract the event duration and carry-over from event interval
+            if( gap < 0.0 ) # the actual gap cannot be negative
+            {
+              .GAP.DAYS[si] <- 0.0; carry.over <- (-gap);
+            } else
+            {
+              .GAP.DAYS[si] <- gap; carry.over <- 0.0;
+            }
+
+            if( cond1[i] )
+            {
+              # Do not carry over across medication changes:
+              carry.over <- 0;
+            } else if( cond2[i] )
+            {
+              # Apply the dosage change ratio:
+              carry.over <- carry.over * dosage.change.ratio[i]; # adjust the carry-over relative to dosage change
+            }
+          }
+        } else
+        {
+          # do not consider carry over within the observation window:
+
+          # event intervals:
+          .EVENT.INTERVAL[s]       <- .TDIFF2[s]; # save the time difference between next and current event start dates, but
+          .EVENT.INTERVAL[s[slen]] <- .difftime.Dates.as.days(.OBS.END.DATE, event.date2.column[s[slen]]); # for last event, the interval ends at the end of OW
+          # event.interval - event.duration:
+          .event.interval.minus.duration <- (.EVENT.INTERVAL[s] - event.duration.column[s]);
+          # no carry over in this case:
+          .CARRY.OVER.FROM.BEFORE[s] <- 0.0;
+
+          # for each event:
+          for( i in seq_along(s) ) # this for loop is not a performance bottleneck!
           {
-            # Apply the dosage change ratio:
-            carry.over <- carry.over * dosage.change.ratio[i]; # adjust the carry-over relative to dosage change
+            si <- s[i]; # caching s[i] as it's used a lot
+
+            # Computing the gap between events:
+            gap <- .event.interval.minus.duration[i]; # the event duration
+            if( gap < 0.0 ) # the actual gap cannot be negative
+            {
+              .GAP.DAYS[si] <- 0.0;
+            } else
+            {
+              .GAP.DAYS[si] <- gap;
+            }
           }
         }
       }
