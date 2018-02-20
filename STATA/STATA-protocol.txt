@@ -1,0 +1,70 @@
+Data exchange with STATA:
+
+1. There is a wrapper STATA function that calls R as below:
+
+shell Rscript --vanilla PATH_TO_ADHERER/callAdhereR.R PATH_TO_WHERE_DATA_AND_RESULTS_ARE
+
+and packs the necessary info in:
+
+- current dataset as "dataset.csv" (TAB-separated, no quotes)
+
+- parameters file as "parameters.log" in the format exemplified below:
+
+Parameters
+function="CMA1"
+ID.colname="id"
+event.date.colname="fecha_pres"
+event.duration.colname="diascub"
+event.daily.dose.colname="posologia"
+medication.class.colname=""
+end_parameters
+
+
+2. R will return in the same folder two files:
+
+- "results.txt": contains "OK" if everything fine, otherwise a message error (probably to be displayed to the user)
+
+- "results.csv": a TAB-separated (no quotes) CSV file containing the result
+
+
+TODO:
+- plots
+
+
+--------
+
+
+PARAMETERS (some are required and must be defined, but for most we can use implicit values -- i.e., if the user doesn't give them explicitly, simply don't write them to the parameters.log file and I will use the default values in AdhereR)
+
+FUNCTIONS: CMA1...CMA9, CMA_per_episode, CMA_sliding_window, compute.event.int.gaps, compute.treatment.episodes
+
+
+++ CMA1:
+
+PARAMETER				REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
+data					YES 
+ID.colname				YES 
+event.date.colname			YES
+event.duration.colname			YES
+followup.window.start.type		NO		numeric		numeric, character, date
+followup.window.start			NO		0
+followup.window.start.unit 		NO		days		days, weeks, months, years
+followup.window.duration.type		NO		numeric		numeric, character, date
+followup.window.duration 		NO		365 * 2		numeric, character
+followup.window.duration.unit 		NO		days		days, weeks, months, years
+observation.window.start.type		NO		numeric		numeric, character, date
+observation.window.start		NO		0
+observation.window.start.unit 		NO		days		days, weeks, months, years
+observation.window.duration.type	NO		numeric		numeric, character, date
+observation.window.duration 		NO		365 * 2		numeric, character
+observation.window.duration.unit 	NO		days		days, weeks, months, years
+date.format				NO		%m/%d/%Y
+event.interval.colname			NO		event.interval
+gap.days.colname			NO		gap.days
+force.NA.CMA.for.failed.patients	NO		TRUE
+parallel.backend			NO		none		none, multicore, snow, snow(SOCK), snow(MPI), snow(NWS)
+parallel.threads			NO		auto		[[this is a bit complicated, we'll detail in the help file]]
+suppress.warnings			NO		FALSE
+
+
+
