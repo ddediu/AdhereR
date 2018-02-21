@@ -20,11 +20,13 @@ medication.class.colname=""
 end_parameters
 
 
-2. R will return in the same folder two files:
+2. R will return in the same folder the following files:
 
-- "results.txt": contains "OK" if everything fine, otherwise a message error (probably to be displayed to the user)
+- "Adherer-results.txt": contains "OK" if everything fine, otherwise a message error (probably to be displayed to the user)
 
-- "results.csv": a TAB-separated (no quotes) CSV file containing the result
+- "CMA.csv": a TAB-separated (no quotes) CSV file containing the resulting CMAs
+
+- "EVENTINFO.csv": a TAB-separated (no quotes) CSV file containing the internally computed event info and gap days -- only be explicit request
 
 
 TODO:
@@ -36,10 +38,29 @@ TODO:
 
 PARAMETERS (some are required and must be defined, but for most we can use implicit values -- i.e., if the user doesn't give them explicitly, simply don't write them to the parameters.log file and I will use the default values in AdhereR)
 
+
+
+COMMENTS:
+everything on a line following /// or # is considered a comment and ignored (except when included within "" or '')
+
+
+
+SPECIAL PARAMETERS:
+
+NA.SYMBOL.NUMERIC    <-- the numeric missing data symbol; if missing, defaults to NA (STATA: ".")
+NA.SYMBOL.STRING     <-- the string missing data symbol; if missing, defaults to NA (STATA: "")
+LOGICAL.SYMBOL.TRUE  <-- the logical TRUE symbol; if missing, defaults to TRUE (STATA: "1")
+LOGICAL.SYMBOL.FALSE <-- the logical FALSE symbol; if missing, defaults to FALSE (STATA: "0")
+COLNAMES.DOT.SYMBOL  <-- can use "." in column names, and if not, what to replace it with, defaults to "." (STATA: "_")
+COLNAMES.START.DOT   <-- can begin column names with "." (or equivalent symbol), and if not, what to replace it with, defaults to "." (STATA: "internal_")
+
+
+
+
 FUNCTIONS: CMA1...CMA9, CMA_per_episode, CMA_sliding_window, compute.event.int.gaps, compute.treatment.episodes
 
 
-++ CMA1:
+++ CMA1, CMA2, CMA3, CMA4:
 
 PARAMETER				REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
 data					YES 
@@ -50,13 +71,13 @@ followup.window.start.type		NO		numeric		numeric, character, date
 followup.window.start			NO		0
 followup.window.start.unit 		NO		days		days, weeks, months, years
 followup.window.duration.type		NO		numeric		numeric, character, date
-followup.window.duration 		NO		365 * 2		numeric, character
+followup.window.duration 		NO		365 * 2		
 followup.window.duration.unit 		NO		days		days, weeks, months, years
 observation.window.start.type		NO		numeric		numeric, character, date
 observation.window.start		NO		0
 observation.window.start.unit 		NO		days		days, weeks, months, years
 observation.window.duration.type	NO		numeric		numeric, character, date
-observation.window.duration 		NO		365 * 2		numeric, character
+observation.window.duration 		NO		365 * 2		
 observation.window.duration.unit 	NO		days		days, weeks, months, years
 date.format				NO		%m/%d/%Y
 event.interval.colname			NO		event.interval
@@ -65,6 +86,230 @@ force.NA.CMA.for.failed.patients	NO		TRUE
 parallel.backend			NO		none		none, multicore, snow, snow(SOCK), snow(MPI), snow(NWS)
 parallel.threads			NO		auto		[[this is a bit complicated, we'll detail in the help file]]
 suppress.warnings			NO		FALSE
+save.event.info				NO		FALSE
 
+RETURN VALUES
+Adherer-results.txt   <-- "OK" or error messages (if any)
+CMA.csv       <-- the CMAs (one per patient), always exported
+EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
+
+
+
+++ CMA5, CMA6, CMA7, CMA8, CMA9:
+
+PARAMETER				REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
+data					YES 
+ID.colname				YES 
+event.date.colname			YES
+event.duration.colname			YES
+event.daily.dose.colname		YES
+medication.class.colname		YES
+carry.only.for.same.medication		NO		FALSE
+consider.dosage.change			NO		FALSE
+followup.window.start.type		NO		numeric		numeric, character, date
+followup.window.start			NO		0
+followup.window.start.unit 		NO		days		days, weeks, months, years
+followup.window.duration.type		NO		numeric		numeric, character, date
+followup.window.duration 		NO		365 * 2		
+followup.window.duration.unit 		NO		days		days, weeks, months, years
+observation.window.start.type		NO		numeric		numeric, character, date
+observation.window.start		NO		0
+observation.window.start.unit 		NO		days		days, weeks, months, years
+observation.window.duration.type	NO		numeric		numeric, character, date
+observation.window.duration 		NO		365 * 2		
+observation.window.duration.unit 	NO		days		days, weeks, months, years
+date.format				NO		%m/%d/%Y
+event.interval.colname			NO		event.interval
+gap.days.colname			NO		gap.days
+force.NA.CMA.for.failed.patients	NO		TRUE
+parallel.backend			NO		none		none, multicore, snow, snow(SOCK), snow(MPI), snow(NWS)
+parallel.threads			NO		auto		[[this is a bit complicated, we'll detail in the help file]]
+suppress.warnings			NO		FALSE
+save.event.info				NO		FALSE
+
+RETURN VALUES
+Adherer-results.txt   <-- "OK" or error messages (if any)
+CMA.csv       <-- the CMAs (one per patient), always exported
+EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
+
+
+
+++ CMA_per_episode:
+
+PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
+CMA.to.apply					YES
+data						YES 
+ID.colname					YES 
+event.date.colname				YES
+event.duration.colname				YES
+event.daily.dose.colname			YES
+medication.class.colname			YES
+carry.only.for.same.medication			NO		FALSE
+consider.dosage.change				NO		FALSE
+medication.change.means.new.treatment.episode	NO		TRUE
+maximum.permissible.gap				NO		180
+maximum.permissible.gap.unit			NO		days		days, weeks, months, years, percent
+followup.window.start.type			NO		numeric		numeric, character, date
+followup.window.start				NO		0
+followup.window.start.unit 			NO		days		days, weeks, months, years
+followup.window.duration.type			NO		numeric		numeric, character, date
+followup.window.duration 			NO		365 * 2		
+followup.window.duration.unit 			NO		days		days, weeks, months, years
+observation.window.start.type			NO		numeric		numeric, character, date
+observation.window.start			NO		0
+observation.window.start.unit 			NO		days		days, weeks, months, years
+observation.window.duration.type		NO		numeric		numeric, character, date
+observation.window.duration 			NO		365 * 2		
+observation.window.duration.unit 		NO		days		days, weeks, months, years
+date.format					NO		%m/%d/%Y
+event.interval.colname				NO		event.interval
+gap.days.colname				NO		gap.days
+force.NA.CMA.for.failed.patients		NO		TRUE
+parallel.backend				NO		none		none, multicore, snow, snow(SOCK), snow(MPI), snow(NWS)
+parallel.threads				NO		auto		[[this is a bit complicated, we'll detail in the help file]]
+suppress.warnings				NO		FALSE
+save.event.info					NO		FALSE
+
+RETURN VALUES
+Adherer-results.txt   <-- "OK" or error messages (if any)
+CMA.csv       <-- the CMAs (one per patient), always exported
+EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
+
+
+
+++ CMA_sliding_window:
+
+PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
+CMA.to.apply					YES
+data						YES 
+ID.colname					YES 
+event.date.colname				YES
+event.duration.colname				YES
+event.daily.dose.colname			YES
+medication.class.colname			YES
+carry.only.for.same.medication			NO		FALSE
+consider.dosage.change				NO		FALSE
+followup.window.start.type			NO		numeric		numeric, character, date
+followup.window.start				NO		0
+followup.window.start.unit 			NO		days		days, weeks, months, years
+followup.window.duration.type			NO		numeric		numeric, character, date
+followup.window.duration 			NO		365 * 2		
+followup.window.duration.unit 			NO		days		days, weeks, months, years
+observation.window.start.type			NO		numeric		numeric, character, date
+observation.window.start			NO		0
+observation.window.start.unit 			NO		days		days, weeks, months, years
+observation.window.duration.type		NO		numeric		numeric, character, date
+observation.window.duration 			NO		365 * 2		
+observation.window.duration.unit 		NO		days		days, weeks, months, years
+sliding.window.start.type			NO		numeric		numeric, character, date
+sliding.window.start				NO		0
+sliding.window.start.unit 			NO		days		days, weeks, months, years
+sliding.window.duration.type			NO		numeric		numeric, character, date
+sliding.window.duration 			NO		90		
+sliding.window.duration.unit 			NO		days		days, weeks, months, years
+sliding.window.step.duration.type		NO		numeric		numeric, character
+sliding.window.step.duration			NO		30		
+sliding.window.step.unit			NO		days		days, weeks, months, years
+sliding.window.no.steps				NO		-1
+date.format					NO		%m/%d/%Y
+event.interval.colname				NO		event.interval
+gap.days.colname				NO		gap.days
+force.NA.CMA.for.failed.patients		NO		TRUE
+parallel.backend				NO		none		none, multicore, snow, snow(SOCK), snow(MPI), snow(NWS)
+parallel.threads				NO		auto		[[this is a bit complicated, we'll detail in the help file]]
+suppress.warnings				NO		FALSE
+save.event.info					NO		FALSE
+
+RETURN VALUES
+Adherer-results.txt   <-- "OK" or error messages (if any)
+CMA.csv       <-- the CMAs (one per patient), always exported
+EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
+
+
+++ compute.event.int.gaps:
+
+PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
+CMA.to.apply					YES
+data						YES 
+ID.colname					YES 
+event.date.colname				YES
+event.duration.colname				YES
+event.daily.dose.colname			NO
+medication.class.colname			NO
+carryover.within.obs.window			NO		FALSE
+carryover.into.obs.window			NO		FALSE
+carry.only.for.same.medication			NO		FALSE
+consider.dosage.change				NO		FALSE
+followup.window.start.type			NO		numeric		numeric, character, date
+followup.window.start				NO		0
+followup.window.start.unit 			NO		days		days, weeks, months, years
+followup.window.duration.type			NO		numeric		numeric, character, date
+followup.window.duration 			NO		365 * 2		
+followup.window.duration.unit 			NO		days		days, weeks, months, years
+observation.window.start.type			NO		numeric		numeric, character, date
+observation.window.start			NO		0
+observation.window.start.unit 			NO		days		days, weeks, months, years
+observation.window.duration.type		NO		numeric		numeric, character, date
+observation.window.duration 			NO		365 * 2		
+observation.window.duration.unit 		NO		days		days, weeks, months, years
+date.format					NO		%m/%d/%Y
+keep.window.start.end.dates			NO		FALSE
+remove.events.outside.followup.window		NO		TRUE
+keep.event.interval.for.all.events		NO		FALSE
+event.interval.colname				NO		event.interval
+gap.days.colname				NO		gap.days
+force.NA.CMA.for.failed.patients		NO		TRUE
+parallel.backend				NO		none		none, multicore, snow, snow(SOCK), snow(MPI), snow(NWS)
+parallel.threads				NO		auto		[[this is a bit complicated, we'll detail in the help file]]
+suppress.warnings				NO		FALSE
+
+RETURN VALUES
+Adherer-results.txt   <-- "OK" or error messages (if any)
+EVENTINFO.csv <-- the gap days and event info data (always)
+
+
+++ compute.treatment.episodes:
+
+PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
+CMA.to.apply					YES
+data						YES 
+ID.colname					YES 
+event.date.colname				YES
+event.duration.colname				YES
+event.daily.dose.colname			NO
+medication.class.colname			NO
+carryover.within.obs.window			NO		FALSE
+carryover.into.obs.window			NO		FALSE
+carry.only.for.same.medication			NO		FALSE
+consider.dosage.change				NO		FALSE
+medication.change.means.new.treatment.episode	NO		FALSE
+maximum.permissible.gap				NO		90
+maximum.permissible.gap.unit			NO		days		days, weeks, months, years, percent
+followup.window.start.type			NO		numeric		numeric, character, date
+followup.window.start				NO		0
+followup.window.start.unit 			NO		days		days, weeks, months, years
+followup.window.duration.type			NO		numeric		numeric, character, date
+followup.window.duration 			NO		365 * 2		
+followup.window.duration.unit 			NO		days		days, weeks, months, years
+observation.window.start.type			NO		numeric		numeric, character, date
+observation.window.start			NO		0
+observation.window.start.unit 			NO		days		days, weeks, months, years
+observation.window.duration.type		NO		numeric		numeric, character, date
+observation.window.duration 			NO		365 * 2		
+observation.window.duration.unit 		NO		days		days, weeks, months, years
+date.format					NO		%m/%d/%Y
+keep.window.start.end.dates			NO		FALSE
+remove.events.outside.followup.window		NO		TRUE
+keep.event.interval.for.all.events		NO		FALSE
+event.interval.colname				NO		event.interval
+gap.days.colname				NO		gap.days
+force.NA.CMA.for.failed.patients		NO		TRUE
+parallel.backend				NO		none		none, multicore, snow, snow(SOCK), snow(MPI), snow(NWS)
+parallel.threads				NO		auto		[[this is a bit complicated, we'll detail in the help file]]
+suppress.warnings				NO		FALSE
+
+RETURN VALUES
+Adherer-results.txt   <-- "OK" or error messages (if any)
+TREATMENTEPISODES.csv <-- the treatment episodes data (always)
 
 

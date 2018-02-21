@@ -13,8 +13,8 @@ compute.event.int.gaps(data, ID.colname = NA, event.date.colname = NA,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
   followup.window.duration = 365 * 2,
   followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
-  observation.window.start = 0, observation.window.start.unit = "days",
-  observation.window.duration = 365 * 2,
+  observation.window.start = 0, observation.window.start.unit = c("days",
+  "weeks", "months", "years")[1], observation.window.duration = 365 * 2,
   observation.window.duration.unit = c("days", "weeks", "months", "years")[1],
   date.format = "\%m/\%d/\%Y", keep.window.start.end.dates = FALSE,
   remove.events.outside.followup.window = TRUE,
@@ -80,7 +80,7 @@ the first event (the column must be of type \code{numeric}) or as actual
 dates (in which case the column must be of type \code{Date}); if a
 \emph{number} it is the number of time units defined in the
 \code{followup.window.start.unit} parameter after the begin of the
-participant's first event; or \code{NA} if not defined.}
+participant's first event.}
 
 \item{followup.window.start.unit}{can be either \emph{"days"},
 \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time

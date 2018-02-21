@@ -1,7 +1,7 @@
 ###############################################################################################
 #
 #    AdhereR: an R package for computing various estimates of medication adherence.
-#    Copyright (C) 2015-2017  Dan Dediu & Alexandra Dima
+#    Copyright (C) 2015-2018  Dan Dediu & Alexandra Dima
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -8210,4 +8210,19 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   }
 }
 
+
+#' @export
+plot_interactive_cma_shiny <- function(param="TEST", ...)
+{
+  # pass things to shiny using the global environment (as discussed at https://github.com/rstudio/shiny/issues/440):
+
+  # put things in the global environment for shiny:
+  .GlobalEnv$.hist.title <- param;
+  .GlobalEnv$.init.bins <- 15;
+  # make sure they are deleted on exit from shiny:
+  on.exit(rm(.hist.title, .init.bins, envir=.GlobalEnv));
+
+  # call shiny:
+  shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'));
+}
 
