@@ -8212,15 +8212,249 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
 
 
 #' @export
-plot_interactive_cma_shiny <- function(param="TEST", ...)
+plot_interactive_cma_shiny <- function(data=NULL, # the data used to compute the CMA on
+                                       ID=NULL, # the ID of the patient to be plotted (automatically taken to be the first)
+                                       cma.class=c("simple","per episode","sliding window")[1], # the CMA class to plot
+                                       print.full.params=FALSE, # should the parameter values for the currently plotted plot be printed?
+                                       # Important columns in the data
+                                       ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
+                                       event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
+                                       event.duration.colname=NA, # the event duration in days (NA = undefined)
+                                       event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
+                                       medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
+                                       # Date format:
+                                       date.format=NA, # the format of the dates used in this function (NA = undefined)
+                                       # Parameter ranges:
+                                       followup.window.start.max=5*365, # in days
+                                       followup.window.duration.max=5*365, # in days
+                                       observation.window.start.max=followup.window.start.max, # in days
+                                       observation.window.duration.max=followup.window.duration.max, # in days
+                                       maximum.permissible.gap.max=2*365, # in days
+                                       sliding.window.start.max=followup.window.start.max, # in days
+                                       sliding.window.duration.max=2*365, # in days
+                                       sliding.window.step.duration.max=2*365 # in days
+)
 {
   # pass things to shiny using the global environment (as discussed at https://github.com/rstudio/shiny/issues/440):
 
+  # checks:
+  if( !(cma.class %in% c("simple","per episode","sliding window")) )
+  {
+    warning(paste0("Only know how to interactively plot 'cma.class' of type 'simple', 'per episode' and 'sliding window', but you requested '",cma.class,"': assuming 'simple'."));
+    cma.class <- "simple";
+  }
+
+  # Preconditions:
+  if( !is.null(data) )
+  {
+    # data's class and dimensions:
+    if( class(data) == "matrix" ) data <- as.data.frame(data); #make it a data.frame
+    if( !inherits(data, "data.frame") )
+    {
+      stop("The 'data' must be of type 'data.frame'!\n");
+      return (NULL);
+    }
+    if( nrow(data) < 1 )
+    {
+      stop("The 'data' must have at least one row!\n");
+      return (NULL);
+    }
+    # the column names must exist in data:
+    if( !is.na(ID.colname) && !(ID.colname %in% names(data)) )
+    {
+      stop(paste0("Column ID.colname='",ID.colname,"' must appear in the 'data'!\n"));
+      return (NULL);
+    }
+    if( !is.na(event.date.colname) && !(event.date.colname %in% names(data)) )
+    {
+      stop(paste0("Column event.date.colname='",event.date.colname,"' must appear in the 'data'!\n"));
+      return (NULL);
+    }
+    if( !is.na(event.duration.colname) && !(event.duration.colname %in% names(data)) )
+    {
+      stop(paste0("Column event.duration.colname='",event.duration.colname,"' must appear in the 'data'!\n"));
+      return (NULL);
+    }
+    if( !is.na(event.daily.dose.colname) && !(event.daily.dose.colname %in% names(data)) )
+    {
+      stop(paste0("Column event.daily.dose.colname='",event.daily.dose.colname,"' must appear in the 'data'!\n"));
+      return (NULL);
+    }
+    if( !is.na(medication.class.colname) && !(medication.class.colname %in% names(data)) )
+    {
+      stop(paste0("Column medication.class.colname='",medication.class.colname,"' must appear in the 'data'!\n"));
+      return (NULL);
+    }
+  } else
+  {
+    stop("The 'data' cannot be empty!\n");
+    return (NULL);
+  }
+
+  # All patient IDs:
+  all.IDs <- sort(unique(data[,ID.colname]));
+  if( is.null(ID) || is.na(ID) || !(ID %in% all.IDs) ) ID <- all.IDs[1];
+
+  # The function encapsulating the plotting:
+  .plotting.fnc <- function(data=NULL, # the data used to compute the CMA on
+                            ID=NULL, # the ID of the patient to plot
+                            cma="none", # the CMA to use for plotting
+                            cma.to.apply="none", # cma to compute per episode or sliding window
+                            # Various types medhods of computing gaps:
+                            carryover.within.obs.window=NA, # if TRUE consider the carry-over within the observation window (NA = undefined)
+                            carryover.into.obs.window=NA, # if TRUE consider the carry-over from before the starting date of the observation window (NA = undefined)
+                            carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
+                            consider.dosage.change=NA, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
+                            # The follow-up window:
+                            followup.window.start=NA, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
+                            followup.window.start.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            followup.window.duration=NA, # the duration of the follow-up window in the time units given below (NA = undefined)
+                            followup.window.duration.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
+                            # The observation window (embedded in the follow-up window):
+                            observation.window.start=NA, # the number of time units relative to followup.window.start (NA = undefined)
+                            observation.window.start.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            observation.window.duration=NA, # the duration of the observation window in time units (NA = undefined)
+                            observation.window.duration.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            # Treatment episodes:
+                            medication.change.means.new.treatment.episode=TRUE, # does a change in medication automatically start a new treatment episode?
+                            maximum.permissible.gap=180, # if a number, is the duration in units of max. permissible gaps between treatment episodes
+                            maximum.permissible.gap.unit="days", # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days) or "years" (fixed at 365 days)
+                            # Sliding window:
+                            sliding.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
+                            sliding.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            sliding.window.duration=90,  # the duration of the sliding window in time units (NA = undefined)
+                            sliding.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            sliding.window.step.duration=7, # the step ("jump") of the sliding window in time units (NA = undefined)
+                            sliding.window.step.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            sliding.window.no.steps=NA, # the number of steps to jump; if both sliding.win.no.steps & sliding.win.duration are NA, fill the whole observation window
+                            plot.CMA.as.histogram=TRUE, # plot the CMA as historgram or density plot?
+                            show.legend=TRUE # show the legend?
+  )
+  {
+    # Progress messages:
+    cat(paste0("Plotting patient ID '",ID,"' with CMA '",cma,"'",ifelse(cma.to.apply != "none",paste0(" ('",cma.to.apply,"')"),"")));
+    if( print.full.params )
+    {
+      cat(paste0(" with params: ",
+                 "carryover.within.obs.window=",carryover.within.obs.window,", ",
+                 "carryover.into.obs.window=",carryover.into.obs.window,", ",
+                 "carry.only.for.same.medication=",carry.only.for.same.medication,", ",
+                 "consider.dosage.change=",consider.dosage.change,", ",
+                 "followup.window.start=",followup.window.start,", ",
+                 "followup.window.start.unit=",followup.window.start.unit,", ",
+                 "followup.window.duration=",followup.window.duration,", ",
+                 "followup.window.duration.unit=",followup.window.duration.unit,", ",
+                 "observation.window.start=",observation.window.start,", ",
+                 "observation.window.start.unit=",observation.window.start.unit,", ",
+                 "observation.window.duration=",observation.window.duration,", ",
+                 "observation.window.duration.unit=",observation.window.duration.unit,", ",
+                 "medication.change.means.new.treatment.episode=",medication.change.means.new.treatment.episode,", ",
+                 "maximum.permissible.gap=",maximum.permissible.gap,", ",
+                 "maximum.permissible.gap.unit=",maximum.permissible.gap.unit,", ",
+                 "sliding.window.start=",sliding.window.start,", ",
+                 "sliding.window.start.unit=",sliding.window.start.unit,", ",
+                 "sliding.window.duration=",sliding.window.duration,", ",
+                 "sliding.window.duration.unit=",sliding.window.duration.unit,", ",
+                 "sliding.window.step.duration=",sliding.window.step.duration,", ",
+                 "sliding.window.step.unit=",sliding.window.step.unit,", ",
+                 "sliding.window.no.steps=",sliding.window.no.steps
+      ));
+    }
+    cat("\n");
+
+    # Preconditions:
+    if( is.null(ID) || is.null(data <- data[data[,ID.colname] == ID,]) || nrow(data)==0 )
+    {
+      plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
+      return;
+    }
+
+    # Compute the CMA:
+    cma.fnc <- switch(cma,
+                      "CMA1" = CMA1,
+                      "CMA2" = CMA2,
+                      "CMA3" = CMA3,
+                      "CMA4" = CMA4,
+                      "CMA5" = CMA5,
+                      "CMA6" = CMA6,
+                      "CMA7" = CMA7,
+                      "CMA8" = CMA8,
+                      "CMA9" = CMA9,
+                      "per episode" = CMA_per_episode,
+                      "sliding window" = CMA_sliding_window,
+                      CMA0); # by default, fall back to CMA0
+    # Try to catch errors and warnings for nice displaying:
+    results <- NULL;
+    full.results <- tryCatch( results <- cma.fnc( data,
+                                                  CMA=cma.to.apply,
+                                                  ID.colname=ID.colname,
+                                                  event.date.colname=event.date.colname,
+                                                  event.duration.colname=event.duration.colname,
+                                                  event.daily.dose.colname=event.daily.dose.colname,
+                                                  medication.class.colname=medication.class.colname,
+                                                  date.format=date.format,
+                                                  carryover.within.obs.window=carryover.within.obs.window,
+                                                  carryover.into.obs.window=carryover.into.obs.window,
+                                                  carry.only.for.same.medication=carry.only.for.same.medication,
+                                                  consider.dosage.change=consider.dosage.change,
+                                                  followup.window.start=followup.window.start,
+                                                  followup.window.start.unit=followup.window.start.unit,
+                                                  followup.window.duration=followup.window.duration,
+                                                  followup.window.duration.unit=followup.window.duration.unit,
+                                                  observation.window.start=observation.window.start,
+                                                  observation.window.start.unit=observation.window.start.unit,
+                                                  observation.window.duration=observation.window.duration,
+                                                  observation.window.duration.unit=observation.window.duration.unit,
+                                                  medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                                  maximum.permissible.gap=maximum.permissible.gap,
+                                                  maximum.permissible.gap.unit=maximum.permissible.gap.unit,
+                                                  sliding.window.start=sliding.window.start,
+                                                  sliding.window.start.unit=sliding.window.start.unit,
+                                                  sliding.window.duration=sliding.window.duration,
+                                                  sliding.window.duration.unit=sliding.window.duration.unit,
+                                                  sliding.window.step.duration=sliding.window.step.duration,
+                                                  sliding.window.step.unit=sliding.window.step.unit,
+                                                  sliding.window.no.steps=sliding.window.no.steps),
+                              error  =function(e) return(list(results=results,error=conditionMessage(e))),
+                              warning=function(w) return(list(results=results,warning=conditionMessage(w))));
+    if( is.null(results) )
+    {
+      # Plot an error message:
+      plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab="");
+      text(0,0,paste0("Error computing '",cma,"' for patient '",ID,"'\n(see console for possible warnings or errors)!"),col="red");
+      if( !is.null(full.results$error) )   cat(paste0("Error(s): ",paste0(full.results$error,collapse="\n")));
+      if( !is.null(full.results$warning) ) cat(paste0("Warning(s): ",paste0(full.results$warning,collapse="\n")));
+    } else
+    {
+      # Plot the results:
+      plot(results, show.legend=show.legend, plot.CMA.as.histogram=plot.CMA.as.histogram);
+    }
+  }
+
+
   # put things in the global environment for shiny:
-  .GlobalEnv$.hist.title <- param;
-  .GlobalEnv$.init.bins <- 15;
+  .GlobalEnv$.plotting.params <- list("data"=data,
+                                      "ID"=ID, "all.IDs"=all.IDs,
+                                      "cma.class"=cma.class,
+                                      "print.full.params"=print.full.params,
+                                      "ID.colname"=ID.colname,
+                                      "event.date.colname"=event.date.colname,
+                                      "event.duration.colname"=event.duration.colname,
+                                      "event.daily.dose.colname"=event.daily.dose.colname,
+                                      "medication.class.colname"=medication.class.colname,
+                                      "date.format"=date.format,
+                                      "followup.window.start.max"=followup.window.start.max,
+                                      "followup.window.duration.max"=followup.window.duration.max,
+                                      "observation.window.start.max"=observation.window.start.max,
+                                      "observation.window.duration.max"=observation.window.duration.max,
+                                      "maximum.permissible.gap.max"=maximum.permissible.gap.max,
+                                      "sliding.window.start.max"=sliding.window.start.max,
+                                      "sliding.window.duration.max"=sliding.window.duration.max,
+                                      "sliding.window.step.duration.max"=sliding.window.step.duration.max,
+                                      ".plotting.fnc"=.plotting.fnc
+                                      );
   # make sure they are deleted on exit from shiny:
-  on.exit(rm(.hist.title, .init.bins, envir=.GlobalEnv));
+  on.exit(rm(.plotting.params, envir=.GlobalEnv));
 
   # call shiny:
   shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'));

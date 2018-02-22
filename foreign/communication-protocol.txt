@@ -59,6 +59,59 @@ COLNAMES.START.DOT   <-- can begin column names with "." (or equivalent symbol),
 
 FUNCTIONS: CMA1...CMA9, CMA_per_episode, CMA_sliding_window, compute.event.int.gaps, compute.treatment.episodes
 
+++ PLOTTING: all functions can also specify parameters related to plotting (a subset) of the patients:
+PARAMETER				REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
+plot.show				NO		FALSE		[do the plotting? If TRUE, save the resulting dataset with a "-plotted" suffix to avoid overwriting previous results]
+plot.save.to				NO		""		[the folder where to save the plots (by default, same folder as the results)]
+plot.save.as				NO		"jpg"		"jpg", "png", "tiff", "eps", "pdf" [the type of image to save]
+plot.width				NO		"7"		[plot width in inches]
+plot.height				NO		"7"		[plot height in inches]
+plot.quality				NO		"90"		[plot quality (applies only to some types of plots]
+plot.dpi				NO		"150"		[plot DPI (applies only to some types of plots]
+plot.patients.to.plot			NO		""		[the patient IDs to plot (if missing, all patients) given as "id1;id2; .. ;idn"]
+plot.duration				NO		""		[duration to plot in days (if missing, determined from the data)]
+plot.align.all.patients			NO		FALSE 		[should all patients be aligned? and, if so, place the first event as the horizontal 0?]
+plot.align.first.event.at.zero		NO		TRUE
+plot.show.period			NO		"days"		"dates", "days"  [raw vertical bars at regular interval as dates or days?]
+plot.period.in.days			NO		90,             [the interval (in days) at which to draw vertical lines]
+plot.show.legend			NO		TRUE		[legend params and position]
+plot.legend.x				NO		"right"
+plot.legend.y				NO		"bottom"
+plot.legend.bkg.opacity			NO		0.5 		[background opacity]
+plot.cex				NO		1.0		[various plotting font sizes]
+plot.cex.axis				NO		0.75
+plot.cex.lab				NO		1.0
+plot.show.cma				NO		TRUE		[show the CMA type]
+plot.unspecified.category.label		NO		"drug"		[the label of the unspecified category of medication]
+plot.lty.event				NO		"solid"		[style parameters controlling the plotting of events]
+plot.lwd.event				NO		2
+plot.pch.start.event			NO		15
+plot.pch.end.event			NO		16
+plot.show.event.intervals		NO		TRUE		[show the actual prescription intervals]
+plot.col.na				NO		"lightgray"	[color for missing data]
+plot.col.continuation			NO		"black"		[style of the continuation lines connecting consecutive events]
+plot.lty.continuation			NO		"dotted"
+plot.lwd.continuation			NO		1
+plot.print.CMA				NO		TRUE		[print CMA next to the participant's ID?]
+plot.plot.CMA				NO		TRUE		[plot the CMA next to the participant ID?]
+plot.plot.CMA.as.histogram		NO		TRUE		[lot CMA as a histogram or as a density plot?]
+plot.CMA.plot.ratio			NO		0.10		[the proportion of the total horizontal plot to be taken by the CMA plot]
+plot.CMA.plot.col			NO		"lightgreen"	[attributes of the CMA plot]
+plot.CMA.plot.border			NO		"darkgreen"
+plot.CMA.plot.bkg			NO		"aquamarine"
+plot.CMA.plot.text			NO		""		[by default, the same as plot.CMA.plot.border] 
+plot.highlight.followup.window		NO		TRUE
+plot.followup.window.col		NO		"green"
+plot.highlight.observation.window	NO		TRUE
+plot.observation.window.col		NO		"yellow"
+plot.observation.window.density		NO		35
+plot.observation.window.angle		NO		-30
+plot.show.real.obs.window.start		NO		TRUE		[for some CMAs, the real observation window starts at a different date]
+plot.real.obs.window.density		NO		35
+plot.real.obs.window.angle		NO		30 
+plot.bw.plot				NO		FALSE		[if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting]
+
+
 
 ++ CMA1, CMA2, CMA3, CMA4:
 
