@@ -7805,6 +7805,9 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #' windows in days.
 #' @param sliding.window.step.duration.max The maximum sliding window step in
 #' days.
+#' @param backend The plotting backend to use; "shiny" (the default) tries to
+#' use the Shiny framework, while "rstudio" uses the manipulate RStudio
+#' capability.
 #' @return Nothing
 #' @examples
 #' \dontrun{
@@ -7821,7 +7824,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                                   # Date format:
-                                  date.format=NA, # the format of the dates used in this function (NA = undefined)
+                                  date.format="%m/%d/%Y", # the format of the dates used in this function (NA = undefined)
                                   # Parameter ranges:
                                   followup.window.start.max=5*365, # in days
                                   followup.window.duration.max=5*365, # in days
@@ -7830,7 +7833,86 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   maximum.permissible.gap.max=2*365, # in days
                                   sliding.window.start.max=followup.window.start.max, # in days
                                   sliding.window.duration.max=2*365, # in days
-                                  sliding.window.step.duration.max=2*365 # in days
+                                  sliding.window.step.duration.max=2*365, # in days
+                                  backend=c("shiny","rstudio"), # the interactive backend to use
+                                  ...
+)
+{
+  if( backend == "shiny" )
+  {
+    .plot_interactive_cma_shiny(data=data,
+                                ID=ID,
+                                cma.class=cma.class,
+                                print.full.params=print.full.params,
+                                ID.colname=ID.colname,
+                                event.date.colname=event.date.colname,
+                                event.duration.colname=event.duration.colname,
+                                event.daily.dose.colname=event.daily.dose.colname,
+                                medication.class.colname=medication.class.colname,
+                                date.format=date.format,
+                                followup.window.start.max=followup.window.start.max,
+                                followup.window.duration.max=followup.window.duration.max,
+                                observation.window.start.max=observation.window.start.max,
+                                observation.window.duration.max=observation.window.duration.max,
+                                maximum.permissible.gap.max=maximum.permissible.gap.max,
+                                sliding.window.start.max=sliding.window.start.max,
+                                sliding.window.duration.max=sliding.window.duration.max,
+                                sliding.window.step.duration.max=sliding.window.step.duration.max,
+                                ...
+    );
+  } else if( backend == "rstudio" )
+  {
+    .plot_interactive_cma_rstudio(data=data,
+                                  ID=ID,
+                                  cma.class=cma.class,
+                                  print.full.params=print.full.params,
+                                  ID.colname=ID.colname,
+                                  event.date.colname=event.date.colname,
+                                  event.duration.colname=event.duration.colname,
+                                  event.daily.dose.colname=event.daily.dose.colname,
+                                  medication.class.colname=medication.class.colname,
+                                  date.format=date.format,
+                                  followup.window.start.max=followup.window.start.max,
+                                  followup.window.duration.max=followup.window.duration.max,
+                                  observation.window.start.max=observation.window.start.max,
+                                  observation.window.duration.max=observation.window.duration.max,
+                                  maximum.permissible.gap.max=maximum.permissible.gap.max,
+                                  sliding.window.start.max=sliding.window.start.max,
+                                  sliding.window.duration.max=sliding.window.duration.max,
+                                  sliding.window.step.duration.max=sliding.window.step.duration.max,
+                                  ...
+    );
+  } else
+  {
+    warning("Interactive plotting: dont' know backend '",backend,"'; only use 'shiny' or 'rstudio'.\n");
+  }
+}
+
+
+
+# Auxiliary function: interactive plot using RStudio's manipulate:
+.plot_interactive_cma_rstudio <- function( data=NULL, # the data used to compute the CMA on
+                                           ID=NULL, # the ID of the patient to be plotted (automatically taken to be the first)
+                                           cma.class=c("simple","per episode","sliding window")[1], # the CMA class to plot
+                                           print.full.params=FALSE, # should the parameter values for the currently plotted plot be printed?
+                                           # Important columns in the data
+                                           ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
+                                           event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
+                                           event.duration.colname=NA, # the event duration in days (NA = undefined)
+                                           event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
+                                           medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
+                                           # Date format:
+                                           date.format=NA, # the format of the dates used in this function (NA = undefined)
+                                           # Parameter ranges:
+                                           followup.window.start.max=5*365, # in days
+                                           followup.window.duration.max=5*365, # in days
+                                           observation.window.start.max=followup.window.start.max, # in days
+                                           observation.window.duration.max=followup.window.duration.max, # in days
+                                           maximum.permissible.gap.max=2*365, # in days
+                                           sliding.window.start.max=followup.window.start.max, # in days
+                                           sliding.window.duration.max=2*365, # in days
+                                           sliding.window.step.duration.max=2*365, # in days
+                                           ...
 )
 {
   # Check if manipulate can be run:
@@ -8211,28 +8293,30 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
 }
 
 
-#' @export
-plot_interactive_cma_shiny <- function(data=NULL, # the data used to compute the CMA on
-                                       ID=NULL, # the ID of the patient to be plotted (automatically taken to be the first)
-                                       cma.class=c("simple","per episode","sliding window")[1], # the CMA class to plot
-                                       print.full.params=FALSE, # should the parameter values for the currently plotted plot be printed?
-                                       # Important columns in the data
-                                       ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
-                                       event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
-                                       event.duration.colname=NA, # the event duration in days (NA = undefined)
-                                       event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
-                                       medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                                       # Date format:
-                                       date.format=NA, # the format of the dates used in this function (NA = undefined)
-                                       # Parameter ranges:
-                                       followup.window.start.max=5*365, # in days
-                                       followup.window.duration.max=5*365, # in days
-                                       observation.window.start.max=followup.window.start.max, # in days
-                                       observation.window.duration.max=followup.window.duration.max, # in days
-                                       maximum.permissible.gap.max=2*365, # in days
-                                       sliding.window.start.max=followup.window.start.max, # in days
-                                       sliding.window.duration.max=2*365, # in days
-                                       sliding.window.step.duration.max=2*365 # in days
+# Auxiliary function: interactive plot using shiny
+.plot_interactive_cma_shiny <- function(data=NULL, # the data used to compute the CMA on
+                                        ID=NULL, # the ID of the patient to be plotted (automatically taken to be the first)
+                                        cma.class=c("simple","per episode","sliding window")[1], # the CMA class to plot
+                                        print.full.params=FALSE, # should the parameter values for the currently plotted plot be printed?
+                                        # Important columns in the data
+                                        ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
+                                        event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
+                                        event.duration.colname=NA, # the event duration in days (NA = undefined)
+                                        event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
+                                        medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
+                                        # Date format:
+                                        date.format=NA, # the format of the dates used in this function (NA = undefined)
+                                        # Parameter ranges:
+                                        followup.window.start.max=5*365, # in days
+                                        followup.window.duration.max=5*365, # in days
+                                        observation.window.start.max=followup.window.start.max, # in days
+                                        observation.window.duration.max=followup.window.duration.max, # in days
+                                        maximum.permissible.gap.max=2*365, # in days
+                                        sliding.window.start.max=followup.window.start.max, # in days
+                                        sliding.window.duration.max=2*365, # in days
+                                        sliding.window.step.duration.max=2*365, # in days
+                                        use.system.browser=FALSE, # by default, don't necessarily use the system browser
+                                        ...
 )
 {
   # pass things to shiny using the global environment (as discussed at https://github.com/rstudio/shiny/issues/440):
@@ -8457,6 +8541,12 @@ plot_interactive_cma_shiny <- function(data=NULL, # the data used to compute the
   on.exit(rm(.plotting.params, envir=.GlobalEnv));
 
   # call shiny:
-  shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'));
+  if( use.system.browser )
+  {
+    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'), launch.browser=TRUE);
+  } else
+  {
+    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'));
+  }
 }
 

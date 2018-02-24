@@ -57,7 +57,7 @@ COLNAMES.START.DOT   <-- can begin column names with "." (or equivalent symbol),
 
 
 
-FUNCTIONS: CMA1...CMA9, CMA_per_episode, CMA_sliding_window, compute.event.int.gaps, compute.treatment.episodes
+FUNCTIONS: CMA1...CMA9, CMA_per_episode, CMA_sliding_window, compute.event.int.gaps, compute.treatment.episodes, plot_interactive_cma
 
 ++ PLOTTING: all functions can also specify parameters related to plotting (a subset) of the patients:
 PARAMETER				REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
@@ -116,7 +116,6 @@ plot.bw.plot				NO		FALSE		[if TRUE, override all user-given colors and replace 
 ++ CMA1, CMA2, CMA3, CMA4:
 
 PARAMETER				REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
-data					YES 
 ID.colname				YES 
 event.date.colname			YES
 event.duration.colname			YES
@@ -151,7 +150,6 @@ EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
 ++ CMA5, CMA6, CMA7, CMA8, CMA9:
 
 PARAMETER				REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
-data					YES 
 ID.colname				YES 
 event.date.colname			YES
 event.duration.colname			YES
@@ -191,7 +189,6 @@ EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
 CMA.to.apply					YES
-data						YES 
 ID.colname					YES 
 event.date.colname				YES
 event.duration.colname				YES
@@ -234,7 +231,6 @@ EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
 CMA.to.apply					YES
-data						YES 
 ID.colname					YES 
 event.date.colname				YES
 event.duration.colname				YES
@@ -283,7 +279,6 @@ EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
 CMA.to.apply					YES
-data						YES 
 ID.colname					YES 
 event.date.colname				YES
 event.duration.colname				YES
@@ -325,7 +320,6 @@ EVENTINFO.csv <-- the gap days and event info data (always)
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
 CMA.to.apply					YES
-data						YES 
 ID.colname					YES 
 event.date.colname				YES
 event.duration.colname				YES
@@ -364,5 +358,28 @@ suppress.warnings				NO		FALSE
 RETURN VALUES
 Adherer-results.txt   <-- "OK" or error messages (if any)
 TREATMENTEPISODES.csv <-- the treatment episodes data (always)
+
+
+
+++ plot_interactive_cma:	<--- this ignores plot.show=TRUE !
+
+PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
+patient_to_plot					NO		[first patient in the data]
+ID.colname					YES 
+event.date.colname				YES
+event.duration.colname				YES
+event.daily.dose.colname			NO
+medication.class.colname			NO
+date.format					NO		%m/%d/%Y
+followup.window.start.max			NO		
+followup.window.duration.max			NO		
+observation.window.start.max			NO		
+observation.window.duration.max			NO	
+maximum.permissible.gap.max			NO
+sliding.window.start.max			NO
+sliding.window.duration.max			NO
+sliding.window.step.duration.max		NO
+
+
 
 

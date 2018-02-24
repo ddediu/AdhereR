@@ -20,7 +20,9 @@
 ###############################################################################################
 
 
-library(shiny)
+#library(shiny)
+#' @import shiny
+NULL
 
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
@@ -29,16 +31,19 @@ ui <- fluidPage(
   titlePanel("AdhereR: Interactive plotting using Shiny..."),
 
   # Sidebar layout with input and output definitions ----
-  sidebarLayout(
+  #sidebarLayout(
+  fluidRow(
 
     # Sidebar panel for inputs ----
-    sidebarPanel(
+    #sidebarPanel(
+    column(3, wellPanel(id = "tPanel",style = "overflow-y:scroll; max-height: 600px;",
+
 
       span(h4("General settings..."), style="color:DarkBlue"),
 
       # Select the CMA class ----
       selectInput(inputId="cma_class",
-                  label="Select the class of CMAs",
+                  label="Select CMA type",
                   choices=c("simple", "per episode", "sliding window"),
                   selected=.plotting.params$cma.class),
 
@@ -46,7 +51,7 @@ ui <- fluidPage(
 
       # Select the simple CMA to compute ----
       selectInput(inputId="cma_to_compute",
-                  label="Select the simple CMA to compute",
+                  label="Select CMA to compute",
                   choices=paste0("CMA",0:9),
                   selected="CMA1"),
 
@@ -257,13 +262,38 @@ ui <- fluidPage(
       span(h4("Close shop..."), style="color:Red"),
       actionButton(inputId="close_shop", label="  and return to caller...", icon=icon("remove-circle", lib="glyphicon"))
 
-    ),
+    )),
 
 
     # Main panel for displaying outputs ----
-    mainPanel(
+    #mainPanel(
+    column(9,
 
-      # Output: Histogram ----
+      # Control the plot dimensions ----
+      column(4, offset=1,
+        sliderInput(inputId="plot_width",
+                    label="Plot width",
+                    min=0, max=1000, value=10, step=1, round=TRUE)
+      ),
+
+      column(4,
+        sliderInput(inputId="plot_height",
+                    label="height",
+                    min=0, max=1000, value=10, step=1, round=TRUE)
+      ),
+
+      column(3,
+        checkboxInput(inputId="plot_keep_ratio",
+                    label="keep ratio?",
+                    value=TRUE),
+
+        checkboxInput(inputId="plot_auto_size",
+                    label="auto size?",
+                    value=TRUE)
+      ),
+
+
+      # Output: the actual plot ----
       plotOutput(outputId = "distPlot")
 
     )

@@ -8,14 +8,15 @@ plot_interactive_cma(data = NULL, ID = NULL, cma.class = c("simple",
   "per episode", "sliding window")[1], print.full.params = FALSE,
   ID.colname = NA, event.date.colname = NA, event.duration.colname = NA,
   event.daily.dose.colname = NA, medication.class.colname = NA,
-  date.format = NA, followup.window.start.max = 5 * 365,
+  date.format = "\%m/\%d/\%Y", followup.window.start.max = 5 * 365,
   followup.window.duration.max = 5 * 365,
   observation.window.start.max = followup.window.start.max,
   observation.window.duration.max = followup.window.duration.max,
   maximum.permissible.gap.max = 2 * 365,
   sliding.window.start.max = followup.window.start.max,
   sliding.window.duration.max = 2 * 365,
-  sliding.window.step.duration.max = 2 * 365)
+  sliding.window.step.duration.max = 2 * 365, backend = c("shiny",
+  "rstudio"), ...)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the events (prescribing or
@@ -80,6 +81,10 @@ windows in days.}
 
 \item{sliding.window.step.duration.max}{The maximum sliding window step in
 days.}
+
+\item{backend}{The plotting backend to use; "shiny" (the default) tries to
+use the Shiny framework, while "rstudio" uses the manipulate RStudio
+capability.}
 }
 \value{
 Nothing

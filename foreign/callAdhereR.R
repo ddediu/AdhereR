@@ -32,6 +32,26 @@
 #
 #######
 
+
+# Auxiliary function: Interactive plotting:
+.do.interactive.plotting <- function(params.as.list)
+{
+  # pre-process the parameters:
+  if( length(s <- which("patient_to_plot" == names(params.as.list))) > 0 )
+  {
+    names(params.as.list)[s] <- "ID";
+    params.as.list[[s]] <- .get.param.value("patient_to_plot", type="character", default.value=NULL, required=FALSE);
+  }
+
+  # Interactive plotting:
+  do.call("plot_interactive_cma", c(list("print.full.params"=FALSE), # DEBUG
+                                    list("backend"="shiny"), list("use.system.browser"=TRUE), # force using shiny in the system browser
+                                    params.as.list));
+
+  return (NULL); # all ok
+}
+
+
 # get the command line arguments
 args <- commandArgs(trailingOnly=TRUE);
 
@@ -202,6 +222,8 @@ if( is.null(data) || nrow(data)==0 || ncol(data)==0 )
 
 
 # load AdhereR:
+#cat("ATTENTION: change AdhereR.devel to AdhereR in the final version!!!\n");
+#if( !library("AdhereR.devel", verbose=FALSE, quietly=TRUE, logical.return=TRUE) )
 if( !library("AdhereR", verbose=FALSE, quietly=TRUE, logical.return=TRUE) )
 {
   msg <- paste0("AdhereR: failed loading the 'AdhereR' R package. Please check that it is corretly installed in R! ABORTING...\n");
@@ -275,155 +297,164 @@ results <- switch(function.to.call,
                   "CMA_sliding_window"=,
                   "compute.event.int.gaps"=,
                   "compute.treatment.episodes"= do.call(function.to.call, params.as.list), # call a CMA (or CMA-like) function
+                  "plot_interactive_cma"=.do.interactive.plotting(params.as.list), # call the interactive plotting function
                   NULL # oops!
 );
 
 if( is.null(results) ) # OOPS! some error occured: make it known and quit!
 {
-  #file.remove(paste0(folder.path,"./results.csv"), showWarnings=FALSE);
-  msg <- "\nSOME ERROR HAS OCCURED (maybe there's some helpful messages above?)\n";
-  stop(msg, call.=FALSE); # force stopping!
-}
+  #file.remove(paste0(folder.path,"./results.csv"), showWarnings=FALSE); # clean-up?
 
-# Otherwise, continue....
-
-# Save the results (possibly applying conversions):
-.apply.export.conversions <- function(df)
-{
-  # logical symbols (may require converssion to numeric or string):
-  LOGICAL.SYMBOL.TRUE  <- .get.param.value("LOGICAL.SYMBOL.TRUE",  type="character", default.value=NA, required=FALSE);
-  LOGICAL.SYMBOL.FALSE <- .get.param.value("LOGICAL.SYMBOL.FALSE", type="character", default.value=NA, required=FALSE);
-  if( !is.na(LOGICAL.SYMBOL.TRUE) || !is.na(LOGICAL.SYMBOL.FALSE) )
+  if( function.to.call == "plot_interactive_cma" )
   {
-    for( i in 1:ncol(df) ) if( is.logical(df[,i]) )
+    # interactive plotting is a special case where NULL is just a sign of ending the call...
+      cat("OK: interactive plotting is over  (but still, there might be warnings and messages above worth paying attention to)!\n", file=stderr());
+  } else
+  {
+    msg <- "\nSOME ERROR HAS OCCURED (maybe there's some helpful messages above?)\n";
+    stop(msg, call.=FALSE); # force stopping!
+  }
+} else
+{
+  # Otherwise, continue....
+
+  # Save the results (possibly applying conversions):
+  .apply.export.conversions <- function(df)
+  {
+    # logical symbols (may require converssion to numeric or string):
+    LOGICAL.SYMBOL.TRUE  <- .get.param.value("LOGICAL.SYMBOL.TRUE",  type="character", default.value=NA, required=FALSE);
+    LOGICAL.SYMBOL.FALSE <- .get.param.value("LOGICAL.SYMBOL.FALSE", type="character", default.value=NA, required=FALSE);
+    if( !is.na(LOGICAL.SYMBOL.TRUE) || !is.na(LOGICAL.SYMBOL.FALSE) )
     {
-      tmp <- as.character(df[,i]);
-      if( !is.na(LOGICAL.SYMBOL.TRUE) )  tmp[tmp=="TRUE"]  <- LOGICAL.SYMBOL.TRUE;
-      if( !is.na(LOGICAL.SYMBOL.FALSE) ) tmp[tmp=="FALSE"] <- LOGICAL.SYMBOL.FALSE;
-      df[,i] <- tmp;
+      for( i in 1:ncol(df) ) if( is.logical(df[,i]) )
+      {
+        tmp <- as.character(df[,i]);
+        if( !is.na(LOGICAL.SYMBOL.TRUE) )  tmp[tmp=="TRUE"]  <- LOGICAL.SYMBOL.TRUE;
+        if( !is.na(LOGICAL.SYMBOL.FALSE) ) tmp[tmp=="FALSE"] <- LOGICAL.SYMBOL.FALSE;
+        df[,i] <- tmp;
+      }
     }
-  }
 
-  # NA.SYMBOL.NUMERIC (applies to numeric columns):
-  NA.SYMBOL.NUMERIC <- .get.param.value("NA.SYMBOL.NUMERIC", type="character", default.value=NA, required=FALSE);
-  if( !is.na(NA.SYMBOL.NUMERIC) )
-  {
-    for( i in 1:ncol(df) ) if( is.numeric(df[,i]) ){ tmp <- as.character(df[,i]); tmp[is.na(tmp)] <- NA.SYMBOL.NUMERIC; df[,i] <- tmp; }
-  }
-
-  # NA.SYMBOL.STRING (applies to character and Date columns):
-  NA.SYMBOL.STRING <- .get.param.value("NA.SYMBOL.STRING", type="character", default.value=NA, required=FALSE);
-  if( !is.na(NA.SYMBOL.STRING) )
-  {
-    for( i in 1:ncol(df) )
+    # NA.SYMBOL.NUMERIC (applies to numeric columns):
+    NA.SYMBOL.NUMERIC <- .get.param.value("NA.SYMBOL.NUMERIC", type="character", default.value=NA, required=FALSE);
+    if( !is.na(NA.SYMBOL.NUMERIC) )
     {
-      if( is.character(df[,i]) || is.factor(df[,i]) ){ tmp <- as.character(df[,i]); tmp[is.na(tmp)] <- NA.SYMBOL.STRING; df[,i] <- tmp; }
-      if( inherits(df[,i],"Date") ){ tmp <- as.character(df[,i], format=.get.param.value("date.format", type="character", default.value="%m/%d/%Y", required=FALSE)); tmp[is.na(tmp)] <- NA.SYMBOL.STRING; df[,i] <- tmp; }
+      for( i in 1:ncol(df) ) if( is.numeric(df[,i]) ){ tmp <- as.character(df[,i]); tmp[is.na(tmp)] <- NA.SYMBOL.NUMERIC; df[,i] <- tmp; }
     }
+
+    # NA.SYMBOL.STRING (applies to character and Date columns):
+    NA.SYMBOL.STRING <- .get.param.value("NA.SYMBOL.STRING", type="character", default.value=NA, required=FALSE);
+    if( !is.na(NA.SYMBOL.STRING) )
+    {
+      for( i in 1:ncol(df) )
+      {
+        if( is.character(df[,i]) || is.factor(df[,i]) ){ tmp <- as.character(df[,i]); tmp[is.na(tmp)] <- NA.SYMBOL.STRING; df[,i] <- tmp; }
+        if( inherits(df[,i],"Date") ){ tmp <- as.character(df[,i], format=.get.param.value("date.format", type="character", default.value="%m/%d/%Y", required=FALSE)); tmp[is.na(tmp)] <- NA.SYMBOL.STRING; df[,i] <- tmp; }
+      }
+    }
+
+    # column name stuff:
+    COLNAMES.START.DOT <- .get.param.value("COLNAMES.START.DOT", type="character", default.value=NA, required=FALSE);
+    if( !is.na(COLNAMES.START.DOT) ) names(df) <- sub("^\\.", COLNAMES.START.DOT, names(df));
+    COLNAMES.DOT.SYMBOL <- .get.param.value("COLNAMES.DOT.SYMBOL", type="character", default.value=NA, required=FALSE);
+    if( !is.na(COLNAMES.DOT.SYMBOL) ) names(df) <- gsub(".", COLNAMES.DOT.SYMBOL, names(df), fixed=TRUE);
+
+    # return the new df for exporting:
+    return (df);
   }
 
-  # column name stuff:
-  COLNAMES.START.DOT <- .get.param.value("COLNAMES.START.DOT", type="character", default.value=NA, required=FALSE);
-  if( !is.na(COLNAMES.START.DOT) ) names(df) <- sub("^\\.", COLNAMES.START.DOT, names(df));
-  COLNAMES.DOT.SYMBOL <- .get.param.value("COLNAMES.DOT.SYMBOL", type="character", default.value=NA, required=FALSE);
-  if( !is.na(COLNAMES.DOT.SYMBOL) ) names(df) <- gsub(".", COLNAMES.DOT.SYMBOL, names(df), fixed=TRUE);
-
-  # return the new df for exporting:
-  return (df);
-}
-
-# Depending on the computation, we may export different things:
-if( inherits(results, "CMA0") )
-{
-  # Special case: for plot.show == TRUE, add the "-plotted" suffix to the saved files!
-  file.name.suffix <- ifelse(.get.param.value("plot.show", type="character", default.value="FALSE", required=FALSE) == "TRUE", "-plotted", "" );
-
-  # CMAs:
-  write.table(.apply.export.conversions(results$CMA), paste0(folder.path,"./CMA",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
-  # event info:
-  if( !is.na(save.event.info <- .get.param.value("save.event.info", type="character", default.value=NA, required=FALSE)) && save.event.info=="TRUE" )
+  # Depending on the computation, we may export different things:
+  if( inherits(results, "CMA0") )
   {
-    write.table(.apply.export.conversions(results$event.info), paste0(folder.path,"./EVENTINFO",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
-  }
-} else if( function.to.call == "compute.event.int.gaps" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
-{
-  # event info:
-  write.table(.apply.export.conversions(results), paste0(folder.path,"./EVENTINFO.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
-} else if( function.to.call == "compute.treatment.episodes" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
-{
-  # treatment episodes:
-  write.table(.apply.export.conversions(results), paste0(folder.path,"./TREATMENTEPISODES.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
-}
+    # Special case: for plot.show == TRUE, add the "-plotted" suffix to the saved files!
+    file.name.suffix <- ifelse(.get.param.value("plot.show", type="character", default.value="FALSE", required=FALSE) == "TRUE", "-plotted", "" );
 
-
-# Plotting might have been required:
-if( .get.param.value("plot.show", type="character", default.value="FALSE", required=FALSE) == "TRUE" )
-{
-  # OK, plotting it too!
-
-  # Get the list of relevant parameters:
-  plotting.params <- params.as.list[grep("^plot\\.", names(params.as.list))];
-  plotting.params[["plot.show"]] <- NULL;
-  plotting.params[["plot.save.to"]] <- NULL;
-  plotting.params[["plot.save.as"]] <- NULL;
-  plotting.params[["plot.width"]] <- NULL;
-  plotting.params[["plot.height"]] <- NULL;
-  plotting.params[["plot.quality"]] <- NULL;
-  plotting.params[["plot.dpi"]] <- NULL;
-  names(plotting.params) <- substring(names(plotting.params), nchar("plot.")+1);
-
-  # patients.to.plot is special:
-  if( "patients.to.plot" %in% names(plotting.params) ) plotting.params[["patients.to.plot"]] <- .get.param.value("plot.patients.to.plot", type="character.vector", default.value=NULL, required=FALSE);
-
-  # Get the info about the plot exporting process:
-  plot.file.name <- paste0(.get.param.value("plot.save.to", type="character", default.value=folder.path, required=FALSE),"/adherer-plot.");
-  plot.file.type <- .get.param.value("plot.save.as", type="character", default.value="jpg", required=FALSE);
-  if( plot.file.type %in% c("jpg", "jpeg") )
+    # CMAs:
+    write.table(.apply.export.conversions(results$CMA), paste0(folder.path,"./CMA",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
+    # event info:
+    if( !is.na(save.event.info <- .get.param.value("save.event.info", type="character", default.value=NA, required=FALSE)) && save.event.info=="TRUE" )
+    {
+      write.table(.apply.export.conversions(results$event.info), paste0(folder.path,"./EVENTINFO",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
+    }
+  } else if( function.to.call == "compute.event.int.gaps" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
   {
-    jpeg(paste0(plot.file.name,"jpg"),
-         width=.get.param.value("plot.width", type="numeric", default.value=7, required=FALSE),
-         height=.get.param.value("plot.height", type="numeric", default.value=7, required=FALSE),
-         units="in",
-         quality=.get.param.value("plot.quality", type="numeric", default.value=90, required=FALSE),
-         res=.get.param.value("plot.dpi", type="numeric", default.value=150, required=FALSE));
-  } else if( plot.file.type %in% c("png") )
+    # event info:
+    write.table(.apply.export.conversions(results), paste0(folder.path,"./EVENTINFO.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
+  } else if( function.to.call == "compute.treatment.episodes" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
   {
-    png(paste0(plot.file.name,"png"),
-         width=.get.param.value("plot.width", type="numeric", default.value=7, required=FALSE),
-         height=.get.param.value("plot.height", type="numeric", default.value=7, required=FALSE),
-         units="in",
-         res=.get.param.value("plot.dpi", type="numeric", default.value=150, required=FALSE));
-  } else if( plot.file.type %in% c("tif", "tiff") )
-  {
-    tiff(paste0(plot.file.name,"tiff"),
-         width=.get.param.value("plot.width", type="numeric", default.value=7, required=FALSE),
-         height=.get.param.value("plot.height", type="numeric", default.value=7, required=FALSE),
-         units="in", compression="lzw",
-         res=.get.param.value("plot.dpi", type="numeric", default.value=150, required=FALSE));
-  } else if( plot.file.type %in% c("eps") )
-  {
-    postscript(paste0(plot.file.name,"eps"),
-         width=.get.param.value("plot.width", type="numeric", default.value=7, required=FALSE),
-         height=.get.param.value("plot.height", type="numeric", default.value=7, required=FALSE),
-         units="in", horizontal=FALSE, onefile=FALSE, paper="special"); # make sure the output is EPS
-  } else if( plot.file.type %in% c("pdf") )
-  {
-    pdf(paste0(plot.file.name,"pdf"),
-         width=.get.param.value("plot.width", type="numeric", default.value=7, required=FALSE),
-         height=.get.param.value("plot.height", type="numeric", default.value=7, required=FALSE),
-         units="in", horizontal=FALSE, onefile=FALSE, paper="special");
+    # treatment episodes:
+    write.table(.apply.export.conversions(results), paste0(folder.path,"./TREATMENTEPISODES.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
   }
 
-  # attemt to plot:
-  do.call("plot", c(list(results), plotting.params));
 
-  # close the plotting device:
-  dev.off();
+  # Plotting might have been required:
+  if( .get.param.value("plot.show", type="character", default.value="FALSE", required=FALSE) == "TRUE" )
+  {
+    # OK, plotting it too!
+
+    # Get the list of relevant parameters:
+    plotting.params <- params.as.list[grep("^plot\\.", names(params.as.list))];
+    plotting.params[["plot.show"]] <- NULL;
+    plotting.params[["plot.save.to"]] <- NULL;
+    plotting.params[["plot.save.as"]] <- NULL;
+    plotting.params[["plot.width"]] <- NULL;
+    plotting.params[["plot.height"]] <- NULL;
+    plotting.params[["plot.quality"]] <- NULL;
+    plotting.params[["plot.dpi"]] <- NULL;
+    names(plotting.params) <- substring(names(plotting.params), nchar("plot.")+1);
+
+    # patients.to.plot is special:
+    if( "patients.to.plot" %in% names(plotting.params) ) plotting.params[["patients.to.plot"]] <- .get.param.value("plot.patients.to.plot", type="character.vector", default.value=NULL, required=FALSE);
+
+    # Get the info about the plot exporting process:
+    plot.file.name <- paste0(.get.param.value("plot.save.to", type="character", default.value=folder.path, required=FALSE),"/adherer-plot.");
+    plot.file.type <- .get.param.value("plot.save.as", type="character", default.value="jpg", required=FALSE);
+    if( plot.file.type %in% c("jpg", "jpeg") )
+    {
+      jpeg(paste0(plot.file.name,"jpg"),
+           width=.get.param.value("plot.width", type="numeric", default.value=7, required=FALSE),
+           height=.get.param.value("plot.height", type="numeric", default.value=7, required=FALSE),
+           units="in",
+           quality=.get.param.value("plot.quality", type="numeric", default.value=90, required=FALSE),
+           res=.get.param.value("plot.dpi", type="numeric", default.value=150, required=FALSE));
+    } else if( plot.file.type %in% c("png") )
+    {
+      png(paste0(plot.file.name,"png"),
+           width=.get.param.value("plot.width", type="numeric", default.value=7, required=FALSE),
+           height=.get.param.value("plot.height", type="numeric", default.value=7, required=FALSE),
+           units="in",
+           res=.get.param.value("plot.dpi", type="numeric", default.value=150, required=FALSE));
+    } else if( plot.file.type %in% c("tif", "tiff") )
+    {
+      tiff(paste0(plot.file.name,"tiff"),
+           width=.get.param.value("plot.width", type="numeric", default.value=7, required=FALSE),
+           height=.get.param.value("plot.height", type="numeric", default.value=7, required=FALSE),
+           units="in", compression="lzw",
+           res=.get.param.value("plot.dpi", type="numeric", default.value=150, required=FALSE));
+    } else if( plot.file.type %in% c("eps") )
+    {
+      postscript(paste0(plot.file.name,"eps"),
+           width=.get.param.value("plot.width", type="numeric", default.value=7, required=FALSE),
+           height=.get.param.value("plot.height", type="numeric", default.value=7, required=FALSE),
+           units="in", horizontal=FALSE, onefile=FALSE, paper="special"); # make sure the output is EPS
+    } else if( plot.file.type %in% c("pdf") )
+    {
+      pdf(paste0(plot.file.name,"pdf"),
+           width=.get.param.value("plot.width", type="numeric", default.value=7, required=FALSE),
+           height=.get.param.value("plot.height", type="numeric", default.value=7, required=FALSE),
+           units="in", horizontal=FALSE, onefile=FALSE, paper="special");
+    }
+
+    # attemt to plot:
+    do.call("plot", c(list(results), plotting.params));
+
+    # close the plotting device:
+    dev.off();
+  }
+
+  # everything seems ok:
+  cat("OK: the results were exported successfully (but still, there might be warnings and messages above worth paying attention to)!\n", file=stderr());
 }
-
-
-# everything seems ok:
-cat("OK: the results were exported successfully (but still, there might be warnings and messages above worth paying attention to)!\n", file=stderr());
 
 # ... and finish...
 
