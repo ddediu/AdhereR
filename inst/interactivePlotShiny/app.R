@@ -67,21 +67,31 @@ ui <- fluidPage(
       # Follow-up window start ----
       selectInput(inputId="followup_window_start_unit",
                   label="Follow-up wnd. start unit",
-                  choices=c("days", "weeks", "months", "years", "Actual Calendar Date"),
+                  choices=c("days", "weeks", "months", "years", "calendar date"), # "column in dataset"),
                   selected="days"),
 
-      # If follow-up window unit is "Actual Calendar Date" ----
+      # If follow-up window unit is "calendar date" ----
       conditionalPanel(
-        condition = "(input.followup_window_start_unit == 'Actual Calendar Date')",
+        condition = "(input.followup_window_start_unit == 'calendar date')",
                     # Select an actual date ----
                     dateInput(inputId="followup_window_start_date",
                               label="Follow-up wnd. start",
                               value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1)
       ),
 
-      # If follow-up window unit is not "Actual Calendar Date" ----
+      ## If follow-up window unit is "column in dataset" ----
+      #conditionalPanel(
+      #  condition = "(input.followup_window_start_unit == 'column in dataset')",
+      #              # Select an actual date ----
+      #              selectInput(inputId="followup_window_start_column",
+      #                        label="Follow-up wnd. start",
+      #                        choices=names(.plotting.params$data),
+      #                        selected="")
+      #),
+
+      # If follow-up window unit is regular unit ----
       conditionalPanel(
-        condition = "(input.followup_window_start_unit != 'Actual Calendar Date')",
+        condition = "(input.followup_window_start_unit != 'calendar date')",  # && input.followup_window_start_unit != 'column in dataset')",
                     # Select the number of units ----
                     sliderInput(inputId="followup_window_start_no_units",
                                 label="Follow-up wnd. start",
@@ -106,21 +116,21 @@ ui <- fluidPage(
       # Observation window start ----
       selectInput(inputId="observation_window_start_unit",
                   label="Observation wnd. start unit",
-                  choices=c("days", "weeks", "months", "years", "Actual Calendar Date"),
+                  choices=c("days", "weeks", "months", "years", "calendar date"),
                   selected="days"),
 
-      # If observation window unit is "Actual Calendar Date" ----
+      # If observation window unit is "calendar date" ----
       conditionalPanel(
-        condition = "(input.observation_window_start_unit == 'Actual Calendar Date')",
+        condition = "(input.observation_window_start_unit == 'calendar date')",
                     # Select an actual date ----
                     dateInput(inputId="observation_window_start_date",
                               label="Observation wnd. start",
                               value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1)
       ),
 
-      # If observation window unit is not "Actual Calendar Date" ----
+      # If observation window unit is not "calendar date" ----
       conditionalPanel(
-        condition = "(input.observation_window_start_unit != 'Actual Calendar Date')",
+        condition = "(input.observation_window_start_unit != 'calendar date')",
                     # Select the number of units ----
                     sliderInput(inputId="observation_window_start_no_units",
                                 label="Observation wnd. start",
@@ -184,6 +194,11 @@ ui <- fluidPage(
                                 label="Max. permissible gap",
                                 min=0, max=.plotting.params$followup.window.duration.max, value=0, step=1, round=TRUE),
 
+                    # Plot CMA as histogram ----
+                    checkboxInput(inputId="plot_CMA_as_histogram_episodes",
+                                  label="Plot CMA as histogram?",
+                                  value=FALSE),
+
                     hr()
       ),
 
@@ -240,6 +255,10 @@ ui <- fluidPage(
                                               min=0, max=1000, value=10, step=1, round=TRUE)
                     ),
 
+                    # Plot CMA as histogram ----
+                    checkboxInput(inputId="plot_CMA_as_histogram_sliding_window",
+                                  label="Plot CMA as histogram?",
+                                  value=TRUE),
 
                     hr()
 
@@ -251,16 +270,7 @@ ui <- fluidPage(
       # Show legend? ----
       checkboxInput(inputId="show_legend",
                   label="Show the legend?",
-                  value=TRUE),
-
-      # Save image to file:
-      downloadButton(outputId="save_to_file", label="Export plot to file..."),
-
-      hr(),
-
-      # Close shop:
-      span(h4("Close shop..."), style="color:Red"),
-      actionButton(inputId="close_shop", label="  and return to caller...", icon=icon("remove-circle", lib="glyphicon"))
+                  value=TRUE)
 
     )),
 
@@ -270,26 +280,36 @@ ui <- fluidPage(
     column(9,
 
       # Control the plot dimensions ----
-      column(4, offset=1,
+      column(3,
         sliderInput(inputId="plot_width",
                     label="Plot width",
                     min=0, max=1000, value=10, step=1, round=TRUE)
       ),
 
-      column(4,
+      column(3,
         sliderInput(inputId="plot_height",
                     label="height",
                     min=0, max=1000, value=10, step=1, round=TRUE)
       ),
 
-      column(3,
+      column(2,
         checkboxInput(inputId="plot_keep_ratio",
-                    label="keep ratio?",
+                    label="keep ratio",
                     value=TRUE),
 
         checkboxInput(inputId="plot_auto_size",
-                    label="auto size?",
+                    label="auto size",
                     value=TRUE)
+      ),
+
+      column(2,
+        # Save image to file:
+        downloadButton(outputId="save_to_file", label="Save plot")
+      ),
+
+      column(2,
+        # Close shop:
+        actionButton(inputId="close_shop", label=strong("Exit..."), icon=icon("remove-circle", lib="glyphicon"), style="color: #C70039 ; border-color: #C70039")
       ),
 
 
@@ -297,7 +317,19 @@ ui <- fluidPage(
       plotOutput(outputId = "distPlot")
 
     )
+  ),
+
+
+  fluidRow(
+
+    # Messages:
+    column(12,
+      span(h4(" Messages:"), style="color:DarkBlue"),
+      span(textOutput(outputId = "messages"), style="color:Blue")
+    )
+
   )
+
 )
 
 
@@ -308,49 +340,71 @@ server <- function(input, output) {
   output$distPlot <- renderPlot({
 
       # Depeding on the CMA class we might do things differently:
-      if( input$cma_class == "simple" )
+      msgs <- ""; # the output messages
+      if( input$cma_class %in% c("simple", "per episode", "sliding window") )
       {
         # Call the workhorse plotting function with the appropriate argumens:
-        .plotting.params$.plotting.fnc(data=.plotting.params$data,
-                                       ID=input$patient,
-                                       cma=input$cma_to_compute,
-                                       carryover.within.obs.window=NA, # carryover.within.obs.window,
-                                       carryover.into.obs.window=NA, # carryover.into.obs.window,
-                                       carry.only.for.same.medication=FALSE,
-                                       consider.dosage.change=FALSE,
-                                       followup.window.start=0,
-                                       followup.window.start.unit="days", # followup.window.start.unit,
-                                       followup.window.duration=365,
-                                       followup.window.duration.unit="days", # followup.window.duration.unit,
-                                       observation.window.start=0,
-                                       observation.window.start.unit="days", # observation.window.start.unit,
-                                       observation.window.duration=365,
-                                       observation.window.duration.unit="days", # observation.window.duration.unit,
-                                       medication.change.means.new.treatment.episode=FALSE, #medication.change.means.new.treatment.episode,
-                                       maximum.permissible.gap=0, #maximum.permissible.gap,
-                                       maximum.permissible.gap.unit="days", # maximum.permissible.gap.unit,
-                                       sliding.window.start=0, #sliding.window.start,
-                                       sliding.window.start.unit="days", # sliding.window.start.unit,
-                                       sliding.window.duration=10, #sliding.window.duration,
-                                       sliding.window.duration.unit="days", # sliding.window.duration.unit,
-                                       sliding.window.step.duration=5, #sliding.window.step.duration,
-                                       sliding.window.step.unit="days", # sliding.window.step.unit,
-                                       sliding.window.no.steps=NA, # sliding.window.no.steps
-                                       plot.CMA.as.histogram=NA, # plot CMA as historgram?
-                                       show.legend=TRUE # show the legend?
+        msgs <- capture.output(
+          .plotting.params$.plotting.fnc(data=.plotting.params$data,
+                                         ID=input$patient,
+                                         cma=ifelse(input$cma_class == "simple",
+                                                    input$cma_to_compute,
+                                                    input$cma_class),
+                                         cma.to.apply=ifelse(input$cma_class == "simple",
+                                                             "none",
+                                                             input$cma_to_compute),
+                                         #carryover.within.obs.window=FALSE,
+                                         #carryover.into.obs.window=FALSE,
+                                         carry.only.for.same.medication=input$carry_only_for_same_medication,
+                                         consider.dosage.change=input$consider_dosage_change,
+                                         followup.window.start=ifelse(input$followup_window_start_unit== "calendar date",
+                                                                      as.Date(input$followup_window_start_date, format="%Y-%m-%d"),
+                                                                      as.numeric(input$followup_window_start_no_units)),
+                                         followup.window.start.unit=ifelse(input$followup_window_start_unit== "calendar date",
+                                                                           "days",
+                                                                           input$followup_window_start_unit),
+                                         followup.window.duration=as.numeric(input$followup_window_duration),
+                                         followup.window.duration.unit=input$followup_window_duration_unit,
+                                         observation.window.start=ifelse(input$observation_window_start_unit== "calendar date",
+                                                                          as.Date(input$observation_window_start_date, format="%Y-%m-%d"),
+                                                                          as.numeric(input$observation_window_start_no_units)),
+                                         observation.window.start.unit=ifelse(input$observation_window_start_unit== "calendar date",
+                                                                               "days",
+                                                                               input$observation_window_start_unit),
+                                         observation.window.duration=as.numeric(input$observation_window_duration),
+                                         observation.window.duration.unit=input$observation_window_duration_unit,
+                                         medication.change.means.new.treatment.episode=input$medication_change_means_new_treatment_episode,
+                                         maximum.permissible.gap=as.numeric(input$maximum_permissible_gap),
+                                         maximum.permissible.gap.unit=input$maximum_permissible_gap_unit,
+                                         sliding.window.start=as.numeric(input$sliding_window_start),
+                                         sliding.window.start.unit=input$sliding_window_start_unit,
+                                         sliding.window.duration=as.numeric(input$sliding_window_duration),
+                                         sliding.window.duration.unit=input$sliding_window_duration_unit,
+                                         sliding.window.step.duration=as.numeric(input$sliding_window_step_duration),
+                                         sliding.window.step.unit=input$sliding_window_step_unit,
+                                         sliding.window.no.steps=ifelse(input$sliding_window_step_choice == "the number of steps" ,as.numeric(input$sliding_window_no_steps), NA),
+                                         plot.CMA.as.histogram=ifelse(input$cma_class == "sliding window",
+                                                                      !input$plot_CMA_as_histogram_sliding_window,
+                                                                      !input$plot_CMA_as_histogram_episodes),
+                                         show.legend=input$show_legend # show the legend?
+          )
         );
-      } else if( input$cma_class == "per episode" )
-      {
-        plot(0:10,0:10,col="red");
-      } else if( input$cma_class == "sliding window" )
-      {
-        plot(0:10,0:10,col="green");
       } else
       {
+        # Quitting....
         showModal(modalDialog(title="AdhereR interactive plotting...", paste0("Unknwon CMA class '",input$cma_class,"'."), easyClose=TRUE));
       }
 
+      output$messages <- renderText({
+        msgs;
+      })
+
     })
+
+  # Text messages:
+  output$messages <- renderText({
+    ""
+  })
 
   # Export plot to file:
   output$save_to_file <- downloadHandler(
