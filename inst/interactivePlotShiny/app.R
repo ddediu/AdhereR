@@ -36,7 +36,7 @@ ui <- fluidPage(
 
     # Sidebar panel for inputs ----
     #sidebarPanel(
-    column(3, wellPanel(id = "tPanel",style = "overflow-y:scroll; max-height: 600px;",
+    column(3, wellPanel(id = "tPanel", style = "overflow-y:scroll; max-height: 600px;",
 
 
       span(h4("General settings..."), style="color:DarkBlue"),
@@ -283,13 +283,13 @@ ui <- fluidPage(
       column(3,
         sliderInput(inputId="plot_width",
                     label="Plot width",
-                    min=0, max=1000, value=10, step=1, round=TRUE)
+                    min=0, max=5000, value=500, step=20, round=TRUE, )
       ),
 
       column(3,
         sliderInput(inputId="plot_height",
                     label="height",
-                    min=0, max=1000, value=10, step=1, round=TRUE)
+                    min=0, max=5000, value=300, step=20, round=TRUE)
       ),
 
       column(2,
@@ -312,23 +312,30 @@ ui <- fluidPage(
         actionButton(inputId="close_shop", label=strong("Exit..."), icon=icon("remove-circle", lib="glyphicon"), style="color: #C70039 ; border-color: #C70039")
       ),
 
+      # Messages:
+      column(12,
+        tags$head(tags$style("#container * { display: inline; }")),
+        div(id="container", span(" Messages:", style="color:DarkBlue"), span(textOutput(outputId = "messages"), style="color:Blue"))
+      ),
 
       # Output: the actual plot ----
-      plotOutput(outputId = "distPlot")
+      column(12, wellPanel(id = "tPlot",
+                           style="resize: both; overflow-y:scroll; overflow-x:scroll; max-height: 800px;",
+                           plotOutput(outputId = "distPlot", inline=TRUE)))
 
     )
-  ),
-
-
-  fluidRow(
-
-    # Messages:
-    column(12,
-      span(h4(" Messages:"), style="color:DarkBlue"),
-      span(textOutput(outputId = "messages"), style="color:Blue")
-    )
-
-  )
+  )#,
+  #
+  #
+  #fluidRow(
+  #
+  #  # Messages:
+  #  column(12,
+  #    span(h4(" Messages:"), style="color:DarkBlue")
+  #    span(textOutput(outputId = "messages"), style="color:Blue")
+  #  )
+  #
+  #)
 
 )
 
@@ -399,7 +406,10 @@ server <- function(input, output) {
         msgs;
       })
 
-    })
+    },
+    width=function(){ input$plot_width }, # plot dimensions
+    height=function(){ input$plot_height }
+    )
 
   # Text messages:
   output$messages <- renderText({
