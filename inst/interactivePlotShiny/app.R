@@ -313,12 +313,40 @@ ui <- fluidPage(
 
       column(2,
         # Save image to file:
-        downloadButton(outputId="save_to_file", label="Save plot")
+        checkboxInput(inputId="save_to_file_info",
+                    label="Save plot!",
+                    value=FALSE)
       ),
 
       column(2,
         # Close shop:
         actionButton(inputId="close_shop", label=strong("Exit..."), icon=icon("remove-circle", lib="glyphicon"), style="color: #C70039 ; border-color: #C70039")
+      ),
+
+      # Save to file info:
+      column(12,
+        conditionalPanel(
+          condition="(input.save_to_file_info)",
+
+          column(2,numericInput(inputId="save_plot_width", label="width", value=5)),
+          column(2,numericInput(inputId="save_plot_height", label="height", value=5)),
+
+          conditionalPanel( # EPS + PDF
+            condition="(input.save_plot_type == 'eps' || save_plot_type == 'pdf')",
+            column(2,selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in")) # only inches
+          ),
+          conditionalPanel( # JPEG + PNG + TIFF
+            condition="(input.save_plot_type != 'eps' && save_plot_type != 'pdf')",
+            column(2,selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","mm","px"), selected="in"))
+          ),
+
+          column(2,selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpeg")),
+
+          #column(2,numericInput(inputId="save_plot_quality", label="quality", value=75, min=0, max=100, step=1)),
+          column(2,numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0)),
+
+          column(2, style="margin-top: 25px;", downloadButton(outputId="save_to_file", label="Save plot"))
+        )
       ),
 
       # Messages:
@@ -352,7 +380,55 @@ ui <- fluidPage(
 # Define server logic required to draw a histogram ----
 server <- function(input, output, session) {
 
-  # The ploting:
+  # The plotting function:
+  .renderPlot <- function()
+  {
+    .plotting.params$.plotting.fnc(data=.plotting.params$data,
+                                   ID=input$patient,
+                                   cma=ifelse(input$cma_class == "simple",
+                                              input$cma_to_compute,
+                                              input$cma_class),
+                                   cma.to.apply=ifelse(input$cma_class == "simple",
+                                                       "none",
+                                                       input$cma_to_compute),
+                                   #carryover.within.obs.window=FALSE,
+                                   #carryover.into.obs.window=FALSE,
+                                   carry.only.for.same.medication=input$carry_only_for_same_medication,
+                                   consider.dosage.change=input$consider_dosage_change,
+                                   followup.window.start=ifelse(input$followup_window_start_unit== "calendar date",
+                                                                as.Date(input$followup_window_start_date, format="%Y-%m-%d"),
+                                                                as.numeric(input$followup_window_start_no_units)),
+                                   followup.window.start.unit=ifelse(input$followup_window_start_unit== "calendar date",
+                                                                     "days",
+                                                                     input$followup_window_start_unit),
+                                   followup.window.duration=as.numeric(input$followup_window_duration),
+                                   followup.window.duration.unit=input$followup_window_duration_unit,
+                                   observation.window.start=ifelse(input$observation_window_start_unit== "calendar date",
+                                                                   as.Date(input$observation_window_start_date, format="%Y-%m-%d"),
+                                                                   as.numeric(input$observation_window_start_no_units)),
+                                   observation.window.start.unit=ifelse(input$observation_window_start_unit== "calendar date",
+                                                                        "days",
+                                                                        input$observation_window_start_unit),
+                                   observation.window.duration=as.numeric(input$observation_window_duration),
+                                   observation.window.duration.unit=input$observation_window_duration_unit,
+                                   medication.change.means.new.treatment.episode=input$medication_change_means_new_treatment_episode,
+                                   maximum.permissible.gap=as.numeric(input$maximum_permissible_gap),
+                                   maximum.permissible.gap.unit=input$maximum_permissible_gap_unit,
+                                   sliding.window.start=as.numeric(input$sliding_window_start),
+                                   sliding.window.start.unit=input$sliding_window_start_unit,
+                                   sliding.window.duration=as.numeric(input$sliding_window_duration),
+                                   sliding.window.duration.unit=input$sliding_window_duration_unit,
+                                   sliding.window.step.duration=as.numeric(input$sliding_window_step_duration),
+                                   sliding.window.step.unit=input$sliding_window_step_unit,
+                                   sliding.window.no.steps=ifelse(input$sliding_window_step_choice == "the number of steps" ,as.numeric(input$sliding_window_no_steps), NA),
+                                   plot.CMA.as.histogram=ifelse(input$cma_class == "sliding window",
+                                                                !input$plot_CMA_as_histogram_sliding_window,
+                                                                !input$plot_CMA_as_histogram_episodes),
+                                   show.legend=input$show_legend # show the legend?
+    )
+  }
+
+  # Do the ploting:
   output$distPlot <- renderPlot({
 
       # Depeding on the CMA class we might do things differently:
@@ -360,51 +436,7 @@ server <- function(input, output, session) {
       if( input$cma_class %in% c("simple", "per episode", "sliding window") )
       {
         # Call the workhorse plotting function with the appropriate argumens:
-        msgs <- capture.output(
-          .plotting.params$.plotting.fnc(data=.plotting.params$data,
-                                         ID=input$patient,
-                                         cma=ifelse(input$cma_class == "simple",
-                                                    input$cma_to_compute,
-                                                    input$cma_class),
-                                         cma.to.apply=ifelse(input$cma_class == "simple",
-                                                             "none",
-                                                             input$cma_to_compute),
-                                         #carryover.within.obs.window=FALSE,
-                                         #carryover.into.obs.window=FALSE,
-                                         carry.only.for.same.medication=input$carry_only_for_same_medication,
-                                         consider.dosage.change=input$consider_dosage_change,
-                                         followup.window.start=ifelse(input$followup_window_start_unit== "calendar date",
-                                                                      as.Date(input$followup_window_start_date, format="%Y-%m-%d"),
-                                                                      as.numeric(input$followup_window_start_no_units)),
-                                         followup.window.start.unit=ifelse(input$followup_window_start_unit== "calendar date",
-                                                                           "days",
-                                                                           input$followup_window_start_unit),
-                                         followup.window.duration=as.numeric(input$followup_window_duration),
-                                         followup.window.duration.unit=input$followup_window_duration_unit,
-                                         observation.window.start=ifelse(input$observation_window_start_unit== "calendar date",
-                                                                          as.Date(input$observation_window_start_date, format="%Y-%m-%d"),
-                                                                          as.numeric(input$observation_window_start_no_units)),
-                                         observation.window.start.unit=ifelse(input$observation_window_start_unit== "calendar date",
-                                                                               "days",
-                                                                               input$observation_window_start_unit),
-                                         observation.window.duration=as.numeric(input$observation_window_duration),
-                                         observation.window.duration.unit=input$observation_window_duration_unit,
-                                         medication.change.means.new.treatment.episode=input$medication_change_means_new_treatment_episode,
-                                         maximum.permissible.gap=as.numeric(input$maximum_permissible_gap),
-                                         maximum.permissible.gap.unit=input$maximum_permissible_gap_unit,
-                                         sliding.window.start=as.numeric(input$sliding_window_start),
-                                         sliding.window.start.unit=input$sliding_window_start_unit,
-                                         sliding.window.duration=as.numeric(input$sliding_window_duration),
-                                         sliding.window.duration.unit=input$sliding_window_duration_unit,
-                                         sliding.window.step.duration=as.numeric(input$sliding_window_step_duration),
-                                         sliding.window.step.unit=input$sliding_window_step_unit,
-                                         sliding.window.no.steps=ifelse(input$sliding_window_step_choice == "the number of steps" ,as.numeric(input$sliding_window_no_steps), NA),
-                                         plot.CMA.as.histogram=ifelse(input$cma_class == "sliding window",
-                                                                      !input$plot_CMA_as_histogram_sliding_window,
-                                                                      !input$plot_CMA_as_histogram_episodes),
-                                         show.legend=input$show_legend # show the legend?
-          )
-        );
+        msgs <- capture.output(.renderPlot());
       } else
       {
         # Quitting....
@@ -453,9 +485,32 @@ server <- function(input, output, session) {
 
   # Export plot to file:
   output$save_to_file <- downloadHandler(
-    filename = function(){ paste0("adherer-plot-",input$cma_class,"-",input$cma_to_compute,"-ID-",input$patient,".jpg") },
-    content = function(file) {
-      write.csv(data, file) # TODO!!!
+    filename = function(){ paste0("adherer-plot-", input$cma_class,"-", input$cma_to_compute,"-", "ID-",input$patient, ".", input$save_plot_type) },
+    content = function(file)
+    {
+      # The type of plot to save:
+      if( input$save_plot_type == "png" )
+      {
+        png(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution);
+      } else if( input$save_plot_type == "tiff" )
+      {
+        tiff(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution);
+      } else if( input$save_plot_type == "eps" )
+      {
+        postscript(file, height=input$save_plot_width, width=input$save_plot_height, horizontal=FALSE, onefile=FALSE, paper="special");
+      } else if( input$save_plot_type == "pdf" )
+      {
+        pdf(file, height=input$save_plot_width, width=input$save_plot_height, horizontal=FALSE, onefile=FALSE, paper="special");
+      } else # default to JPEG
+      {
+        jpeg(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution);
+      }
+
+      # Plot it:
+      .renderPlot();
+
+      # Close the device:
+      dev.off();
     }
   )
 

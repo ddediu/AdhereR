@@ -7859,7 +7859,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 sliding.window.start.max=sliding.window.start.max,
                                 sliding.window.duration.max=sliding.window.duration.max,
                                 sliding.window.step.duration.max=sliding.window.step.duration.max,
-                                use.system.browser=TRUE,
+                                use.system.browser=use.system.browser,
                                 ...
     );
   } else if( backend == "rstudio" )
