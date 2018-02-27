@@ -10,14 +10,18 @@
   
   - *dates with no day specificed (i.e., only month & year)* -- probably assume 1st of the month?
   
-  - *plotting bugs*: check carefully all sorts of plotting bugs (size, etc)
+  - *plotting bugs*: check carefully all sorts of plotting bugs (size, etc)  <-- **SEEMS FIXED**
+    + title too verbose for sliding window & per episodes
+    + cma limits get too crowded
+    + cma per episode too crowded
   
 **Shiny interactive plots**:  *DONE*
 
   - plot size   **DONE**
   - force plot redrawing on resizing   **DONE**
-  - save plot   *DONE*
+  - save plot   **DONE**
   - when exiting, also attempt to close tab (?)   **DONT FIX** (not worth it)
+  - plot multiple patients  **DONE**
   
   
   

@@ -59,7 +59,8 @@ ui <- fluidPage(
       selectInput(inputId="patient",
                   label="Select patient to plot",
                   choices=.plotting.params$all.IDs,
-                  selected=.plotting.params$ID),
+                  selected=.plotting.params$ID,
+                  multiple=TRUE),
 
       hr(),
       span(h4("Follow-up window..."), style="color:DarkBlue"),

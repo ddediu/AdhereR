@@ -473,7 +473,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 )
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
-  if( is.null(cma) || !inherits(cma, "CMA0") ) return;
+  if( is.null(cma) || !inherits(cma, "CMA0") ) return (invisible(NULL));
 
   if( format[1] == "text" )
   {
@@ -532,7 +532,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
   } else
   {
     warning("Unknown format for printing!\n");
-    return;
+    return (invisible(NULL));
   }
 }
 
@@ -641,7 +641,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA0") || is.null(cma$data) || nrow(cma$data) < 1 ||
       is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) ||
-      is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) ) return;
+      is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) ) return (invisible(NULL));
 
   # Check compatibility between subtypes of plots:
   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
@@ -656,7 +656,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   # The patients:
   patids <- unique(as.character(cma$data[,cma$ID.colname])); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
-  if( length(patids) == 0 ) return;
+  if( length(patids) == 0 ) return (invisible(NULL));
   # Select only the patients to display:
   cma$data <- cma$data[ cma$data[,cma$ID.colname] %in% patids, ];
   # Make sure the patients are ordered by ID and date:
@@ -2365,6 +2365,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                            show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                           min.plot.size.in.characters.horiz=20, min.plot.size.in.characters.vert=15,  # the minimum plot size (in character)
+                           max.patients.to.plot=100,        # maximum number of patients to plot
                            ...
 )
 {
@@ -2386,7 +2388,17 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   # The patients (use event.info as it contains all the info required, plus the specifics of the CMA):
   patids <- unique(cma$event.info[,cma$ID.colname]); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
-  if( length(patids) == 0 ) return;
+  if( length(patids) == 0 )
+  {
+    cat("No patients to plot!\n");
+    return (invisible(NULL));
+  } else if( length(patids) > max.patients.to.plot )
+  {
+    cat(paste0("Too many patients to plot (",length(patids),
+               ")! If you really want that, please change the 'max.patients.to.plot' parameter value (now set at ",
+               max.patients.to.plot,"!\n"));
+    return (invisible(NULL));
+  }
   # Select only the patients to display:
   cma$data <- cma$data[ cma$data[,cma$ID.colname] %in% patids, ];
   cma$event.info <- cma$event.info[ cma$event.info[,cma$ID.colname] %in% patids, ];
@@ -2459,16 +2471,50 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   duration.total <- duration + adh.plot.space[2];
 
   # The actual plotting:
-  plot( 0, 1,
-        xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
-        ylim=c(0,nrow(cma$event.info)+1), yaxs="i", type="n",
-        main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
-                    ifelse(show.cma,paste0(" (",class(cma)[1],")"),"")),
-        axes=FALSE, xlab=ifelse(show.period=="dates","","days"),
-        ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"), cex.lab=cex.lab ); box();
+  if(inherits(msg <- try(plot( 0, 1,
+                               xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
+                               ylim=c(0,nrow(cma$event.info)+1), yaxs="i", type="n",
+                               axes=FALSE,
+                               xlab="", ylab=""),
+                         silent=TRUE),
+              "try-error"))
+  {
+    # Some error occured when creatig the plot...
+    cat(msg);
+    return (invisible(NULL));
+  }
 
   # Character height and width in the current plotting system:
-  char.height <- strheight("O",cex=cex); char.width <- strwidth("O",cex=cex);
+  char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
+
+  # Minimum plot dimensions:
+  if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
+      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * length(patids))
+  {
+    cat(paste0("Plotting area is too small (it must be at least ",
+               min.plot.size.in.characters.horiz,
+               " x ",
+               min.plot.size.in.characters.vert,
+               " characters per patient, but now it is only ",
+               round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
+               " x ",
+               round(abs(par("usr")[4] - par("usr")[3]) / (char.height * length(patids)),1),
+               ")!\n"));
+    #segments(x0=c(par("usr")[1], par("usr")[1]),
+    #         y0=c(par("usr")[3], par("usr")[4]),
+    #         x1=c(par("usr")[2], par("usr")[2]),
+    #         y1=c(par("usr")[4], par("usr")[3]),
+    #         col="red", lwd=3);
+    return (invisible(NULL));
+  }
+
+  # Continue plotting:
+  box();
+  title(main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
+                    ifelse(show.cma,paste0(" (",class(cma)[1],")"),"")),
+        xlab=ifelse(show.period=="dates","","days"),
+        ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
+        cex.lab=cex.lab);
 
   # The patient axis and CMA plots:
   if( plot.CMA && !is.null(getCMA(cma)) )
@@ -2498,7 +2544,19 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       adh <- getCMA(cma)[x,"CMA"];
       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(min(adh,adh.max)), mean(s)+1, col=CMA.plot.col, border=NA);
       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)), mean(s)+1, col=NA, border=CMA.plot.border);
-      if(!is.na(adh)) text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s), labels=sprintf("%.1f%%",adh*100), col=CMA.plot.text, cex=cex.axis);
+      if( !is.na(adh) )
+      {
+        cma.string <- sprintf("%.1f%%",adh*100); available.x.space <- abs(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0));
+        if( strwidth(cma.string, cex=cex.axis) <= available.x.space )
+        { # horizontal writing of the CMA:
+          text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s),
+               labels=cma.string, col=CMA.plot.text, cex=cex.axis);
+        } else if( strheight(cma.string, cex=cex.axis) <= available.x.space )
+        { # vertical writing of the CMA:
+          text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s),
+               labels=cma.string, col=CMA.plot.text, cex=cex.axis, srt=90);
+        } # otherwise, theres' no space for showing the CMA here
+      }
     }
 
     # The follow-up and observation windows:
@@ -6413,7 +6471,7 @@ print.CMA_per_episode <- function(x,                                     # the C
 )
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
-  if( is.null(cma) ) return;
+  if( is.null(cma) ) return (invisible(NULL));
 
   if( format[1] == "text" )
   {
@@ -6472,7 +6530,7 @@ print.CMA_per_episode <- function(x,                                     # the C
   } else
   {
     warning("Unknown format for printing!\n");
-    return;
+    return (invisible(NULL));
   }
 }
 
@@ -6500,6 +6558,8 @@ print.CMA_per_episode <- function(x,                                     # the C
                                highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                                show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
                                bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                               min.plot.size.in.characters.horiz=20, min.plot.size.in.characters.vert=15,  # the minimum plot size (in character)
+                               max.patients.to.plot=100,        # maximum number of patients to plot
                                ...
 )
 {
@@ -6539,7 +6599,17 @@ print.CMA_per_episode <- function(x,                                     # the C
   # The patients:
   patids <- unique(cmas[,cma$ID.colname]); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
-  if( length(patids) == 0 ) return;
+  if( length(patids) == 0 )
+  {
+    cat("No patients to plot!\n");
+    return (invisible(NULL));
+  } else if( length(patids) > max.patients.to.plot )
+  {
+    cat(paste0("Too many patients to plot (",length(patids),
+               ")! If you really want that, please change the 'max.patients.to.plot' parameter value (now set at ",
+               max.patients.to.plot,"!\n"));
+    return (invisible(NULL));
+  }
   # Select only the patients to display:
   cma$data <- cma$data[ cma$data[,cma$ID.colname] %in% patids, ];
   cmas <- cmas[ cmas[,cma$ID.colname] %in% patids, ];
@@ -6627,16 +6697,50 @@ print.CMA_per_episode <- function(x,                                     # the C
   duration.total <- duration + adh.plot.space[2];
 
   # The actual plotting:
-  plot( 0, 1,
-        xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
-        ylim=c(0,nrow(cma$data)+ifelse(plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0)+1), yaxs="i", type="n",
-        main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
-                    ifelse(show.cma,paste0(" (",class(cma)[1]," using ",cma$computed.CMA,")"),"")),
-        axes=FALSE, xlab=ifelse(show.period=="dates","","days"),
-        ylab="patient", cex.lab=cex.lab ); box();
+  if(inherits(msg <- try(plot( 0, 1,
+                               xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
+                               ylim=c(0,nrow(cma$data)+ifelse(plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0)+1), yaxs="i", type="n",
+                               axes=FALSE,
+                               xlab="", ylab="" ),
+                         silent=TRUE),
+              "try-error"))
+  {
+    # Some error occured when creatig the plot...
+    cat(msg);
+    return (invisible(NULL));
+  }
 
   # Character width and height in the current plotting system:
   char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
+
+  # Minimum plot dimensions:
+  if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
+      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * length(patids))
+  {
+    cat(paste0("Plotting area is too small (it must be at least ",
+               min.plot.size.in.characters.horiz,
+               " x ",
+               min.plot.size.in.characters.vert,
+               " characters per patient, but now it is only ",
+               round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
+               " x ",
+               round(abs(par("usr")[4] - par("usr")[3]) / (char.height * length(patids)),1),
+               ")!\n"));
+    #segments(x0=c(par("usr")[1], par("usr")[1]),
+    #         y0=c(par("usr")[3], par("usr")[4]),
+    #         x1=c(par("usr")[2], par("usr")[2]),
+    #         y1=c(par("usr")[4], par("usr")[3]),
+    #         col="red", lwd=3);
+    return (invisible(NULL));
+  }
+
+  # Continue plotting:
+  box();
+  title(main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
+                    ifelse(show.cma,paste0(" (",class(cma)[1]," using ",cma$computed.CMA,")"),"")),
+        xlab=ifelse(show.period=="dates","","days"),
+        ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
+        cex.lab=cex.lab);
 
   # The patient axis and CMA plots:
   if( plot.CMA && !is.null(getCMA(cma)) )
@@ -8048,7 +8152,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     if( is.null(ID) || is.null(data <- data[data[,ID.colname] == ID,]) || nrow(data)==0 )
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
-      return;
+      return (invisible(NULL));
     }
 
     # Compute the CMA:
@@ -8452,7 +8556,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     if( is.null(ID) || is.null(data <- data[data[,ID.colname] == ID,]) || nrow(data)==0 )
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
-      return;
+      return (invisible(NULL));
     }
 
     # Compute the CMA:
