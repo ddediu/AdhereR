@@ -7835,6 +7835,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   sliding.window.duration.max=2*365, # in days
                                   sliding.window.step.duration.max=2*365, # in days
                                   backend=c("shiny","rstudio"), # the interactive backend to use
+                                  use.system.browser=FALSE, # if shiny backend, use the system browser?
                                   ...
 )
 {
@@ -7858,6 +7859,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 sliding.window.start.max=sliding.window.start.max,
                                 sliding.window.duration.max=sliding.window.duration.max,
                                 sliding.window.step.duration.max=sliding.window.step.duration.max,
+                                use.system.browser=TRUE,
                                 ...
     );
   } else if( backend == "rstudio" )

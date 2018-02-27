@@ -286,20 +286,29 @@ ui <- fluidPage(
                     min=0, max=5000, value=500, step=20, round=TRUE, )
       ),
 
-      column(3,
-        sliderInput(inputId="plot_height",
-                    label="height",
-                    min=0, max=5000, value=300, step=20, round=TRUE)
+      conditionalPanel(
+        condition = "(!input.plot_keep_ratio)",
+        column(3,
+          sliderInput(inputId="plot_height",
+                      label="height",
+                      min=0, max=5000, value=300, step=20, round=TRUE)
+        )
+      ),
+      conditionalPanel(
+        condition = "(input.plot_keep_ratio)",
+        column(3,
+          p("")
+        )
       ),
 
       column(2,
         checkboxInput(inputId="plot_keep_ratio",
                     label="keep ratio",
-                    value=TRUE),
+                    value=TRUE)#,
 
-        checkboxInput(inputId="plot_auto_size",
-                    label="auto size",
-                    value=TRUE)
+        #checkboxInput(inputId="plot_auto_size",
+        #            label="auto size",
+        #            value=TRUE)
       ),
 
       column(2,
@@ -341,7 +350,7 @@ ui <- fluidPage(
 
 
 # Define server logic required to draw a histogram ----
-server <- function(input, output) {
+server <- function(input, output, session) {
 
   # The ploting:
   output$distPlot <- renderPlot({
@@ -407,14 +416,40 @@ server <- function(input, output) {
       })
 
     },
-    width=function(){ input$plot_width }, # plot dimensions
-    height=function(){ input$plot_height }
-    )
+    width=function() # plot width
+      {
+        return (input$plot_width);
+      },
+    height=function() # plot height
+      {
+        if( !is.numeric(.plotting.params$plot.ratio) ) .plotting.params$plot.ratio <<- (input$plot_width / input$plot_height); # define the ratio
+        if( input$plot_keep_ratio )
+        {
+          return (input$plot_width / .plotting.params$plot.ratio);
+        } else
+        {
+          return (input$plot_height);
+        }
+      },
+    execOnResize=TRUE # force redrawing on resize
+  )
 
   # Text messages:
   output$messages <- renderText({
     ""
   })
+
+  observeEvent(input$plot_keep_ratio, # plot keep ratio toggle
+  {
+    if( input$plot_keep_ratio )
+    {
+      .plotting.params$plot.ratio <<- (input$plot_width / input$plot_height); # save the ratio
+    } else
+    {
+      updateSliderInput(session, "plot_height", value = round(input$plot_width / .plotting.params$plot.ratio));
+    }
+  })
+
 
   # Export plot to file:
   output$save_to_file <- downloadHandler(
