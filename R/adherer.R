@@ -6712,6 +6712,7 @@ print.CMA_per_episode <- function(x,                                     # the C
 
   # Character width and height in the current plotting system:
   char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
+  char.height.CMA <- strheight("0",cex=CMA.cex);
 
   # Minimum plot dimensions:
   if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
@@ -6737,7 +6738,11 @@ print.CMA_per_episode <- function(x,                                     # the C
   # Continue plotting:
   box();
   title(main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
-                    ifelse(show.cma,paste0(" (",class(cma)[1]," using ",cma$computed.CMA,")"),"")),
+                    ifelse(show.cma,paste0(" ",
+                                           switch(class(cma)[1],
+                                                  "CMA_sliding_window"="sliding window",
+                                                  "CMA_per_episode"="per episode"),
+                                           " (",cma$computed.CMA,")"),"")),
         xlab=ifelse(show.period=="dates","","days"),
         ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
         cex.lab=cex.lab);
@@ -6783,9 +6788,16 @@ print.CMA_per_episode <- function(x,                                     # the C
           adh.y <- adh.hist$counts; adh.y <- adh.y / max(adh.y);
           adh.x.max <- adh.x[which.max(adh.hist$counts)];
           segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4*adh.y, lty="solid", lwd=1, col=CMA.plot.border);
-          text(x=.rescale.xcoord.for.CMA.plot(0), y.mean-2, sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)), srt=0, pos=1, cex=CMA.cex, col=CMA.plot.text);
-          text(x=.rescale.xcoord.for.CMA.plot(1), y.mean-2, sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)), srt=0, pos=1, cex=CMA.cex, col=CMA.plot.text);
-          text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean+2, sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=0, pos=3, cex=CMA.cex, col=CMA.plot.text);
+          if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+          {
+            # enough space for vertical writing all three of them:
+            text(x=.rescale.xcoord.for.CMA.plot(0),         y.mean-2-char.height.CMA/2,
+                 sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            text(x=.rescale.xcoord.for.CMA.plot(1),         y.mean-2-char.height.CMA/2,
+                 sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean+2+char.height.CMA/2,
+                 sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=90, pos=3, cex=CMA.cex, col=CMA.plot.text);
+          }
         }
       } else
       {
@@ -6802,7 +6814,22 @@ print.CMA_per_episode <- function(x,                                     # the C
             #if( length(adh) == 1 || isTRUE(all.equal(min(adh), max(adh))) ) adh.x <- pmax(pmin(adh,1.0),0.0) else adh.x <- (adh - min(adh)) / (max(adh) - min(adh));
             adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
             segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
-            for( i in 1:length(adh) ) text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean+ifelse(i %% 2==0,2,-2), sprintf("%.1f%%",100*adh[i]), srt=0, pos=ifelse(i %% 2==0,3,1), cex=CMA.cex, col=CMA.plot.text);
+            if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            {
+              # enough space for vertical writing all of them:
+              for( i in 1:length(adh) )
+              {
+                text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean+ifelse(i %% 2==0,2+char.height.CMA/2,-2-char.height.CMA/2),
+                     sprintf("%.1f%%",100*adh[i]), srt=90, pos=ifelse(i %% 2==0,3,1), cex=CMA.cex, col=CMA.plot.text);
+              }
+            } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            {
+              # enough space for vertical writing only the extremes:
+              text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean-2-char.height.CMA/2,
+                   sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean-2-char.height.CMA/2,
+                   sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            }
           } else
           {
             adh.density$x <- adh.density$x[ss]; adh.density$y <- adh.density$y[ss];
@@ -6810,8 +6837,12 @@ print.CMA_per_episode <- function(x,                                     # the C
             adh.x <- adh.density$x; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
             adh.y <- adh.density$y; adh.y <- (adh.y - min(adh.y)) / (max(adh.y) - min(adh.y));
             points(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4*adh.y, type="l", col=CMA.plot.border);
-            text(x=.rescale.xcoord.for.CMA.plot(0), y.mean-2, sprintf("%.1f%%",100*adh.x.0), srt=0, pos=1, cex=CMA.cex, col=CMA.plot.text);
-            text(x=.rescale.xcoord.for.CMA.plot(1), y.mean-2, sprintf("%.1f%%",100*adh.x.1), srt=0, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            {
+              # enough space for vertical writing:
+              text(x=.rescale.xcoord.for.CMA.plot(0), y.mean-2-char.height.CMA/2, sprintf("%.1f%%",100*adh.x.0), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              text(x=.rescale.xcoord.for.CMA.plot(1), y.mean-2-char.height.CMA/2, sprintf("%.1f%%",100*adh.x.1), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            }
           }
         } else
         {
@@ -6825,7 +6856,22 @@ print.CMA_per_episode <- function(x,                                     # the C
             #if( length(adh) == 1 || isTRUE(all.equal(min(adh), max(adh))) ) adh.x <- pmax(pmin(adh,1.0),0.0) else adh.x <- (adh - min(adh)) / (max(adh) - min(adh));
             adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
             segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
-            for( i in 1:length(adh) ) text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean+ifelse(i %% 2==0,2,-2), sprintf("%.1f%%",100*adh[i]), srt=0, pos=ifelse(i %% 2==0,3,1), cex=CMA.cex, col=CMA.plot.text);
+            if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            {
+              # enough space for vertical writing all of them:
+              for( i in 1:length(adh) )
+              {
+                text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean+ifelse(i %% 2==0,2+char.height.CMA/2,-2-char.height.CMA/2),
+                     sprintf("%.1f%%",100*adh[i]), srt=90, pos=ifelse(i %% 2==0,3,1), cex=CMA.cex, col=CMA.plot.text);
+              }
+            } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            {
+              # enough space for vertical writing only the extremes:
+              text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean-2-char.height.CMA/2,
+                   sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean-2-char.height.CMA/2,
+                   sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            }
           }
         }
       }
@@ -6894,8 +6940,12 @@ print.CMA_per_episode <- function(x,                                     # the C
               if( !is.na(cmas$CMA[s[j]]) )
               {
                 h <- start + (end - start)*max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
-                rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
-                if( print.CMA ) text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10,
+                      adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
+                if( print.CMA && char.height.CMA <= 0.80 )
+                {
+                  text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                }
               }
               y.cur <- y.cur+1;
             }
@@ -6920,7 +6970,10 @@ print.CMA_per_episode <- function(x,                                     # the C
         {
           h <- start + (end - start)*max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
           rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
-          if( print.CMA ) text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+          if( print.CMA && char.height.CMA <= .80 )
+          {
+            text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+          }
         }
         y.cur <- y.cur+1;
       }
@@ -7934,6 +7987,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   followup.window.duration.max=5*365, # in days
                                   observation.window.start.max=followup.window.start.max, # in days
                                   observation.window.duration.max=followup.window.duration.max, # in days
+                                  align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place the first event as the horizontal 0?
                                   maximum.permissible.gap.max=2*365, # in days
                                   sliding.window.start.max=followup.window.start.max, # in days
                                   sliding.window.duration.max=2*365, # in days
@@ -7959,6 +8013,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 followup.window.duration.max=followup.window.duration.max,
                                 observation.window.start.max=observation.window.start.max,
                                 observation.window.duration.max=observation.window.duration.max,
+                                align.all.patients=align.all.patients,
+                                align.first.event.at.zero=align.first.event.at.zero,
                                 maximum.permissible.gap.max=maximum.permissible.gap.max,
                                 sliding.window.start.max=sliding.window.start.max,
                                 sliding.window.duration.max=sliding.window.duration.max,
@@ -7982,6 +8038,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   followup.window.duration.max=followup.window.duration.max,
                                   observation.window.start.max=observation.window.start.max,
                                   observation.window.duration.max=observation.window.duration.max,
+                                  #align.all.patients=align.all.patients,
+                                  #align.first.event.at.zero=align.first.event.at.zero,
                                   maximum.permissible.gap.max=maximum.permissible.gap.max,
                                   sliding.window.start.max=sliding.window.start.max,
                                   sliding.window.duration.max=sliding.window.duration.max,
@@ -8149,7 +8207,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     cat("\n");
 
     # Preconditions:
-    if( is.null(ID) || is.null(data <- data[data[,ID.colname] == ID,]) || nrow(data)==0 )
+    if( is.null(ID) || is.null(data <- data[data[,ID.colname] %in% ID,]) || nrow(data)==0 )
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
       return (invisible(NULL));
@@ -8417,6 +8475,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                         followup.window.duration.max=5*365, # in days
                                         observation.window.start.max=followup.window.start.max, # in days
                                         observation.window.duration.max=followup.window.duration.max, # in days
+                                        align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
                                         maximum.permissible.gap.max=2*365, # in days
                                         sliding.window.start.max=followup.window.start.max, # in days
                                         sliding.window.duration.max=2*365, # in days
@@ -8518,6 +8577,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             sliding.window.step.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
                             sliding.window.no.steps=NA, # the number of steps to jump; if both sliding.win.no.steps & sliding.win.duration are NA, fill the whole observation window
                             plot.CMA.as.histogram=TRUE, # plot the CMA as historgram or density plot?
+                            align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
+
+                            # Legend:
                             show.legend=TRUE # show the legend?
   )
   {
@@ -8547,13 +8609,15 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                  "sliding.window.duration.unit=",sliding.window.duration.unit,", ",
                  "sliding.window.step.duration=",sliding.window.step.duration,", ",
                  "sliding.window.step.unit=",sliding.window.step.unit,", ",
-                 "sliding.window.no.steps=",sliding.window.no.steps
+                 "sliding.window.no.steps=",sliding.window.no.steps,", ",
+                 "align.all.patients=",align.all.patients,", ",
+                 "align.first.event.at.zero=",align.first.event.at.zero
       ));
     }
     cat("\n");
 
     # Preconditions:
-    if( is.null(ID) || is.null(data <- data[data[,ID.colname] == ID,]) || nrow(data)==0 )
+    if( is.null(ID) || is.null(data <- data[data[,ID.colname] %in% ID,]) || nrow(data)==0 )
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
       return (invisible(NULL));
@@ -8617,7 +8681,12 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     } else
     {
       # Plot the results:
-      plot(results, show.legend=show.legend, plot.CMA.as.histogram=plot.CMA.as.histogram);
+      plot(results,
+           show.legend=show.legend,
+           plot.CMA.as.histogram=plot.CMA.as.histogram,
+           align.all.patients=align.all.patients,
+           align.first.event.at.zero=align.first.event.at.zero
+          );
     }
   }
 
@@ -8641,8 +8710,10 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       "sliding.window.start.max"=sliding.window.start.max,
                                       "sliding.window.duration.max"=sliding.window.duration.max,
                                       "sliding.window.step.duration.max"=sliding.window.step.duration.max,
+                                      "align.all.patients"=align.all.patients,
+                                      "align.first.event.at.zero"=align.first.event.at.zero,
                                       ".plotting.fnc"=.plotting.fnc
-                                      );
+                                     );
   # make sure they are deleted on exit from shiny:
   on.exit(rm(.plotting.params, envir=.GlobalEnv));
 

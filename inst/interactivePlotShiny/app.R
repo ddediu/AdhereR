@@ -268,6 +268,23 @@ ui <- fluidPage(
 
       span(h4("Other..."), style="color:DarkBlue"),
 
+      # Align al patients ----
+      conditionalPanel(
+        condition="(input.patient.length > 1)",
+
+        checkboxInput(inputId="plot_align_all_patients",
+                      label="Align patients?",
+                      value=FALSE),
+
+        # Align al patients ----
+        conditionalPanel(
+          condition="input.plot_align_all_patients",
+          checkboxInput(inputId="plot_align_first_event_at_zero",
+                        label="Align 1st event at 0?",
+                        value=FALSE)
+        )
+      ),
+
       # Show legend? ----
       checkboxInput(inputId="show_legend",
                   label="Show the legend?",
@@ -425,6 +442,8 @@ server <- function(input, output, session) {
                                    plot.CMA.as.histogram=ifelse(input$cma_class == "sliding window",
                                                                 !input$plot_CMA_as_histogram_sliding_window,
                                                                 !input$plot_CMA_as_histogram_episodes),
+                                   align.all.patients=input$plot_align_all_patients,
+                                   align.first.event.at.zero=input$plot_align_first_event_at_zero,
                                    show.legend=input$show_legend # show the legend?
     )
   }

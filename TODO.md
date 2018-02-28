@@ -11,9 +11,9 @@
   - *dates with no day specificed (i.e., only month & year)* -- probably assume 1st of the month?
   
   - *plotting bugs*: check carefully all sorts of plotting bugs (size, etc)  <-- **SEEMS FIXED**
-    + title too verbose for sliding window & per episodes
-    + cma limits get too crowded
-    + cma per episode too crowded
+    + title too verbose for sliding window & per episodes  **FIXED**
+    + cma limits get too crowded  **FIXED**
+    + cma per episode too crowded  **FIXED**
   
 **Shiny interactive plots**:  *DONE*
 
