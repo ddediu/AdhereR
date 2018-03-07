@@ -6,7 +6,7 @@ Created on Sun Mar  4 19:23:21 2018
 @author: ddediu
 """
 
-import pandas, warnings, subprocess, os
+import pandas, warnings, subprocess, os, numbers, datetime
 
 # Load the test dataset
 df = pandas.read_csv('./test-dataset.csv', sep='\t', header=0)
@@ -29,9 +29,13 @@ def adhereR(dataset,
             event_duration_colname,
             followup_window_start_type = 'numeric',
             followup_window_start = 0,
+            followup_window_start_unit = "days",
+            date_format = "%m/%d/%Y",
+            save_event_info = False,
             path_to_Rscript = '/usr/local/bin/Rscript',
             path_to_adherer = os.getcwd(),
-            path_to_data_directory = os.getcwd()
+            path_to_data_directory = os.getcwd(),
+            print_adherer_messages = True
             ):
     """
     Call AdhereR.
@@ -52,20 +56,35 @@ def adhereR(dataset,
     event_duration_colname : str
         The name of the column in dataset containing the event duration
     followup_window_start_type : str
-        The follow-up window start unit; can be 'numeric', 'character' or 'date' (defaults to 'numeric')
-    followup_window_start
+        The follow-up window start unit; can be 'numeric' (default), 'character' or 'date'
+    followup_window_start : numeric, str, or date
         The follow-up window start; can be a number, a string or a date
+    followup_window_start_unit : str
+        The follow-up window start unit; can be 'days' (default), 'weeks', 'months' or 'years'
+    date_format : str
+        The date format to be used throughout the call (in the standard strftime() format)
+    save_event_info : bool
+        Should the EVENTINFO be also saved?
     path_to_Rscript : str
         The path to where Rscript is installed
     path_to_adherer : str
         The path to where the callAdhereR.R script is (defaults to the current folder)
     path_to_data_directory : str
         The path to the directory where the various data should be saved (defaults to the current folder)
+    print_adherer_messages : bool
+        Print the AdhereR message (on top of returning them to the caller)?
 
     Returns
     -------
-    MAKA
-        Description of return value
+    Dictionary
+        If a serious error has occured before being able to call AdhereR, returns None. 
+        Otherwise returns a dictionary containing various keys appropriate to the called function, as follows:
+        - all: 
+            - return_code: numeric code returned by the shell call to AdhereR (0 = OK)
+            - message: the string message returned by AdhereR (if any)
+        - CMA1 .. CMA9, CMA_per_episode, CMA_sliding_window also return:
+            - CMA: a pandas.Dataframe containing the computed CMAs
+            - EVENTINFO: if explicitely requested (save_event_info == True), a pandas.Dataframe containing the event intervals and gaps
 
     """    
     # Check that dataset is of the right type and contains the required columns:
@@ -104,10 +123,30 @@ def adhereR(dataset,
         parameters_file.close()
         return None;
     parameters_file.write('followup.window.start.type = "' + followup_window_start_type + '"\n')
-    parameters_file.write('followup.window.start = "' + str(followup_window_start) + '"\n')
+    
+    if isinstance(followup_window_start, numbers.Number):
+        parameters_file.write('followup.window.start = "' + str(followup_window_start) + '"\n')
+    elif isinstance(followup_window_start, datetime.date) or isinstance(followup_window_start, datetime.datetime):
+        parameters_file.write('followup.window.start = "' + followup_window_start.strftime(date_format) + '"\n')
+    else:
+        parameters_file.write('followup.window.start = "' + followup_window_start + '"\n')
+    
+    if not followup_window_start_unit in ('days', 'weeks', 'months', 'years'):
+        warnings.warn('adhereR: argument "followup_window_start_unit" (' + followup_window_start_unit + ') is not recognized.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('followup.window.start.unit = "' + followup_window_start_unit + '"\n')
     
     #if function in ('CMA1', 'CMA2', 'CMA3', 'CMA4'):
     #    maka;
+    
+    if not isinstance(date_format, str):
+        warnings.warn('adhereR: argument "date_format" must be a string specifying a valid strftime() date.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('date.format = "' + date_format + '"\n')   
+    
+    parameters_file.write('save.event.info = "' + ('TRUE' if save_event_info else 'FALSE') + '"\n')   
     
     # Write the parameters ending:
     parameters_file.write('end_parameters\n')
@@ -116,18 +155,36 @@ def adhereR(dataset,
 
     # Call adhereR:
     Rscript_cmd = path_to_Rscript + ' --vanilla ' + path_to_adherer + 'callAdhereR.R' + ' ' + path_to_data_directory
-    print(Rscript_cmd)
+    #print('DEBUG: call = ' + Rscript_cmd)
     return_code = subprocess.call(Rscript_cmd, shell=True) 
-    print(return_code)
+    #print('DEBUG: return code = ' + str(return_code))
     
     # Check and load the results
+    with open(path_to_data_directory + "/Adherer-results.txt", 'r') as adherer_messages_file:
+        adherer_messages = adherer_messages_file.read()
+        adherer_messages_file.close()
+    if print_adherer_messages:
+        print('Adherer returned code ' + str(return_code) + ' and said:\n' + adherer_messages)
+    if return_code != 0 or adherer_messages[0:3] != 'OK:':
+        warnings.warn('adhereR: some error has occured when calling AdhereR (code ' + str(return_code) + '): "' + adherer_messages + '".')
+        return None;
+    
+    # The return value (as a dictionary 'name':'value')
+    ret_val = {'return_code':return_code,
+               'message':adherer_messages}
+    
+    if function in ('CMA1', 'CMA2', 'CMA3', 'CMA4', 'CMA5', 'CMA6', 'CMA7', 'CMA8', 'CMA9', 'CMA_per_episode', 'CMA_sliding_window'):
+        # Expecting CMA.csv and possibly EVENTINFO.csv
+        ret_val['CMA'] = pandas.read_csv(path_to_data_directory + '/CMA.csv', sep='\t', header=0)
+        if save_event_info:
+            ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory + '/EVENTINFO.csv', sep='\t', header=0)
     
     # Everything seems fine....
-    return True;
+    return ret_val;
 
 
-adhereR(df, 'CMA1', 'patientID', 'prescriptionDate', 'prescriptionDate', 
-        path_to_adherer = '../')
+x = adhereR(df, 'CMA1', 'patientID', 'prescriptionDate', 'prescriptionDuration', 
+            save_event_info = True, path_to_adherer = '../')
 
 
 
