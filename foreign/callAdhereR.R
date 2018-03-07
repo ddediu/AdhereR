@@ -223,8 +223,8 @@ if( is.null(data) || nrow(data)==0 || ncol(data)==0 )
 
 # load AdhereR:
 #cat("ATTENTION: change AdhereR.devel to AdhereR in the final version!!!\n");
-#if( !library("AdhereR.devel", verbose=FALSE, quietly=TRUE, logical.return=TRUE) )
-if( !library("AdhereR", verbose=FALSE, quietly=TRUE, logical.return=TRUE) )
+if( !library("AdhereR.devel", verbose=FALSE, quietly=TRUE, logical.return=TRUE) )
+#if( !library("AdhereR", verbose=FALSE, quietly=TRUE, logical.return=TRUE) )
 {
   msg <- paste0("AdhereR: failed loading the 'AdhereR' R package. Please check that it is corretly installed in R! ABORTING...\n");
   #cat(msg);
@@ -370,20 +370,20 @@ if( is.null(results) ) # OOPS! some error occured: make it known and quit!
     file.name.suffix <- ifelse(.get.param.value("plot.show", type="character", default.value="FALSE", required=FALSE) == "TRUE", "-plotted", "" );
 
     # CMAs:
-    write.table(.apply.export.conversions(results$CMA), paste0(folder.path,"./CMA",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
+    write.table(.apply.export.conversions(results$CMA), paste0(folder.path,"/CMA",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
     # event info:
     if( !is.na(save.event.info <- .get.param.value("save.event.info", type="character", default.value=NA, required=FALSE)) && save.event.info=="TRUE" )
     {
-      write.table(.apply.export.conversions(results$event.info), paste0(folder.path,"./EVENTINFO",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
+      write.table(.apply.export.conversions(results$event.info), paste0(folder.path,"/EVENTINFO",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
     }
   } else if( function.to.call == "compute.event.int.gaps" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
   {
     # event info:
-    write.table(.apply.export.conversions(results), paste0(folder.path,"./EVENTINFO.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
+    write.table(.apply.export.conversions(results), paste0(folder.path,"/EVENTINFO.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
   } else if( function.to.call == "compute.treatment.episodes" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
   {
     # treatment episodes:
-    write.table(.apply.export.conversions(results), paste0(folder.path,"./TREATMENTEPISODES.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
+    write.table(.apply.export.conversions(results), paste0(folder.path,"/TREATMENTEPISODES.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
   }
 
 
