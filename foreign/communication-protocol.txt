@@ -72,11 +72,11 @@ plot.patients.to.plot			NO		""		[the patient IDs to plot (if missing, all patien
 plot.duration				NO		""		[duration to plot in days (if missing, determined from the data)]
 plot.align.all.patients			NO		FALSE 		[should all patients be aligned? and, if so, place the first event as the horizontal 0?]
 plot.align.first.event.at.zero		NO		TRUE
-plot.show.period			NO		"days"		"dates", "days"  [raw vertical bars at regular interval as dates or days?]
+plot.show.period			NO		"days"		"dates", "days"  [draw vertical bars at regular interval as dates or days?]
 plot.period.in.days			NO		90,             [the interval (in days) at which to draw vertical lines]
 plot.show.legend			NO		TRUE		[legend params and position]
-plot.legend.x				NO		"right"
-plot.legend.y				NO		"bottom"
+plot.legend.x				NO		"bottom right"
+plot.legend.y				NO		""
 plot.legend.bkg.opacity			NO		0.5 		[background opacity]
 plot.cex				NO		1.0		[various plotting font sizes]
 plot.cex.axis				NO		0.75

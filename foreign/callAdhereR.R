@@ -182,11 +182,11 @@ if( is.null(data) || nrow(data)==0 || ncol(data)==0 )
 
 
 # try to get the value of a given parameter:
-.get.param.value <- function(param.name,                                                 # the parameter's name
-                             type=c("character","numeric","Date","character.vector")[1], # the expected type (vector means a list of values of the given type separated by ";")
-                             default.value=NA,                                           # the default value (if not defined)
-                             date.format="%d/%m/%y",                                     # the format of the Date (if so requested)
-                             required=TRUE                                               # is the param required (i.e., stop everything if not defined)?
+.get.param.value <- function(param.name,                                                           # the parameter's name
+                             type=c("character","numeric","logical","Date","character.vector")[1], # the expected type (vector means a list of values of the given type separated by ";")
+                             default.value=NA,                                                     # the default value (if not defined)
+                             date.format="%d/%m/%y",                                               # the format of the Date (if so requested)
+                             required=TRUE                                                         # is the param required (i.e., stop everything if not defined)?
 )
 {
   if( is.na(param.name) || is.null(param.name) || !is.character(param.name) || length(param.name) != 1 ) return (NA);
@@ -215,6 +215,7 @@ if( is.null(data) || nrow(data)==0 || ncol(data)==0 )
     return (switch(type,
                    "character"=parameters.block$value[s],
                    "numeric"=as.numeric(parameters.block$value[s]),
+                   "logical"=as.logical(parameters.block$value[s]),
                    "Date"=as.Date(parameters.block$value[s], format=date.format),
                    "character.vector"=vapply(strsplit(parameters.block$value[s],";",fixed=TRUE)[[1]], function(s) .remove.spaces.and.quotes(s), character(1))));
   }
@@ -248,14 +249,15 @@ params.as.list <- Filter(Negate(is.null), params.as.list); # get rid of the NULL
 
 # some params have special meaning and should be processed as such:
 # various window types:
-.cast.param.to.type <- function(value.param, type.param)
+.cast.param.to.type <- function(value.param, type.param, is.type.param.fixed=FALSE)
 {
   if( !is.null(params.as.list[[value.param]]) )
   {
     # set its type appropriately:
-    tmp <- switch(.get.param.value(type.param, type="character", default.value="numeric", required=FALSE),
+    tmp <- switch(ifelse(is.type.param.fixed, type.param, .get.param.value(type.param, type="character", default.value="numeric", required=FALSE)),
                   "character"=params.as.list[[value.param]], # nothing to covert to
                   "numeric"=as.numeric(params.as.list[[value.param]]), # try to make it a number
+                  "logical"=as.logical(params.as.list[[value.param]]), # try to make it a boolean
                   "date"=as.Date(params.as.list[[value.param]], format=.get.param.value("date.format", type="character", default.value="%m/%d/%Y", required=FALSE)), # try to make it a Date
                   NA);
     if( is.na(tmp) )
@@ -269,6 +271,7 @@ params.as.list <- Filter(Negate(is.null), params.as.list); # get rid of the NULL
     }
   }
 }
+# Force type for params with known type:
 .cast.param.to.type("followup.window.start",        "followup.window.start.type");
 .cast.param.to.type("followup.window.duration",     "followup.window.duration.type");
 .cast.param.to.type("observation.window.start",     "observation.window.start.type");
@@ -276,6 +279,55 @@ params.as.list <- Filter(Negate(is.null), params.as.list); # get rid of the NULL
 .cast.param.to.type("sliding.window.start",         "sliding.window.start.type");
 .cast.param.to.type("sliding.window.duration",      "sliding.window.duration.type");
 .cast.param.to.type("sliding.window.step.duration", "sliding.window.step.duration.type");
+
+.cast.param.to.type("plot.show",                         "logical", TRUE);
+.cast.param.to.type("plot.align.all.patients",           "logical", TRUE);
+.cast.param.to.type("plot.align.first.event.at.zero",    "logical", TRUE);
+.cast.param.to.type("plot.show.legend",                  "logical", TRUE);
+.cast.param.to.type("plot.show.cma",                     "logical", TRUE);
+.cast.param.to.type("plot.show.event.intervals",         "logical", TRUE);
+.cast.param.to.type("plot.print.CMA",                    "logical", TRUE);
+.cast.param.to.type("plot.plot.CMA",                     "logical", TRUE);
+.cast.param.to.type("plot.plot.CMA.as.histogram",        "logical", TRUE);
+.cast.param.to.type("plot.highlight.followup.window",    "logical", TRUE);
+.cast.param.to.type("plot.highlight.observation.window", "logical", TRUE);
+.cast.param.to.type("plot.show.real.obs.window.start",   "logical", TRUE);
+.cast.param.to.type("plot.bw.plot",                      "logical", TRUE);
+.cast.param.to.type("force.NA.CMA.for.failed.patients",  "logical", TRUE);
+.cast.param.to.type("suppress.warnings",                 "logical", TRUE);
+.cast.param.to.type("save.event.info",                   "logical", TRUE);
+
+.cast.param.to.type("plot.width",                      "numeric", TRUE);
+.cast.param.to.type("plot.height",                     "numeric", TRUE);
+.cast.param.to.type("plot.quality",                    "numeric", TRUE);
+.cast.param.to.type("plot.dpi",                        "numeric", TRUE);
+.cast.param.to.type("plot.period.in.days",             "numeric", TRUE);
+.cast.param.to.type("plot.legend.bkg.opacity",         "numeric", TRUE);
+.cast.param.to.type("plot.cex",                        "numeric", TRUE);
+.cast.param.to.type("plot.cex.axis",                   "numeric", TRUE);
+.cast.param.to.type("plot.cex.lab",                    "numeric", TRUE);
+.cast.param.to.type("plot.lwd.event",                  "numeric", TRUE);
+.cast.param.to.type("plot.pch.start.event",            "numeric", TRUE);
+.cast.param.to.type("plot.pch.end.event",              "numeric", TRUE);
+.cast.param.to.type("plot.lwd.continuation",           "numeric", TRUE);
+.cast.param.to.type("plot.CMA.plot.ratio",             "numeric", TRUE);
+.cast.param.to.type("plot.observation.window.density", "numeric", TRUE);
+.cast.param.to.type("plot.observation.window.angle",   "numeric", TRUE);
+.cast.param.to.type("plot.real.obs.window.density",    "numeric", TRUE);
+.cast.param.to.type("plot.real.obs.window.angle",      "numeric", TRUE);
+
+# special case for plotting: don't compute the CMA for all patients but only for those to be plotted:
+if( .get.param.value("plot.show", type="logical", default.value=FALSE, required=FALSE) &&
+    !is.null(patients.to.plot <- .get.param.value("plot.patients.to.plot", type="character.vector", default.value=NULL, required=FALSE)) )
+{
+  data <- data[ data[,.get.param.value("ID.colname", type="character", required=TRUE)] %in% patients.to.plot, ];
+  if( is.null(data) || nrow(data) == 0 )
+  {
+    msg <- paste0("AdhereR: No patients to plot!...\n");
+    #cat(msg); sink();
+    stop(msg, call.=FALSE);
+  }
+}
 
 # add the data to the list of params as well:
 params.as.list <- c(list("data"=data), params.as.list);
@@ -308,7 +360,7 @@ if( is.null(results) ) # OOPS! some error occured: make it known and quit!
   if( function.to.call == "plot_interactive_cma" )
   {
     # interactive plotting is a special case where NULL is just a sign of ending the call...
-      cat("OK: interactive plotting is over  (but still, there might be warnings and messages above worth paying attention to)!\n", file=stderr());
+      cat("OK: interactive plotting is over (but still, there might be warnings and messages above worth paying attention to)!\n", file=stderr());
   } else
   {
     msg <- "\nSOME ERROR HAS OCCURED (maybe there's some helpful messages above?)\n";
@@ -388,23 +440,23 @@ if( is.null(results) ) # OOPS! some error occured: make it known and quit!
 
 
   # Plotting might have been required:
-  if( .get.param.value("plot.show", type="character", default.value="FALSE", required=FALSE) == "TRUE" )
+  if( .get.param.value("plot.show", type="logical", default.value="FALSE", required=FALSE) )
   {
     # OK, plotting it too!
 
     # Get the list of relevant parameters:
     plotting.params <- params.as.list[grep("^plot\\.", names(params.as.list))];
-    plotting.params[["plot.show"]] <- NULL;
-    plotting.params[["plot.save.to"]] <- NULL;
-    plotting.params[["plot.save.as"]] <- NULL;
-    plotting.params[["plot.width"]] <- NULL;
-    plotting.params[["plot.height"]] <- NULL;
-    plotting.params[["plot.quality"]] <- NULL;
-    plotting.params[["plot.dpi"]] <- NULL;
+    #plotting.params[["plot.show"]] <- NULL;
+    #plotting.params[["plot.save.to"]] <- NULL;
+    #plotting.params[["plot.save.as"]] <- NULL;
+    #plotting.params[["plot.width"]] <- NULL;
+    #plotting.params[["plot.height"]] <- NULL;
+    #plotting.params[["plot.quality"]] <- NULL;
+    #plotting.params[["plot.dpi"]] <- NULL;
     names(plotting.params) <- substring(names(plotting.params), nchar("plot.")+1);
 
-    # patients.to.plot is special:
-    if( "patients.to.plot" %in% names(plotting.params) ) plotting.params[["patients.to.plot"]] <- .get.param.value("plot.patients.to.plot", type="character.vector", default.value=NULL, required=FALSE);
+    # patients.to.plot has already been parsed:
+    if( "patients.to.plot" %in% names(plotting.params) ) plotting.params[["patients.to.plot"]] <- patients.to.plot;
 
     # Get the info about the plot exporting process:
     plot.file.name <- paste0(.get.param.value("plot.save.to", type="character", default.value=folder.path, required=FALSE),"/adherer-plot.");

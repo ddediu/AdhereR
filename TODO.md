@@ -21,6 +21,8 @@
   
   - *plotting per episode shiny*: add percent
   
+  - *foreign* - capture messages spitted by (non-interactive) plotting as well
+  
 **Shiny interactive plots**:  *DONE*
 
   - plot size   **DONE**
