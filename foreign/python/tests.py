@@ -87,6 +87,21 @@ def call_adhereR(dataset,
                 plot_print_CMA = True,
                 plot_plot_CMA = True,
                 plot_plot_CMA_as_histogram = True,
+                plot_CMA_plot_ratio = 0.10,
+                plot_CMA_plot_col = 'lightgreen',
+                plot_CMA_plot_border = 'darkgreen',
+                plot_CMA_plot_bkg = 'aquamarine',
+                plot_CMA_plot_text = None,
+                plot_highlight_followup_window = True,
+                plot_followup_window_col = 'green',
+                plot_highlight_observation_window = True,
+                plot_observation_window_col = 'yellow',
+                plot_observation_window_density = 35,
+                plot_observation_window_angle = -30,
+                plot_show_real_obs_window_start = True,
+                plot_real_obs_window_density = 35,
+                plot_real_obs_window_angle = 30,
+                plot_bw_plot = False,
                 path_to_Rscript = '/usr/local/bin/Rscript',
                 path_to_adherer = os.getcwd(),
                 path_to_data_directory = os.getcwd(),
@@ -230,6 +245,36 @@ def call_adhereR(dataset,
         Plot the CMA next to the participant ID? (defaults to True)
     plot_plot_CMA_as_histogram : bool
         Plot CMA as a histogram or as a density plot? (defaults to True)
+    plot_CMA_plot_ratio : numeric
+        The proportion of the total horizontal plot to be taken by the CMA plot (defaults to 0.10)
+    plot_CMA_plot_col : str
+        The color of the CMA plot (see plot_col_na for details; defaults to 'lightgreen')
+    plot_CMA_plot_border : str
+        The color of the CMA border (see plot_col_na for details; defaults to 'darkgreen')
+    plot_CMA_plot_bkg : str
+        The color of the CMA background (see plot_col_na for details; defaults to 'darkgreen')
+    plot_CMA_plot_text : str
+        The color of the CMA text (see plot_col_na for details; defaults to None, i.e., the same as plot_CMA_plot_border)
+    plot_highlight_followup_window : bool
+        Highlight the follow-up window? (defaults to True)
+    plot_followup_window_col : str
+        The color of the CMA follow-up window (see plot_col_na for details; defaults to 'green')
+    plot_highlight_observation_window : bool
+        Highlight the observaion window? (defaults to True)
+    plot_observation_window_col : str
+        The color of the CMA observation window (see plot_col_na for details; defaults to 'yellow')
+    plot_observation_window_density : numeric
+        The density (per inch) of the hash lines marking the obervation window (defaults to 35)
+    plot_observation_window_angle : numeric
+        The angle (in degrees) of the hash lines marking the obervation window (defaults to -30)
+    plot_show_real_obs_window_start : bool
+        For some CMAs, the real observation window starts at a different date: should we show it? (defaults to True)
+    plot_real_obs_window_density : numeric
+        Same as plot_observation_window_density (defaults to 35)
+    plot_real_obs_window_angle : numeric
+        Same as plot_observation_window_angle (defaults to 30)
+    plot_bw_plot : bool
+        If True, override all user-given colors and replace them with a scheme suitable for grayscale plotting (fedaults to False)
     path_to_Rscript : str
         The path to where Rscript is installed
     path_to_adherer : str
@@ -680,6 +725,99 @@ def call_adhereR(dataset,
         parameters_file.close()
         return None;
     parameters_file.write('plot.plot.CMA.as.histogram = "' + ('TRUE' if plot_plot_CMA_as_histogram else 'FALSE') + '"\n') 
+    
+    if not isinstance(plot_CMA_plot_ratio, numbers.Number) or plot_CMA_plot_ratio < 0 or plot_CMA_plot_ratio > 1:
+        warnings.warn('adhereR: argument "plot_CMA_plot_ratio" must be a number between 0 and 1.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.CMA.plot.ratio = "' + str(plot_CMA_plot_ratio) + '"\n')
+    
+    if not isinstance(plot_CMA_plot_col, str):
+        warnings.warn('adhereR: argument "plot_CMA_plot_col" must be a string.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.CMA.plot.col = "' + plot_CMA_plot_col + '"\n') 
+        
+    if not isinstance(plot_CMA_plot_border, str):
+        warnings.warn('adhereR: argument "plot_CMA_plot_border" must be a string.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.CMA.plot.border = "' + plot_CMA_plot_border + '"\n') 
+        
+    if not isinstance(plot_CMA_plot_bkg, str):
+        warnings.warn('adhereR: argument "plot_CMA_plot_bkg" must be a string.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.CMA.plot.bkg = "' + plot_CMA_plot_bkg + '"\n') 
+    
+    if plot_CMA_plot_text is None:
+        parameters_file.write('plot.CMA.plot.text = ""\n')
+    elif not isinstance(plot_CMA_plot_text, str):
+        warnings.warn('adhereR: argument "plot_CMA_plot_text" must be a string.')
+        parameters_file.close()
+        return None;
+    else:
+        parameters_file.write('plot.CMA.plot.text = "' + plot_CMA_plot_text + '"\n')
+        
+    if not isinstance(plot_highlight_followup_window, bool):
+        warnings.warn('adhereR: argument "plot_highlight_followup_window" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.highlight.followup.window = "' + ('TRUE' if plot_highlight_followup_window else 'FALSE') + '"\n') 
+    
+    if not isinstance(plot_followup_window_col, str):
+        warnings.warn('adhereR: argument "plot_followup_window_col" must be a string.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.followup.window.col = "' + plot_followup_window_col + '"\n') 
+    
+    if not isinstance(plot_highlight_observation_window, bool):
+        warnings.warn('adhereR: argument "plot_highlight_observation_window" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.highlight.observation.window = "' + ('TRUE' if plot_highlight_observation_window else 'FALSE') + '"\n') 
+    
+    if not isinstance(plot_observation_window_col, str):
+        warnings.warn('adhereR: argument "plot_observation_window_col" must be a string.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.observation.window.col = "' + plot_observation_window_col + '"\n') 
+    
+    if not isinstance(plot_observation_window_density, numbers.Number) or plot_observation_window_density < 0:
+        warnings.warn('adhereR: argument "plot_observation_window_density" must be a positive number.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.observation.window.density = "' + str(plot_observation_window_density) + '"\n')
+    
+    if not isinstance(plot_observation_window_angle, numbers.Number):
+        warnings.warn('adhereR: argument "plot_observation_window_angle" must be a positive number.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.observation.window.angle = "' + str(plot_observation_window_angle) + '"\n')
+    
+    if not isinstance(plot_show_real_obs_window_start, bool):
+        warnings.warn('adhereR: argument "plot_show_real_obs_window_start" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.show.real.obs.window.start = "' + ('TRUE' if plot_show_real_obs_window_start else 'FALSE') + '"\n') 
+    
+    if not isinstance(plot_real_obs_window_density, numbers.Number) or plot_real_obs_window_density < 0:
+        warnings.warn('adhereR: argument "plot_real_obs_window_density" must be a positive number.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.real.obs.window.density = "' + str(plot_real_obs_window_density) + '"\n')
+    
+    if not isinstance(plot_real_obs_window_angle, numbers.Number):
+        warnings.warn('adhereR: argument "plot_real_obs_window_angle" must be a positive number.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.real.obs.window.angle = "' + str(plot_real_obs_window_angle) + '"\n')
+    
+    if not isinstance(plot_bw_plot, bool):
+        warnings.warn('adhereR: argument "plot_bw_plot" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('plot.bw.plot = "' + ('TRUE' if plot_bw_plot else 'FALSE') + '"\n') 
     
 
     
