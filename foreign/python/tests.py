@@ -27,6 +27,13 @@ def call_adhereR(dataset,
                 ID_colname,
                 event_date_colname,
                 event_duration_colname,
+                event_daily_dose_colname = None,
+                medication_class_colname = None,
+                carry_only_for_same_medication = False,
+                consider_dosage_change = False,
+                medication_change_means_new_treatment_episode = False,
+                maximum_permissible_gap = 180,
+                maximum_permissible_gap_unit = 'days',
                 followup_window_start_type = 'numeric',
                 followup_window_start = 0,
                 followup_window_start_unit = "days",
@@ -39,6 +46,16 @@ def call_adhereR(dataset,
                 observation_window_duration_type = 'numeric',
                 observation_window_duration = 365*2,
                 observation_window_duration_unit = "days",
+                sliding_window_start_type = 'numeric',
+                sliding_window_start = 0,
+                sliding_window_start_unit = "days",
+                sliding_window_duration_type = 'numeric',
+                sliding_window_duration = 365*2,
+                sliding_window_duration_unit = 'days',
+                sliding_window_step_duration_type = 'numeric',
+                sliding_window_step_duration = 30,	
+                sliding_window_step_unit = 'days',
+                sliding_window_no_steps = None,
                 date_format = "%m/%d/%Y",
                 event_interval_colname = 'event.interval',
                 gap_days_colname = 'gap.days',
@@ -125,6 +142,20 @@ def call_adhereR(dataset,
         The name of the column in dataset containing the event dates
     event_duration_colname : str
         The name of the column in dataset containing the event duration
+    event_daily_dose_colname : str
+        The name of the column in dataset containing the event daily dose (defaults to None, i.e. undefined)
+    medication_class_colname : str
+        The name of the column in dataset containing the event medication type/class (defaults to None, i.e. undefined)
+    carry_only_for_same_medication : bool
+        Carry only works only across same medication events? (defaults to False)
+    consider_dosage_change : bool
+        Consider dosage change? (defaults to False)
+    medication_change_means_new_treatment_episode : bool
+        Does a change in medication mean the start of a new episode? (defaults to False)
+    maximum_permissible_gap : numeric
+        The size of the maximum persimissible gap between episodes (in units; defaults to 180)
+    maximum_permissible_gap_unit : str
+        The unit of the maximum_permissible_gap; can be 'days', 'weeks', 'months', 'years' or 'percent' (defaults to 'days')
     followup_window_start_type : str
         The follow-up window start unit; can be 'numeric' (default), 'character' or 'date'
     followup_window_start : numeric, str, or date
@@ -149,6 +180,26 @@ def call_adhereR(dataset,
         The observation window duration; can be a number, a string or a date
     observation_window_duration_unit : str
         The observation window duration unit; can be 'days' (default), 'weeks', 'months' or 'years'
+    sliding_window_start_type : str
+        The sliding window start unit; can be 'numeric' (default), 'character' or 'date'
+    sliding_window_start : numeric, str, or date
+        The sliding window start; can be a number, a string or a date
+    sliding_window_start_unit : str
+        The sliding window start unit; can be 'days' (default), 'weeks', 'months' or 'years'
+    sliding_window_duration_type : str
+        The sliding window duration unit; can be 'numeric' (default), 'character' or 'date'
+    sliding_window_duration : numeric, str, or date
+        The sliding window duration; can be a number, a string or a date
+    sliding_window_duration_unit : str
+        The sliding window duration unit; can be 'days' (default), 'weeks', 'months' or 'years'
+    sliding_window_step_duration_type : str
+        The sliding window step duration unit; can be 'numeric' (default) or 'character'
+    sliding_window_step_duration : numeric or str
+        The sliding window step duration; can be a number, a string or a date
+    sliding_window_step_unit : str
+        The sliding windowstep  duration unit; can be 'days' (default), 'weeks', 'months' or 'years'
+    sliding_window_no_steps : numeric
+        The number of sliding windows (defaults to None, i.e., should use the duration and step instead)
     date_format : str
         The date format to be used throughout the call (in the standard strftime() format)
     event_interval_colname : str
@@ -301,7 +352,8 @@ def call_adhereR(dataset,
     if not isinstance(dataset, pandas.DataFrame):
         warnings.warn('adhereR: argument "dataset" must be a pandas DataFrame (or compatible).')
         return None;
-    if not function in ('CMA1', 'CMA2', 'CMA3', 'CMA4'):
+    if not function in ('CMA1', 'CMA2', 'CMA3', 'CMA4', 
+                        'plot_interactive_cma'):
         warnings.warn('adhereR: argument "function" (' + function + ') is not a known adhereR function".')
         return None;
     if not ID_colname in df.columns.values.tolist():
@@ -332,7 +384,44 @@ def call_adhereR(dataset,
     parameters_file.write('ID.colname = "' + ID_colname + '"\n')
     parameters_file.write('event.date.colname = "' + event_date_colname + '"\n')
     parameters_file.write('event.duration.colname = "' + event_duration_colname + '"\n')
+    
+    
+    if (function in ('CMA5', 'CMA6', 'CMA7', 'CMA8', 'CMA9', 'plot_interactive_cma', 'CMA_per_episode', 'CMA_sliding_window')) and \
+        ((event_daily_dose_colname is None) or (medication_class_colname is None)):
+        warnings.warn('adhereR: argument "CMA_per_episode" and "CMA_sliding_window" are required for CMA5-CMA5, CMA_per_episode, CMA_sliding_window and plot_interactive_cma.')
+        parameters_file.close()
+        return None;
+        
+    if not isinstance(carry_only_for_same_medication, bool):
+        warnings.warn('adhereR: argument "carry_only_for_same_medication" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('carry.only.for.same.medication = "' + ('TRUE' if carry_only_for_same_medication else 'FALSE') + '"\n') 
 
+    if not isinstance(consider_dosage_change, bool):
+        warnings.warn('adhereR: argument "consider_dosage_change" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('consider.dosage.change = "' + ('TRUE' if consider_dosage_change else 'FALSE') + '"\n') 
+
+    if not isinstance(medication_change_means_new_treatment_episode, bool):
+        warnings.warn('adhereR: argument "medication_change_means_new_treatment_episode" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('medication.change.means.new.treatment.episode = "' + ('TRUE' if medication_change_means_new_treatment_episode else 'FALSE') + '"\n') 
+
+    if not isinstance(maximum_permissible_gap, numbers.Number) or maximum_permissible_gap <= 0:
+        warnings.warn('adhereR: argument "maximum_permissible_gap" must be a strictly positive number.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('maximum.permissible.gap = "' + str(maximum_permissible_gap) + '"\n')
+    
+    if not maximum_permissible_gap_unit in ('days', 'weeks', 'months', 'years', 'percent'):
+        warnings.warn('adhereR: argument "maximum_permissible_gap_unit" (' + maximum_permissible_gap_unit + ') is not recognized.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('maximum.permissible.gap.unit = "' + maximum_permissible_gap_unit + '"\n')
+    
 
     # Follow-up window:
     if not followup_window_start_type in ('numeric', 'character', 'date'):
@@ -414,6 +503,74 @@ def call_adhereR(dataset,
         parameters_file.close()
         return None;
     parameters_file.write('observation.window.duration.unit = "' + observation_window_duration_unit + '"\n')
+
+
+    # Sliding windows:
+    if not sliding_window_start_type in ('numeric', 'character', 'date'):
+        warnings.warn('adhereR: argument "sliding_window_start_type" (' + sliding_window_start_type + ') is not recognized.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('sliding.window.start.type = "' + sliding_window_start_type + '"\n')
+    
+    if isinstance(sliding_window_start, numbers.Number):
+        parameters_file.write('sliding.window.start = "' + str(sliding_window_start) + '"\n')
+    elif isinstance(sliding_window_start, datetime.date) or isinstance(sliding_window_start, datetime.datetime):
+        parameters_file.write('sliding.window.start = "' + sliding_window_start.strftime(date_format) + '"\n')
+    else:
+        parameters_file.write('sliding.window.start = "' + sliding_window_start + '"\n')
+    
+    if not sliding_window_start_unit in ('days', 'weeks', 'months', 'years'):
+        warnings.warn('adhereR: argument "sliding_window_start_unit" (' + sliding_window_start_unit + ') is not recognized.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('sliding.window.start.unit = "' + sliding_window_start_unit + '"\n')
+
+
+    if not sliding_window_duration_type in ('numeric', 'character', 'date'):
+        warnings.warn('adhereR: argument "sliding_window_duration_type" (' + sliding_window_duration_type + ') is not recognized.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('sliding.window.duration.type = "' + sliding_window_duration_type + '"\n')
+    
+    if isinstance(sliding_window_duration, numbers.Number):
+        parameters_file.write('sliding.window.duration = "' + str(sliding_window_duration) + '"\n')
+    elif isinstance(sliding_window_duration, datetime.date) or isinstance(sliding_window_duration, datetime.datetime):
+        parameters_file.write('sliding.window.duration = "' + sliding_window_duration.strftime(date_format) + '"\n')
+    else:
+        parameters_file.write('sliding.window.duration = "' + sliding_window_duration + '"\n')
+    
+    if not sliding_window_duration_unit in ('days', 'weeks', 'months', 'years'):
+        warnings.warn('adhereR: argument "sliding_window_duration_unit" (' + sliding_window_duration_unit + ') is not recognized.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('sliding.window.duration.unit = "' + sliding_window_duration_unit + '"\n')
+
+
+    if not sliding_window_step_duration_type in ('numeric', 'character'):
+        warnings.warn('adhereR: argument "sliding_window_step_duration_type" (' + sliding_window_step_duration_type + ') is not recognized.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('sliding.window.step.duration.type = "' + sliding_window_step_duration_type + '"\n')
+    
+    if isinstance(sliding_window_step_duration, numbers.Number):
+        parameters_file.write('sliding.window.step.duration = "' + str(sliding_window_step_duration) + '"\n')
+    else:
+        parameters_file.write('sliding.window.step.duration = "' + sliding_window_step_duration + '"\n')
+    
+    if not sliding_window_step_unit in ('days', 'weeks', 'months', 'years'):
+        warnings.warn('adhereR: argument "sliding_window_step_unit" (' + sliding_window_step_unit + ') is not recognized.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('sliding.window.step.unit = "' + sliding_window_step_unit + '"\n')
+    
+    if not isinstance(sliding_window_no_steps, numbers.Number):
+        parameters_file.write('sliding.window.no.steps = "' + str(sliding_window_no_steps) + '"\n')
+    elif sliding_window_no_steps in None:
+        parameters_file.write('sliding.window.no.steps = "-1"\n')
+    else:
+        warnings.warn('adhereR: argument "sliding_window_no_steps" must be a strictly positive number or None.')
+        parameters_file.close()
+        return None;
 
 
     # Date format:    
@@ -819,6 +976,8 @@ def call_adhereR(dataset,
         return None;
     parameters_file.write('plot.bw.plot = "' + ('TRUE' if plot_bw_plot else 'FALSE') + '"\n') 
     
+        
+    
 
     
     # Write the parameters ending:
@@ -827,7 +986,10 @@ def call_adhereR(dataset,
     parameters_file.close()
 
     # Remove any pre-existing results file:
-    os.remove(path_to_data_directory + "/Adherer-results.txt")
+    try:
+        os.remove(path_to_data_directory + "/Adherer-results.txt")
+    except:
+        pass
 
     # Call adhereR:
     Rscript_cmd = path_to_Rscript + ' --vanilla ' + path_to_adherer + 'callAdhereR.R' + ' ' + path_to_data_directory
@@ -838,12 +1000,12 @@ def call_adhereR(dataset,
     
     # Check and load the results:
     with open(path_to_data_directory + "/Adherer-results.txt", 'r') as adherer_messages_file:
-        adherer_messages = adherer_messages_file.read()
+        adherer_messages = adherer_messages_file.readlines()
         adherer_messages_file.close()
     if print_adherer_messages:
-        print('Adherer returned code ' + str(return_code) + ' and said:\n' + adherer_messages)
-    if return_code != 0 or adherer_messages[0:3] != 'OK:':
-        warnings.warn('adhereR: some error has occured when calling AdhereR (code ' + str(return_code) + '): "' + adherer_messages + '".')
+        print('Adherer returned code ' + str(return_code) + ' and said:\n' + ''.join(adherer_messages))
+    if return_code != 0 or adherer_messages[-1][0:3] != 'OK:':
+        warnings.warn('adhereR: some error has occured when calling AdhereR (code ' + str(return_code) + '): "' + ''.join(adherer_messages) + '".')
         return None;
 
     # The return value (as a dictionary 'name':'value')
@@ -855,8 +1017,11 @@ def call_adhereR(dataset,
         ret_val['CMA'] = pandas.read_csv(path_to_data_directory + '/CMA' + ('-plotted' if plot_show else '') + '.csv', sep='\t', header=0)
         if save_event_info:
             ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory + '/EVENTINFO' + ('-plotted' if plot_show else '') + '.csv', sep='\t', header=0)
+    elif function == 'plot_interactive_cma':
+        # Expecting nothing really... 
+        pass
             
-    if plot_show is True:
+    if (plot_show is True) and (function != 'plot_interactive_cma'):
         # Load the produced image (if any):
         ret_val['plot'] = PIL.Image.open((plot_save_to if not (plot_save_to is None) else path_to_data_directory) + '/adherer-plot' + '.' + plot_save_as)
     
@@ -864,13 +1029,17 @@ def call_adhereR(dataset,
     return ret_val;
 
 
-x = call_adhereR(df, 'CMA1', 'patientID', 'prescriptionDate', 'prescriptionDuration', 
-                followup_window_start_type = 'numeric', followup_window_start = 0, followup_window_start_unit = "days",
-                followup_window_duration_type = 'numeric', followup_window_duration = 365*2, followup_window_duration_unit = "days",
-                observation_window_start_type = 'numeric', observation_window_start = 30, observation_window_start_unit = "days",
-                observation_window_duration_type = 'numeric', observation_window_duration = 365, observation_window_duration_unit = "days",
-                plot_show = True, plot_patients_to_plot = [2,3],
-                save_event_info = True, path_to_adherer = '../')
+# Tests:
+#x = call_adhereR(df, 'CMA1', 'patientID', 'prescriptionDate', 'prescriptionDuration', 
+#                followup_window_start_type = 'numeric', followup_window_start = 0, followup_window_start_unit = "days",
+#                followup_window_duration_type = 'numeric', followup_window_duration = 365*2, followup_window_duration_unit = "days",
+#                observation_window_start_type = 'numeric', observation_window_start = 30, observation_window_start_unit = "days",
+#                observation_window_duration_type = 'numeric', observation_window_duration = 365, observation_window_duration_unit = "days",
+#                plot_show = True, plot_patients_to_plot = [2,3],
+#                save_event_info = True, path_to_adherer = '../')
 
+y = call_adhereR(df, 'plot_interactive_cma', 
+                 ID_colname='patientID', event_date_colname='prescriptionDate', event_duration_colname='prescriptionDuration',
+                 path_to_adherer = '../') 
 
 
