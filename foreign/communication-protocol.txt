@@ -275,10 +275,9 @@ CMA.csv       <-- the CMAs (one per patient), always exported
 EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
 
 
-++ compute.event.int.gaps:
+++ compute_event_int_gaps:
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
-CMA.to.apply					YES
 ID.colname					YES 
 event.date.colname				YES
 event.duration.colname				YES
@@ -316,10 +315,9 @@ Adherer-results.txt   <-- "OK" or error messages (if any)
 EVENTINFO.csv <-- the gap days and event info data (always)
 
 
-++ compute.treatment.episodes:
+++ compute_treatment_episodes:
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
-CMA.to.apply					YES
 ID.colname					YES 
 event.date.colname				YES
 event.duration.colname				YES

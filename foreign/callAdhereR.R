@@ -347,8 +347,8 @@ results <- switch(function.to.call,
                   "CMA9"=,
                   "CMA_per_episode"=,
                   "CMA_sliding_window"=,
-                  "compute.event.int.gaps"=,
-                  "compute.treatment.episodes"= do.call(function.to.call, params.as.list), # call a CMA (or CMA-like) function
+                  "compute_event_int_gaps"=,
+                  "compute_treatment_episodes"= do.call(function.to.call, params.as.list), # call a CMA (or CMA-like) function
                   "plot_interactive_cma"=.do.interactive.plotting(params.as.list), # call the interactive plotting function
                   NULL # oops!
 );
