@@ -29,6 +29,8 @@ def call_adhereR(dataset,
                 event_duration_colname,
                 event_daily_dose_colname = None,
                 medication_class_colname = None,
+                carryover_within_obs_window = False,
+                carryover_into_obs_window = False,
                 carry_only_for_same_medication = False,
                 consider_dosage_change = False,
                 medication_change_means_new_treatment_episode = False,
@@ -56,10 +58,14 @@ def call_adhereR(dataset,
                 sliding_window_step_duration = 30,	
                 sliding_window_step_unit = 'days',
                 sliding_window_no_steps = None,
+                CMA_to_apply = None,
                 date_format = "%m/%d/%Y",
                 event_interval_colname = 'event.interval',
                 gap_days_colname = 'gap.days',
                 force_NA_CMA_for_failed_patients = True,
+                keep_window_start_end_dates = False,
+                remove_events_outside_followup_window = True,
+                keep_event_interval_for_all_events = False,
                 parallel_backend = 'none',
                 parallel_threads = 'auto',
                 suppress_warnings = False,
@@ -146,6 +152,10 @@ def call_adhereR(dataset,
         The name of the column in dataset containing the event daily dose (defaults to None, i.e. undefined)
     medication_class_colname : str
         The name of the column in dataset containing the event medication type/class (defaults to None, i.e. undefined)
+    carryover_within_obs_window : bool
+        Carry over within the observaion window? (defaults to False)
+    carryover_into_obs_window : bool
+        Carry over into the observation window? (defaults to False)
     carry_only_for_same_medication : bool
         Carry only works only across same medication events? (defaults to False)
     consider_dosage_change : bool
@@ -200,6 +210,8 @@ def call_adhereR(dataset,
         The sliding windowstep  duration unit; can be 'days' (default), 'weeks', 'months' or 'years'
     sliding_window_no_steps : numeric
         The number of sliding windows (defaults to None, i.e., should use the duration and step instead)
+    CMA_to_apply : str
+        CMA to apply for CMA_sliding_window and CMA_per_episode (defaults to None)
     date_format : str
         The date format to be used throughout the call (in the standard strftime() format)
     event_interval_colname : str
@@ -208,6 +220,12 @@ def call_adhereR(dataset,
         What name to use for the internal column saving the gap days (defaults to 'gap.days')
     force_NA_CMA_for_failed_patients : bool
         Force the patients that failed to missing CMA? (default to 'True')
+    keep_window_start_end_dates : bool
+        For compute_event_int_gaps: keep the window start and end dates? (defaults to False)
+    remove_events_outside_followup_window : bool
+        For compute_event_int_gaps: remove the events that fall outside the follow-up window? (defaults to True)
+    keep_event_interval_for_all_events : bool
+        For compute_event_int_gaps: keep the event interval for all event? (defaults to False)
     parallel_backend : str
         The parallel backend to use; can be 'none', 'multicore', 'snow', 'snow(SOCK)', 'snow(MPI)', 'snow(NWS)' (defaults to 'none')
     parallel_threads : numeric or str
@@ -388,9 +406,17 @@ def call_adhereR(dataset,
     
     if (function in ('CMA5', 'CMA6', 'CMA7', 'CMA8', 'CMA9', 'plot_interactive_cma', 'CMA_per_episode', 'CMA_sliding_window')) and \
         ((event_daily_dose_colname is None) or (medication_class_colname is None)):
-        warnings.warn('adhereR: argument "CMA_per_episode" and "CMA_sliding_window" are required for CMA5-CMA5, CMA_per_episode, CMA_sliding_window and plot_interactive_cma.')
+        warnings.warn('adhereR: argument "event_daily_dose_colname" and "medication_class_colname" are required for CMA5-CMA5, CMA_per_episode, CMA_sliding_window and plot_interactive_cma.')
         parameters_file.close()
         return None;
+
+    
+    if (function in ('CMA_per_episode', 'CMA_sliding_window')) and \
+        not (CMA_to_apply in ('CMA1', 'CMA2', 'CMA3', 'CMA4', 'CMA5', 'CMA6', 'CMA7', 'CMA8', 'CMA9')):
+        warnings.warn('adhereR: argument "CMA_to_apply" mjst be a valid simple CMA for CMA_per_episode and CMA_sliding_window.')
+        parameters_file.close()
+        return None;
+    
         
     if not isinstance(carry_only_for_same_medication, bool):
         warnings.warn('adhereR: argument "carry_only_for_same_medication" must be a bool.')
@@ -592,7 +618,42 @@ def call_adhereR(dataset,
         warnings.warn('adhereR: argument "gap_days_colname" must be a string specifying a valid column name.')
         parameters_file.close()
         return None;
-    parameters_file.write('gap.days.colname = "' + gap_days_colname + '"\n')   
+    parameters_file.write('gap.days.colname = "' + gap_days_colname + '"\n') 
+    
+    
+    # compute_event_int_gaps arguments:
+    if not isinstance(keep_window_start_end_dates, bool):
+        warnings.warn('adhereR: argument "keep_window_start_end_dates" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('keep.window.start.end.dates = "' + ('TRUE' if keep_window_start_end_dates else 'FALSE') + '"\n')   
+
+    if not isinstance(remove_events_outside_followup_window, bool):
+        warnings.warn('adhereR: argument "remove_events_outside_followup_window" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('remove.events.outside.followup.window = "' + ('TRUE' if remove_events_outside_followup_window else 'FALSE') + '"\n')   
+
+    if not isinstance(keep_event_interval_for_all_events, bool):
+        warnings.warn('adhereR: argument "keep_event_interval_for_all_events" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('keep.event.interval.for.all.events = "' + ('TRUE' if keep_event_interval_for_all_events else 'FALSE') + '"\n')   
+
+    
+    # compute_treatment_episodes arguments:
+    if not isinstance(carryover_within_obs_window, bool):
+        warnings.warn('adhereR: argument "carryover_within_obs_window" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('carryover.within.obs.window = "' + ('TRUE' if carryover_within_obs_window else 'FALSE') + '"\n') 
+
+    if not isinstance(carryover_into_obs_window, bool):
+        warnings.warn('adhereR: argument "carryover_into_obs_window" must be a bool.')
+        parameters_file.close()
+        return None;
+    parameters_file.write('carryover.into.obs.window = "' + ('TRUE' if carryover_into_obs_window else 'FALSE') + '"\n') 
+
     
     
     # Parallel processing:
@@ -1020,6 +1081,12 @@ def call_adhereR(dataset,
     elif function == 'plot_interactive_cma':
         # Expecting nothing really... 
         pass
+    elif function == 'compute_event_int_gaps':
+        # Expecting EVENTINFO.csv only:
+        ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory + '/EVENTINFO.csv', sep='\t', header=0)
+    elif function == 'compute_treatment_episodes':
+        # Expect TREATMENTEPISODES.csv:
+        ret_val['TREATMENTEPISODES'] = pandas.read_csv(path_to_data_directory + '/TREATMENTEPISODES.csv', sep='\t', header=0)
             
     if (plot_show is True) and (function != 'plot_interactive_cma'):
         # Load the produced image (if any):
@@ -1030,16 +1097,16 @@ def call_adhereR(dataset,
 
 
 # Tests:
-#x = call_adhereR(df, 'CMA1', 'patientID', 'prescriptionDate', 'prescriptionDuration', 
-#                followup_window_start_type = 'numeric', followup_window_start = 0, followup_window_start_unit = "days",
-#                followup_window_duration_type = 'numeric', followup_window_duration = 365*2, followup_window_duration_unit = "days",
-#                observation_window_start_type = 'numeric', observation_window_start = 30, observation_window_start_unit = "days",
-#                observation_window_duration_type = 'numeric', observation_window_duration = 365, observation_window_duration_unit = "days",
-#                plot_show = True, plot_patients_to_plot = [2,3],
-#                save_event_info = True, path_to_adherer = '../')
+x = call_adhereR(df, 'CMA1', 'patientID', 'prescriptionDate', 'prescriptionDuration', 
+                followup_window_start_type = 'numeric', followup_window_start = 0, followup_window_start_unit = "days",
+                followup_window_duration_type = 'numeric', followup_window_duration = 365*2, followup_window_duration_unit = "days",
+                observation_window_start_type = 'numeric', observation_window_start = 30, observation_window_start_unit = "days",
+                observation_window_duration_type = 'numeric', observation_window_duration = 365, observation_window_duration_unit = "days",
+                plot_show = True, plot_patients_to_plot = [2,3],
+                save_event_info = True, path_to_adherer = '../')
 
-y = call_adhereR(df, 'plot_interactive_cma', 
-                 ID_colname='patientID', event_date_colname='prescriptionDate', event_duration_colname='prescriptionDuration',
-                 path_to_adherer = '../') 
+#y = call_adhereR(df, 'plot_interactive_cma', 
+#                 ID_colname='patientID', event_date_colname='prescriptionDate', event_duration_colname='prescriptionDuration',
+#                 path_to_adherer = '../') 
 
 
