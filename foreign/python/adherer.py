@@ -213,7 +213,7 @@ class CMA0:
             real_obs_window_angle = 30,
             bw_plot = False):
         # do the plotting:
-        r = self.__call_adhereR(dataset = self.dataset, function='CMA0', plot.show=True,
+        r = self.__call_adhereR(dataset = self.dataset, function='CMA0', plot_show=True,
                          ID_colname = self.ID_colname, 
                          event_date_colname = self.event_date_colname, 
                          event_duration_colname = self.event_duration_colname,
@@ -598,13 +598,13 @@ class CMA0:
             warnings.warn('adhereR: argument "function" (' + function + ') is not a known adhereR function".')
             return None;
         if not ID_colname in dataset.columns.values.tolist():
-            warnings.warn('adhereR: argument "ID_colname" (' + ID_colname + ') must a column in "dataset".')
+            warnings.warn('adhereR: argument "ID_colname" (' + ID_colname + ') must be a column in "dataset".')
             return None;
         if not event_date_colname in dataset.columns.values.tolist():
-            warnings.warn('adhereR: argument "event_date_colname" (' + event_date_colname + ') must a column in "dataset".')
+            warnings.warn('adhereR: argument "event_date_colname" (' + event_date_colname + ') must be a column in "dataset".')
             return None;
         if not event_duration_colname in dataset.columns.values.tolist():
-            warnings.warn('adhereR: argument "event_duration_colname" (' + event_duration_colname + ') must a column in "dataset".')
+            warnings.warn('adhereR: argument "event_duration_colname" (' + event_duration_colname + ') must be a column in "dataset".')
             return None;
         
         # Export the dataset:
@@ -632,11 +632,20 @@ class CMA0:
             warnings.warn('adhereR: argument "event_daily_dose_colname" and "medication_class_colname" are required for CMA5-CMA5, CMA_per_episode, CMA_sliding_window and plot_interactive_cma.')
             parameters_file.close()
             return None;
+
+        if not event_daily_dose_colname in dataset.columns.values.tolist():
+            warnings.warn('adhereR: argument "event_daily_dose_colname" (' + event_daily_dose_colname + ') must be a column in "dataset".')
+            return None;
+        parameters_file.write('event.daily.dose.colname = "' + event_daily_dose_colname + '"\n')
+        if not medication_class_colname in dataset.columns.values.tolist():
+            warnings.warn('adhereR: argument "medication_class_colname" (' + medication_class_colname + ') must be a column in "dataset".')
+            return None;
+        parameters_file.write('medication.class.colname = "' + medication_class_colname + '"\n')
     
         
         if (function in ('CMA_per_episode', 'CMA_sliding_window')) and \
             not (CMA_to_apply in ('CMA1', 'CMA2', 'CMA3', 'CMA4', 'CMA5', 'CMA6', 'CMA7', 'CMA8', 'CMA9')):
-            warnings.warn('adhereR: argument "CMA_to_apply" mjst be a valid simple CMA for CMA_per_episode and CMA_sliding_window.')
+            warnings.warn('adhereR: argument "CMA_to_apply" must be a valid simple CMA for CMA_per_episode and CMA_sliding_window.')
             parameters_file.close()
             return None;
         
