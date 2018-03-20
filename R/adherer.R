@@ -244,7 +244,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  # Date format:
                  date.format=NA, # the format of the dates used in this function (NA = undefined)
                  # Comments and metadata:
-                 summary=NA,
+                 summary="Base CMA object",
                  # Misc:
                  suppress.warnings=FALSE,
                  ...
