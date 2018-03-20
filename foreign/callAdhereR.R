@@ -316,6 +316,11 @@ params.as.list <- Filter(Negate(is.null), params.as.list); # get rid of the NULL
 .cast.param.to.type("plot.real.obs.window.density",    "numeric", TRUE);
 .cast.param.to.type("plot.real.obs.window.angle",      "numeric", TRUE);
 
+.cast.param.to.type("carryover.within.obs.window",     "logical", TRUE);
+.cast.param.to.type("carryover.into.obs.window",       "logical", TRUE);
+.cast.param.to.type("carry.only.for.same.medication",  "logical", TRUE);
+.cast.param.to.type("consider.dosage.change",          "logical", TRUE);
+
 # special case for plotting: don't compute the CMA for all patients but only for those to be plotted:
 if( .get.param.value("plot.show", type="logical", default.value=FALSE, required=FALSE) &&
     !is.null(patients.to.plot <- .get.param.value("plot.patients.to.plot", type="character.vector", default.value=NULL, required=FALSE)) )
@@ -416,7 +421,10 @@ if( is.null(results) ) # OOPS! some error occured: make it known and quit!
   }
 
   # Depending on the computation, we may export different things:
-  if( inherits(results, "CMA0") )
+  if( class(results) == "CMA0" )
+  {
+    # Nothing to export....
+  } else if( inherits(results, "CMA0") )
   {
     # Special case: for plot.show == TRUE, add the "-plotted" suffix to the saved files!
     file.name.suffix <- ifelse(.get.param.value("plot.show", type="character", default.value="FALSE", required=FALSE) == "TRUE", "-plotted", "" );

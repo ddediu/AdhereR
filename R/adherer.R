@@ -309,12 +309,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
     }
     if( !is.na(consider.dosage.change) && !is.logical(consider.dosage.change) )
     {
-      if( !suppress.warnings ) warning(paste0("Parameter 'carry.only.for.same.medication' must be logical!\n"));
-      return (NULL);
-    }
-    if( !is.na(consider.dosage.change) && !is.logical(consider.dosage.change) )
-    {
-      if( !suppress.warnings ) warning(paste0("Parameter 'carry.only.for.same.medication' must be logical!\n"));
+      if( !suppress.warnings ) warning(paste0("Parameter 'consider.dosage.change' must be logical!\n"));
       return (NULL);
     }
     if( (!is.na(carryover.within.obs.window) && !is.na(carryover.into.obs.window) && !is.na(carry.only.for.same.medication)) &&

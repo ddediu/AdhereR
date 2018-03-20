@@ -41,5 +41,13 @@ testcma = adherer.CMA0(df,
                        event_daily_dose_colname='quantityPerDay',
                        medication_class_colname='medicationType',
                        path_to_adherer = '../')
-testcma.plotInteractive(patient_to_plot=3)
+#testcma.plotInteractive(patient_to_plot=3)
+x = testcma.plot(patients_to_plot=['1','2','3'],
+                 save_as="tiff",
+                 width=7, height=7,
+                 quality = 90, dpi=92, align_all_patients=True,
+                 period_in_days=30,
+                 show_legend=True, legend_x='left', legend_y='top',
+                 cex=0.5, col_continuation='blue', bw_plot=True)
+
 

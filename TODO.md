@@ -23,6 +23,8 @@
   
   - *foreign* - capture messages spitted by (non-interactive) plotting as well
   
+  - check if plot legend_x and legend_y work!
+  
 **Shiny interactive plots**:  *DONE*
 
   - plot size   **DONE**

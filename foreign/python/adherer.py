@@ -13,6 +13,9 @@ using a standard shell-and-files approach.
 import pandas, warnings, subprocess, os, numbers, datetime, PIL
 
 
+class CallAdhereRError(Exception):
+   """Error occuring when calling AhereR"""
+   pass
 
 
 class CMA0:
@@ -142,7 +145,7 @@ class CMA0:
         self.CMA = None
         self.EVENTINFO = None
         self.TREATMENTEPISODES = None
-        self.plot = None
+        self.plot_image = None
         self.computation_return_code = None
         self.computation_messages = None
             
@@ -217,8 +220,50 @@ class CMA0:
                          ID_colname = self.ID_colname, 
                          event_date_colname = self.event_date_colname, 
                          event_duration_colname = self.event_duration_colname,
+                         plot_patients_to_plot = patients_to_plot,
+                         plot_save_to = save_to, plot_save_as = save_as,
+                         plot_width = width, plot_height = height,
+                         plot_quality = quality, plot_dpi = dpi,
+                         plot_duration = duration,
+                         plot_align_all_patients = align_all_patients, plot_align_first_event_at_zero = align_first_event_at_zero,
+                         plot_show_period = show_period, plot_period_in_days = period_in_days,
+                         plot_show_legend = show_legend, plot_legend_x = legend_x, plot_legend_y = legend_y,
+                         plot_legend_bkg_opacity = legend_bkg_opacity, 
+                         plot_cex = cex, plot_cex_axis = cex_axis, plot_cex_lab = cex_lab,
+                         plot_show_cma = show_cma, 
+                         plot_unspecified_category_label = unspecified_category_label,
+                         plot_lty_event = lty_event, plot_lwd_event = lwd_event,
+                         plot_pch_start_event = pch_start_event, plot_pch_end_event = pch_end_event,
+                         plot_show_event_intervals = show_event_intervals,
+                         plot_col_na = col_na, plot_col_continuation = col_continuation, 
+                         plot_lty_continuation = lty_continuation, plot_lwd_continuation = lwd_continuation,
+                         plot_print_CMA = print_CMA, plot_plot_CMA = plot_CMA, plot_plot_CMA_as_histogram = plot_CMA_as_histogram,
+                         plot_CMA_plot_ratio = CMA_plot_ratio, plot_CMA_plot_col = CMA_plot_col,
+                         plot_CMA_plot_border = CMA_plot_border, plot_CMA_plot_bkg = CMA_plot_bkg, 
+                         plot_CMA_plot_text = CMA_plot_text,
+                         plot_highlight_followup_window = highlight_followup_window,
+                         plot_highlight_observation_window = highlight_observation_window,
+                         plot_observation_window_col = observation_window_col, 
+                         plot_observation_window_density = observation_window_density,
+                         plot_observation_window_angle = observation_window_angle,
+                         plot_show_real_obs_window_start = show_real_obs_window_start,
+                         plot_real_obs_window_density = real_obs_window_density,
+                         plot_real_obs_window_angle = real_obs_window_angle,
+                         plot_bw_plot = bw_plot,
                          path_to_adherer = self.path_to_adherer) 
-        return r
+
+        # Were there errors?
+        if r is None:
+            raise CallAdhereRError('General plotting error')
+        elif r['return_code'] != 0:
+            raise CallAdhereRError(r['message'])
+        
+        # Save the return code and message:
+        self.computation_return_code = r['return_code']
+        self.computation_messages = r['message']
+        
+        # Return the plot:
+        return r['plot']
 
     # Interactive plotting:
     def plotInteractive(self, 
@@ -238,7 +283,18 @@ class CMA0:
                          medication_class_colname = self.medication_class_colname,
                          patient_to_plot = patient_to_plot,
                          path_to_adherer = self.path_to_adherer) 
-        return r
+
+        # Were there errors?
+        if r is None:
+            raise CallAdhereRError('General plotting error')
+        elif r['return_code'] != 0:
+            raise CallAdhereRError(r['message'])
+        
+        # Save the return code and message:
+        self.computation_return_code = r['return_code']
+        self.computation_messages = r['message']
+        
+        return True
 
     # The private workhorse function that really does everything
     def __call_adhereR(self,
@@ -593,8 +649,10 @@ class CMA0:
         if not isinstance(dataset, pandas.DataFrame):
             warnings.warn('adhereR: argument "dataset" must be a pandas DataFrame (or compatible).')
             return None;
-        if not function in ('CMA1', 'CMA2', 'CMA3', 'CMA4', 
-                            'plot_interactive_cma'):
+        if not function in ('CMA0',
+                            'CMA1', 'CMA2', 'CMA3', 'CMA4',
+                            'CMA5', 'CMA6', 'CMA7', 'CMA8', 'CMA9', 
+                            'plot_interactive_cma', 'CMA_per_episode', 'CMA_sliding_window'):
             warnings.warn('adhereR: argument "function" (' + function + ') is not a known adhereR function".')
             return None;
         if not ID_colname in dataset.columns.values.tolist():
@@ -633,14 +691,20 @@ class CMA0:
             parameters_file.close()
             return None;
 
-        if not event_daily_dose_colname in dataset.columns.values.tolist():
+        if event_daily_dose_colname is None:
+            parameters_file.write('event.daily.dose.colname = ""\n')
+        elif not event_daily_dose_colname in dataset.columns.values.tolist():
             warnings.warn('adhereR: argument "event_daily_dose_colname" (' + event_daily_dose_colname + ') must be a column in "dataset".')
             return None;
-        parameters_file.write('event.daily.dose.colname = "' + event_daily_dose_colname + '"\n')
-        if not medication_class_colname in dataset.columns.values.tolist():
+        else:
+            parameters_file.write('event.daily.dose.colname = "' + event_daily_dose_colname + '"\n')
+        if medication_class_colname is None:
+            parameters_file.write('medication.class.colname = ""\n')
+        elif not medication_class_colname in dataset.columns.values.tolist():
             warnings.warn('adhereR: argument "medication_class_colname" (' + medication_class_colname + ') must be a column in "dataset".')
             return None;
-        parameters_file.write('medication.class.colname = "' + medication_class_colname + '"\n')
+        else:
+            parameters_file.write('medication.class.colname = "' + medication_class_colname + '"\n')
     
         
         if (function in ('CMA_per_episode', 'CMA_sliding_window')) and \

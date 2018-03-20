@@ -26,7 +26,7 @@ end_parameters
 
 - "CMA.csv": a TAB-separated (no quotes) CSV file containing the resulting CMAs
 
-- "EVENTINFO.csv": a TAB-separated (no quotes) CSV file containing the internally computed event info and gap days -- only be explicit request
+- "EVENTINFO.csv": a TAB-separated (no quotes) CSV file containing the internally computed event info and gap days -- only by explicit request
 
 
 TODO:
@@ -57,10 +57,11 @@ COLNAMES.START.DOT   <-- can begin column names with "." (or equivalent symbol),
 
 
 
-FUNCTIONS: CMA1...CMA9, CMA_per_episode, CMA_sliding_window, compute.event.int.gaps, compute.treatment.episodes, plot_interactive_cma
+FUNCTIONS: CMA0, CMA1...CMA9, CMA_per_episode, CMA_sliding_window, compute.event.int.gaps, compute.treatment.episodes, plot_interactive_cma
 
 ++ PLOTTING: all functions can also specify parameters related to plotting (a subset) of the patients:
 PARAMETER				REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
+function				YES		"CMA0"		can also be "CMA0" for plotting!
 plot.show				NO		FALSE		[do the plotting? If TRUE, save the resulting dataset with a "-plotted" suffix to avoid overwriting previous results]
 plot.save.to				NO		""		[the folder where to save the plots (by default, same folder as the results)]
 plot.save.as				NO		"jpg"		"jpg", "png", "tiff", "eps", "pdf" [the type of image to save]
