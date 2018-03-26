@@ -421,7 +421,7 @@ if( is.null(results) ) # OOPS! some error occured: make it known and quit!
   }
 
   # Depending on the computation, we may export different things:
-  if( class(results) == "CMA0" )
+  if( length(class(results)) == 1 && class(results) == "CMA0" )
   {
     # Nothing to export....
   } else if( inherits(results, "CMA0") )
