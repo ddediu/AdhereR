@@ -22,6 +22,9 @@ class CMA0:
     """
     The CMA base class
     """  
+        
+    # What CMA class ("function") is this?:
+    function = 'CMA0'
     
     def __init__(self,
                  dataset,
@@ -216,10 +219,14 @@ class CMA0:
             real_obs_window_angle = 30,
             bw_plot = False):
         # do the plotting:
-        r = self.__call_adhereR(dataset = self.dataset, function='CMA0', plot_show=True,
+        r = self._call_adhereR(dataset = self.dataset, function=self.function, plot_show=True,
                          ID_colname = self.ID_colname, 
                          event_date_colname = self.event_date_colname, 
                          event_duration_colname = self.event_duration_colname,
+                         event_daily_dose_colname = self.event_daily_dose_colname,
+                         medication_class_colname = self.medication_class_colname,
+                         carry_only_for_same_medication = self.carry_only_for_same_medication,
+                         consider_dosage_change = self.consider_dosage_change,
                          plot_patients_to_plot = patients_to_plot,
                          plot_save_to = save_to, plot_save_as = save_as,
                          plot_width = width, plot_height = height,
@@ -275,7 +282,7 @@ class CMA0:
             return None
         
         # Do the interactive plotting:
-        r = self.__call_adhereR(dataset = self.dataset, function='plot_interactive_cma', 
+        r = self._call_adhereR(dataset = self.dataset, function='plot_interactive_cma', 
                          ID_colname = self.ID_colname, 
                          event_date_colname = self.event_date_colname, 
                          event_duration_colname = self.event_duration_colname,
@@ -297,7 +304,7 @@ class CMA0:
         return True
 
     # The private workhorse function that really does everything
-    def __call_adhereR(self,
+    def _call_adhereR(self,
                        dataset,
                         function,
                         ID_colname,
@@ -687,7 +694,7 @@ class CMA0:
         
         if (function in ('CMA5', 'CMA6', 'CMA7', 'CMA8', 'CMA9', 'plot_interactive_cma', 'CMA_per_episode', 'CMA_sliding_window')) and \
             ((event_daily_dose_colname is None) or (medication_class_colname is None)):
-            warnings.warn('adhereR: argument "event_daily_dose_colname" and "medication_class_colname" are required for CMA5-CMA5, CMA_per_episode, CMA_sliding_window and plot_interactive_cma.')
+            warnings.warn('adhereR: argument "event_daily_dose_colname" and "medication_class_colname" are required for CMA5-CMA9, CMA_per_episode, CMA_sliding_window and plot_interactive_cma.')
             parameters_file.close()
             return None;
 
@@ -1399,6 +1406,356 @@ class CMA0:
         # Everything seems fine....
         return ret_val;
     
+
+
+class CMA1(CMA0):
+    """
+    CMA1 class
+    """  
+        
+    # What CMA class ("function") is this?:
+    function = 'CMA1'
+    
+    def __init__(self,
+                 dataset,
+                 ID_colname,
+                 event_date_colname,
+                 event_duration_colname,
+                 followup_window_start_type = 'numeric',
+                 followup_window_start = 0,
+                 followup_window_start_unit = 'days',
+                 followup_window_duration_type = 'numeric',
+                 followup_window_duration = 365*2,
+                 followup_window_duration_unit = 'days',
+                 observation_window_start_type = 'numeric',
+                 observation_window_start = 0,
+                 observation_window_start_unit = 'days',
+                 observation_window_duration_type = 'numeric',
+                 observation_window_duration = 365*2,
+                 observation_window_duration_unit = 'days',
+                 date_format = '%m/%d/%Y',
+                 event_interval_colname = 'event.interval',
+                 gap_days_colname = 'gap.days',
+                 force_NA_CMA_for_failed_patients = True,
+                 parallel_backend = 'none',
+                 parallel_threads = 'auto',
+                 suppress_warnings = False,
+                 save_event_info = False,
+                 NA_symbol_numeric = 'NA',
+                 NA_symbol_string = 'NA',
+                 logical_symbol_TRUE = 'TRUE',
+                 logical_symbol_FALSE = 'FALSE',
+                 colnames_dot_symbol = '.',
+                 colnames_start_dot = '.',
+                 path_to_Rscript = '/usr/local/bin/Rscript',
+                 path_to_adherer = os.getcwd(),
+                 path_to_data_directory = os.getcwd(),
+                 print_adherer_messages = True):
+        
+        # Call the base class constructor:
+        super().__init__(dataset = dataset,
+                 ID_colname = ID_colname,
+                 event_date_colname = event_date_colname,
+                 event_duration_colname = event_duration_colname,
+                 followup_window_start_type = followup_window_start_type,
+                 followup_window_start = followup_window_start,
+                 followup_window_start_unit = followup_window_start_unit,
+                 followup_window_duration_type = followup_window_duration_type,
+                 followup_window_duration = followup_window_duration,
+                 followup_window_duration_unit = followup_window_duration_unit,
+                 observation_window_start_type = observation_window_start_type,
+                 observation_window_start = observation_window_start,
+                 observation_window_start_unit = observation_window_start_unit,
+                 observation_window_duration_type = observation_window_duration_type,
+                 observation_window_duration = observation_window_duration,
+                 observation_window_duration_unit = observation_window_duration_unit,
+                 date_format = date_format,
+                 event_interval_colname = event_interval_colname,
+                 gap_days_colname = gap_days_colname,
+                 force_NA_CMA_for_failed_patients = force_NA_CMA_for_failed_patients,
+                 parallel_backend = parallel_backend,
+                 parallel_threads = parallel_threads,
+                 suppress_warnings = suppress_warnings,
+                 save_event_info = save_event_info,
+                 NA_symbol_numeric = NA_symbol_numeric,
+                 NA_symbol_string = NA_symbol_string,
+                 logical_symbol_TRUE = logical_symbol_TRUE,
+                 logical_symbol_FALSE = logical_symbol_FALSE,
+                 colnames_dot_symbol = colnames_dot_symbol,
+                 colnames_start_dot = colnames_start_dot,
+                 path_to_Rscript = path_to_Rscript,
+                 path_to_adherer = path_to_adherer,
+                 path_to_data_directory = path_to_data_directory,
+                 print_adherer_messages = print_adherer_messages)
+               
+        # Compute the CMA:
+        r = super()._call_adhereR(function=self.function,
+                 dataset = self.dataset,
+                 ID_colname = self.ID_colname,
+                 event_date_colname = self.event_date_colname,
+                 event_duration_colname = self.event_duration_colname,
+                 followup_window_start_type = self.followup_window_start_type,
+                 followup_window_start = self.followup_window_start,
+                 followup_window_start_unit = self.followup_window_start_unit,
+                 followup_window_duration_type = self.followup_window_duration_type,
+                 followup_window_duration = self.followup_window_duration,
+                 followup_window_duration_unit = self.followup_window_duration_unit,
+                 observation_window_start_type = self.observation_window_start_type,
+                 observation_window_start = self.observation_window_start,
+                 observation_window_start_unit = self.observation_window_start_unit,
+                 observation_window_duration_type = self.observation_window_duration_type,
+                 observation_window_duration = self.observation_window_duration,
+                 observation_window_duration_unit = self.observation_window_duration_unit,
+                 date_format = self.date_format,
+                 event_interval_colname = self.event_interval_colname,
+                 gap_days_colname = self.gap_days_colname,
+                 force_NA_CMA_for_failed_patients = self.force_NA_CMA_for_failed_patients,
+                 parallel_backend = self.parallel_backend,
+                 parallel_threads = self.parallel_threads,
+                 suppress_warnings = self.suppress_warnings,
+                 save_event_info = self.save_event_info,
+                 NA_symbol_numeric = self.NA_symbol_numeric,
+                 NA_symbol_string = self.NA_symbol_string,
+                 logical_symbol_TRUE = self.logical_symbol_TRUE,
+                 logical_symbol_FALSE = self.logical_symbol_FALSE,
+                 colnames_dot_symbol = self.colnames_dot_symbol,
+                 colnames_start_dot = self.colnames_start_dot,
+                 path_to_Rscript = self.path_to_Rscript,
+                 path_to_adherer = self.path_to_adherer,
+                 path_to_data_directory = self.path_to_data_directory,
+                 print_adherer_messages = self.print_adherer_messages)
+
+        # Were there errors?
+        if r is None:
+            raise CallAdhereRError('General computing error')
+        elif r['return_code'] != 0:
+            raise CallAdhereRError(r['message'])
+        
+        # Save the return code and message:
+        self.computation_return_code = r['return_code']
+        self.computation_messages = r['message']
+        
+        # Save the results:
+        self.CMA = r['CMA']
+        if 'EVENTINFO' in r:
+            self.EVENTINFO = r['EVENTINFO'] 
+    
+
+
+class CMA2(CMA1):
+    """
+    CMA2 class
+    """  
+        
+    # What CMA class ("function") is this?:
+    function = 'CMA2'
+    
+
+
+class CMA3(CMA1):
+    """
+    CMA3 class
+    """  
+        
+    # What CMA class ("function") is this?:
+    function = 'CMA3'
+    
+
+
+class CMA4(CMA1):
+    """
+    CMA4 class
+    """  
+        
+    # What CMA class ("function") is this?:
+    function = 'CMA4'
+    
+
+
+class CMA5(CMA0):
+    """
+    CMA5 class
+    """  
+        
+    # What CMA class ("function") is this?:
+    function = 'CMA5'
+    
+    def __init__(self,
+                 dataset,
+                 ID_colname,
+                 event_date_colname,
+                 event_duration_colname,
+                 event_daily_dose_colname,
+                 medication_class_colname,
+                 carry_only_for_same_medication = False,
+                 consider_dosage_change = False,
+                 followup_window_start_type = 'numeric',
+                 followup_window_start = 0,
+                 followup_window_start_unit = 'days',
+                 followup_window_duration_type = 'numeric',
+                 followup_window_duration = 365*2,
+                 followup_window_duration_unit = 'days',
+                 observation_window_start_type = 'numeric',
+                 observation_window_start = 0,
+                 observation_window_start_unit = 'days',
+                 observation_window_duration_type = 'numeric',
+                 observation_window_duration = 365*2,
+                 observation_window_duration_unit = 'days',
+                 date_format = '%m/%d/%Y',
+                 event_interval_colname = 'event.interval',
+                 gap_days_colname = 'gap.days',
+                 force_NA_CMA_for_failed_patients = True,
+                 parallel_backend = 'none',
+                 parallel_threads = 'auto',
+                 suppress_warnings = False,
+                 save_event_info = False,
+                 NA_symbol_numeric = 'NA',
+                 NA_symbol_string = 'NA',
+                 logical_symbol_TRUE = 'TRUE',
+                 logical_symbol_FALSE = 'FALSE',
+                 colnames_dot_symbol = '.',
+                 colnames_start_dot = '.',
+                 path_to_Rscript = '/usr/local/bin/Rscript',
+                 path_to_adherer = os.getcwd(),
+                 path_to_data_directory = os.getcwd(),
+                 print_adherer_messages = True):
+        
+        # Call the base class constructor:
+        super().__init__(dataset = dataset,
+                 ID_colname = ID_colname,
+                 event_date_colname = event_date_colname,
+                 event_duration_colname = event_duration_colname,
+                 event_daily_dose_colname = event_daily_dose_colname,
+                 medication_class_colname = medication_class_colname,
+                 carry_only_for_same_medication = carry_only_for_same_medication,
+                 consider_dosage_change = consider_dosage_change,
+                 followup_window_start_type = followup_window_start_type,
+                 followup_window_start = followup_window_start,
+                 followup_window_start_unit = followup_window_start_unit,
+                 followup_window_duration_type = followup_window_duration_type,
+                 followup_window_duration = followup_window_duration,
+                 followup_window_duration_unit = followup_window_duration_unit,
+                 observation_window_start_type = observation_window_start_type,
+                 observation_window_start = observation_window_start,
+                 observation_window_start_unit = observation_window_start_unit,
+                 observation_window_duration_type = observation_window_duration_type,
+                 observation_window_duration = observation_window_duration,
+                 observation_window_duration_unit = observation_window_duration_unit,
+                 date_format = date_format,
+                 event_interval_colname = event_interval_colname,
+                 gap_days_colname = gap_days_colname,
+                 force_NA_CMA_for_failed_patients = force_NA_CMA_for_failed_patients,
+                 parallel_backend = parallel_backend,
+                 parallel_threads = parallel_threads,
+                 suppress_warnings = suppress_warnings,
+                 save_event_info = save_event_info,
+                 NA_symbol_numeric = NA_symbol_numeric,
+                 NA_symbol_string = NA_symbol_string,
+                 logical_symbol_TRUE = logical_symbol_TRUE,
+                 logical_symbol_FALSE = logical_symbol_FALSE,
+                 colnames_dot_symbol = colnames_dot_symbol,
+                 colnames_start_dot = colnames_start_dot,
+                 path_to_Rscript = path_to_Rscript,
+                 path_to_adherer = path_to_adherer,
+                 path_to_data_directory = path_to_data_directory,
+                 print_adherer_messages = print_adherer_messages)
+               
+        # Compute the CMA:
+        r = super()._call_adhereR(function=self.function,
+                 dataset = self.dataset,
+                 ID_colname = self.ID_colname,
+                 event_date_colname = self.event_date_colname,
+                 event_duration_colname = self.event_duration_colname,
+                 event_daily_dose_colname = self.event_daily_dose_colname,
+                 medication_class_colname = self.medication_class_colname,
+                 carry_only_for_same_medication = self.carry_only_for_same_medication,
+                 consider_dosage_change = self.consider_dosage_change,
+                 followup_window_start_type = self.followup_window_start_type,
+                 followup_window_start = self.followup_window_start,
+                 followup_window_start_unit = self.followup_window_start_unit,
+                 followup_window_duration_type = self.followup_window_duration_type,
+                 followup_window_duration = self.followup_window_duration,
+                 followup_window_duration_unit = self.followup_window_duration_unit,
+                 observation_window_start_type = self.observation_window_start_type,
+                 observation_window_start = self.observation_window_start,
+                 observation_window_start_unit = self.observation_window_start_unit,
+                 observation_window_duration_type = self.observation_window_duration_type,
+                 observation_window_duration = self.observation_window_duration,
+                 observation_window_duration_unit = self.observation_window_duration_unit,
+                 date_format = self.date_format,
+                 event_interval_colname = self.event_interval_colname,
+                 gap_days_colname = self.gap_days_colname,
+                 force_NA_CMA_for_failed_patients = self.force_NA_CMA_for_failed_patients,
+                 parallel_backend = self.parallel_backend,
+                 parallel_threads = self.parallel_threads,
+                 suppress_warnings = self.suppress_warnings,
+                 save_event_info = self.save_event_info,
+                 NA_symbol_numeric = self.NA_symbol_numeric,
+                 NA_symbol_string = self.NA_symbol_string,
+                 logical_symbol_TRUE = self.logical_symbol_TRUE,
+                 logical_symbol_FALSE = self.logical_symbol_FALSE,
+                 colnames_dot_symbol = self.colnames_dot_symbol,
+                 colnames_start_dot = self.colnames_start_dot,
+                 path_to_Rscript = self.path_to_Rscript,
+                 path_to_adherer = self.path_to_adherer,
+                 path_to_data_directory = self.path_to_data_directory,
+                 print_adherer_messages = self.print_adherer_messages)
+
+        # Were there errors?
+        if r is None:
+            raise CallAdhereRError('General computing error')
+        elif r['return_code'] != 0:
+            raise CallAdhereRError(r['message'])
+        
+        # Save the return code and message:
+        self.computation_return_code = r['return_code']
+        self.computation_messages = r['message']
+        
+        # Save the results:
+        self.CMA = r['CMA']
+        if 'EVENTINFO' in r:
+            self.EVENTINFO = r['EVENTINFO'] 
+    
+
+
+class CMA6(CMA5):
+    """
+    CMA6 class
+    """  
+        
+    # What CMA class ("function") is this?:
+    function = 'CMA6'
+    
+
+
+class CMA7(CMA5):
+    """
+    CMA7 class
+    """  
+        
+    # What CMA class ("function") is this?:
+    function = 'CMA7'
+    
+
+
+class CMA8(CMA5):
+    """
+    CMA8 class
+    """  
+        
+    # What CMA class ("function") is this?:
+    function = 'CMA8'
+    
+
+
+class CMA9(CMA5):
+    """
+    CMA9 class
+    """  
+        
+    # What CMA class ("function") is this?:
+    function = 'CMA9'
+            
     
     
     

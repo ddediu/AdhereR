@@ -33,16 +33,25 @@ inplace=True)
 #                 ID_colname='patientID', event_date_colname='prescriptionDate', event_duration_colname='prescriptionDuration',
 #                 path_to_adherer = '../') 
 
+testcma1 = adherer.CMA1(df, 
+                       ID_colname='patientID', 
+                       event_date_colname='prescriptionDate', 
+                       event_duration_colname='prescriptionDuration',
+                       #event_daily_dose_colname='quantityPerDay',
+                       #medication_class_colname='medicationType',
+                       #save_event_info = True,
+                       path_to_adherer = '../')
 
-testcma = adherer.CMA0(df, 
+testcma8 = adherer.CMA8(df, 
                        ID_colname='patientID', 
                        event_date_colname='prescriptionDate', 
                        event_duration_colname='prescriptionDuration',
                        event_daily_dose_colname='quantityPerDay',
                        medication_class_colname='medicationType',
+                       #save_event_info = True,
                        path_to_adherer = '../')
 #testcma.plotInteractive(patient_to_plot=3)
-x = testcma.plot(patients_to_plot=['1','2','3'],
+x = testcma8.plot(patients_to_plot=['1','2','3'],
                  save_as="tiff",
                  width=7, height=7,
                  quality = 90, dpi=92, align_all_patients=True,
