@@ -320,6 +320,7 @@ params.as.list <- Filter(Negate(is.null), params.as.list); # get rid of the NULL
 .cast.param.to.type("carryover.into.obs.window",       "logical", TRUE);
 .cast.param.to.type("carry.only.for.same.medication",  "logical", TRUE);
 .cast.param.to.type("consider.dosage.change",          "logical", TRUE);
+.cast.param.to.type("medication.change.means.new.treatment.episode", "logical", TRUE);
 
 # special case for plotting: don't compute the CMA for all patients but only for those to be plotted:
 if( .get.param.value("plot.show", type="logical", default.value=FALSE, required=FALSE) &&
