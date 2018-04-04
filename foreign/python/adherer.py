@@ -10,7 +10,8 @@ using a standard shell-and-files approach.
 """
 
 # Import needed stuff:
-import pandas, warnings, subprocess, os, numbers, datetime, PIL
+import pandas, warnings, subprocess, os, numbers, datetime
+from PIL import Image
 
 
 class CallAdhereRError(Exception):
@@ -1401,7 +1402,7 @@ class CMA0:
                 
         if (plot_show is True) and (function != 'plot_interactive_cma'):
             # Load the produced image (if any):
-            ret_val['plot'] = PIL.Image.open((plot_save_to if not (plot_save_to is None) else path_to_data_directory) + '/adherer-plot' + '.' + plot_save_as)
+            ret_val['plot'] = Image.open((plot_save_to if not (plot_save_to is None) else path_to_data_directory) + '/adherer-plot' + '.' + plot_save_as)
         
         # Everything seems fine....
         return ret_val;
