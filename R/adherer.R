@@ -936,7 +936,7 @@ getCMA.CMA0 <- function(x)
 )
 {
   # Quick decision for sequential processing:
-  if( parallel.backend == "none" || parallel.threads == 1 )
+  if( parallel.backend == "none" || (is.numeric(parallel.threads) && parallel.threads == 1) )
   {
     # Single threaded: simply call the function with the given data:
     return (fnc(data=data,

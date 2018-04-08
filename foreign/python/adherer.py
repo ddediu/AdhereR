@@ -18,6 +18,15 @@ import datetime
 import pandas
 from PIL import Image
 
+# pylint: disable=too-many-instance-attributes
+# pylint: disable=too-many-arguments
+# pylint: disable=R0914
+# pylint: disable=too-many-statements
+# pylint: disable=too-many-return-statements
+# pylint: disable=too-many-branches
+# pylint: disable=C0302
+# We need these here (even if they might not be seen as too elegant).
+
 
 class CallAdhereRError(Exception):
     """Error occuring when calling AhereR"""
@@ -30,7 +39,7 @@ class CMA0:
     """
 
     # What CMA class ("function") is this?:
-    function = 'CMA0'
+    _adherer_function = 'CMA0'
 
     def __init__(self,
                  dataset,
@@ -62,7 +71,7 @@ class CMA0:
                  sliding_window_start=0,
                  sliding_window_start_unit='days',
                  sliding_window_duration_type='numeric',
-                 sliding_window_duration=365*2,
+                 sliding_window_duration=90,
                  sliding_window_duration_unit='days',
                  sliding_window_step_duration_type='numeric',
                  sliding_window_step_duration=30,
@@ -92,88 +101,130 @@ class CMA0:
                  print_adherer_messages=True):
 
         # Store the parameter values:
-        self.dataset = dataset
-        self.id_colname = id_colname
-        self.event_date_colname = event_date_colname
-        self.event_duration_colname = event_duration_colname
-        self.event_daily_dose_colname = event_daily_dose_colname
-        self.medication_class_colname = medication_class_colname
-        self.carryover_within_obs_window = carryover_within_obs_window
-        self.carryover_into_obs_window = carryover_into_obs_window
-        self.carry_only_for_same_medication = carry_only_for_same_medication
-        self.consider_dosage_change = consider_dosage_change
-        self.medication_change_means_new_treatment_episode = \
+        self._dataset = dataset
+        self._id_colname = id_colname
+        self._event_date_colname = event_date_colname
+        self._event_duration_colname = event_duration_colname
+        self._event_daily_dose_colname = event_daily_dose_colname
+        self._medication_class_colname = medication_class_colname
+        self._carryover_within_obs_window = carryover_within_obs_window
+        self._carryover_into_obs_window = carryover_into_obs_window
+        self._carry_only_for_same_medication = carry_only_for_same_medication
+        self._consider_dosage_change = consider_dosage_change
+        self._medication_change_means_new_treatment_episode = \
             medication_change_means_new_treatment_episode
-        self.maximum_permissible_gap = maximum_permissible_gap
-        self.maximum_permissible_gap_unit = maximum_permissible_gap_unit
-        self.followup_window_start_type = followup_window_start_type
-        self.followup_window_start = followup_window_start
-        self.followup_window_start_unit = followup_window_start_unit
-        self.followup_window_duration_type = followup_window_duration_type
-        self.followup_window_duration = followup_window_duration
-        self.followup_window_duration_unit = followup_window_duration_unit
-        self.observation_window_start_type = observation_window_start_type
-        self.observation_window_start = observation_window_start
-        self.observation_window_start_unit = observation_window_start_unit
-        self.observation_window_duration_type = observation_window_duration_type
-        self.observation_window_duration = observation_window_duration
-        self.observation_window_duration_unit = observation_window_duration_unit
-        self.sliding_window_start_type = sliding_window_start_type
-        self.sliding_window_start = sliding_window_start
-        self.sliding_window_start_unit = sliding_window_start_unit
-        self.sliding_window_duration_type = sliding_window_duration_type
-        self.sliding_window_duration = sliding_window_duration
-        self.sliding_window_duration_unit = sliding_window_duration_unit
-        self.sliding_window_step_duration_type = sliding_window_step_duration_type
-        self.sliding_window_step_duration = sliding_window_step_duration
-        self.sliding_window_step_unit = sliding_window_step_unit
-        self.sliding_window_no_steps = sliding_window_no_steps
-        self.cma_to_apply = cma_to_apply
-        self.date_format = date_format
-        self.event_interval_colname = event_interval_colname
-        self.gap_days_colname = gap_days_colname
-        self.force_na_cma_for_failed_patients = force_na_cma_for_failed_patients
-        self.keep_window_start_end_dates = keep_window_start_end_dates
-        self.remove_events_outside_followup_window = remove_events_outside_followup_window
-        self.keep_event_interval_for_all_events = keep_event_interval_for_all_events
-        self.parallel_backend = parallel_backend
-        self.parallel_threads = parallel_threads
-        self.suppress_warnings = suppress_warnings
-        self.save_event_info = save_event_info
-        self.na_symbol_numeric = na_symbol_numeric
-        self.na_symbol_string = na_symbol_string
-        self.logical_symbol_true = logical_symbol_true
-        self.logical_symbol_false = logical_symbol_false
-        self.colnames_dot_symbol = colnames_dot_symbol
-        self.colnames_start_dot = colnames_start_dot
-        self.path_to_rscript = path_to_rscript
-        self.path_to_adherer = path_to_adherer
-        self.path_to_data_directory = path_to_data_directory
-        self.print_adherer_messages = print_adherer_messages
+        self._maximum_permissible_gap = maximum_permissible_gap
+        self._maximum_permissible_gap_unit = maximum_permissible_gap_unit
+        self._followup_window_start_type = followup_window_start_type
+        self._followup_window_start = followup_window_start
+        self._followup_window_start_unit = followup_window_start_unit
+        self._followup_window_duration_type = followup_window_duration_type
+        self._followup_window_duration = followup_window_duration
+        self._followup_window_duration_unit = followup_window_duration_unit
+        self._observation_window_start_type = observation_window_start_type
+        self._observation_window_start = observation_window_start
+        self._observation_window_start_unit = observation_window_start_unit
+        self._observation_window_duration_type = observation_window_duration_type
+        self._observation_window_duration = observation_window_duration
+        self._observation_window_duration_unit = observation_window_duration_unit
+        self._sliding_window_start_type = sliding_window_start_type
+        self._sliding_window_start = sliding_window_start
+        self._sliding_window_start_unit = sliding_window_start_unit
+        self._sliding_window_duration_type = sliding_window_duration_type
+        self._sliding_window_duration = sliding_window_duration
+        self._sliding_window_duration_unit = sliding_window_duration_unit
+        self._sliding_window_step_duration_type = sliding_window_step_duration_type
+        self._sliding_window_step_duration = sliding_window_step_duration
+        self._sliding_window_step_unit = sliding_window_step_unit
+        self._sliding_window_no_steps = sliding_window_no_steps
+        self._cma_to_apply = cma_to_apply
+        self._date_format = date_format
+        self._event_interval_colname = event_interval_colname
+        self._gap_days_colname = gap_days_colname
+        self._force_na_cma_for_failed_patients = force_na_cma_for_failed_patients
+        self._keep_window_start_end_dates = keep_window_start_end_dates
+        self._remove_events_outside_followup_window = remove_events_outside_followup_window
+        self._keep_event_interval_for_all_events = keep_event_interval_for_all_events
+        self._parallel_backend = parallel_backend
+        self._parallel_threads = parallel_threads
+        self._suppress_warnings = suppress_warnings
+        self._save_event_info = save_event_info
+        self._na_symbol_numeric = na_symbol_numeric
+        self._na_symbol_string = na_symbol_string
+        self._logical_symbol_true = logical_symbol_true
+        self._logical_symbol_false = logical_symbol_false
+        self._colnames_dot_symbol = colnames_dot_symbol
+        self._colnames_start_dot = colnames_start_dot
+        self._path_to_rscript = path_to_rscript
+        self._path_to_adherer = path_to_adherer
+        self._path_to_data_directory = path_to_data_directory
+        self._print_adherer_messages = print_adherer_messages
 
         # CMA-specific stuff:
-        self.CMA = None
-        self.EVENTINFO = None
-        self.TREATMENTEPISODES = None
-        self.plot_image = None
-        self.computation_return_code = None
-        self.computation_messages = None
+        self._cma = None
+        self._event_info = None
+        self._treatment_episodes = None
+        self._plot_image = None
+        self._computation_return_code = None
+        self._computation_messages = None
 
     # Accessors:
-    def getDataset(self):
-        return self.dataset
+    def get_dataset(self):
+        """
+        Get the original dataset used for computations.
 
-    def getCMA(self):
-        return self.CMA
+        Returns
+        -------
+        A pandas table with the dataset, or None.
 
-    def getEVENTINFO(self):
-        return self.EVENTINFO
+        """
+        return self._dataset
 
-    def getTREATMENTEPISODES(self):
-        return self.TREATMENTEPISODES
+    def get_cma(self):
+        """
+        Get the computed CMA.
 
-    def getComputationResults(self):
-        return {'code':self.computation_return_code, 'messages':self.computation_messages}
+        Returns
+        -------
+        A pandas table with the CMA if computed, or None.
+
+        """
+        return self._cma
+
+    def get_event_info(self):
+        """
+        Get the event info.
+
+        Returns
+        -------
+        A pandas table with the event info if computed, or None.
+
+        """
+        return self._event_info
+
+    def get_treatment_episodes(self):
+        """
+        Get the treatment episodes.
+
+        Returns
+        -------
+        A pandas table with the treatment episodes if computed, or None.
+
+        """
+        return self._treatment_episodes
+
+    def get_computation_results(self):
+        """
+        Get the results of calling AdhereR.
+
+        Returns
+        -------
+        A dictionary with entries 'code' (the numeric code returned by the \
+        shell process) and 'messages' (a string contining the actual messages \
+        produced by AdhereR).
+
+        """
+        return {'code':self._computation_return_code, 'messages':self._computation_messages}
 
     # Plotting:
     def plot(self,
@@ -207,14 +258,14 @@ class CMA0:
              col_continuation='black',
              lty_continuation='dotted',
              lwd_continuation=1,
-             print_CMA=True,
-             plot_CMA=True,
-             plot_CMA_as_histogram=True,
-             CMA_plot_ratio=0.10,
-             CMA_plot_col='lightgreen',
-             CMA_plot_border='darkgreen',
-             CMA_plot_bkg='aquamarine',
-             CMA_plot_text=None,
+             print_cma=True,
+             plot_cma=True,
+             plot_cma_as_histogram=True,
+             cma_plot_ratio=0.10,
+             cma_plot_col='lightgreen',
+             cma_plot_border='darkgreen',
+             cma_plot_bkg='aquamarine',
+             cma_plot_text=None,
              highlight_followup_window=True,
              followup_window_col='green',
              highlight_observation_window=True,
@@ -225,15 +276,220 @@ class CMA0:
              real_obs_window_density=35,
              real_obs_window_angle=30,
              bw_plot=False):
+        """
+        Plotting the CMA.
+
+        Parameters
+        ----------
+        patients_to_plot : list
+            the list of patients to plot (defaults to None = all patients)
+        save_to : str
+            The folder where to save the plots (defaults to None, i.e. same folder \
+            as the other results)
+        save_as : str
+            The format of the saved plot; can be 'jpg', 'png', 'tiff', 'eps' or \
+            'pdataset' (defaults to 'jpg')
+        width : numeric
+            Plot width in inches (defaults to 7)
+        height : numeric
+            Plot heght in inches (defaults to 7)
+        quality : numeric
+            Plot quality (applies only to certain formts; defaults to 90)
+        dpi : numeric
+            Plot resultion (applies only to certain formts; defaults to 150)
+        patients_to_plot : strings
+            The patient IDs to plot as a vector (defaults to None, i.e., all)
+        duration : numeric
+            Duration to plot in days (defaults to None, i.e., is determined \
+            from the data)
+        align_all_patients : bool
+            Alling all patients? (defaults to False)
+        align_first_event_at_zero : bool
+            If plot_align_all_patients == True, also place the event at the origin? \
+            (defaults to True)
+        show_period : str
+            Draw vertical bars at regular interval as dates or days; can be 'days' \
+            or 'dates' (defaults to 'days')
+        period_in_days : numeric
+            The interval (in days) at which to draw vertical guides (defaults to 90)
+        show_legend : bool
+            Show the legend? (defaults to True)
+        legend_x : str or numeric
+            Together with plot_legend_y specifies the position of the legend; \
+            can be 'left' or 'right' or a number; (defaults to 'right')
+        legend_y : str or numeric
+            Together with plot_legend_x specifies the position of the legend; \
+            can be 'bottom' or 'top' or a number; (defaults to 'bottom')
+        legend_bkg_opacity : numeric
+            The legend background opacity (between 0 and 1, defaults to 0.5)
+        cex : numeric
+            The relative text size (defaults to 1.0)
+        cex_axis : numeric
+            The relative axis text size (defaults to 0.75)
+        cex_lab : numeric
+            The relative labels text size (defaults to 1.0)
+        show_cma : bool
+            Show the CMA type? (defaults to True)
+        unspecified_category_label : str
+            The label of the unspecified category of medication (defaults to 'drug')
+        lty_event : str
+            Line style for plotting events; can be 'solid', 'dotted' or 'dashed' \
+            (defaults to 'solid')
+        lwd_event : numeric
+            Line width for plitting events (defaults to 2)
+        pch_start_event : numeric
+            Symbol for the event start; can be any of the R plotting symbols given at, \
+            for example, http://www.endmemo.com/program/R/pchsymbols.php (defaults to 15)
+        pch_end_event : numeric
+            Symbol for event end (see plot_pch_start_event for details; defaults to 16)
+        show_event_intervals : bool
+            Show the prescription intervals? (defaults to True)
+        col_na : str
+            The color of the missing data; can be any R color specification as, \
+            for example, given at http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdataset \
+            (defaults to 'lightgray')
+        col_continuation : str
+            The color of the lines connections consecutive events (see plot_col_na \
+            for details; defaults to 'black')
+        lty_continuation : str
+            Style of the lines connections consecutive events (see plot_lty_event \
+            for details; defaults to 'dotted')
+        lwd_continuation : numeric
+            Line width for plitting events (defaults to 1)
+        print_cma : bool
+            Print CMA value next to the participant's ID? (defaults to True)
+        plot_cma : bool
+            Plot the CMA next to the participant ID? (defaults to True)
+        plot_cma_as_histogram : bool
+            Plot CMA as a histogram or as a density plot? (defaults to True)
+        cma_plot_ratio : numeric
+            The proportion of the total horizontal plot to be taken by the CMA plot \
+            (defaults to 0.10)
+        cma_plot_col : str
+            The color of the CMA plot (see plot_col_na for details; defaults to \
+            'lightgreen')
+        cma_plot_border : str
+            The color of the CMA border (see plot_col_na for details; defaults \
+            to 'darkgreen')
+        cma_plot_bkg : str
+            The color of the CMA background (see plot_col_na for details; \
+            defaults to 'darkgreen')
+        cma_plot_text : str
+            The color of the CMA text (see plot_col_na for details; defaults to \
+            None, i.e., the same as plot_cma_plot_border)
+        highlight_followup_window : bool
+            Highlight the follow-up window? (defaults to True)
+        followup_window_col : str
+            The color of the CMA follow-up window (see plot_col_na for details; \
+            defaults to 'green')
+        highlight_observation_window : bool
+            Highlight the observaion window? (defaults to True)
+        observation_window_col : str
+            The color of the CMA observation window (see plot_col_na for details; \
+            defaults to 'yellow')
+        observation_window_density : numeric
+            The density (per inch) of the hash lines marking the obervation window \
+            (defaults to 35)
+        observation_window_angle : numeric
+            The angle (in degrees) of the hash lines marking the obervation window \
+            (defaults to -30)
+        show_real_obs_window_start : bool
+            For some CMAs, the real observation window starts at a different date: \
+            should we show it? (defaults to True)
+        real_obs_window_density : numeric
+            Same as plot_observation_window_density (defaults to 35)
+        real_obs_window_angle : numeric
+            Same as plot_observation_window_angle (defaults to 30)
+        bw_plot : bool
+            If True, override all user-given colors and replace them with a scheme \
+            suitable for grayscale plotting (fedaults to False)
+
+        Returns
+        -------
+        The resulting plot as a PIL.Image object.
+
+        """
         # do the plotting:
-        result = self._call_adherer(dataset=self.dataset, function=self.function, plot_show=True,
-                                    id_colname=self.id_colname,
-                                    event_date_colname=self.event_date_colname,
-                                    event_duration_colname=self.event_duration_colname,
-                                    event_daily_dose_colname=self.event_daily_dose_colname,
-                                    medication_class_colname=self.medication_class_colname,
-                                    carry_only_for_same_medication=self.carry_only_for_same_medication,
-                                    consider_dosage_change=self.consider_dosage_change,
+        result = self._call_adherer(dataset=self._dataset,
+                                    function=self._adherer_function, plot_show=True,
+
+                                    id_colname=self._id_colname,
+                                    event_date_colname=self._event_date_colname,
+                                    event_duration_colname=self._event_duration_colname,
+                                    event_daily_dose_colname=self._event_daily_dose_colname,
+                                    medication_class_colname=self._medication_class_colname,
+
+                                    carryover_within_obs_window=self._carryover_within_obs_window,
+                                    carryover_into_obs_window=self._carryover_into_obs_window,
+                                    carry_only_for_same_medication=\
+                                        self._carry_only_for_same_medication,
+                                    consider_dosage_change=self._consider_dosage_change,
+
+                                    medication_change_means_new_treatment_episode=\
+                                        self._medication_change_means_new_treatment_episode,
+                                    maximum_permissible_gap=self._maximum_permissible_gap,
+                                    maximum_permissible_gap_unit=self._maximum_permissible_gap_unit,
+
+                                    followup_window_start_type=self._followup_window_start_type,
+                                    followup_window_start=self._followup_window_start,
+                                    followup_window_start_unit=self._followup_window_start_unit,
+                                    followup_window_duration_type=\
+                                        self._followup_window_duration_type,
+                                    followup_window_duration=self._followup_window_duration,
+                                    followup_window_duration_unit=\
+                                        self._followup_window_duration_unit,
+
+                                    observation_window_start_type=\
+                                        self._observation_window_start_type,
+                                    observation_window_start=self._observation_window_start,
+                                    observation_window_start_unit=\
+                                        self._observation_window_start_unit,
+                                    observation_window_duration_type=\
+                                        self._observation_window_duration_type,
+                                    observation_window_duration=self._observation_window_duration,
+                                    observation_window_duration_unit=\
+                                        self._observation_window_duration_unit,
+
+                                    sliding_window_start_type=self._sliding_window_start_type,
+                                    sliding_window_start=self._sliding_window_start,
+                                    sliding_window_start_unit=self._sliding_window_start_unit,
+                                    sliding_window_duration_type=self._sliding_window_duration_type,
+                                    sliding_window_duration=self._sliding_window_duration,
+                                    sliding_window_duration_unit=self._sliding_window_duration_unit,
+                                    sliding_window_step_duration_type=\
+                                        self._sliding_window_step_duration_type,
+                                    sliding_window_step_duration=self._sliding_window_step_duration,
+                                    sliding_window_step_unit=self._sliding_window_step_unit,
+                                    sliding_window_no_steps=self._sliding_window_no_steps,
+
+                                    cma_to_apply=self._cma_to_apply,
+
+                                    date_format=self._date_format,
+
+                                    event_interval_colname=self._event_interval_colname,
+                                    gap_days_colname=self._gap_days_colname,
+
+                                    force_na_cma_for_failed_patients=\
+                                        self._force_na_cma_for_failed_patients,
+                                    keep_window_start_end_dates=self._keep_window_start_end_dates,
+                                    remove_events_outside_followup_window=\
+                                        self._remove_events_outside_followup_window,
+                                    keep_event_interval_for_all_events=\
+                                        self._keep_event_interval_for_all_events,
+
+                                    parallel_backend=self._parallel_backend,
+                                    parallel_threads=self._parallel_threads,
+
+                                    suppress_warnings=self._suppress_warnings,
+                                    save_event_info=self._save_event_info,
+
+                                    na_symbol_numeric=self._na_symbol_numeric,
+                                    na_symbol_string=self._na_symbol_string,
+                                    logical_symbol_true=self._logical_symbol_true,
+                                    logical_symbol_false=self._logical_symbol_false,
+                                    colnames_dot_symbol=self._colnames_dot_symbol,
+                                    colnames_start_dot=self._colnames_start_dot,
+
                                     plot_patients_to_plot=patients_to_plot,
                                     plot_save_to=save_to, plot_save_as=save_as,
                                     plot_width=width, plot_height=height,
@@ -241,7 +497,8 @@ class CMA0:
                                     plot_duration=duration,
                                     plot_align_all_patients=align_all_patients,
                                     plot_align_first_event_at_zero=align_first_event_at_zero,
-                                    plot_show_period=show_period, plot_period_in_days=period_in_days,
+                                    plot_show_period=show_period,
+                                    plot_period_in_days=period_in_days,
                                     plot_show_legend=show_legend,
                                     plot_legend_x=legend_x, plot_legend_y=legend_y,
                                     plot_legend_bkg_opacity=legend_bkg_opacity,
@@ -256,11 +513,13 @@ class CMA0:
                                     plot_col_continuation=col_continuation,
                                     plot_lty_continuation=lty_continuation,
                                     plot_lwd_continuation=lwd_continuation,
-                                    plot_print_cma=print_CMA, plot_plot_cma=plot_CMA,
-                                    plot_plot_cma_as_histogram=plot_CMA_as_histogram,
-                                    plot_cma_plot_ratio=CMA_plot_ratio, plot_cma_plot_col=CMA_plot_col,
-                                    plot_cma_plot_border=CMA_plot_border, plot_cma_plot_bkg=CMA_plot_bkg,
-                                    plot_cma_plot_text=CMA_plot_text,
+                                    plot_print_cma=print_cma, plot_plot_cma=plot_cma,
+                                    plot_plot_cma_as_histogram=plot_cma_as_histogram,
+                                    plot_cma_plot_ratio=cma_plot_ratio,
+                                    plot_cma_plot_col=cma_plot_col,
+                                    plot_cma_plot_border=cma_plot_border,
+                                    plot_cma_plot_bkg=cma_plot_bkg,
+                                    plot_cma_plot_text=cma_plot_text,
                                     plot_highlight_followup_window=highlight_followup_window,
                                     plot_followup_window_col=followup_window_col,
                                     plot_highlight_observation_window=highlight_observation_window,
@@ -271,7 +530,11 @@ class CMA0:
                                     plot_real_obs_window_density=real_obs_window_density,
                                     plot_real_obs_window_angle=real_obs_window_angle,
                                     plot_bw_plot=bw_plot,
-                                    path_to_adherer=self.path_to_adherer)
+
+                                    path_to_rscript=self._path_to_rscript,
+                                    path_to_adherer=self._path_to_adherer,
+                                    path_to_data_directory=self._path_to_data_directory,
+                                    print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
         if result is None:
@@ -280,8 +543,8 @@ class CMA0:
             raise CallAdhereRError(result['message'])
 
         # Save the return code and message:
-        self.computation_return_code = result['return_code']
-        self.computation_messages = result['message']
+        self._computation_return_code = result['return_code']
+        self._computation_messages = result['message']
 
         # Return the plot:
         return result['plot']
@@ -304,24 +567,24 @@ class CMA0:
 
         """
         # Some preliminary tests:
-        if ((self.dataset is None) or
-                (self.id_colname is None) or
-                (self.event_date_colname is None) or
-                (self.event_duration_colname is None)):
+        if ((self._dataset is None) or
+                (self._id_colname is None) or
+                (self._event_date_colname is None) or
+                (self._event_duration_colname is None)):
             warnings.warn('Interactive plotting of CMAs requires at a minimum \
                           the dataset, id_colname, event_date_colnameand \
                           event_duration_colname to be defined.')
             return None
 
         # Do the interactive plotting:
-        result = self._call_adherer(dataset=self.dataset, function='plot_interactive_cma',
-                                    id_colname=self.id_colname,
-                                    event_date_colname=self.event_date_colname,
-                                    event_duration_colname=self.event_duration_colname,
-                                    event_daily_dose_colname=self.event_daily_dose_colname,
-                                    medication_class_colname=self.medication_class_colname,
+        result = self._call_adherer(dataset=self._dataset, function='plot_interactive_cma',
+                                    id_colname=self._id_colname,
+                                    event_date_colname=self._event_date_colname,
+                                    event_duration_colname=self._event_duration_colname,
+                                    event_daily_dose_colname=self._event_daily_dose_colname,
+                                    medication_class_colname=self._medication_class_colname,
                                     patient_to_plot=patient_to_plot,
-                                    path_to_adherer=self.path_to_adherer)
+                                    path_to_adherer=self._path_to_adherer)
 
         # Were there errors?
         if result is None:
@@ -330,14 +593,14 @@ class CMA0:
             raise CallAdhereRError(result['message'])
 
         # Save the return code and message:
-        self.computation_return_code = result['return_code']
-        self.computation_messages = result['message']
+        self._computation_return_code = result['return_code']
+        self._computation_messages = result['message']
 
         return True
 
     # The private workhorse function that really does everything
-    def _call_adherer(self,
-                      dataset,
+    @staticmethod
+    def _call_adherer(dataset,
                       function,
                       id_colname,
                       event_date_colname,
@@ -367,7 +630,7 @@ class CMA0:
                       sliding_window_start=0,
                       sliding_window_start_unit='days',
                       sliding_window_duration_type='numeric',
-                      sliding_window_duration=365*2,
+                      sliding_window_duration=90,
                       sliding_window_duration_unit='days',
                       sliding_window_step_duration_type='numeric',
                       sliding_window_step_duration=30,
@@ -575,7 +838,12 @@ class CMA0:
             'snow(SOCK)', 'snow(MPI)', 'snow(NWS)' (defaults to 'none')
         parallel_threads : numeric or str
             Specification of the number of parallel threads; can be an actual \
-            number, 'auto' or a more complex list of nodes (defaults to 'auto')
+            number, 'auto' or a more complex list of nodes (defaults to 'auto').\
+            For example: "c(rep(list(list(host='user@remote-host', \
+            rscript='/usr/local/bin/Rscript', \
+            snowlib='/usr/local/lib64/R/library/')),2))" distributes computation \
+            to a Linux 'remote-host' (using passwordless ssh for user 'user') as \
+            two parallel threads
         suppress_warnings : bool
             Suppress the warnings produced by AdhereR? (default to False)
         save_event_info : bool
@@ -879,8 +1147,7 @@ class CMA0:
 
         if isinstance(followup_window_start, numbers.Number):
             parameters_file.write('followup.window.start = "' + str(followup_window_start) + '"\n')
-        elif (isinstance(followup_window_start, datetime.date) or
-              isinstance(followup_window_start, datetime.datetime)):
+        elif isinstance(followup_window_start, (datetime.date, datetime.datetime)):
             parameters_file.write('followup.window.start = "' +
                                   followup_window_start.strftime(date_format) + '"\n')
         else:
@@ -906,8 +1173,7 @@ class CMA0:
         if isinstance(followup_window_duration, numbers.Number):
             parameters_file.write('followup.window.duration = "' +
                                   str(followup_window_duration) + '"\n')
-        elif (isinstance(followup_window_duration, datetime.date) or
-              isinstance(followup_window_duration, datetime.datetime)):
+        elif isinstance(followup_window_duration, (datetime.date, datetime.datetime)):
             parameters_file.write('followup.window.duration = "' +
                                   followup_window_duration.strftime(date_format) + '"\n')
         else:
@@ -935,8 +1201,7 @@ class CMA0:
         if isinstance(observation_window_start, numbers.Number):
             parameters_file.write('observation.window.start = "' +
                                   str(observation_window_start) + '"\n')
-        elif (isinstance(observation_window_start, datetime.date) or
-              isinstance(observation_window_start, datetime.datetime)):
+        elif isinstance(observation_window_start, (datetime.date, datetime.datetime)):
             parameters_file.write('observation.window.start = "' +
                                   observation_window_start.strftime(date_format) + '"\n')
         else:
@@ -963,8 +1228,7 @@ class CMA0:
         if isinstance(observation_window_duration, numbers.Number):
             parameters_file.write('observation.window.duration = "' +
                                   str(observation_window_duration) + '"\n')
-        elif (isinstance(observation_window_duration, datetime.date) or
-              isinstance(observation_window_duration, datetime.datetime)):
+        elif isinstance(observation_window_duration, (datetime.date, datetime.datetime)):
             parameters_file.write('observation.window.duration = "' +
                                   observation_window_duration.strftime(date_format) + '"\n')
         else:
@@ -990,8 +1254,7 @@ class CMA0:
 
         if isinstance(sliding_window_start, numbers.Number):
             parameters_file.write('sliding.window.start = "' + str(sliding_window_start) + '"\n')
-        elif (isinstance(sliding_window_start, datetime.date) or
-              isinstance(sliding_window_start, datetime.datetime)):
+        elif isinstance(sliding_window_start, (datetime.date, datetime.datetime)):
             parameters_file.write('sliding.window.start = "' +
                                   sliding_window_start.strftime(date_format) + '"\n')
         else:
@@ -1018,8 +1281,7 @@ class CMA0:
         if isinstance(sliding_window_duration, numbers.Number):
             parameters_file.write('sliding.window.duration = "' +
                                   str(sliding_window_duration) + '"\n')
-        elif (isinstance(sliding_window_duration, datetime.date) or
-              isinstance(sliding_window_duration, datetime.datetime)):
+        elif isinstance(sliding_window_duration, (datetime.date, datetime.datetime)):
             parameters_file.write('sliding.window.duration = "' +
                                   sliding_window_duration.strftime(date_format) + '"\n')
         else:
@@ -1057,7 +1319,7 @@ class CMA0:
             return None
         parameters_file.write('sliding.window.step.unit = "' + sliding_window_step_unit + '"\n')
 
-        if not isinstance(sliding_window_no_steps, numbers.Number):
+        if isinstance(sliding_window_no_steps, numbers.Number):
             parameters_file.write('sliding.window.no.steps = "' +
                                   str(sliding_window_no_steps) + '"\n')
         elif sliding_window_no_steps is None:
@@ -1288,22 +1550,28 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_align_all_patients" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.align.all.patients = "' + ('TRUE' if plot_align_all_patients else 'FALSE') + '"\n')
+        parameters_file.write('plot.align.all.patients = "' + \
+                              ('TRUE' if plot_align_all_patients else 'FALSE') + \
+                              '"\n')
 
         if not isinstance(plot_align_first_event_at_zero, bool):
             warnings.warn('adhereR: argument "plot_align_first_event_at_zero" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.align.first.event.at.zero = "' + ('TRUE' if plot_align_first_event_at_zero else 'FALSE') + '"\n')
+        parameters_file.write('plot.align.first.event.at.zero = "' + \
+                              ('TRUE' if plot_align_first_event_at_zero else 'FALSE') + \
+                              '"\n')
 
         if plot_show_period not in ('days', 'dates'):
-            warnings.warn('adhereR: argument "plot_show_period" (' + plot_show_period + ') is not recognized.')
+            warnings.warn('adhereR: argument "plot_show_period" (' + \
+                          plot_show_period + ') is not recognized.')
             parameters_file.close()
             return None
         parameters_file.write('plot.show.period = "' + plot_show_period + '"\n')
 
         if not isinstance(plot_period_in_days, numbers.Number) or plot_period_in_days <= 0:
-            warnings.warn('adhereR: argument "plot_period_in_days" must be a strictly positive number.')
+            warnings.warn('adhereR: argument "plot_period_in_days" \
+                          must be a strictly positive number.')
             parameters_file.close()
             return None
         parameters_file.write('plot.period.in.days = "' + str(plot_period_in_days) + '"\n')
@@ -1312,21 +1580,28 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_show_legend" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.show.legend = "' + ('TRUE' if plot_show_legend else 'FALSE') + '"\n')
+        parameters_file.write('plot.show.legend = "' + \
+                              ('TRUE' if plot_show_legend else 'FALSE') + \
+                              '"\n')
 
         if plot_legend_x in ('left', 'right') and plot_legend_y in ('bottom', 'top'):
             parameters_file.write('plot.legend.x = "' + plot_legend_x + '"\n')
             parameters_file.write('plot.legend.y = "' + plot_legend_y + '"\n')
-        elif isinstance(plot_legend_x, numbers.Number) and isinstance(plot_legend_y, numbers.Number) and plot_legend_x >= 0 and plot_legend_y >= 0:
+        elif isinstance(plot_legend_x, numbers.Number) and \
+             isinstance(plot_legend_y, numbers.Number) and \
+             plot_legend_x >= 0 and plot_legend_y >= 0:
             parameters_file.write('plot.legend.x = "' + str(plot_legend_x) + '"\n')
             parameters_file.write('plot.legend.y = "' + str(plot_legend_y) + '"\n')
         else:
-            warnings.warn('adhereR: argument "plot_legend_x" and "plot_legend_y" are not recognized.')
+            warnings.warn('adhereR: argument "plot_legend_x" and \
+                          "plot_legend_y" are not recognized.')
             parameters_file.close()
             return None
 
-        if not isinstance(plot_legend_bkg_opacity, numbers.Number) or plot_legend_bkg_opacity < 0 or plot_legend_bkg_opacity > 1:
-            warnings.warn('adhereR: argument "plot_legend_bkg_opacity" must be a number between 0 and 1.')
+        if not isinstance(plot_legend_bkg_opacity, numbers.Number) or \
+           plot_legend_bkg_opacity < 0 or plot_legend_bkg_opacity > 1:
+            warnings.warn('adhereR: argument "plot_legend_bkg_opacity" \
+                          must be a number between 0 and 1.')
             parameters_file.close()
             return None
         parameters_file.write('plot.legend.bkg.opacity = "' + str(plot_legend_bkg_opacity) + '"\n')
@@ -1359,10 +1634,12 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_unspecified_category_label" must be a string.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.unspecified.category.label = "' + plot_unspecified_category_label + '"\n')
+        parameters_file.write('plot.unspecified.category.label = "' + \
+                              plot_unspecified_category_label + '"\n')
 
         if plot_lty_event not in ('solid', 'dotted', 'dashed'):
-            warnings.warn('adhereR: argument "plot_lty_event" (' + plot_lty_event + ') is not recognized.')
+            warnings.warn('adhereR: argument "plot_lty_event" (' + \
+                          plot_lty_event + ') is not recognized.')
             parameters_file.close()
             return None
         parameters_file.write('plot.lty.event = "' + plot_lty_event + '"\n')
@@ -1395,7 +1672,9 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_show_event_intervals" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.show.event.intervals = "' + ('TRUE' if plot_show_event_intervals else 'FALSE') + '"\n')
+        parameters_file.write('plot.show.event.intervals = "' + \
+                              ('TRUE' if plot_show_event_intervals else 'FALSE') + \
+                              '"\n')
 
         if not isinstance(plot_col_na, str):
             warnings.warn('adhereR: argument "plot_col_na" must be a string.')
@@ -1410,13 +1689,15 @@ class CMA0:
         parameters_file.write('plot.col.continuation = "' + plot_col_continuation + '"\n')
 
         if plot_lty_continuation not in ('solid', 'dotted', 'dashed'):
-            warnings.warn('adhereR: argument "plot_lty_continuation" (' + plot_lty_continuation + ') is not recognized.')
+            warnings.warn('adhereR: argument "plot_lty_continuation" (' + \
+                          plot_lty_continuation + ') is not recognized.')
             parameters_file.close()
             return None
         parameters_file.write('plot.lty.continuation = "' + plot_lty_continuation + '"\n')
 
         if not isinstance(plot_lwd_continuation, numbers.Number) or plot_lwd_continuation < 0:
-            warnings.warn('adhereR: argument "plot_lwd_continuation" must be a strictly positive number.')
+            warnings.warn('adhereR: argument "plot_lwd_continuation" \
+                          must be a strictly positive number.')
             parameters_file.close()
             return None
         parameters_file.write('plot.lwd.continuation = "' + str(plot_lwd_continuation) + '"\n')
@@ -1425,7 +1706,9 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_print_cma" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.print.CMA = "' + ('TRUE' if plot_print_cma else 'FALSE') + '"\n')
+        parameters_file.write('plot.print.CMA = "' + \
+                              ('TRUE' if plot_print_cma else 'FALSE') + \
+                              '"\n')
 
         if not isinstance(plot_plot_cma, bool):
             warnings.warn('adhereR: argument "plot_plot_cma" must be a bool.')
@@ -1437,10 +1720,14 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_plot_cma_as_histogram" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.plot.CMA.as.histogram = "' + ('TRUE' if plot_plot_cma_as_histogram else 'FALSE') + '"\n')
+        parameters_file.write('plot.plot.CMA.as.histogram = "' + \
+                              ('TRUE' if plot_plot_cma_as_histogram else 'FALSE') + \
+                              '"\n')
 
-        if not isinstance(plot_cma_plot_ratio, numbers.Number) or plot_cma_plot_ratio < 0 or plot_cma_plot_ratio > 1:
-            warnings.warn('adhereR: argument "plot_cma_plot_ratio" must be a number between 0 and 1.')
+        if not isinstance(plot_cma_plot_ratio, numbers.Number) or \
+           plot_cma_plot_ratio < 0 or plot_cma_plot_ratio > 1:
+            warnings.warn('adhereR: argument "plot_cma_plot_ratio" \
+                          must be a number between 0 and 1.')
             parameters_file.close()
             return None
         parameters_file.write('plot.CMA.plot.ratio = "' + str(plot_cma_plot_ratio) + '"\n')
@@ -1476,7 +1763,9 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_highlight_followup_window" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.highlight.followup.window = "' + ('TRUE' if plot_highlight_followup_window else 'FALSE') + '"\n')
+        parameters_file.write('plot.highlight.followup.window = "' + \
+                              ('TRUE' if plot_highlight_followup_window else 'FALSE') + \
+                              '"\n')
 
         if not isinstance(plot_followup_window_col, str):
             warnings.warn('adhereR: argument "plot_followup_window_col" must be a string.')
@@ -1488,43 +1777,57 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_highlight_observation_window" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.highlight.observation.window = "' + ('TRUE' if plot_highlight_observation_window else 'FALSE') + '"\n')
+        parameters_file.write('plot.highlight.observation.window = "' + \
+                              ('TRUE' if plot_highlight_observation_window else 'FALSE') + \
+                              '"\n')
 
         if not isinstance(plot_observation_window_col, str):
             warnings.warn('adhereR: argument "plot_observation_window_col" must be a string.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.observation.window.col = "' + plot_observation_window_col + '"\n')
+        parameters_file.write('plot.observation.window.col = "' + \
+                              plot_observation_window_col + '"\n')
 
-        if not isinstance(plot_observation_window_density, numbers.Number) or plot_observation_window_density < 0:
-            warnings.warn('adhereR: argument "plot_observation_window_density" must be a positive number.')
+        if not isinstance(plot_observation_window_density, numbers.Number) or \
+           plot_observation_window_density < 0:
+            warnings.warn('adhereR: argument "plot_observation_window_density" \
+                          must be a positive number.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.observation.window.density = "' + str(plot_observation_window_density) + '"\n')
+        parameters_file.write('plot.observation.window.density = "' + \
+                              str(plot_observation_window_density) + '"\n')
 
         if not isinstance(plot_observation_window_angle, numbers.Number):
-            warnings.warn('adhereR: argument "plot_observation_window_angle" must be a positive number.')
+            warnings.warn('adhereR: argument "plot_observation_window_angle" \
+                          must be a positive number.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.observation.window.angle = "' + str(plot_observation_window_angle) + '"\n')
+        parameters_file.write('plot.observation.window.angle = "' + \
+                              str(plot_observation_window_angle) + '"\n')
 
         if not isinstance(plot_show_real_obs_window_start, bool):
             warnings.warn('adhereR: argument "plot_show_real_obs_window_start" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.show.real.obs.window.start = "' + ('TRUE' if plot_show_real_obs_window_start else 'FALSE') + '"\n')
+        parameters_file.write('plot.show.real.obs.window.start = "' + \
+                              ('TRUE' if plot_show_real_obs_window_start else 'FALSE') + '"\n')
 
-        if not isinstance(plot_real_obs_window_density, numbers.Number) or plot_real_obs_window_density < 0:
-            warnings.warn('adhereR: argument "plot_real_obs_window_density" must be a positive number.')
+        if not isinstance(plot_real_obs_window_density, numbers.Number) or \
+           plot_real_obs_window_density < 0:
+            warnings.warn('adhereR: argument "plot_real_obs_window_density" \
+                          must be a positive number.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.real.obs.window.density = "' + str(plot_real_obs_window_density) + '"\n')
+        parameters_file.write('plot.real.obs.window.density = "' + \
+                              str(plot_real_obs_window_density) + '"\n')
 
         if not isinstance(plot_real_obs_window_angle, numbers.Number):
-            warnings.warn('adhereR: argument "plot_real_obs_window_angle" must be a positive number.')
+            warnings.warn('adhereR: argument "plot_real_obs_window_angle" must \
+                          be a positive number.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.real.obs.window.angle = "' + str(plot_real_obs_window_angle) + '"\n')
+        parameters_file.write('plot.real.obs.window.angle = "' + \
+                              str(plot_real_obs_window_angle) + '"\n')
 
         if not isinstance(plot_bw_plot, bool):
             warnings.warn('adhereR: argument "plot_bw_plot" must be a bool.')
@@ -1556,7 +1859,8 @@ class CMA0:
             pass
 
         # Call adhereR:
-        rscript_cmd = path_to_rscript + ' --vanilla ' + path_to_adherer + 'callAdhereR.R' + ' ' + path_to_data_directory
+        rscript_cmd = path_to_rscript + ' --vanilla ' + path_to_adherer + \
+                      'callAdhereR.R' + ' ' + path_to_data_directory
         #print('DEBUG: call = ' + Rscript_cmd)
         return_code = subprocess.call(rscript_cmd, shell=True)
         #print('DEBUG: return code = ' + str(return_code))
@@ -1567,33 +1871,44 @@ class CMA0:
             adherer_messages = adherer_messages_file.readlines()
             adherer_messages_file.close()
         if print_adherer_messages:
-            print('Adherer returned code ' + str(return_code) + ' and said:\n' + ''.join(adherer_messages))
+            print('Adherer returned code ' + str(return_code) + \
+                  ' and said:\n' + ''.join(adherer_messages))
         if return_code != 0 or adherer_messages[-1][0:3] != 'OK:':
-            warnings.warn('adhereR: some error has occured when calling AdhereR (code ' + str(return_code) + '): "' + ''.join(adherer_messages) + '".')
+            warnings.warn('adhereR: some error has occured when calling AdhereR (code ' + \
+                          str(return_code) + '): "' + ''.join(adherer_messages) + '".')
             return None
 
         # The return value (as a dictionary 'name':'value')
         ret_val = {'return_code':return_code,
                    'message':adherer_messages}
 
-        if function in ('CMA1', 'CMA2', 'CMA3', 'CMA4', 'CMA5', 'CMA6', 'CMA7', 'CMA8', 'CMA9', 'CMA_per_episode', 'CMA_sliding_window'):
+        if function in ('CMA1', 'CMA2', 'CMA3', 'CMA4', 'CMA5', 'CMA6', 'CMA7',
+                        'CMA8', 'CMA9', 'CMA_per_episode', 'CMA_sliding_window'):
             # Expecting CMA.csv and possibly EVENTINFO.csv
-            ret_val['CMA'] = pandas.read_csv(path_to_data_directory + '/CMA' + ('-plotted' if plot_show else '') + '.csv', sep='\t', header=0)
+            ret_val['CMA'] = pandas.read_csv(path_to_data_directory + \
+                             '/CMA' + ('-plotted' if plot_show else '') + \
+                             '.csv', sep='\t', header=0)
             if save_event_info:
-                ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory + '/EVENTINFO' + ('-plotted' if plot_show else '') + '.csv', sep='\t', header=0)
+                ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory + \
+                                       '/EVENTINFO' + ('-plotted' if plot_show else '') + \
+                                       '.csv', sep='\t', header=0)
         elif function == 'plot_interactive_cma':
             # Expecting nothing really...
             pass
         elif function == 'compute_event_int_gaps':
             # Expecting EVENTINFO.csv only:
-            ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory + '/EVENTINFO.csv', sep='\t', header=0)
+            ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory + \
+                                   '/EVENTINFO.csv', sep='\t', header=0)
         elif function == 'compute_treatment_episodes':
             # Expect TREATMENTEPISODES.csv:
-            ret_val['TREATMENTEPISODES'] = pandas.read_csv(path_to_data_directory + '/TREATMENTEPISODES.csv', sep='\t', header=0)
+            ret_val['TREATMENTEPISODES'] = pandas.read_csv(path_to_data_directory + \
+                                           '/TREATMENTEPISODES.csv', sep='\t', header=0)
 
         if (plot_show is True) and (function != 'plot_interactive_cma'):
             # Load the produced image (if any):
-            ret_val['plot'] = Image.open((plot_save_to if not (plot_save_to is None) else path_to_data_directory) + '/adherer-plot' + '.' + plot_save_as)
+            ret_val['plot'] = Image.open((plot_save_to if not (plot_save_to is None) \
+                                          else path_to_data_directory) +
+                                         '/adherer-plot' + '.' + plot_save_as)
 
         # Everything seems fine....
         return ret_val
@@ -1604,174 +1919,182 @@ class CMA1(CMA0):
     """
     CMA1 class
     """
-        
+
     # What CMA class ("function") is this?:
-    function = 'CMA1'
-    
+    _adherer_function = 'CMA1'
+
     def __init__(self,
                  dataset,
                  id_colname,
                  event_date_colname,
                  event_duration_colname,
-                 followup_window_start_type = 'numeric',
-                 followup_window_start = 0,
-                 followup_window_start_unit = 'days',
-                 followup_window_duration_type = 'numeric',
-                 followup_window_duration = 365*2,
-                 followup_window_duration_unit = 'days',
-                 observation_window_start_type = 'numeric',
-                 observation_window_start = 0,
-                 observation_window_start_unit = 'days',
-                 observation_window_duration_type = 'numeric',
-                 observation_window_duration = 365*2,
-                 observation_window_duration_unit = 'days',
-                 date_format = '%m/%d/%Y',
-                 event_interval_colname = 'event.interval',
-                 gap_days_colname = 'gap.days',
-                 force_na_cma_for_failed_patients = True,
-                 parallel_backend = 'none',
-                 parallel_threads = 'auto',
-                 suppress_warnings = False,
-                 save_event_info = False,
-                 na_symbol_numeric = 'NA',
-                 na_symbol_string = 'NA',
-                 logical_symbol_true = 'TRUE',
-                 logical_symbol_false = 'FALSE',
-                 colnames_dot_symbol = '.',
-                 colnames_start_dot = '.',
-                 path_to_rscript = '/usr/local/bin/Rscript',
-                 path_to_adherer = os.getcwd(),
-                 path_to_data_directory = os.getcwd(),
-                 print_adherer_messages = True):
-        
+                 followup_window_start_type='numeric',
+                 followup_window_start=0,
+                 followup_window_start_unit='days',
+                 followup_window_duration_type='numeric',
+                 followup_window_duration=365*2,
+                 followup_window_duration_unit='days',
+                 observation_window_start_type='numeric',
+                 observation_window_start=0,
+                 observation_window_start_unit='days',
+                 observation_window_duration_type='numeric',
+                 observation_window_duration=365*2,
+                 observation_window_duration_unit='days',
+                 date_format='%m/%d/%Y',
+                 event_interval_colname='event.interval',
+                 gap_days_colname='gap.days',
+                 force_na_cma_for_failed_patients=True,
+                 parallel_backend='none',
+                 parallel_threads='auto',
+                 suppress_warnings=False,
+                 save_event_info=False,
+                 na_symbol_numeric='NA',
+                 na_symbol_string='NA',
+                 logical_symbol_true='TRUE',
+                 logical_symbol_false='FALSE',
+                 colnames_dot_symbol='.',
+                 colnames_start_dot='.',
+                 path_to_rscript='/usr/local/bin/Rscript',
+                 path_to_adherer=os.getcwd(),
+                 path_to_data_directory=os.getcwd(),
+                 print_adherer_messages=True):
+
         # Call the base class constructor:
-        super().__init__(dataset = dataset,
-                 id_colname = id_colname,
-                 event_date_colname = event_date_colname,
-                 event_duration_colname = event_duration_colname,
-                 followup_window_start_type = followup_window_start_type,
-                 followup_window_start = followup_window_start,
-                 followup_window_start_unit = followup_window_start_unit,
-                 followup_window_duration_type = followup_window_duration_type,
-                 followup_window_duration = followup_window_duration,
-                 followup_window_duration_unit = followup_window_duration_unit,
-                 observation_window_start_type = observation_window_start_type,
-                 observation_window_start = observation_window_start,
-                 observation_window_start_unit = observation_window_start_unit,
-                 observation_window_duration_type = observation_window_duration_type,
-                 observation_window_duration = observation_window_duration,
-                 observation_window_duration_unit = observation_window_duration_unit,
-                 date_format = date_format,
-                 event_interval_colname = event_interval_colname,
-                 gap_days_colname = gap_days_colname,
-                 force_na_cma_for_failed_patients = force_na_cma_for_failed_patients,
-                 parallel_backend = parallel_backend,
-                 parallel_threads = parallel_threads,
-                 suppress_warnings = suppress_warnings,
-                 save_event_info = save_event_info,
-                 na_symbol_numeric = na_symbol_numeric,
-                 na_symbol_string = na_symbol_string,
-                 logical_symbol_true = logical_symbol_true,
-                 logical_symbol_false = logical_symbol_false,
-                 colnames_dot_symbol = colnames_dot_symbol,
-                 colnames_start_dot = colnames_start_dot,
-                 path_to_rscript = path_to_rscript,
-                 path_to_adherer = path_to_adherer,
-                 path_to_data_directory = path_to_data_directory,
-                 print_adherer_messages = print_adherer_messages)
-               
+        super().__init__(dataset=dataset,
+                         id_colname=id_colname,
+                         event_date_colname=event_date_colname,
+                         event_duration_colname=event_duration_colname,
+                         followup_window_start_type=followup_window_start_type,
+                         followup_window_start=followup_window_start,
+                         followup_window_start_unit=followup_window_start_unit,
+                         followup_window_duration_type=followup_window_duration_type,
+                         followup_window_duration=followup_window_duration,
+                         followup_window_duration_unit=followup_window_duration_unit,
+                         observation_window_start_type=observation_window_start_type,
+                         observation_window_start=observation_window_start,
+                         observation_window_start_unit=observation_window_start_unit,
+                         observation_window_duration_type=observation_window_duration_type,
+                         observation_window_duration=observation_window_duration,
+                         observation_window_duration_unit=observation_window_duration_unit,
+                         date_format=date_format,
+                         event_interval_colname=event_interval_colname,
+                         gap_days_colname=gap_days_colname,
+                         force_na_cma_for_failed_patients=force_na_cma_for_failed_patients,
+                         parallel_backend=parallel_backend,
+                         parallel_threads=parallel_threads,
+                         suppress_warnings=suppress_warnings,
+                         save_event_info=save_event_info,
+                         na_symbol_numeric=na_symbol_numeric,
+                         na_symbol_string=na_symbol_string,
+                         logical_symbol_true=logical_symbol_true,
+                         logical_symbol_false=logical_symbol_false,
+                         colnames_dot_symbol=colnames_dot_symbol,
+                         colnames_start_dot=colnames_start_dot,
+                         path_to_rscript=path_to_rscript,
+                         path_to_adherer=path_to_adherer,
+                         path_to_data_directory=path_to_data_directory,
+                         print_adherer_messages=print_adherer_messages)
+
         # Compute the CMA:
-        result = super()._call_adherer(function=self.function,
-                 dataset = self.dataset,
-                 id_colname = self.id_colname,
-                 event_date_colname = self.event_date_colname,
-                 event_duration_colname = self.event_duration_colname,
-                 followup_window_start_type = self.followup_window_start_type,
-                 followup_window_start = self.followup_window_start,
-                 followup_window_start_unit = self.followup_window_start_unit,
-                 followup_window_duration_type = self.followup_window_duration_type,
-                 followup_window_duration = self.followup_window_duration,
-                 followup_window_duration_unit = self.followup_window_duration_unit,
-                 observation_window_start_type = self.observation_window_start_type,
-                 observation_window_start = self.observation_window_start,
-                 observation_window_start_unit = self.observation_window_start_unit,
-                 observation_window_duration_type = self.observation_window_duration_type,
-                 observation_window_duration = self.observation_window_duration,
-                 observation_window_duration_unit = self.observation_window_duration_unit,
-                 date_format = self.date_format,
-                 event_interval_colname = self.event_interval_colname,
-                 gap_days_colname = self.gap_days_colname,
-                 force_na_cma_for_failed_patients = self.force_na_cma_for_failed_patients,
-                 parallel_backend = self.parallel_backend,
-                 parallel_threads = self.parallel_threads,
-                 suppress_warnings = self.suppress_warnings,
-                 save_event_info = self.save_event_info,
-                 na_symbol_numeric = self.na_symbol_numeric,
-                 na_symbol_string = self.na_symbol_string,
-                 logical_symbol_true = self.logical_symbol_true,
-                 logical_symbol_false = self.logical_symbol_false,
-                 colnames_dot_symbol = self.colnames_dot_symbol,
-                 colnames_start_dot = self.colnames_start_dot,
-                 path_to_rscript = self.path_to_rscript,
-                 path_to_adherer = self.path_to_adherer,
-                 path_to_data_directory = self.path_to_data_directory,
-                 print_adherer_messages = self.print_adherer_messages)
+        result = super()._call_adherer(function=self._adherer_function,
+                                       dataset=self._dataset,
+                                       id_colname=self._id_colname,
+                                       event_date_colname=self._event_date_colname,
+                                       event_duration_colname=self._event_duration_colname,
+                                       followup_window_start_type=self._followup_window_start_type,
+                                       followup_window_start=self._followup_window_start,
+                                       followup_window_start_unit=self._followup_window_start_unit,
+                                       followup_window_duration_type=\
+                                           self._followup_window_duration_type,
+                                       followup_window_duration=self._followup_window_duration,
+                                       followup_window_duration_unit=\
+                                           self._followup_window_duration_unit,
+                                       observation_window_start_type=\
+                                           self._observation_window_start_type,
+                                       observation_window_start=self._observation_window_start,
+                                       observation_window_start_unit=\
+                                           self._observation_window_start_unit,
+                                       observation_window_duration_type=\
+                                           self._observation_window_duration_type,
+                                       observation_window_duration=\
+                                           self._observation_window_duration,
+                                       observation_window_duration_unit=\
+                                           self._observation_window_duration_unit,
+                                       date_format=self._date_format,
+                                       event_interval_colname=self._event_interval_colname,
+                                       gap_days_colname=self._gap_days_colname,
+                                       force_na_cma_for_failed_patients=\
+                                           self._force_na_cma_for_failed_patients,
+                                       parallel_backend=self._parallel_backend,
+                                       parallel_threads=self._parallel_threads,
+                                       suppress_warnings=self._suppress_warnings,
+                                       save_event_info=self._save_event_info,
+                                       na_symbol_numeric=self._na_symbol_numeric,
+                                       na_symbol_string=self._na_symbol_string,
+                                       logical_symbol_true=self._logical_symbol_true,
+                                       logical_symbol_false=self._logical_symbol_false,
+                                       colnames_dot_symbol=self._colnames_dot_symbol,
+                                       colnames_start_dot=self._colnames_start_dot,
+                                       path_to_rscript=self._path_to_rscript,
+                                       path_to_adherer=self._path_to_adherer,
+                                       path_to_data_directory=self._path_to_data_directory,
+                                       print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
         if result is None:
             raise CallAdhereRError('General computing error')
         elif result['return_code'] != 0:
             raise CallAdhereRError(result['message'])
-        
+
         # Save the return code and message:
-        self.computation_return_code = result['return_code']
-        self.computation_messages = result['message']
-        
+        self._computation_return_code = result['return_code']
+        self._computation_messages = result['message']
+
         # Save the results:
-        self.CMA = result['CMA']
+        self._cma = result['CMA']
         if 'EVENTINFO' in result:
-            self.EVENTINFO = result['EVENTINFO'] 
-    
+            self._event_info = result['EVENTINFO']
+
 
 
 class CMA2(CMA1):
     """
     CMA2 class
-    """  
-        
+    """
+
     # What CMA class ("function") is this?:
-    function = 'CMA2'
-    
+    _adherer_function = 'CMA2'
+
 
 
 class CMA3(CMA1):
     """
     CMA3 class
-    """  
-        
+    """
+
     # What CMA class ("function") is this?:
-    function = 'CMA3'
-    
+    _adherer_function = 'CMA3'
+
 
 
 class CMA4(CMA1):
     """
     CMA4 class
-    """  
-        
+    """
+
     # What CMA class ("function") is this?:
-    function = 'CMA4'
-    
+    _adherer_function = 'CMA4'
+
 
 
 class CMA5(CMA0):
     """
     CMA5 class
-    """  
-        
+    """
+
     # What CMA class ("function") is this?:
-    function = 'CMA5'
-    
+    _adherer_function = 'CMA5'
+
     def __init__(self,
                  dataset,
                  id_colname,
@@ -1779,185 +2102,194 @@ class CMA5(CMA0):
                  event_duration_colname,
                  event_daily_dose_colname,
                  medication_class_colname,
-                 carry_only_for_same_medication = False,
-                 consider_dosage_change = False,
-                 followup_window_start_type = 'numeric',
-                 followup_window_start = 0,
-                 followup_window_start_unit = 'days',
-                 followup_window_duration_type = 'numeric',
-                 followup_window_duration = 365*2,
-                 followup_window_duration_unit = 'days',
-                 observation_window_start_type = 'numeric',
-                 observation_window_start = 0,
-                 observation_window_start_unit = 'days',
-                 observation_window_duration_type = 'numeric',
-                 observation_window_duration = 365*2,
-                 observation_window_duration_unit = 'days',
-                 date_format = '%m/%d/%Y',
-                 event_interval_colname = 'event.interval',
-                 gap_days_colname = 'gap.days',
-                 force_na_cma_for_failed_patients = True,
-                 parallel_backend = 'none',
-                 parallel_threads = 'auto',
-                 suppress_warnings = False,
-                 save_event_info = False,
-                 na_symbol_numeric = 'NA',
-                 na_symbol_string = 'NA',
-                 logical_symbol_true = 'TRUE',
-                 logical_symbol_false = 'FALSE',
-                 colnames_dot_symbol = '.',
-                 colnames_start_dot = '.',
-                 path_to_rscript = '/usr/local/bin/Rscript',
-                 path_to_adherer = os.getcwd(),
-                 path_to_data_directory = os.getcwd(),
-                 print_adherer_messages = True):
-        
+                 carry_only_for_same_medication=False,
+                 consider_dosage_change=False,
+                 followup_window_start_type='numeric',
+                 followup_window_start=0,
+                 followup_window_start_unit='days',
+                 followup_window_duration_type='numeric',
+                 followup_window_duration=365*2,
+                 followup_window_duration_unit='days',
+                 observation_window_start_type='numeric',
+                 observation_window_start=0,
+                 observation_window_start_unit='days',
+                 observation_window_duration_type='numeric',
+                 observation_window_duration=365*2,
+                 observation_window_duration_unit='days',
+                 date_format='%m/%d/%Y',
+                 event_interval_colname='event.interval',
+                 gap_days_colname='gap.days',
+                 force_na_cma_for_failed_patients=True,
+                 parallel_backend='none',
+                 parallel_threads='auto',
+                 suppress_warnings=False,
+                 save_event_info=False,
+                 na_symbol_numeric='NA',
+                 na_symbol_string='NA',
+                 logical_symbol_true='TRUE',
+                 logical_symbol_false='FALSE',
+                 colnames_dot_symbol='.',
+                 colnames_start_dot='.',
+                 path_to_rscript='/usr/local/bin/Rscript',
+                 path_to_adherer=os.getcwd(),
+                 path_to_data_directory=os.getcwd(),
+                 print_adherer_messages=True):
+
         # Call the base class constructor:
-        super().__init__(dataset = dataset,
-                 id_colname = id_colname,
-                 event_date_colname = event_date_colname,
-                 event_duration_colname = event_duration_colname,
-                 event_daily_dose_colname = event_daily_dose_colname,
-                 medication_class_colname = medication_class_colname,
-                 carry_only_for_same_medication = carry_only_for_same_medication,
-                 consider_dosage_change = consider_dosage_change,
-                 followup_window_start_type = followup_window_start_type,
-                 followup_window_start = followup_window_start,
-                 followup_window_start_unit = followup_window_start_unit,
-                 followup_window_duration_type = followup_window_duration_type,
-                 followup_window_duration = followup_window_duration,
-                 followup_window_duration_unit = followup_window_duration_unit,
-                 observation_window_start_type = observation_window_start_type,
-                 observation_window_start = observation_window_start,
-                 observation_window_start_unit = observation_window_start_unit,
-                 observation_window_duration_type = observation_window_duration_type,
-                 observation_window_duration = observation_window_duration,
-                 observation_window_duration_unit = observation_window_duration_unit,
-                 date_format = date_format,
-                 event_interval_colname = event_interval_colname,
-                 gap_days_colname = gap_days_colname,
-                 force_na_cma_for_failed_patients = force_na_cma_for_failed_patients,
-                 parallel_backend = parallel_backend,
-                 parallel_threads = parallel_threads,
-                 suppress_warnings = suppress_warnings,
-                 save_event_info = save_event_info,
-                 na_symbol_numeric = na_symbol_numeric,
-                 na_symbol_string = na_symbol_string,
-                 logical_symbol_true = logical_symbol_true,
-                 logical_symbol_false = logical_symbol_false,
-                 colnames_dot_symbol = colnames_dot_symbol,
-                 colnames_start_dot = colnames_start_dot,
-                 path_to_rscript = path_to_rscript,
-                 path_to_adherer = path_to_adherer,
-                 path_to_data_directory = path_to_data_directory,
-                 print_adherer_messages = print_adherer_messages)
-               
+        super().__init__(dataset=dataset,
+                         id_colname=id_colname,
+                         event_date_colname=event_date_colname,
+                         event_duration_colname=event_duration_colname,
+                         event_daily_dose_colname=event_daily_dose_colname,
+                         medication_class_colname=medication_class_colname,
+                         carry_only_for_same_medication=carry_only_for_same_medication,
+                         consider_dosage_change=consider_dosage_change,
+                         followup_window_start_type=followup_window_start_type,
+                         followup_window_start=followup_window_start,
+                         followup_window_start_unit=followup_window_start_unit,
+                         followup_window_duration_type=followup_window_duration_type,
+                         followup_window_duration=followup_window_duration,
+                         followup_window_duration_unit=followup_window_duration_unit,
+                         observation_window_start_type=observation_window_start_type,
+                         observation_window_start=observation_window_start,
+                         observation_window_start_unit=observation_window_start_unit,
+                         observation_window_duration_type=observation_window_duration_type,
+                         observation_window_duration=observation_window_duration,
+                         observation_window_duration_unit=observation_window_duration_unit,
+                         date_format=date_format,
+                         event_interval_colname=event_interval_colname,
+                         gap_days_colname=gap_days_colname,
+                         force_na_cma_for_failed_patients=force_na_cma_for_failed_patients,
+                         parallel_backend=parallel_backend,
+                         parallel_threads=parallel_threads,
+                         suppress_warnings=suppress_warnings,
+                         save_event_info=save_event_info,
+                         na_symbol_numeric=na_symbol_numeric,
+                         na_symbol_string=na_symbol_string,
+                         logical_symbol_true=logical_symbol_true,
+                         logical_symbol_false=logical_symbol_false,
+                         colnames_dot_symbol=colnames_dot_symbol,
+                         colnames_start_dot=colnames_start_dot,
+                         path_to_rscript=path_to_rscript,
+                         path_to_adherer=path_to_adherer,
+                         path_to_data_directory=path_to_data_directory,
+                         print_adherer_messages=print_adherer_messages)
+
         # Compute the CMA:
-        result = super()._call_adherer(function=self.function,
-                 dataset = self.dataset,
-                 id_colname = self.id_colname,
-                 event_date_colname = self.event_date_colname,
-                 event_duration_colname = self.event_duration_colname,
-                 event_daily_dose_colname = self.event_daily_dose_colname,
-                 medication_class_colname = self.medication_class_colname,
-                 carry_only_for_same_medication = self.carry_only_for_same_medication,
-                 consider_dosage_change = self.consider_dosage_change,
-                 followup_window_start_type = self.followup_window_start_type,
-                 followup_window_start = self.followup_window_start,
-                 followup_window_start_unit = self.followup_window_start_unit,
-                 followup_window_duration_type = self.followup_window_duration_type,
-                 followup_window_duration = self.followup_window_duration,
-                 followup_window_duration_unit = self.followup_window_duration_unit,
-                 observation_window_start_type = self.observation_window_start_type,
-                 observation_window_start = self.observation_window_start,
-                 observation_window_start_unit = self.observation_window_start_unit,
-                 observation_window_duration_type = self.observation_window_duration_type,
-                 observation_window_duration = self.observation_window_duration,
-                 observation_window_duration_unit = self.observation_window_duration_unit,
-                 date_format = self.date_format,
-                 event_interval_colname = self.event_interval_colname,
-                 gap_days_colname = self.gap_days_colname,
-                 force_na_cma_for_failed_patients = self.force_na_cma_for_failed_patients,
-                 parallel_backend = self.parallel_backend,
-                 parallel_threads = self.parallel_threads,
-                 suppress_warnings = self.suppress_warnings,
-                 save_event_info = self.save_event_info,
-                 na_symbol_numeric = self.na_symbol_numeric,
-                 na_symbol_string = self.na_symbol_string,
-                 logical_symbol_true = self.logical_symbol_true,
-                 logical_symbol_false = self.logical_symbol_false,
-                 colnames_dot_symbol = self.colnames_dot_symbol,
-                 colnames_start_dot = self.colnames_start_dot,
-                 path_to_rscript = self.path_to_rscript,
-                 path_to_adherer = self.path_to_adherer,
-                 path_to_data_directory = self.path_to_data_directory,
-                 print_adherer_messages = self.print_adherer_messages)
+        result = super()._call_adherer(function=self._adherer_function,
+                                       dataset=self._dataset,
+                                       id_colname=self._id_colname,
+                                       event_date_colname=self._event_date_colname,
+                                       event_duration_colname=self._event_duration_colname,
+                                       event_daily_dose_colname=self._event_daily_dose_colname,
+                                       medication_class_colname=self._medication_class_colname,
+                                       carry_only_for_same_medication=\
+                                           self._carry_only_for_same_medication,
+                                       consider_dosage_change=self._consider_dosage_change,
+                                       followup_window_start_type=self._followup_window_start_type,
+                                       followup_window_start=self._followup_window_start,
+                                       followup_window_start_unit=self._followup_window_start_unit,
+                                       followup_window_duration_type=\
+                                           self._followup_window_duration_type,
+                                       followup_window_duration=self._followup_window_duration,
+                                       followup_window_duration_unit=\
+                                           self._followup_window_duration_unit,
+                                       observation_window_start_type=\
+                                           self._observation_window_start_type,
+                                       observation_window_start=self._observation_window_start,
+                                       observation_window_start_unit=\
+                                           self._observation_window_start_unit,
+                                       observation_window_duration_type=\
+                                           self._observation_window_duration_type,
+                                       observation_window_duration=\
+                                           self._observation_window_duration,
+                                       observation_window_duration_unit=\
+                                           self._observation_window_duration_unit,
+                                       date_format=self._date_format,
+                                       event_interval_colname=self._event_interval_colname,
+                                       gap_days_colname=self._gap_days_colname,
+                                       force_na_cma_for_failed_patients=\
+                                           self._force_na_cma_for_failed_patients,
+                                       parallel_backend=self._parallel_backend,
+                                       parallel_threads=self._parallel_threads,
+                                       suppress_warnings=self._suppress_warnings,
+                                       save_event_info=self._save_event_info,
+                                       na_symbol_numeric=self._na_symbol_numeric,
+                                       na_symbol_string=self._na_symbol_string,
+                                       logical_symbol_true=self._logical_symbol_true,
+                                       logical_symbol_false=self._logical_symbol_false,
+                                       colnames_dot_symbol=self._colnames_dot_symbol,
+                                       colnames_start_dot=self._colnames_start_dot,
+                                       path_to_rscript=self._path_to_rscript,
+                                       path_to_adherer=self._path_to_adherer,
+                                       path_to_data_directory=self._path_to_data_directory,
+                                       print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
         if result is None:
             raise CallAdhereRError('General computing error')
         elif result['return_code'] != 0:
             raise CallAdhereRError(result['message'])
-        
+
         # Save the return code and message:
-        self.computation_return_code = result['return_code']
-        self.computation_messages = result['message']
-        
+        self._computation_return_code = result['return_code']
+        self._computation_messages = result['message']
+
         # Save the results:
-        self.CMA = result['CMA']
+        self._cma = result['CMA']
         if 'EVENTINFO' in result:
-            self.EVENTINFO = result['EVENTINFO'] 
-    
+            self._event_info = result['EVENTINFO']
+
 
 
 class CMA6(CMA5):
     """
     CMA6 class
-    """  
-        
+    """
+
     # What CMA class ("function") is this?:
-    function = 'CMA6'
-    
+    _adherer_function = 'CMA6'
+
 
 
 class CMA7(CMA5):
     """
     CMA7 class
-    """  
-        
+    """
+
     # What CMA class ("function") is this?:
-    function = 'CMA7'
-    
+    _adherer_function = 'CMA7'
+
 
 
 class CMA8(CMA5):
     """
     CMA8 class
-    """  
-        
+    """
+
     # What CMA class ("function") is this?:
-    function = 'CMA8'
-    
+    _adherer_function = 'CMA8'
+
 
 
 class CMA9(CMA5):
     """
     CMA9 class
-    """  
-        
+    """
+
     # What CMA class ("function") is this?:
-    function = 'CMA9'
-    
+    _adherer_function = 'CMA9'
+
 
 
 class CMAPerEpisode(CMA0):
     """
     CMAPerEpisode class
-    """  
-        
+    """
+
     # What CMA class ("function") is this?:
-    function = 'CMAPerEpisode'
-    
+    _adherer_function = 'CMA_per_episode'
+
     def __init__(self,
                  dataset,
                  cma_to_apply,
@@ -1966,265 +2298,168 @@ class CMAPerEpisode(CMA0):
                  event_duration_colname,
                  event_daily_dose_colname,
                  medication_class_colname,
-                 carry_only_for_same_medication = False,
-                 consider_dosage_change = False,
-                 medication_change_means_new_treatment_episode = False,
-                 maximum_permissible_gap = 180,
-                 maximum_permissible_gap_unit = 'days',
-                 followup_window_start_type = 'numeric',
-                 followup_window_start = 0,
-                 followup_window_start_unit = 'days',
-                 followup_window_duration_type = 'numeric',
-                 followup_window_duration = 365*2,
-                 followup_window_duration_unit = 'days',
-                 observation_window_start_type = 'numeric',
-                 observation_window_start = 0,
-                 observation_window_start_unit = 'days',
-                 observation_window_duration_type = 'numeric',
-                 observation_window_duration = 365*2,
-                 observation_window_duration_unit = 'days',
-                 date_format = '%m/%d/%Y',
-                 event_interval_colname = 'event.interval',
-                 gap_days_colname = 'gap.days',
-                 force_na_cma_for_failed_patients = True,
-                 parallel_backend = 'none',
-                 parallel_threads = 'auto',
-                 suppress_warnings = False,
-                 save_event_info = False,
-                 na_symbol_numeric = 'NA',
-                 na_symbol_string = 'NA',
-                 logical_symbol_true = 'TRUE',
-                 logical_symbol_false = 'FALSE',
-                 colnames_dot_symbol = '.',
-                 colnames_start_dot = '.',
-                 path_to_rscript = '/usr/local/bin/Rscript',
-                 path_to_adherer = os.getcwd(),
-                 path_to_data_directory = os.getcwd(),
-                 print_adherer_messages = True):
-        
+                 carry_only_for_same_medication=False,
+                 consider_dosage_change=False,
+                 medication_change_means_new_treatment_episode=False,
+                 maximum_permissible_gap=180,
+                 maximum_permissible_gap_unit='days',
+                 followup_window_start_type='numeric',
+                 followup_window_start=0,
+                 followup_window_start_unit='days',
+                 followup_window_duration_type='numeric',
+                 followup_window_duration=365*2,
+                 followup_window_duration_unit='days',
+                 observation_window_start_type='numeric',
+                 observation_window_start=0,
+                 observation_window_start_unit='days',
+                 observation_window_duration_type='numeric',
+                 observation_window_duration=365*2,
+                 observation_window_duration_unit='days',
+                 date_format='%m/%d/%Y',
+                 event_interval_colname='event.interval',
+                 gap_days_colname='gap.days',
+                 force_na_cma_for_failed_patients=True,
+                 parallel_backend='none',
+                 parallel_threads='auto',
+                 suppress_warnings=False,
+                 save_event_info=False,
+                 na_symbol_numeric='NA',
+                 na_symbol_string='NA',
+                 logical_symbol_true='TRUE',
+                 logical_symbol_false='FALSE',
+                 colnames_dot_symbol='.',
+                 colnames_start_dot='.',
+                 path_to_rscript='/usr/local/bin/Rscript',
+                 path_to_adherer=os.getcwd(),
+                 path_to_data_directory=os.getcwd(),
+                 print_adherer_messages=True):
+
         # Call the base class constructor:
-        super().__init__(dataset = dataset,
-                 id_colname = id_colname,
-                 event_date_colname = event_date_colname,
-                 event_duration_colname = event_duration_colname,
-                 event_daily_dose_colname = event_daily_dose_colname,
-                 medication_class_colname = medication_class_colname,
-                 carry_only_for_same_medication = carry_only_for_same_medication,
-                 consider_dosage_change = consider_dosage_change,
-                 medication_change_means_new_treatment_episode = medication_change_means_new_treatment_episode,
-                 maximum_permissible_gap = maximum_permissible_gap,
-                 maximum_permissible_gap_unit = maximum_permissible_gap_unit,
-                 followup_window_start_type = followup_window_start_type,
-                 followup_window_start = followup_window_start,
-                 followup_window_start_unit = followup_window_start_unit,
-                 followup_window_duration_type = followup_window_duration_type,
-                 followup_window_duration = followup_window_duration,
-                 followup_window_duration_unit = followup_window_duration_unit,
-                 observation_window_start_type = observation_window_start_type,
-                 observation_window_start = observation_window_start,
-                 observation_window_start_unit = observation_window_start_unit,
-                 observation_window_duration_type = observation_window_duration_type,
-                 observation_window_duration = observation_window_duration,
-                 observation_window_duration_unit = observation_window_duration_unit,
-                 cma_to_apply = cma_to_apply,
-                 date_format = date_format,
-                 event_interval_colname = event_interval_colname,
-                 gap_days_colname = gap_days_colname,
-                 force_na_cma_for_failed_patients = force_na_cma_for_failed_patients,
-                 parallel_backend = parallel_backend,
-                 parallel_threads = parallel_threads,
-                 suppress_warnings = suppress_warnings,
-                 save_event_info = save_event_info,
-                 na_symbol_numeric = na_symbol_numeric,
-                 na_symbol_string = na_symbol_string,
-                 logical_symbol_true = logical_symbol_true,
-                 logical_symbol_false = logical_symbol_false,
-                 colnames_dot_symbol = colnames_dot_symbol,
-                 colnames_start_dot = colnames_start_dot,
-                 path_to_rscript = path_to_rscript,
-                 path_to_adherer = path_to_adherer,
-                 path_to_data_directory = path_to_data_directory,
-                 print_adherer_messages = print_adherer_messages)
-               
+        super().__init__(dataset=dataset,
+                         id_colname=id_colname,
+                         event_date_colname=event_date_colname,
+                         event_duration_colname=event_duration_colname,
+                         event_daily_dose_colname=event_daily_dose_colname,
+                         medication_class_colname=medication_class_colname,
+                         carry_only_for_same_medication=carry_only_for_same_medication,
+                         consider_dosage_change=consider_dosage_change,
+                         medication_change_means_new_treatment_episode=\
+                             medication_change_means_new_treatment_episode,
+                         maximum_permissible_gap=maximum_permissible_gap,
+                         maximum_permissible_gap_unit=maximum_permissible_gap_unit,
+                         followup_window_start_type=followup_window_start_type,
+                         followup_window_start=followup_window_start,
+                         followup_window_start_unit=followup_window_start_unit,
+                         followup_window_duration_type=followup_window_duration_type,
+                         followup_window_duration=followup_window_duration,
+                         followup_window_duration_unit=followup_window_duration_unit,
+                         observation_window_start_type=observation_window_start_type,
+                         observation_window_start=observation_window_start,
+                         observation_window_start_unit=observation_window_start_unit,
+                         observation_window_duration_type=observation_window_duration_type,
+                         observation_window_duration=observation_window_duration,
+                         observation_window_duration_unit=observation_window_duration_unit,
+                         cma_to_apply=cma_to_apply,
+                         date_format=date_format,
+                         event_interval_colname=event_interval_colname,
+                         gap_days_colname=gap_days_colname,
+                         force_na_cma_for_failed_patients=force_na_cma_for_failed_patients,
+                         parallel_backend=parallel_backend,
+                         parallel_threads=parallel_threads,
+                         suppress_warnings=suppress_warnings,
+                         save_event_info=save_event_info,
+                         na_symbol_numeric=na_symbol_numeric,
+                         na_symbol_string=na_symbol_string,
+                         logical_symbol_true=logical_symbol_true,
+                         logical_symbol_false=logical_symbol_false,
+                         colnames_dot_symbol=colnames_dot_symbol,
+                         colnames_start_dot=colnames_start_dot,
+                         path_to_rscript=path_to_rscript,
+                         path_to_adherer=path_to_adherer,
+                         path_to_data_directory=path_to_data_directory,
+                         print_adherer_messages=print_adherer_messages)
+
         # Compute the CMA:
-        result = super()._call_adherer(function=self.function,
-                 dataset = self.dataset,
-                 id_colname = self.id_colname,
-                 event_date_colname = self.event_date_colname,
-                 event_duration_colname = self.event_duration_colname,
-                 event_daily_dose_colname = self.event_daily_dose_colname,
-                 medication_class_colname = self.medication_class_colname,
-                 carry_only_for_same_medication = self.carry_only_for_same_medication,
-                 consider_dosage_change = self.consider_dosage_change,
-                 medication_change_means_new_treatment_episode = self.medication_change_means_new_treatment_episode,
-                 maximum_permissible_gap = self.maximum_permissible_gap,
-                 maximum_permissible_gap_unit = self.maximum_permissible_gap_unit,
-                 followup_window_start_type = self.followup_window_start_type,
-                 followup_window_start = self.followup_window_start,
-                 followup_window_start_unit = self.followup_window_start_unit,
-                 followup_window_duration_type = self.followup_window_duration_type,
-                 followup_window_duration = self.followup_window_duration,
-                 followup_window_duration_unit = self.followup_window_duration_unit,
-                 observation_window_start_type = self.observation_window_start_type,
-                 observation_window_start = self.observation_window_start,
-                 observation_window_start_unit = self.observation_window_start_unit,
-                 observation_window_duration_type = self.observation_window_duration_type,
-                 observation_window_duration = self.observation_window_duration,
-                 observation_window_duration_unit = self.observation_window_duration_unit,
-                 cma_to_apply = self.cma_to_apply,
-                 date_format = self.date_format,
-                 event_interval_colname = self.event_interval_colname,
-                 gap_days_colname = self.gap_days_colname,
-                 force_na_cma_for_failed_patients = self.force_na_cma_for_failed_patients,
-                 parallel_backend = self.parallel_backend,
-                 parallel_threads = self.parallel_threads,
-                 suppress_warnings = self.suppress_warnings,
-                 save_event_info = self.save_event_info,
-                 na_symbol_numeric = self.na_symbol_numeric,
-                 na_symbol_string = self.na_symbol_string,
-                 logical_symbol_true = self.logical_symbol_true,
-                 logical_symbol_false = self.logical_symbol_false,
-                 colnames_dot_symbol = self.colnames_dot_symbol,
-                 colnames_start_dot = self.colnames_start_dot,
-                 path_to_rscript = self.path_to_rscript,
-                 path_to_adherer = self.path_to_adherer,
-                 path_to_data_directory = self.path_to_data_directory,
-                 print_adherer_messages = self.print_adherer_messages)
+        result = super()._call_adherer(function=self._adherer_function,
+                                       dataset=self._dataset,
+                                       id_colname=self._id_colname,
+                                       event_date_colname=self._event_date_colname,
+                                       event_duration_colname=self._event_duration_colname,
+                                       event_daily_dose_colname=self._event_daily_dose_colname,
+                                       medication_class_colname=self._medication_class_colname,
+                                       carry_only_for_same_medication=\
+                                           self._carry_only_for_same_medication,
+                                       consider_dosage_change=self._consider_dosage_change,
+                                       medication_change_means_new_treatment_episode=\
+                                           self._medication_change_means_new_treatment_episode,
+                                       maximum_permissible_gap=self._maximum_permissible_gap,
+                                       maximum_permissible_gap_unit=\
+                                           self._maximum_permissible_gap_unit,
+                                       followup_window_start_type=self._followup_window_start_type,
+                                       followup_window_start=self._followup_window_start,
+                                       followup_window_start_unit=self._followup_window_start_unit,
+                                       followup_window_duration_type=\
+                                           self._followup_window_duration_type,
+                                       followup_window_duration=self._followup_window_duration,
+                                       followup_window_duration_unit=\
+                                           self._followup_window_duration_unit,
+                                       observation_window_start_type=\
+                                           self._observation_window_start_type,
+                                       observation_window_start=self._observation_window_start,
+                                       observation_window_start_unit=\
+                                           self._observation_window_start_unit,
+                                       observation_window_duration_type=\
+                                           self._observation_window_duration_type,
+                                       observation_window_duration=\
+                                           self._observation_window_duration,
+                                       observation_window_duration_unit=\
+                                           self._observation_window_duration_unit,
+                                       cma_to_apply=self._cma_to_apply,
+                                       date_format=self._date_format,
+                                       event_interval_colname=self._event_interval_colname,
+                                       gap_days_colname=self._gap_days_colname,
+                                       force_na_cma_for_failed_patients=\
+                                           self._force_na_cma_for_failed_patients,
+                                       parallel_backend=self._parallel_backend,
+                                       parallel_threads=self._parallel_threads,
+                                       suppress_warnings=self._suppress_warnings,
+                                       save_event_info=self._save_event_info,
+                                       na_symbol_numeric=self._na_symbol_numeric,
+                                       na_symbol_string=self._na_symbol_string,
+                                       logical_symbol_true=self._logical_symbol_true,
+                                       logical_symbol_false=self._logical_symbol_false,
+                                       colnames_dot_symbol=self._colnames_dot_symbol,
+                                       colnames_start_dot=self._colnames_start_dot,
+                                       path_to_rscript=self._path_to_rscript,
+                                       path_to_adherer=self._path_to_adherer,
+                                       path_to_data_directory=self._path_to_data_directory,
+                                       print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
         if result is None:
             raise CallAdhereRError('General computing error')
         elif result['return_code'] != 0:
             raise CallAdhereRError(result['message'])
-        
-        # Save the return code and message:
-        self.computation_return_code = result['return_code']
-        self.computation_messages = result['message']
-        
-        # Save the results:
-        self.CMA = result['CMA']
-        if 'EVENTINFO' in result:
-            self.EVENTINFO = result['EVENTINFO'] 
-    
-    # Plotting:
-    def plot(self, 
-            patients_to_plot = None,
-            save_to = None,
-            save_as = 'jpg',
-            width = 7, 
-            height = 7,
-            quality = 90,
-            dpi = 150,
-            duration = None,
-            align_all_patients = False,
-            align_first_event_at_zero = True,
-            show_period = 'days',
-            period_in_days = 90,
-            show_legend = True,
-            legend_x = 'right',
-            legend_y = 'bottom',
-            legend_bkg_opacity = 0.5,
-            cex = 1.0,
-            cex_axis = 0.75,
-            cex_lab = 1.0,
-            show_cma = True,
-            unspecified_category_label = 'drug',
-            lty_event = 'solid',
-            lwd_event = 2,
-            pch_start_event = 15,
-            pch_end_event = 16,
-            show_event_intervals = True,
-            col_na = 'lightgray',
-            col_continuation = 'black',
-            lty_continuation = 'dotted',
-            lwd_continuation = 1,
-            print_CMA = True,
-            plot_CMA = True,
-            plot_CMA_as_histogram = True,
-            CMA_plot_ratio = 0.10,
-            CMA_plot_col = 'lightgreen',
-            CMA_plot_border = 'darkgreen',
-            CMA_plot_bkg = 'aquamarine',
-            CMA_plot_text = None,
-            highlight_followup_window = True,
-            followup_window_col = 'green',
-            highlight_observation_window = True,
-            observation_window_col = 'yellow',
-            observation_window_density = 35,
-            observation_window_angle = -30,
-            show_real_obs_window_start = True,
-            real_obs_window_density = 35,
-            real_obs_window_angle = 30,
-            bw_plot = False):
-        # do the plotting:
-        result = self._call_adherer(dataset = self.dataset, function = self.function, 
-                               cma_to_apply = self.cma_to_apply, plot_show = True,
-                             id_colname = self.id_colname, 
-                             event_date_colname = self.event_date_colname, 
-                             event_duration_colname = self.event_duration_colname,
-                             event_daily_dose_colname = self.event_daily_dose_colname,
-                             medication_class_colname = self.medication_class_colname,
-                             carry_only_for_same_medication = self.carry_only_for_same_medication,
-                             consider_dosage_change = self.consider_dosage_change,
-                             medication_change_means_new_treatment_episode = self.medication_change_means_new_treatment_episode,
-                             maximum_permissible_gap = self.maximum_permissible_gap,
-                             maximum_permissible_gap_unit = self.maximum_permissible_gap_unit,
-                             
-                             plot_patients_to_plot = patients_to_plot,
-                             plot_save_to = save_to, plot_save_as = save_as,
-                             plot_width = width, plot_height = height,
-                             plot_quality = quality, plot_dpi = dpi,
-                             plot_duration = duration,
-                             plot_align_all_patients = align_all_patients, plot_align_first_event_at_zero = align_first_event_at_zero,
-                             plot_show_period = show_period, plot_period_in_days = period_in_days,
-                             plot_show_legend = show_legend, plot_legend_x = legend_x, plot_legend_y = legend_y,
-                             plot_legend_bkg_opacity = legend_bkg_opacity, 
-                             plot_cex = cex, plot_cex_axis = cex_axis, plot_cex_lab = cex_lab,
-                             plot_show_cma = show_cma, 
-                             plot_unspecified_category_label = unspecified_category_label,
-                             plot_lty_event = lty_event, plot_lwd_event = lwd_event,
-                             plot_pch_start_event = pch_start_event, plot_pch_end_event = pch_end_event,
-                             plot_show_event_intervals = show_event_intervals,
-                             plot_col_na = col_na, plot_col_continuation = col_continuation, 
-                             plot_lty_continuation = lty_continuation, plot_lwd_continuation = lwd_continuation,
-                             plot_print_cma = print_CMA, plot_plot_cma = plot_CMA, plot_plot_cma_as_histogram = plot_CMA_as_histogram,
-                             plot_cma_plot_ratio = CMA_plot_ratio, plot_cma_plot_col = CMA_plot_col,
-                             plot_cma_plot_border = CMA_plot_border, plot_cma_plot_bkg = CMA_plot_bkg, 
-                             plot_cma_plot_text = CMA_plot_text,
-                             plot_highlight_followup_window = highlight_followup_window,
-                             plot_highlight_observation_window = highlight_observation_window,
-                             plot_observation_window_col = observation_window_col, 
-                             plot_observation_window_density = observation_window_density,
-                             plot_observation_window_angle = observation_window_angle,
-                             plot_show_real_obs_window_start = show_real_obs_window_start,
-                             plot_real_obs_window_density = real_obs_window_density,
-                             plot_real_obs_window_angle = real_obs_window_angle,
-                             plot_bw_plot = bw_plot,
-                             path_to_adherer = self.path_to_adherer) 
 
-        # Were there errors?
-        if result is None:
-            raise CallAdhereRError('General plotting error')
-        elif result['return_code'] != 0:
-            raise CallAdhereRError(result['message'])
-        
         # Save the return code and message:
-        self.computation_return_code = result['return_code']
-        self.computation_messages = result['message']
-        
-        # Return the plot:
-        return result['plot']
-    
+        self._computation_return_code = result['return_code']
+        self._computation_messages = result['message']
+
+        # Save the results:
+        self._cma = result['CMA']
+        if 'EVENTINFO' in result:
+            self._event_info = result['EVENTINFO']
+
 
 
 class CMASlidingWindow(CMA0):
     """
     CMASlidingWindow class
-    """  
-        
+    """
+
     # What CMA class ("function") is this?:
-    function = 'CMASlidingWindow'
-    
+    _adherer_function = 'CMA_sliding_window'
+
     def __init__(self,
                  dataset,
                  cma_to_apply,
@@ -2233,287 +2468,176 @@ class CMASlidingWindow(CMA0):
                  event_duration_colname,
                  event_daily_dose_colname,
                  medication_class_colname,
-                 carry_only_for_same_medication = False,
-                 consider_dosage_change = False,
-                 followup_window_start_type = 'numeric',
-                 followup_window_start = 0,
-                 followup_window_start_unit = 'days',
-                 followup_window_duration_type = 'numeric',
-                 followup_window_duration = 365*2,
-                 followup_window_duration_unit = 'days',
-                 observation_window_start_type = 'numeric',
-                 observation_window_start = 0,
-                 observation_window_start_unit = 'days',
-                 observation_window_duration_type = 'numeric',
-                 observation_window_duration = 365*2,
-                 observation_window_duration_unit = 'days',
-                 sliding_window_start_type = 'numeric',
-                 sliding_window_start = 0,
-                 sliding_window_start_unit = 'days',
-                 sliding_window_duration_type = 'numeric',
-                 sliding_window_duration = 365*2,
-                 sliding_window_duration_unit = 'days',
-                 sliding_window_step_duration_type = 'numeric',
-                 sliding_window_step_duration = 30,	
-                 sliding_window_step_unit = 'days',
-                 sliding_window_no_steps = None,
-                 date_format = '%m/%d/%Y',
-                 event_interval_colname = 'event.interval',
-                 gap_days_colname = 'gap.days',
-                 force_na_cma_for_failed_patients = True,
-                 parallel_backend = 'none',
-                 parallel_threads = 'auto',
-                 suppress_warnings = False,
-                 save_event_info = False,
-                 na_symbol_numeric = 'NA',
-                 na_symbol_string = 'NA',
-                 logical_symbol_true = 'TRUE',
-                 logical_symbol_false = 'FALSE',
-                 colnames_dot_symbol = '.',
-                 colnames_start_dot = '.',
-                 path_to_rscript = '/usr/local/bin/Rscript',
-                 path_to_adherer = os.getcwd(),
-                 path_to_data_directory = os.getcwd(),
-                 print_adherer_messages = True):
-        
+                 carry_only_for_same_medication=False,
+                 consider_dosage_change=False,
+                 followup_window_start_type='numeric',
+                 followup_window_start=0,
+                 followup_window_start_unit='days',
+                 followup_window_duration_type='numeric',
+                 followup_window_duration=365*2,
+                 followup_window_duration_unit='days',
+                 observation_window_start_type='numeric',
+                 observation_window_start=0,
+                 observation_window_start_unit='days',
+                 observation_window_duration_type='numeric',
+                 observation_window_duration=365*2,
+                 observation_window_duration_unit='days',
+                 sliding_window_start_type='numeric',
+                 sliding_window_start=0,
+                 sliding_window_start_unit='days',
+                 sliding_window_duration_type='numeric',
+                 sliding_window_duration=90,
+                 sliding_window_duration_unit='days',
+                 sliding_window_step_duration_type='numeric',
+                 sliding_window_step_duration=30,
+                 sliding_window_step_unit='days',
+                 sliding_window_no_steps=None,
+                 date_format='%m/%d/%Y',
+                 event_interval_colname='event.interval',
+                 gap_days_colname='gap.days',
+                 force_na_cma_for_failed_patients=True,
+                 parallel_backend='none',
+                 parallel_threads='auto',
+                 suppress_warnings=False,
+                 save_event_info=False,
+                 na_symbol_numeric='NA',
+                 na_symbol_string='NA',
+                 logical_symbol_true='TRUE',
+                 logical_symbol_false='FALSE',
+                 colnames_dot_symbol='.',
+                 colnames_start_dot='.',
+                 path_to_rscript='/usr/local/bin/Rscript',
+                 path_to_adherer=os.getcwd(),
+                 path_to_data_directory=os.getcwd(),
+                 print_adherer_messages=True):
+
         # Call the base class constructor:
-        super().__init__(dataset = dataset,
-                 id_colname = id_colname,
-                 event_date_colname = event_date_colname,
-                 event_duration_colname = event_duration_colname,
-                 event_daily_dose_colname = event_daily_dose_colname,
-                 medication_class_colname = medication_class_colname,
-                 carry_only_for_same_medication = carry_only_for_same_medication,
-                 consider_dosage_change = consider_dosage_change,
-                 followup_window_start_type = followup_window_start_type,
-                 followup_window_start = followup_window_start,
-                 followup_window_start_unit = followup_window_start_unit,
-                 followup_window_duration_type = followup_window_duration_type,
-                 followup_window_duration = followup_window_duration,
-                 followup_window_duration_unit = followup_window_duration_unit,
-                 observation_window_start_type = observation_window_start_type,
-                 observation_window_start = observation_window_start,
-                 observation_window_start_unit = observation_window_start_unit,
-                 observation_window_duration_type = observation_window_duration_type,
-                 observation_window_duration = observation_window_duration,
-                 observation_window_duration_unit = observation_window_duration_unit,
-                 sliding_window_start_type = sliding_window_start_type,
-                 sliding_window_start = sliding_window_start,
-                 sliding_window_start_unit = sliding_window_start_unit,
-                 sliding_window_duration_type = sliding_window_duration_type,
-                 sliding_window_duration = sliding_window_duration,
-                 sliding_window_duration_unit = sliding_window_duration_unit,
-                 sliding_window_step_duration_type = sliding_window_step_duration_type,
-                 sliding_window_step_duration = sliding_window_step_duration,	
-                 sliding_window_step_unit = sliding_window_step_unit,
-                 sliding_window_no_steps = sliding_window_no_steps,
-                 cma_to_apply = cma_to_apply,
-                 date_format = date_format,
-                 event_interval_colname = event_interval_colname,
-                 gap_days_colname = gap_days_colname,
-                 force_na_cma_for_failed_patients = force_na_cma_for_failed_patients,
-                 parallel_backend = parallel_backend,
-                 parallel_threads = parallel_threads,
-                 suppress_warnings = suppress_warnings,
-                 save_event_info = save_event_info,
-                 na_symbol_numeric = na_symbol_numeric,
-                 na_symbol_string = na_symbol_string,
-                 logical_symbol_true = logical_symbol_true,
-                 logical_symbol_false = logical_symbol_false,
-                 colnames_dot_symbol = colnames_dot_symbol,
-                 colnames_start_dot = colnames_start_dot,
-                 path_to_rscript = path_to_rscript,
-                 path_to_adherer = path_to_adherer,
-                 path_to_data_directory = path_to_data_directory,
-                 print_adherer_messages = print_adherer_messages)
-               
+        super().__init__(dataset=dataset,
+                         id_colname=id_colname,
+                         event_date_colname=event_date_colname,
+                         event_duration_colname=event_duration_colname,
+                         event_daily_dose_colname=event_daily_dose_colname,
+                         medication_class_colname=medication_class_colname,
+                         carry_only_for_same_medication=carry_only_for_same_medication,
+                         consider_dosage_change=consider_dosage_change,
+                         followup_window_start_type=followup_window_start_type,
+                         followup_window_start=followup_window_start,
+                         followup_window_start_unit=followup_window_start_unit,
+                         followup_window_duration_type=followup_window_duration_type,
+                         followup_window_duration=followup_window_duration,
+                         followup_window_duration_unit=followup_window_duration_unit,
+                         observation_window_start_type=observation_window_start_type,
+                         observation_window_start=observation_window_start,
+                         observation_window_start_unit=observation_window_start_unit,
+                         observation_window_duration_type=observation_window_duration_type,
+                         observation_window_duration=observation_window_duration,
+                         observation_window_duration_unit=observation_window_duration_unit,
+                         sliding_window_start_type=sliding_window_start_type,
+                         sliding_window_start=sliding_window_start,
+                         sliding_window_start_unit=sliding_window_start_unit,
+                         sliding_window_duration_type=sliding_window_duration_type,
+                         sliding_window_duration=sliding_window_duration,
+                         sliding_window_duration_unit=sliding_window_duration_unit,
+                         sliding_window_step_duration_type=sliding_window_step_duration_type,
+                         sliding_window_step_duration=sliding_window_step_duration,
+                         sliding_window_step_unit=sliding_window_step_unit,
+                         sliding_window_no_steps=sliding_window_no_steps,
+                         cma_to_apply=cma_to_apply,
+                         date_format=date_format,
+                         event_interval_colname=event_interval_colname,
+                         gap_days_colname=gap_days_colname,
+                         force_na_cma_for_failed_patients=force_na_cma_for_failed_patients,
+                         parallel_backend=parallel_backend,
+                         parallel_threads=parallel_threads,
+                         suppress_warnings=suppress_warnings,
+                         save_event_info=save_event_info,
+                         na_symbol_numeric=na_symbol_numeric,
+                         na_symbol_string=na_symbol_string,
+                         logical_symbol_true=logical_symbol_true,
+                         logical_symbol_false=logical_symbol_false,
+                         colnames_dot_symbol=colnames_dot_symbol,
+                         colnames_start_dot=colnames_start_dot,
+                         path_to_rscript=path_to_rscript,
+                         path_to_adherer=path_to_adherer,
+                         path_to_data_directory=path_to_data_directory,
+                         print_adherer_messages=print_adherer_messages)
+
         # Compute the CMA:
-        result = super()._call_adherer(function=self.function,
-                 dataset = self.dataset,
-                 id_colname = self.id_colname,
-                 event_date_colname = self.event_date_colname,
-                 event_duration_colname = self.event_duration_colname,
-                 event_daily_dose_colname = self.event_daily_dose_colname,
-                 medication_class_colname = self.medication_class_colname,
-                 carry_only_for_same_medication = self.carry_only_for_same_medication,
-                 consider_dosage_change = self.consider_dosage_change,
-                 followup_window_start_type = self.followup_window_start_type,
-                 followup_window_start = self.followup_window_start,
-                 followup_window_start_unit = self.followup_window_start_unit,
-                 followup_window_duration_type = self.followup_window_duration_type,
-                 followup_window_duration = self.followup_window_duration,
-                 followup_window_duration_unit = self.followup_window_duration_unit,
-                 observation_window_start_type = self.observation_window_start_type,
-                 observation_window_start = self.observation_window_start,
-                 observation_window_start_unit = self.observation_window_start_unit,
-                 observation_window_duration_type = self.observation_window_duration_type,
-                 observation_window_duration = self.observation_window_duration,
-                 observation_window_duration_unit = self.observation_window_duration_unit,
-                 sliding_window_start_type = self.sliding_window_start_type,
-                 sliding_window_start = self.sliding_window_start,
-                 sliding_window_start_unit = self.sliding_window_start_unit,
-                 sliding_window_duration_type = self.sliding_window_duration_type,
-                 sliding_window_duration = self.sliding_window_duration,
-                 sliding_window_duration_unit = self.sliding_window_duration_unit,
-                 sliding_window_step_duration_type = self.sliding_window_step_duration_type,
-                 sliding_window_step_duration = self.sliding_window_step_duration,	
-                 sliding_window_step_unit = self.sliding_window_step_unit,
-                 sliding_window_no_steps = self.sliding_window_no_steps,
-                 cma_to_apply = self.cma_to_apply,
-                 date_format = self.date_format,
-                 event_interval_colname = self.event_interval_colname,
-                 gap_days_colname = self.gap_days_colname,
-                 force_na_cma_for_failed_patients = self.force_na_cma_for_failed_patients,
-                 parallel_backend = self.parallel_backend,
-                 parallel_threads = self.parallel_threads,
-                 suppress_warnings = self.suppress_warnings,
-                 save_event_info = self.save_event_info,
-                 na_symbol_numeric = self.na_symbol_numeric,
-                 na_symbol_string = self.na_symbol_string,
-                 logical_symbol_true = self.logical_symbol_true,
-                 logical_symbol_false = self.logical_symbol_false,
-                 colnames_dot_symbol = self.colnames_dot_symbol,
-                 colnames_start_dot = self.colnames_start_dot,
-                 path_to_rscript = self.path_to_rscript,
-                 path_to_adherer = self.path_to_adherer,
-                 path_to_data_directory = self.path_to_data_directory,
-                 print_adherer_messages = self.print_adherer_messages)
+        result = super()._call_adherer(function=self._adherer_function,
+                                       dataset=self._dataset,
+                                       id_colname=self._id_colname,
+                                       event_date_colname=self._event_date_colname,
+                                       event_duration_colname=self._event_duration_colname,
+                                       event_daily_dose_colname=self._event_daily_dose_colname,
+                                       medication_class_colname=self._medication_class_colname,
+                                       carry_only_for_same_medication=\
+                                           self._carry_only_for_same_medication,
+                                       consider_dosage_change=self._consider_dosage_change,
+                                       followup_window_start_type=self._followup_window_start_type,
+                                       followup_window_start=self._followup_window_start,
+                                       followup_window_start_unit=self._followup_window_start_unit,
+                                       followup_window_duration_type=\
+                                           self._followup_window_duration_type,
+                                       followup_window_duration=self._followup_window_duration,
+                                       followup_window_duration_unit=\
+                                           self._followup_window_duration_unit,
+                                       observation_window_start_type=\
+                                           self._observation_window_start_type,
+                                       observation_window_start=self._observation_window_start,
+                                       observation_window_start_unit=\
+                                           self._observation_window_start_unit,
+                                       observation_window_duration_type=\
+                                           self._observation_window_duration_type,
+                                       observation_window_duration=\
+                                           self._observation_window_duration,
+                                       observation_window_duration_unit=\
+                                           self._observation_window_duration_unit,
+                                       sliding_window_start_type=self._sliding_window_start_type,
+                                       sliding_window_start=self._sliding_window_start,
+                                       sliding_window_start_unit=self._sliding_window_start_unit,
+                                       sliding_window_duration_type=\
+                                           self._sliding_window_duration_type,
+                                       sliding_window_duration=self._sliding_window_duration,
+                                       sliding_window_duration_unit=\
+                                           self._sliding_window_duration_unit,
+                                       sliding_window_step_duration_type=\
+                                           self._sliding_window_step_duration_type,
+                                       sliding_window_step_duration=\
+                                           self._sliding_window_step_duration,
+                                       sliding_window_step_unit=self._sliding_window_step_unit,
+                                       sliding_window_no_steps=self._sliding_window_no_steps,
+                                       cma_to_apply=self._cma_to_apply,
+                                       date_format=self._date_format,
+                                       event_interval_colname=self._event_interval_colname,
+                                       gap_days_colname=self._gap_days_colname,
+                                       force_na_cma_for_failed_patients=\
+                                           self._force_na_cma_for_failed_patients,
+                                       parallel_backend=self._parallel_backend,
+                                       parallel_threads=self._parallel_threads,
+                                       suppress_warnings=self._suppress_warnings,
+                                       save_event_info=self._save_event_info,
+                                       na_symbol_numeric=self._na_symbol_numeric,
+                                       na_symbol_string=self._na_symbol_string,
+                                       logical_symbol_true=self._logical_symbol_true,
+                                       logical_symbol_false=self._logical_symbol_false,
+                                       colnames_dot_symbol=self._colnames_dot_symbol,
+                                       colnames_start_dot=self._colnames_start_dot,
+                                       path_to_rscript=self._path_to_rscript,
+                                       path_to_adherer=self._path_to_adherer,
+                                       path_to_data_directory=self._path_to_data_directory,
+                                       print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
         if result is None:
             raise CallAdhereRError('General computing error')
         elif result['return_code'] != 0:
             raise CallAdhereRError(result['message'])
-        
+
         # Save the return code and message:
-        self.computation_return_code = result['return_code']
-        self.computation_messages = result['message']
-        
+        self._computation_return_code = result['return_code']
+        self._computation_messages = result['message']
+
         # Save the results:
-        self.CMA = result['CMA']
+        self._cma = result['CMA']
         if 'EVENTINFO' in result:
-            self.EVENTINFO = result['EVENTINFO'] 
-    
-    # Plotting:
-    def plot(self, 
-            patients_to_plot = None,
-            save_to = None,
-            save_as = 'jpg',
-            width = 7, 
-            height = 7,
-            quality = 90,
-            dpi = 150,
-            duration = None,
-            align_all_patients = False,
-            align_first_event_at_zero = True,
-            show_period = 'days',
-            period_in_days = 90,
-            show_legend = True,
-            legend_x = 'right',
-            legend_y = 'bottom',
-            legend_bkg_opacity = 0.5,
-            cex = 1.0,
-            cex_axis = 0.75,
-            cex_lab = 1.0,
-            show_cma = True,
-            unspecified_category_label = 'drug',
-            lty_event = 'solid',
-            lwd_event = 2,
-            pch_start_event = 15,
-            pch_end_event = 16,
-            show_event_intervals = True,
-            col_na = 'lightgray',
-            col_continuation = 'black',
-            lty_continuation = 'dotted',
-            lwd_continuation = 1,
-            print_CMA = True,
-            plot_CMA = True,
-            plot_CMA_as_histogram = True,
-            CMA_plot_ratio = 0.10,
-            CMA_plot_col = 'lightgreen',
-            CMA_plot_border = 'darkgreen',
-            CMA_plot_bkg = 'aquamarine',
-            CMA_plot_text = None,
-            highlight_followup_window = True,
-            followup_window_col = 'green',
-            highlight_observation_window = True,
-            observation_window_col = 'yellow',
-            observation_window_density = 35,
-            observation_window_angle = -30,
-            show_real_obs_window_start = True,
-            real_obs_window_density = 35,
-            real_obs_window_angle = 30,
-            bw_plot = False):
-        # do the plotting:
-        result = self._call_adherer(dataset = self.dataset, function = self.function, 
-                               cma_to_apply = self.cma_to_apply, plot_show = True,
-                             id_colname = self.id_colname, 
-                             event_date_colname = self.event_date_colname, 
-                             event_duration_colname = self.event_duration_colname,
-                             event_daily_dose_colname = self.event_daily_dose_colname,
-                             medication_class_colname = self.medication_class_colname,
-                             carry_only_for_same_medication = self.carry_only_for_same_medication,
-                             consider_dosage_change = self.consider_dosage_change,
-
-                             sliding_window_start_type = self.sliding_window_start_type,
-                             sliding_window_start = self.sliding_window_start,
-                             sliding_window_start_unit = self.sliding_window_start_unit,
-                             sliding_window_duration_type = self.sliding_window_duration_type,
-                             sliding_window_duration = self.sliding_window_duration,
-                             sliding_window_duration_unit = self.sliding_window_duration_unit,
-                             sliding_window_step_duration_type = self.sliding_window_step_duration_type,
-                             sliding_window_step_duration = self.sliding_window_step_duration,	
-                             sliding_window_step_unit = self.sliding_window_step_unit,
-                             sliding_window_no_steps = self.sliding_window_no_steps,
-                            
-                             plot_patients_to_plot = patients_to_plot,
-                             plot_save_to = save_to, plot_save_as = save_as,
-                             plot_width = width, plot_height = height,
-                             plot_quality = quality, plot_dpi = dpi,
-                             plot_duration = duration,
-                             plot_align_all_patients = align_all_patients, plot_align_first_event_at_zero = align_first_event_at_zero,
-                             plot_show_period = show_period, plot_period_in_days = period_in_days,
-                             plot_show_legend = show_legend, plot_legend_x = legend_x, plot_legend_y = legend_y,
-                             plot_legend_bkg_opacity = legend_bkg_opacity, 
-                             plot_cex = cex, plot_cex_axis = cex_axis, plot_cex_lab = cex_lab,
-                             plot_show_cma = show_cma, 
-                             plot_unspecified_category_label = unspecified_category_label,
-                             plot_lty_event = lty_event, plot_lwd_event = lwd_event,
-                             plot_pch_start_event = pch_start_event, plot_pch_end_event = pch_end_event,
-                             plot_show_event_intervals = show_event_intervals,
-                             plot_col_na = col_na, plot_col_continuation = col_continuation, 
-                             plot_lty_continuation = lty_continuation, plot_lwd_continuation = lwd_continuation,
-                             plot_print_cma = print_CMA, plot_plot_cma = plot_CMA, plot_plot_cma_as_histogram = plot_CMA_as_histogram,
-                             plot_cma_plot_ratio = CMA_plot_ratio, plot_cma_plot_col = CMA_plot_col,
-                             plot_cma_plot_border = CMA_plot_border, plot_cma_plot_bkg = CMA_plot_bkg, 
-                             plot_cma_plot_text = CMA_plot_text,
-                             plot_highlight_followup_window = highlight_followup_window,
-                             plot_highlight_observation_window = highlight_observation_window,
-                             plot_observation_window_col = observation_window_col, 
-                             plot_observation_window_density = observation_window_density,
-                             plot_observation_window_angle = observation_window_angle,
-                             plot_show_real_obs_window_start = show_real_obs_window_start,
-                             plot_real_obs_window_density = real_obs_window_density,
-                             plot_real_obs_window_angle = real_obs_window_angle,
-                             plot_bw_plot = bw_plot,
-                             path_to_adherer = self.path_to_adherer) 
-
-        # Were there errors?
-        if result is None:
-            raise CallAdhereRError('General plotting error')
-        elif result['return_code'] != 0:
-            raise CallAdhereRError(result['message'])
-        
-        # Save the return code and message:
-        self.computation_return_code = result['return_code']
-        self.computation_messages = result['message']
-        
-        # Return the plot:
-        return result['plot']
-    
-
-
-            
-    
-    
-    
+            self._event_info = result['EVENTINFO']

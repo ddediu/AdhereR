@@ -748,7 +748,7 @@ Table: <a name="Table-5"></a>**Table 5.** Performance as running times (single- 
 Table: <a name="Table-6"></a>**Table 6.** Performance as running times (single- and two-threaded, multicore and snow respectively) when computing CMAs for a very large large database with 500,000 patients with 4,058,110 events on a high-end desktop computer running Windows 10. The times shown are "real" (i.e., clock) running times in seconds (as reported by `R`’s `system.time()` function), minutes and, if large enough, hours. In all cases, the FUW and OW are identical at 2 years long. CMAs per episode (with gap=180 days) and sliding window (length=180 days, step=90 days) used CMA1 for each episode/window. Please note that the snow times are longer than a quarter the single-core times due to various data transmission and collection overheads. 
 
 Concerning *parallelism*, if run on a multi-core/multi-processor machine or cluster, `AdhereR` gives the user the possibility to use (completely transparently) two parallel backends: *multicore* (available on Linux, \*BSD and MacOS, but currently not on Microsoft Windows) and *snow* (Simple Network of Workstations, available on all platforms; in fact, this can use various types of backends, see the documentation in package `snow` for details).
-Parallelism is available through the `parallel.backend` and `parallel.threads` parameters, where the first controlls the actual backend to use ("none" -- the default, uses a single thread --, "multicore", and several versions of snow: "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)") and the second the number of desired parallel threads ("auto" defaults to the reported number of cores for "multicore" or 2 otherwise, and to 2 for "snow") or a more complex specification of the nodes for "snow" (see the `snow` package documentation for details).
+Parallelism is available through the `parallel.backend` and `parallel.threads` parameters, where the first controlls the actual backend to use ("none" -- the default, uses a single thread --, "multicore", and several versions of snow: "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)") and the second the number of desired parallel threads ("auto" defaults to the reported number of cores for "multicore" or 2 otherwise, and to 2 for "snow") or a more complex specification of the nodes for "snow" (see the `snow` package documentation for details and [Appendix I: Distributing computations on remote Linux hosts]).
 The implementation uses `mclapply` (in package `parallel`) and `parLapply` (package `snow`), is completely hidden from the user, and tries to pre-allocate whole chunks of patients to the CPUs/cores in order to reduce the various overheads (such as data transfer).
 In general, for "multicore" and "snow" with nodes on the local machine, do not use more than the number of physical cores in the system, and be mindful of the various overheads involved, meaning that the gains, while substantial especially for large databases, will be very slightly lower than the expected 1/#threads (as a corrolary, it might not be a good idea to paralellize very small datasets).
 Also, memory might be of concern when parallelizing, as at least parts of `R`'s environment will be replicated across threads/processes; this, in turn, for large environments and systems low on RAM, might result in massive performance loss due to swapping (or even result in crashes).
@@ -765,7 +765,6 @@ We decided to keep everything "pure `R`" (so there is so far no `C++` code) and 
 'AdhereR' was developed to facilitate flexible and comprehensive analyses of adherence to medication from electronic healthcare data. All objects included in this package ('compute.treatment.episodes', 'CMA1' to 'CMA9', and their 'CMA_per_episode' and CMA_sliding_window versions) can be adapted to various research questions and designs, and we provided here only a few examples of the vast range of possibilities for use. Depending on the type of medication, study population, length of follow-up, etc., the various alternative parametrizations may lead to substantial differences or negligible variation. Very little evidence is available on the impact of these choices in specific scenarios. This package makes it easy to integrate such methodological investigations into data analysis plans, and to communicate these to the scientific community.
 
 We have also aimed to facilitate replicability. Thus, summaries of functions include all parameter values and are easily printed for transparent reporting (for example in an appendix or a supplementary online material). The calculation of adherence values via 'AdhereR' can also be integrated in larger data analysis scripts and made available in a data repository for future use in similar studies, freely-available or with specific access rights. This allows other research teams to use the same parametrizations (for example if studying the same type of medication in different populations), and thus increase homogeneity of studies for the benefit of later meta-analytic efforts. If these parametrizations are complemented by justifications of each decision based on clinical and/or research evidence in specific clinical areas, they can be subject to discussion and clinical consensus building and thus represent transparent and easily-implementable guidelines for EHD-based adherence research in those areas. In this situation, comparisons across medications can also take into account any differences in analysis choices, and general rules derived for adherence calculation across domains. 
-
 
 ## References
 
@@ -786,6 +785,48 @@ We have also aimed to facilitate replicability. Thus, summaries of functions inc
 <a name="Ref-VanWijk2006"></a>Van Wijk B.L.G., Klungel O.H., Heerdink E.R., de Boer A. (2006). [Refill persistence with chronic medication assessed from a pharmacy database was influenced by method of calculation](https://www.ncbi.nlm.nih.gov/pubmed/16360556). *Journal of Clinical Epidemiology* **59**(1), 11–17. [doi:10.1016/j.jclinepi.2005.05.005](http://dx.doi.org/10.1016/j.jclinepi.2005.05.005).
 
 <a name="Ref-Sattler2013"></a>Sattler E., Lee J., Perri M. (2011). [Medication (Re)fill Adherence Measures Derived from Pharmacy Claims Data in Older Americans: A Review of the Literature](https://www.ncbi.nlm.nih.gov/pubmed/23553512). *Drugs  & Aging* **30**(6), 383–99. [doi:10.1007/s40266-013-0074-z](http://dx.doi.org/10.1007/s40266-013-0074-z).
+
+
+## Appendix I: Distributing computations on remote Linux hosts
+
+For example, we show here how to compute CMA1 on a remote `Linux` machine from `macOS` and `Windows 10` hosts.
+
+The Linux machine (hostname `workhorse`) runs `Ubuntu 16.04` (64 bits) with `R 3.4.1` manually compiled and installed in `/usr/local/lib64/R`, and an `OpenSSH` server allowing access to the user `user`.
+
+The `macOS` laptop is running `macOS High Sierra 10.13.4`, `R 3.4.3`, `openssh` (installed through [homebrew](https://brew.sh/)) and we set up passwordless ssh access to `workhorse` (see, for example, the tutorial [here](http://www.linuxproblem.org/art_9.html)).
+The `Windows 10` desktop is running `Microsoft Windows 10 Pro 1709 64 bits` with `openssh` installed vias [Cygwin](http://www.cygwin.com/) (also with passwordless ssh access to `workhorse`) and `Microsoft R Open 3.4.3`.
+
+All machines have the latest version of `AdhereR` and `snow` installed.
+
+With these, we can, for example do:
+
+```{r eval=FALSE}
+cmaW3 <- CMA_sliding_window(CMA="CMA1",
+                            data=med.events,
+                            ID.colname="PATIENT_ID",
+                            event.date.colname="DATE",
+                            event.duration.colname="DURATION",
+                            event.daily.dose.colname="PERDAY",
+                            medication.class.colname="CATEGORY",
+                            carry.only.for.same.medication=FALSE,
+                            consider.dosage.change=FALSE,
+                            sliding.window.duration=30,
+                            sliding.window.step.duration=30,
+                            parallel.backend="snow", # make clear we want to use snow
+                            parallel.threads=c(rep(
+                              list(list(host="worf@workhorse", # host (and user)
+                                        rscript="/usr/local/bin/Rscript", # Rscript location
+                                        snowlib="/usr/local/lib64/R/library/") # snow package location
+                                   ),
+                              2))) # two remote threads
+```
+
+where we use `parallel.backend="snow"` and we specify the `workhorse` node(s) we want to use.
+Here, `parallel.threads` is a list of host specifications (one per thread), each a list contaning the `host` (possibly with the username for ssh access), `rscript` (the location on the remote host of `Rscript`) and `snowlib` (the location on the remote host of the `snow` package, usually the location where the `R` packages are installed).
+In this exmple, we create 2 such identical hosts (using `rep(..., 2)`) which measn that we will have two parallel threads running on `workhorse`.
+If everything is fine, the results should be returned to the user as usual.
+
+*NB1.* This procedure was tested only on `Linux` hosts, but it should *in principle* also work with `Windows` hosts as well (but the setup is currently much more complex and apparently less reliable; moreover, in most high-performance production environments we expect `Linux` rather that `Windows` compute nodes).
 
 
 <!-- Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format: -->

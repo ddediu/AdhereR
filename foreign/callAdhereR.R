@@ -147,14 +147,9 @@ parameters.block <- do.call(rbind, lapply( 2:(length(parameters)-1), function(i)
   if( length(s) == 1 )
   {
     return (data.frame("param"=.remove.spaces.and.quotes(s[1]), "value"=NA));
-  } else if( length(s) == 2 )
-  {
-    return (data.frame("param"=.remove.spaces.and.quotes(s[1]), "value"=.remove.spaces.and.quotes(s[2])));
   } else
   {
-    msg <- paste0("AdhereR: Error in the parameters file 'parameters.log' line ",i," there should be at most one "=" sign...\n");
-    #cat(msg); sink();
-    stop(msg, call.=FALSE);
+    return (data.frame("param"=.remove.spaces.and.quotes(s[1]), "value"=.remove.spaces.and.quotes(paste(s[-1],collapse="=")))); # put back the '=' signs in the value
   }
 }));
 parameters.block$param <- as.character(parameters.block$param); parameters.block$value <- as.character(parameters.block$value); # make sure these are strings!
@@ -279,6 +274,7 @@ params.as.list <- Filter(Negate(is.null), params.as.list); # get rid of the NULL
 .cast.param.to.type("sliding.window.start",         "sliding.window.start.type");
 .cast.param.to.type("sliding.window.duration",      "sliding.window.duration.type");
 .cast.param.to.type("sliding.window.step.duration", "sliding.window.step.duration.type");
+if( .get.param.value("sliding.window.no.steps", type="numeric", default.value=-1, required=FALSE) == -1 ) params.as.list[["sliding.window.no.steps"]] <- NA;
 
 .cast.param.to.type("plot.show",                         "logical", TRUE);
 .cast.param.to.type("plot.align.all.patients",           "logical", TRUE);
@@ -321,6 +317,28 @@ params.as.list <- Filter(Negate(is.null), params.as.list); # get rid of the NULL
 .cast.param.to.type("carry.only.for.same.medication",  "logical", TRUE);
 .cast.param.to.type("consider.dosage.change",          "logical", TRUE);
 .cast.param.to.type("medication.change.means.new.treatment.episode", "logical", TRUE);
+
+if( suppressWarnings(!is.na(as.numeric(params.as.list[["parallel.threads"]]))) )
+{
+  params.as.list[["parallel.threads"]] <- as.numeric(params.as.list[["parallel.threads"]]);
+} else if( is.character(params.as.list[["parallel.threads"]]) && params.as.list[["parallel.threads"]] == "auto" )
+{
+  # nothing to pre-process
+} else
+{
+  # try to eval it:
+  tmp <- NULL;
+  tmp <- try(eval(parse(text=as.character(params.as.list[["parallel.threads"]]))), silent=FALSE);
+  if( is.null(tmp) )
+  {
+    msg <- paste0("AdhereR: I don't understand parallel.threads=\"",as.character(params.as.list[["parallel.threads"]]),"\"!\n");
+    #cat(msg); sink();
+    stop(msg, call.=FALSE);
+  } else
+  {
+    params.as.list[["parallel.threads"]] <- tmp;
+  }
+}
 
 # special case for plotting: don't compute the CMA for all patients but only for those to be plotted:
 if( .get.param.value("plot.show", type="logical", default.value=FALSE, required=FALSE) &&
@@ -425,7 +443,7 @@ if( is.null(results) ) # OOPS! some error occured: make it known and quit!
   if( length(class(results)) == 1 && class(results) == "CMA0" )
   {
     # Nothing to export....
-  } else if( inherits(results, "CMA0") )
+  } else if( inherits(results, "CMA0") || inherits(results, "CMA_per_episode") || inherits(results, "CMA_sliding_window") )
   {
     # Special case: for plot.show == TRUE, add the "-plotted" suffix to the saved files!
     file.name.suffix <- ifelse(.get.param.value("plot.show", type="character", default.value="FALSE", required=FALSE) == "TRUE", "-plotted", "" );
@@ -445,6 +463,11 @@ if( is.null(results) ) # OOPS! some error occured: make it known and quit!
   {
     # treatment episodes:
     write.table(.apply.export.conversions(results), paste0(folder.path,"/TREATMENTEPISODES.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
+  } else
+  {
+    # how did we get here?
+    msg <- "\nDon't know how to export this type of results!\n";
+    stop(msg, call.=FALSE); # force stopping!
   }
 
 
