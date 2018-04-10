@@ -2155,7 +2155,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         parallel.threads="auto", # specification (or number) of parallel threads
                                         # Misc:
                                         suppress.warnings=FALSE,
-                                        return.data.table=FALSE
+                                        return.data.table=FALSE,
+                                        ... # other stuff
 )
 {
   # Convert maximum permissible gap units into days or proprtion:

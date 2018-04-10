@@ -33,7 +33,7 @@ class CallAdhereRError(Exception):
     pass
 
 
-class CMA0:
+class CMA0(object):
     """
     The CMA base class
     """
@@ -337,6 +337,119 @@ class CMA0:
 
         # Return the results:
         return self.get_event_info()
+
+
+    def compute_treatment_episodes(self):
+        """
+        Compute treatment episodes (intended for advanced use only).
+
+        Returns
+        -------
+        A pandas table with the treatment episodes.
+
+        """
+        # do the plotting:
+        result = self._call_adherer(dataset=self._dataset,
+                                    function="compute_treatment_episodes", plot_show=False,
+
+                                    id_colname=self._id_colname,
+                                    event_date_colname=self._event_date_colname,
+                                    event_duration_colname=self._event_duration_colname,
+                                    event_daily_dose_colname=self._event_daily_dose_colname,
+                                    medication_class_colname=self._medication_class_colname,
+
+                                    carryover_within_obs_window=self._carryover_within_obs_window,
+                                    carryover_into_obs_window=self._carryover_into_obs_window,
+                                    carry_only_for_same_medication=\
+                                        self._carry_only_for_same_medication,
+                                    consider_dosage_change=self._consider_dosage_change,
+
+                                    medication_change_means_new_treatment_episode=\
+                                        self._medication_change_means_new_treatment_episode,
+                                    maximum_permissible_gap=self._maximum_permissible_gap,
+                                    maximum_permissible_gap_unit=self._maximum_permissible_gap_unit,
+
+                                    followup_window_start_type=self._followup_window_start_type,
+                                    followup_window_start=self._followup_window_start,
+                                    followup_window_start_unit=self._followup_window_start_unit,
+                                    followup_window_duration_type=\
+                                        self._followup_window_duration_type,
+                                    followup_window_duration=self._followup_window_duration,
+                                    followup_window_duration_unit=\
+                                        self._followup_window_duration_unit,
+
+                                    observation_window_start_type=\
+                                        self._observation_window_start_type,
+                                    observation_window_start=self._observation_window_start,
+                                    observation_window_start_unit=\
+                                        self._observation_window_start_unit,
+                                    observation_window_duration_type=\
+                                        self._observation_window_duration_type,
+                                    observation_window_duration=self._observation_window_duration,
+                                    observation_window_duration_unit=\
+                                        self._observation_window_duration_unit,
+
+                                    sliding_window_start_type=self._sliding_window_start_type,
+                                    sliding_window_start=self._sliding_window_start,
+                                    sliding_window_start_unit=self._sliding_window_start_unit,
+                                    sliding_window_duration_type=self._sliding_window_duration_type,
+                                    sliding_window_duration=self._sliding_window_duration,
+                                    sliding_window_duration_unit=self._sliding_window_duration_unit,
+                                    sliding_window_step_duration_type=\
+                                        self._sliding_window_step_duration_type,
+                                    sliding_window_step_duration=self._sliding_window_step_duration,
+                                    sliding_window_step_unit=self._sliding_window_step_unit,
+                                    sliding_window_no_steps=self._sliding_window_no_steps,
+
+                                    cma_to_apply=self._cma_to_apply,
+
+                                    date_format=self._date_format,
+
+                                    event_interval_colname=self._event_interval_colname,
+                                    gap_days_colname=self._gap_days_colname,
+
+                                    force_na_cma_for_failed_patients=\
+                                        self._force_na_cma_for_failed_patients,
+                                    keep_window_start_end_dates=self._keep_window_start_end_dates,
+                                    remove_events_outside_followup_window=\
+                                        self._remove_events_outside_followup_window,
+                                    keep_event_interval_for_all_events=\
+                                        self._keep_event_interval_for_all_events,
+
+                                    parallel_backend=self._parallel_backend,
+                                    parallel_threads=self._parallel_threads,
+
+                                    suppress_warnings=self._suppress_warnings,
+                                    save_event_info=self._save_event_info,
+
+                                    na_symbol_numeric=self._na_symbol_numeric,
+                                    na_symbol_string=self._na_symbol_string,
+                                    logical_symbol_true=self._logical_symbol_true,
+                                    logical_symbol_false=self._logical_symbol_false,
+                                    colnames_dot_symbol=self._colnames_dot_symbol,
+                                    colnames_start_dot=self._colnames_start_dot,
+
+                                    path_to_rscript=self._path_to_rscript,
+                                    path_to_adherer=self._path_to_adherer,
+                                    path_to_data_directory=self._path_to_data_directory,
+                                    print_adherer_messages=self._print_adherer_messages)
+
+        # Were there errors?
+        if result is None:
+            raise CallAdhereRError('General computation error')
+        elif result['return_code'] != 0:
+            raise CallAdhereRError(result['message'])
+
+        # Save the return code and message:
+        self._computation_return_code = result['return_code']
+        self._computation_messages = result['message']
+
+        # Save the results:
+        if 'TREATMENTEPISODES' in result:
+            self._treatment_episodes = result['TREATMENTEPISODES']
+
+        # Return the results:
+        return self.get_treatment_episodes()
 
 
     # Plotting:
