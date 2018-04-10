@@ -25,6 +25,10 @@
   
   - check if plot legend_x and legend_y work!
   
+  - add parameter *dosage.change.means.new.treatment.episode* to compute_treatment_episodes()
+  
+  - *new plotting function* inspired from plot.CMA0() that can plot prescription, dispensation, hospitalisation and adverse events
+  
 **Shiny interactive plots**:  *DONE*
 
   - plot size   **DONE**

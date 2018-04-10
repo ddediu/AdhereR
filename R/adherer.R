@@ -1331,7 +1331,8 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                    parallel.threads="auto", # specification (or number) of parallel threads
                                    # Misc:
                                    suppress.warnings=FALSE,
-                                   return.data.table=FALSE  # should the result be converted to data.frame (default) or returned as a data.table (keyed by patient ID and event date)?
+                                   return.data.table=FALSE,  # should the result be converted to data.frame (default) or returned as a data.table (keyed by patient ID and event date)?
+                                   ... # other stuff
 )
 {
   # preconditions concerning column names:

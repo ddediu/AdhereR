@@ -133,3 +133,13 @@ if False:
                       period_in_days=30,
                       show_legend=True, legend_x='left', legend_y='top',
                       cex=0.5, col_continuation='blue', bw_plot=True)
+
+testcma0 = adherer.CMA0(df,
+                        id_colname='patientID',
+                        event_date_colname='prescriptionDate',
+                        event_duration_colname='prescriptionDuration',
+                        #event_daily_dose_colname='quantityPerDay',
+                        #medication_class_colname='medicationType',
+                        #save_event_info = True,
+                        path_to_adherer='../')
+ev_info = testcma0.compute_event_int_gaps()

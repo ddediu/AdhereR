@@ -219,12 +219,125 @@ class CMA0:
 
         Returns
         -------
-        A dictionary with entries 'code' (the numeric code returned by the \
-        shell process) and 'messages' (a string contining the actual messages \
+        A dictionary with entries 'code' (the numeric code returned by the
+        shell process) and 'messages' (a string contining the actual messages
         produced by AdhereR).
 
         """
         return {'code':self._computation_return_code, 'messages':self._computation_messages}
+
+    def compute_event_int_gaps(self):
+        """
+        Compute the event intervals and gaps (intended for advanced use only).
+
+        Returns
+        -------
+        A pandas table with the event info.
+
+        """
+        # do the plotting:
+        result = self._call_adherer(dataset=self._dataset,
+                                    function="compute_event_int_gaps", plot_show=False,
+
+                                    id_colname=self._id_colname,
+                                    event_date_colname=self._event_date_colname,
+                                    event_duration_colname=self._event_duration_colname,
+                                    event_daily_dose_colname=self._event_daily_dose_colname,
+                                    medication_class_colname=self._medication_class_colname,
+
+                                    carryover_within_obs_window=self._carryover_within_obs_window,
+                                    carryover_into_obs_window=self._carryover_into_obs_window,
+                                    carry_only_for_same_medication=\
+                                        self._carry_only_for_same_medication,
+                                    consider_dosage_change=self._consider_dosage_change,
+
+                                    medication_change_means_new_treatment_episode=\
+                                        self._medication_change_means_new_treatment_episode,
+                                    maximum_permissible_gap=self._maximum_permissible_gap,
+                                    maximum_permissible_gap_unit=self._maximum_permissible_gap_unit,
+
+                                    followup_window_start_type=self._followup_window_start_type,
+                                    followup_window_start=self._followup_window_start,
+                                    followup_window_start_unit=self._followup_window_start_unit,
+                                    followup_window_duration_type=\
+                                        self._followup_window_duration_type,
+                                    followup_window_duration=self._followup_window_duration,
+                                    followup_window_duration_unit=\
+                                        self._followup_window_duration_unit,
+
+                                    observation_window_start_type=\
+                                        self._observation_window_start_type,
+                                    observation_window_start=self._observation_window_start,
+                                    observation_window_start_unit=\
+                                        self._observation_window_start_unit,
+                                    observation_window_duration_type=\
+                                        self._observation_window_duration_type,
+                                    observation_window_duration=self._observation_window_duration,
+                                    observation_window_duration_unit=\
+                                        self._observation_window_duration_unit,
+
+                                    sliding_window_start_type=self._sliding_window_start_type,
+                                    sliding_window_start=self._sliding_window_start,
+                                    sliding_window_start_unit=self._sliding_window_start_unit,
+                                    sliding_window_duration_type=self._sliding_window_duration_type,
+                                    sliding_window_duration=self._sliding_window_duration,
+                                    sliding_window_duration_unit=self._sliding_window_duration_unit,
+                                    sliding_window_step_duration_type=\
+                                        self._sliding_window_step_duration_type,
+                                    sliding_window_step_duration=self._sliding_window_step_duration,
+                                    sliding_window_step_unit=self._sliding_window_step_unit,
+                                    sliding_window_no_steps=self._sliding_window_no_steps,
+
+                                    cma_to_apply=self._cma_to_apply,
+
+                                    date_format=self._date_format,
+
+                                    event_interval_colname=self._event_interval_colname,
+                                    gap_days_colname=self._gap_days_colname,
+
+                                    force_na_cma_for_failed_patients=\
+                                        self._force_na_cma_for_failed_patients,
+                                    keep_window_start_end_dates=self._keep_window_start_end_dates,
+                                    remove_events_outside_followup_window=\
+                                        self._remove_events_outside_followup_window,
+                                    keep_event_interval_for_all_events=\
+                                        self._keep_event_interval_for_all_events,
+
+                                    parallel_backend=self._parallel_backend,
+                                    parallel_threads=self._parallel_threads,
+
+                                    suppress_warnings=self._suppress_warnings,
+                                    save_event_info=self._save_event_info,
+
+                                    na_symbol_numeric=self._na_symbol_numeric,
+                                    na_symbol_string=self._na_symbol_string,
+                                    logical_symbol_true=self._logical_symbol_true,
+                                    logical_symbol_false=self._logical_symbol_false,
+                                    colnames_dot_symbol=self._colnames_dot_symbol,
+                                    colnames_start_dot=self._colnames_start_dot,
+
+                                    path_to_rscript=self._path_to_rscript,
+                                    path_to_adherer=self._path_to_adherer,
+                                    path_to_data_directory=self._path_to_data_directory,
+                                    print_adherer_messages=self._print_adherer_messages)
+
+        # Were there errors?
+        if result is None:
+            raise CallAdhereRError('General computation error')
+        elif result['return_code'] != 0:
+            raise CallAdhereRError(result['message'])
+
+        # Save the return code and message:
+        self._computation_return_code = result['return_code']
+        self._computation_messages = result['message']
+
+        # Save the results:
+        if 'EVENTINFO' in result:
+            self._event_info = result['EVENTINFO']
+
+        # Return the results:
+        return self.get_event_info()
+
 
     # Plotting:
     def plot(self,
@@ -284,10 +397,10 @@ class CMA0:
         patients_to_plot : list
             the list of patients to plot (defaults to None = all patients)
         save_to : str
-            The folder where to save the plots (defaults to None, i.e. same folder \
+            The folder where to save the plots (defaults to None, i.e. same folder
             as the other results)
         save_as : str
-            The format of the saved plot; can be 'jpg', 'png', 'tiff', 'eps' or \
+            The format of the saved plot; can be 'jpg', 'png', 'tiff', 'eps' or
             'pdataset' (defaults to 'jpg')
         width : numeric
             Plot width in inches (defaults to 7)
@@ -300,25 +413,25 @@ class CMA0:
         patients_to_plot : strings
             The patient IDs to plot as a vector (defaults to None, i.e., all)
         duration : numeric
-            Duration to plot in days (defaults to None, i.e., is determined \
+            Duration to plot in days (defaults to None, i.e., is determined
             from the data)
         align_all_patients : bool
             Alling all patients? (defaults to False)
         align_first_event_at_zero : bool
-            If plot_align_all_patients == True, also place the event at the origin? \
+            If plot_align_all_patients == True, also place the event at the origin?
             (defaults to True)
         show_period : str
-            Draw vertical bars at regular interval as dates or days; can be 'days' \
+            Draw vertical bars at regular interval as dates or days; can be 'days'
             or 'dates' (defaults to 'days')
         period_in_days : numeric
             The interval (in days) at which to draw vertical guides (defaults to 90)
         show_legend : bool
             Show the legend? (defaults to True)
         legend_x : str or numeric
-            Together with plot_legend_y specifies the position of the legend; \
+            Together with plot_legend_y specifies the position of the legend;
             can be 'left' or 'right' or a number; (defaults to 'right')
         legend_y : str or numeric
-            Together with plot_legend_x specifies the position of the legend; \
+            Together with plot_legend_x specifies the position of the legend;
             can be 'bottom' or 'top' or a number; (defaults to 'bottom')
         legend_bkg_opacity : numeric
             The legend background opacity (between 0 and 1, defaults to 0.5)
@@ -333,26 +446,26 @@ class CMA0:
         unspecified_category_label : str
             The label of the unspecified category of medication (defaults to 'drug')
         lty_event : str
-            Line style for plotting events; can be 'solid', 'dotted' or 'dashed' \
+            Line style for plotting events; can be 'solid', 'dotted' or 'dashed'
             (defaults to 'solid')
         lwd_event : numeric
             Line width for plitting events (defaults to 2)
         pch_start_event : numeric
-            Symbol for the event start; can be any of the R plotting symbols given at, \
+            Symbol for the event start; can be any of the R plotting symbols given at,
             for example, http://www.endmemo.com/program/R/pchsymbols.php (defaults to 15)
         pch_end_event : numeric
             Symbol for event end (see plot_pch_start_event for details; defaults to 16)
         show_event_intervals : bool
             Show the prescription intervals? (defaults to True)
         col_na : str
-            The color of the missing data; can be any R color specification as, \
-            for example, given at http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdataset \
+            The color of the missing data; can be any R color specification as,
+            for example, given at http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdataset
             (defaults to 'lightgray')
         col_continuation : str
-            The color of the lines connections consecutive events (see plot_col_na \
+            The color of the lines connections consecutive events (see plot_col_na
             for details; defaults to 'black')
         lty_continuation : str
-            Style of the lines connections consecutive events (see plot_lty_event \
+            Style of the lines connections consecutive events (see plot_lty_event
             for details; defaults to 'dotted')
         lwd_continuation : numeric
             Line width for plitting events (defaults to 1)
@@ -363,45 +476,45 @@ class CMA0:
         plot_cma_as_histogram : bool
             Plot CMA as a histogram or as a density plot? (defaults to True)
         cma_plot_ratio : numeric
-            The proportion of the total horizontal plot to be taken by the CMA plot \
+            The proportion of the total horizontal plot to be taken by the CMA plot
             (defaults to 0.10)
         cma_plot_col : str
-            The color of the CMA plot (see plot_col_na for details; defaults to \
+            The color of the CMA plot (see plot_col_na for details; defaults to
             'lightgreen')
         cma_plot_border : str
-            The color of the CMA border (see plot_col_na for details; defaults \
+            The color of the CMA border (see plot_col_na for details; defaults
             to 'darkgreen')
         cma_plot_bkg : str
-            The color of the CMA background (see plot_col_na for details; \
+            The color of the CMA background (see plot_col_na for details;
             defaults to 'darkgreen')
         cma_plot_text : str
-            The color of the CMA text (see plot_col_na for details; defaults to \
+            The color of the CMA text (see plot_col_na for details; defaults to
             None, i.e., the same as plot_cma_plot_border)
         highlight_followup_window : bool
             Highlight the follow-up window? (defaults to True)
         followup_window_col : str
-            The color of the CMA follow-up window (see plot_col_na for details; \
+            The color of the CMA follow-up window (see plot_col_na for details;
             defaults to 'green')
         highlight_observation_window : bool
             Highlight the observaion window? (defaults to True)
         observation_window_col : str
-            The color of the CMA observation window (see plot_col_na for details; \
+            The color of the CMA observation window (see plot_col_na for details;
             defaults to 'yellow')
         observation_window_density : numeric
-            The density (per inch) of the hash lines marking the obervation window \
+            The density (per inch) of the hash lines marking the obervation window
             (defaults to 35)
         observation_window_angle : numeric
-            The angle (in degrees) of the hash lines marking the obervation window \
+            The angle (in degrees) of the hash lines marking the obervation window
             (defaults to -30)
         show_real_obs_window_start : bool
-            For some CMAs, the real observation window starts at a different date: \
+            For some CMAs, the real observation window starts at a different date:
             should we show it? (defaults to True)
         real_obs_window_density : numeric
             Same as plot_observation_window_density (defaults to 35)
         real_obs_window_angle : numeric
             Same as plot_observation_window_angle (defaults to 30)
         bw_plot : bool
-            If True, override all user-given colors and replace them with a scheme \
+            If True, override all user-given colors and replace them with a scheme
             suitable for grayscale plotting (fedaults to False)
 
         Returns
@@ -571,9 +684,9 @@ class CMA0:
                 (self._id_colname is None) or
                 (self._event_date_colname is None) or
                 (self._event_duration_colname is None)):
-            warnings.warn('Interactive plotting of CMAs requires at a minimum \
-                          the dataset, id_colname, event_date_colnameand \
-                          event_duration_colname to be defined.')
+            warnings.warn('Interactive plotting of CMAs requires at a minimum '
+                          'the dataset, id_colname, event_date_colname and '
+                          'event_duration_colname to be defined.')
             return None
 
         # Do the interactive plotting:
@@ -728,121 +841,121 @@ class CMA0:
         event_duration_colname : str
             The name of the column in dataset containing the event duration
         event_daily_dose_colname : str
-            The name of the column in dataset containing the event daily dose \
+            The name of the column in dataset containing the event daily dose
             (defaults to None, i.e. undefined)
         medication_class_colname : str
-            The name of the column in dataset containing the event medication \
+            The name of the column in dataset containing the event medication
             type/class (defaults to None, i.e. undefined)
         carryover_within_obs_window : bool
             Carry over within the observaion window? (defaults to False)
         carryover_into_obs_window : bool
             Carry over into the observation window? (defaults to False)
         carry_only_for_same_medication : bool
-            Carry only works only across same medication events? (defaults to \
+            Carry only works only across same medication events? (defaults to
             False)
         consider_dosage_change : bool
             Consider dosage change? (defaults to False)
         medication_change_means_new_treatment_episode : bool
-            Does a change in medication mean the start of a new episode? \
+            Does a change in medication mean the start of a new episode?
             (defaults to False)
         maximum_permissible_gap : numeric
-            The size of the maximum persimissible gap between episodes (in \
+            The size of the maximum persimissible gap between episodes (in
             units; defaults to 180)
         maximum_permissible_gap_unit : str
-            The unit of the maximum_permissible_gap; can be 'days', 'weeks', \
+            The unit of the maximum_permissible_gap; can be 'days', 'weeks',
             'months', 'years' or 'percent' (defaults to 'days')
         followup_window_start_type : str
-            The follow-up window start unit; can be 'numeric' (default), \
+            The follow-up window start unit; can be 'numeric' (default),
             'character' or 'date'
         followup_window_start : numeric, str, or date
             The follow-up window start; can be a number, a string or a date
         followup_window_start_unit : str
-            The follow-up window start unit; can be 'days' (default), 'weeks', \
+            The follow-up window start unit; can be 'days' (default), 'weeks',
             'months' or 'years'
         followup_window_duration_type : str
-            The follow-up window duration unit; can be 'numeric' (default), \
+            The follow-up window duration unit; can be 'numeric' (default),
             'character' or 'date'
         followup_window_duration : numeric, str, or date
             The follow-up window duration; can be a number, a string or a date
         followup_window_duration_unit : str
-            The follow-up window duration unit; can be 'days' (default), \
+            The follow-up window duration unit; can be 'days' (default),
             'weeks', 'months' or 'years'
         observation_window_start_type : str
-            The observation window start unit; can be 'numeric' (default), \
+            The observation window start unit; can be 'numeric' (default),
             'character' or 'date'
         observation_window_start : numeric, str, or date
             The observation window start; can be a number, a string or a date
         observation_window_start_unit : str
-            The observation window start unit; can be 'days' (default), 'weeks', \
+            The observation window start unit; can be 'days' (default), 'weeks',
             'months' or 'years'
         observation_window_duration_type : str
-            The observation window duration unit; can be 'numeric' (default), \
+            The observation window duration unit; can be 'numeric' (default),
             'character' or 'date'
         observation_window_duration : numeric, str, or date
             The observation window duration; can be a number, a string or a date
         observation_window_duration_unit : str
-            The observation window duration unit; can be 'days' (default), \
+            The observation window duration unit; can be 'days' (default),
             'weeks', 'months' or 'years'
         sliding_window_start_type : str
-            The sliding window start unit; can be 'numeric' (default), \
+            The sliding window start unit; can be 'numeric' (default),
             'character' or 'date'
         sliding_window_start : numeric, str, or date
             The sliding window start; can be a number, a string or a date
         sliding_window_start_unit : str
-            The sliding window start unit; can be 'days' (default), 'weeks', \
+            The sliding window start unit; can be 'days' (default), 'weeks',
             'months' or 'years'
         sliding_window_duration_type : str
-            The sliding window duration unit; can be 'numeric' (default), \
+            The sliding window duration unit; can be 'numeric' (default),
             'character' or 'date'
         sliding_window_duration : numeric, str, or date
             The sliding window duration; can be a number, a string or a date
         sliding_window_duration_unit : str
-            The sliding window duration unit; can be 'days' (default), 'weeks', \
+            The sliding window duration unit; can be 'days' (default), 'weeks',
             'months' or 'years'
         sliding_window_step_duration_type : str
-            The sliding window step duration unit; can be 'numeric' (default) \
+            The sliding window step duration unit; can be 'numeric' (default)
             or 'character'
         sliding_window_step_duration : numeric or str
             The sliding window step duration; can be a number, a string or a date
         sliding_window_step_unit : str
-            The sliding windowstep  duration unit; can be 'days' (default), \
+            The sliding windowstep  duration unit; can be 'days' (default),
             'weeks', 'months' or 'years'
         sliding_window_no_steps : numeric
-            The number of sliding windows (defaults to None, i.e., should use \
+            The number of sliding windows (defaults to None, i.e., should use
             the duration and step instead)
         cma_to_apply : str
-            CMA to apply for CMA_sliding_window and CMA_per_episode (defaults \
+            CMA to apply for CMA_sliding_window and CMA_per_episode (defaults
             to None)
         date_format : str
-            The date format to be used throughout the call (in the standard \
+            The date format to be used throughout the call (in the standard
             strftime() format)
         event_interval_colname : str
-            What name to use for the internal column saving the event intervals \
+            What name to use for the internal column saving the event intervals
             (defaults to 'event.interval')
         gap_days_colname : str
-            What name to use for the internal column saving the gap days \
+            What name to use for the internal column saving the gap days
             (defaults to 'gap.days')
         force_na_cma_for_failed_patients : bool
             Force the patients that failed to missing CMA? (default to 'True')
         keep_window_start_end_dates : bool
-            For compute_event_int_gaps: keep the window start and end dates? \
+            For compute_event_int_gaps: keep the window start and end dates?
             (defaults to False)
         remove_events_outside_followup_window : bool
-            For compute_event_int_gaps: remove the events that fall outside the \
+            For compute_event_int_gaps: remove the events that fall outside the
             follow-up window? (defaults to True)
         keep_event_interval_for_all_events : bool
-            For compute_event_int_gaps: keep the event interval for all event? \
+            For compute_event_int_gaps: keep the event interval for all event?
             (defaults to False)
         parallel_backend : str
-            The parallel backend to use; can be 'none', 'multicore', 'snow', \
+            The parallel backend to use; can be 'none', 'multicore', 'snow',
             'snow(SOCK)', 'snow(MPI)', 'snow(NWS)' (defaults to 'none')
         parallel_threads : numeric or str
-            Specification of the number of parallel threads; can be an actual \
-            number, 'auto' or a more complex list of nodes (defaults to 'auto').\
-            For example: "c(rep(list(list(host='user@remote-host', \
-            rscript='/usr/local/bin/Rscript', \
-            snowlib='/usr/local/lib64/R/library/')),2))" distributes computation \
-            to a Linux 'remote-host' (using passwordless ssh for user 'user') as \
+            Specification of the number of parallel threads; can be an actual
+            number, 'auto' or a more complex list of nodes (defaults to 'auto').
+            For example: "c(rep(list(list(host='user@remote-host',
+            rscript='/usr/local/bin/Rscript',
+            snowlib='/usr/local/lib64/R/library/')),2))" distributes computation
+            to a Linux 'remote-host' (using passwordless ssh for user 'user') as
             two parallel threads
         suppress_warnings : bool
             Suppress the warnings produced by AdhereR? (default to False)
@@ -857,19 +970,19 @@ class CMA0:
         logical_symbol_false : str
             The symbol used for logical true (defaults to 'FALSE')
         colnames_dot_symbol : str
-            What symbol to replace the '.' in column names with (defaults to '.', \
+            What symbol to replace the '.' in column names with (defaults to '.',
             i.e., no replacement)
         colnames_start_dot : str
-            What symbol to replace the '.' begining a column names with (defaults \
+            What symbol to replace the '.' begining a column names with (defaults
             to '.', i.e., no replacement)
         plot_show : bool
-            Do the plotting? If true, also save the resulting dataset with a \
+            Do the plotting? If true, also save the resulting dataset with a
             "-plotted" suffix to avoid overwriting previous results (defaults to False)
         plot_save_to : str
-            The folder where to save the plots (defaults to None, i.e. same folder \
+            The folder where to save the plots (defaults to None, i.e. same folder
             as the other results)
         plot_save_as : str
-            The format of the saved plot; can be 'jpg', 'png', 'tiff', 'eps' or \
+            The format of the saved plot; can be 'jpg', 'png', 'tiff', 'eps' or
             'pdataset' (defaults to 'jpg')
         plot_width : numeric
             Plot width in inches (defaults to 7)
@@ -882,25 +995,25 @@ class CMA0:
         plot_patients_to_plot : strings
             The patient IDs to plot as a vector (defaults to None, i.e., all)
         plot_duration : numeric
-            Duration to plot in days (defaults to None, i.e., is determined \
+            Duration to plot in days (defaults to None, i.e., is determined
             from the data)
         plot_align_all_patients : bool
             Alling all patients? (defaults to False)
         plot_align_first_event_at_zero : bool
-            If plot_align_all_patients == True, also place the event at the origin? \
+            If plot_align_all_patients == True, also place the event at the origin?
             (defaults to True)
         plot_show_period : str
-            Draw vertical bars at regular interval as dates or days; can be 'days' \
+            Draw vertical bars at regular interval as dates or days; can be 'days'
             or 'dates' (defaults to 'days')
         plot_period_in_days : numeric
             The interval (in days) at which to draw vertical guides (defaults to 90)
         plot_show_legend : bool
             Show the legend? (defaults to True)
         plot_legend_x : str or numeric
-            Together with plot_legend_y specifies the position of the legend; \
+            Together with plot_legend_y specifies the position of the legend;
             can be 'left' or 'right' or a number; (defaults to 'right')
         plot_legend_y : str or numeric
-            Together with plot_legend_x specifies the position of the legend; \
+            Together with plot_legend_x specifies the position of the legend;
             can be 'bottom' or 'top' or a number; (defaults to 'bottom')
         plot_legend_bkg_opacity : numeric
             The legend background opacity (between 0 and 1, defaults to 0.5)
@@ -915,26 +1028,26 @@ class CMA0:
         plot_unspecified_category_label : str
             The label of the unspecified category of medication (defaults to 'drug')
         plot_lty_event : str
-            Line style for plotting events; can be 'solid', 'dotted' or 'dashed' \
+            Line style for plotting events; can be 'solid', 'dotted' or 'dashed'
             (defaults to 'solid')
         plot_lwd_event : numeric
             Line width for plitting events (defaults to 2)
         plot_pch_start_event : numeric
-            Symbol for the event start; can be any of the R plotting symbols given at, \
+            Symbol for the event start; can be any of the R plotting symbols given at,
             for example, http://www.endmemo.com/program/R/pchsymbols.php (defaults to 15)
         plot_pch_end_event : numeric
             Symbol for event end (see plot_pch_start_event for details; defaults to 16)
         plot_show_event_intervals : bool
             Show the prescription intervals? (defaults to True)
         plot_col_na : str
-            The color of the missing data; can be any R color specification as, \
-            for example, given at http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdataset \
+            The color of the missing data; can be any R color specification as,
+            for example, given at http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdataset
             (defaults to 'lightgray')
         plot_col_continuation : str
-            The color of the lines connections consecutive events (see plot_col_na \
+            The color of the lines connections consecutive events (see plot_col_na
             for details; defaults to 'black')
         plot_lty_continuation : str
-            Style of the lines connections consecutive events (see plot_lty_event \
+            Style of the lines connections consecutive events (see plot_lty_event
             for details; defaults to 'dotted')
         plot_lwd_continuation : numeric
             Line width for plitting events (defaults to 1)
@@ -945,56 +1058,56 @@ class CMA0:
         plot_plot_cma_as_histogram : bool
             Plot CMA as a histogram or as a density plot? (defaults to True)
         plot_cma_plot_ratio : numeric
-            The proportion of the total horizontal plot to be taken by the CMA plot \
+            The proportion of the total horizontal plot to be taken by the CMA plot
             (defaults to 0.10)
         plot_cma_plot_col : str
-            The color of the CMA plot (see plot_col_na for details; defaults to \
+            The color of the CMA plot (see plot_col_na for details; defaults to
             'lightgreen')
         plot_cma_plot_border : str
-            The color of the CMA border (see plot_col_na for details; defaults \
+            The color of the CMA border (see plot_col_na for details; defaults
             to 'darkgreen')
         plot_cma_plot_bkg : str
-            The color of the CMA background (see plot_col_na for details; \
+            The color of the CMA background (see plot_col_na for details;
             defaults to 'darkgreen')
         plot_cma_plot_text : str
-            The color of the CMA text (see plot_col_na for details; defaults to \
+            The color of the CMA text (see plot_col_na for details; defaults to
             None, i.e., the same as plot_cma_plot_border)
         plot_highlight_followup_window : bool
             Highlight the follow-up window? (defaults to True)
         plot_followup_window_col : str
-            The color of the CMA follow-up window (see plot_col_na for details; \
+            The color of the CMA follow-up window (see plot_col_na for details;
             defaults to 'green')
         plot_highlight_observation_window : bool
             Highlight the observaion window? (defaults to True)
         plot_observation_window_col : str
-            The color of the CMA observation window (see plot_col_na for details; \
+            The color of the CMA observation window (see plot_col_na for details;
             defaults to 'yellow')
         plot_observation_window_density : numeric
-            The density (per inch) of the hash lines marking the obervation window \
+            The density (per inch) of the hash lines marking the obervation window
             (defaults to 35)
         plot_observation_window_angle : numeric
-            The angle (in degrees) of the hash lines marking the obervation window \
+            The angle (in degrees) of the hash lines marking the obervation window
             (defaults to -30)
         plot_show_real_obs_window_start : bool
-            For some CMAs, the real observation window starts at a different date: \
+            For some CMAs, the real observation window starts at a different date:
             should we show it? (defaults to True)
         plot_real_obs_window_density : numeric
             Same as plot_observation_window_density (defaults to 35)
         plot_real_obs_window_angle : numeric
             Same as plot_observation_window_angle (defaults to 30)
         plot_bw_plot : bool
-            If True, override all user-given colors and replace them with a scheme \
+            If True, override all user-given colors and replace them with a scheme
             suitable for grayscale plotting (fedaults to False)
         patient_to_plot : str
-            The patient to plot in the interactive plotting (it can be interactively \
+            The patient to plot in the interactive plotting (it can be interactively
             changed; deaults to None, i.e., the first patient)
         path_to_rscript : str
             The path to where Rscript is installed
         path_to_adherer : str
-            The path to where the callAdhereR.R script is (defaults to the current \
+            The path to where the callAdhereR.R script is (defaults to the current
             folder)
         path_to_data_directory : str
-            The path to the directory where the various data should be saved \
+            The path to the directory where the various data should be saved
             (defaults to the current folder)
         print_adherer_messages : bool
             Print the AdhereR message (on top of returning them to the caller)?
@@ -1002,16 +1115,16 @@ class CMA0:
         Returns
         -------
         Dictionary
-            If a serious error has occured before being able to call AdhereR, \
+            If a serious error has occured before being able to call AdhereR,
             returns None.
-            Otherwise returns a dictionary containing various keys appropriate \
+            Otherwise returns a dictionary containing various keys appropriate
             to the called function, as follows:
             - all:
                 - return_code: numeric code returned by the shell call to AdhereR (0 = OK)
                 - message: the string message returned by AdhereR (if any)
             - CMA1 .. CMA9, CMA_per_episode, CMA_sliding_window also return:
                 - CMA: a pandas.Dataframe containing the computed CMAs
-                - EVENTINFO: if explicitely requested (save_event_info == True), \
+                - EVENTINFO: if explicitely requested (save_event_info == True),
                 a pandas.Dataframe containing the event intervals and gaps
 
         """
@@ -1022,13 +1135,14 @@ class CMA0:
         if not function in ('CMA0',
                             'CMA1', 'CMA2', 'CMA3', 'CMA4',
                             'CMA5', 'CMA6', 'CMA7', 'CMA8', 'CMA9',
-                            'plot_interactive_cma', 'CMA_per_episode', 'CMA_sliding_window'):
-            warnings.warn('adhereR: argument "function" (' + function + ') is not a \
-                          known adhereR function".')
+                            'plot_interactive_cma', 'CMA_per_episode', 'CMA_sliding_window',
+                            'compute_event_int_gaps', 'compute_treatment_episodes'):
+            warnings.warn('adhereR: argument "function" (' + function + ') is not a '
+                          'known adhereR function".')
             return None
         if not id_colname in dataset.columns.values.tolist():
-            warnings.warn('adhereR: argument "id_colname" (' + id_colname + ') must be \
-                          a column in "dataset".')
+            warnings.warn('adhereR: argument "id_colname" (' + id_colname + ') must be '
+                          'a column in "dataset".')
             return None
         if not event_date_colname in dataset.columns.values.tolist():
             warnings.warn('adhereR: argument "event_date_colname" (' +
@@ -1062,9 +1176,9 @@ class CMA0:
         if (function in ('CMA5', 'CMA6', 'CMA7', 'CMA8', 'CMA9', 'plot_interactive_cma',
                          'CMA_per_episode', 'CMA_sliding_window')) and \
             ((event_daily_dose_colname is None) or (medication_class_colname is None)):
-            warnings.warn('adhereR: argument "event_daily_dose_colname" and \
-                          "medication_class_colname" are required for CMA5-CMA9, \
-                          CMA_per_episode, CMA_sliding_window and plot_interactive_cma.')
+            warnings.warn('adhereR: argument "event_daily_dose_colname" and '
+                          '"medication_class_colname" are required for CMA5-CMA9, '
+                          'CMA_per_episode, CMA_sliding_window and plot_interactive_cma.')
             parameters_file.close()
             return None
 
@@ -1089,16 +1203,16 @@ class CMA0:
         if (function in ('CMA_per_episode', 'CMA_sliding_window')) and \
             not cma_to_apply in ('CMA1', 'CMA2', 'CMA3', 'CMA4', 'CMA5',
                                  'CMA6', 'CMA7', 'CMA8', 'CMA9'):
-            warnings.warn('adhereR: argument "cma_to_apply" must be a valid simple \
-                          CMA for CMA_per_episode and CMA_sliding_window.')
+            warnings.warn('adhereR: argument "cma_to_apply" must be a valid simple '
+                          'CMA for CMA_per_episode and CMA_sliding_window.')
             parameters_file.close()
             return None
         parameters_file.write('CMA.to.apply = "' + str(cma_to_apply) + '"\n')
 
 
         if not isinstance(carry_only_for_same_medication, bool):
-            warnings.warn('adhereR: argument "carry_only_for_same_medication" \
-                          must be a bool.')
+            warnings.warn('adhereR: argument "carry_only_for_same_medication" '
+                          'must be a bool.')
             parameters_file.close()
             return None
         parameters_file.write('carry.only.for.same.medication = "' +
@@ -1112,8 +1226,8 @@ class CMA0:
                               ('TRUE' if consider_dosage_change else 'FALSE') + '"\n')
 
         if not isinstance(medication_change_means_new_treatment_episode, bool):
-            warnings.warn('adhereR: argument "medication_change_means_new_treatment_episode" \
-                          must be a bool.')
+            warnings.warn('adhereR: argument "medication_change_means_new_treatment_episode" '
+                          'must be a bool.')
             parameters_file.close()
             return None
         parameters_file.write('medication.change.means.new.treatment.episode = "' +
@@ -1122,8 +1236,8 @@ class CMA0:
                               '"\n')
 
         if not isinstance(maximum_permissible_gap, numbers.Number) or maximum_permissible_gap <= 0:
-            warnings.warn('adhereR: argument "maximum_permissible_gap" must be a \
-                          strictly positive number.')
+            warnings.warn('adhereR: argument "maximum_permissible_gap" must be a '
+                          'strictly positive number.')
             parameters_file.close()
             return None
         parameters_file.write('maximum.permissible.gap = "' + str(maximum_permissible_gap) + '"\n')
@@ -1325,16 +1439,16 @@ class CMA0:
         elif sliding_window_no_steps is None:
             parameters_file.write('sliding.window.no.steps = "-1"\n')
         else:
-            warnings.warn('adhereR: argument "sliding_window_no_steps" must \
-                          be a strictly positive number or None.')
+            warnings.warn('adhereR: argument "sliding_window_no_steps" must '
+                          'be a strictly positive number or None.')
             parameters_file.close()
             return None
 
 
         # Date format:
         if not isinstance(date_format, str):
-            warnings.warn('adhereR: argument "date_format" must be a string \
-                          specifying a valid strftime() date.')
+            warnings.warn('adhereR: argument "date_format" must be a string '
+                          'specifying a valid strftime() date.')
             parameters_file.close()
             return None
         parameters_file.write('date.format = "' + date_format + '"\n')
@@ -1342,15 +1456,15 @@ class CMA0:
 
         # Auxiliary columns for event intervals computation:
         if not isinstance(event_interval_colname, str):
-            warnings.warn('adhereR: argument "event_interval_colname" must be \
-                          a string specifying a valid column name.')
+            warnings.warn('adhereR: argument "event_interval_colname" must be '
+                          'a string specifying a valid column name.')
             parameters_file.close()
             return None
         parameters_file.write('event.interval.colname = "' + event_interval_colname + '"\n')
 
         if not isinstance(gap_days_colname, str):
-            warnings.warn('adhereR: argument "gap_days_colname" must be a string \
-                          specifying a valid column name.')
+            warnings.warn('adhereR: argument "gap_days_colname" must be a string '
+                          'specifying a valid column name.')
             parameters_file.close()
             return None
         parameters_file.write('gap.days.colname = "' + gap_days_colname + '"\n')
@@ -1365,8 +1479,8 @@ class CMA0:
                               ('TRUE' if keep_window_start_end_dates else 'FALSE') + '"\n')
 
         if not isinstance(remove_events_outside_followup_window, bool):
-            warnings.warn('adhereR: argument "remove_events_outside_followup_window" \
-                          must be a bool.')
+            warnings.warn('adhereR: argument "remove_events_outside_followup_window" '
+                          'must be a bool.')
             parameters_file.close()
             return None
         parameters_file.write('remove.events.outside.followup.window = "' +
@@ -1374,8 +1488,8 @@ class CMA0:
                               '"\n')
 
         if not isinstance(keep_event_interval_for_all_events, bool):
-            warnings.warn('adhereR: argument "keep_event_interval_for_all_events" \
-                          must be a bool.')
+            warnings.warn('adhereR: argument "keep_event_interval_for_all_events" '
+                          'must be a bool.')
             parameters_file.close()
             return None
         parameters_file.write('keep.event.interval.for.all.events = "' +
@@ -1550,28 +1664,28 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_align_all_patients" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.align.all.patients = "' + \
-                              ('TRUE' if plot_align_all_patients else 'FALSE') + \
+        parameters_file.write('plot.align.all.patients = "' +
+                              ('TRUE' if plot_align_all_patients else 'FALSE') +
                               '"\n')
 
         if not isinstance(plot_align_first_event_at_zero, bool):
             warnings.warn('adhereR: argument "plot_align_first_event_at_zero" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.align.first.event.at.zero = "' + \
-                              ('TRUE' if plot_align_first_event_at_zero else 'FALSE') + \
+        parameters_file.write('plot.align.first.event.at.zero = "' +
+                              ('TRUE' if plot_align_first_event_at_zero else 'FALSE') +
                               '"\n')
 
         if plot_show_period not in ('days', 'dates'):
-            warnings.warn('adhereR: argument "plot_show_period" (' + \
+            warnings.warn('adhereR: argument "plot_show_period" (' +
                           plot_show_period + ') is not recognized.')
             parameters_file.close()
             return None
         parameters_file.write('plot.show.period = "' + plot_show_period + '"\n')
 
         if not isinstance(plot_period_in_days, numbers.Number) or plot_period_in_days <= 0:
-            warnings.warn('adhereR: argument "plot_period_in_days" \
-                          must be a strictly positive number.')
+            warnings.warn('adhereR: argument "plot_period_in_days" '
+                          'must be a strictly positive number.')
             parameters_file.close()
             return None
         parameters_file.write('plot.period.in.days = "' + str(plot_period_in_days) + '"\n')
@@ -1580,8 +1694,8 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_show_legend" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.show.legend = "' + \
-                              ('TRUE' if plot_show_legend else 'FALSE') + \
+        parameters_file.write('plot.show.legend = "' +
+                              ('TRUE' if plot_show_legend else 'FALSE') +
                               '"\n')
 
         if plot_legend_x in ('left', 'right') and plot_legend_y in ('bottom', 'top'):
@@ -1593,15 +1707,15 @@ class CMA0:
             parameters_file.write('plot.legend.x = "' + str(plot_legend_x) + '"\n')
             parameters_file.write('plot.legend.y = "' + str(plot_legend_y) + '"\n')
         else:
-            warnings.warn('adhereR: argument "plot_legend_x" and \
-                          "plot_legend_y" are not recognized.')
+            warnings.warn('adhereR: argument "plot_legend_x" and '
+                          '"plot_legend_y" are not recognized.')
             parameters_file.close()
             return None
 
         if not isinstance(plot_legend_bkg_opacity, numbers.Number) or \
            plot_legend_bkg_opacity < 0 or plot_legend_bkg_opacity > 1:
-            warnings.warn('adhereR: argument "plot_legend_bkg_opacity" \
-                          must be a number between 0 and 1.')
+            warnings.warn('adhereR: argument "plot_legend_bkg_opacity" '
+                          'must be a number between 0 and 1.')
             parameters_file.close()
             return None
         parameters_file.write('plot.legend.bkg.opacity = "' + str(plot_legend_bkg_opacity) + '"\n')
@@ -1634,11 +1748,11 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_unspecified_category_label" must be a string.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.unspecified.category.label = "' + \
+        parameters_file.write('plot.unspecified.category.label = "' +
                               plot_unspecified_category_label + '"\n')
 
         if plot_lty_event not in ('solid', 'dotted', 'dashed'):
-            warnings.warn('adhereR: argument "plot_lty_event" (' + \
+            warnings.warn('adhereR: argument "plot_lty_event" (' +
                           plot_lty_event + ') is not recognized.')
             parameters_file.close()
             return None
@@ -1672,8 +1786,8 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_show_event_intervals" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.show.event.intervals = "' + \
-                              ('TRUE' if plot_show_event_intervals else 'FALSE') + \
+        parameters_file.write('plot.show.event.intervals = "' +
+                              ('TRUE' if plot_show_event_intervals else 'FALSE') +
                               '"\n')
 
         if not isinstance(plot_col_na, str):
@@ -1689,15 +1803,15 @@ class CMA0:
         parameters_file.write('plot.col.continuation = "' + plot_col_continuation + '"\n')
 
         if plot_lty_continuation not in ('solid', 'dotted', 'dashed'):
-            warnings.warn('adhereR: argument "plot_lty_continuation" (' + \
+            warnings.warn('adhereR: argument "plot_lty_continuation" (' +
                           plot_lty_continuation + ') is not recognized.')
             parameters_file.close()
             return None
         parameters_file.write('plot.lty.continuation = "' + plot_lty_continuation + '"\n')
 
         if not isinstance(plot_lwd_continuation, numbers.Number) or plot_lwd_continuation < 0:
-            warnings.warn('adhereR: argument "plot_lwd_continuation" \
-                          must be a strictly positive number.')
+            warnings.warn('adhereR: argument "plot_lwd_continuation" '
+                          'must be a strictly positive number.')
             parameters_file.close()
             return None
         parameters_file.write('plot.lwd.continuation = "' + str(plot_lwd_continuation) + '"\n')
@@ -1706,8 +1820,8 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_print_cma" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.print.CMA = "' + \
-                              ('TRUE' if plot_print_cma else 'FALSE') + \
+        parameters_file.write('plot.print.CMA = "' +
+                              ('TRUE' if plot_print_cma else 'FALSE') +
                               '"\n')
 
         if not isinstance(plot_plot_cma, bool):
@@ -1720,14 +1834,14 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_plot_cma_as_histogram" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.plot.CMA.as.histogram = "' + \
-                              ('TRUE' if plot_plot_cma_as_histogram else 'FALSE') + \
+        parameters_file.write('plot.plot.CMA.as.histogram = "' +
+                              ('TRUE' if plot_plot_cma_as_histogram else 'FALSE') +
                               '"\n')
 
         if not isinstance(plot_cma_plot_ratio, numbers.Number) or \
            plot_cma_plot_ratio < 0 or plot_cma_plot_ratio > 1:
-            warnings.warn('adhereR: argument "plot_cma_plot_ratio" \
-                          must be a number between 0 and 1.')
+            warnings.warn('adhereR: argument "plot_cma_plot_ratio" '
+                          'must be a number between 0 and 1.')
             parameters_file.close()
             return None
         parameters_file.write('plot.CMA.plot.ratio = "' + str(plot_cma_plot_ratio) + '"\n')
@@ -1763,8 +1877,8 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_highlight_followup_window" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.highlight.followup.window = "' + \
-                              ('TRUE' if plot_highlight_followup_window else 'FALSE') + \
+        parameters_file.write('plot.highlight.followup.window = "' +
+                              ('TRUE' if plot_highlight_followup_window else 'FALSE') +
                               '"\n')
 
         if not isinstance(plot_followup_window_col, str):
@@ -1777,56 +1891,56 @@ class CMA0:
             warnings.warn('adhereR: argument "plot_highlight_observation_window" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.highlight.observation.window = "' + \
-                              ('TRUE' if plot_highlight_observation_window else 'FALSE') + \
+        parameters_file.write('plot.highlight.observation.window = "' +
+                              ('TRUE' if plot_highlight_observation_window else 'FALSE') +
                               '"\n')
 
         if not isinstance(plot_observation_window_col, str):
             warnings.warn('adhereR: argument "plot_observation_window_col" must be a string.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.observation.window.col = "' + \
+        parameters_file.write('plot.observation.window.col = "' +
                               plot_observation_window_col + '"\n')
 
         if not isinstance(plot_observation_window_density, numbers.Number) or \
            plot_observation_window_density < 0:
-            warnings.warn('adhereR: argument "plot_observation_window_density" \
-                          must be a positive number.')
+            warnings.warn('adhereR: argument "plot_observation_window_density" '
+                          'must be a positive number.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.observation.window.density = "' + \
+        parameters_file.write('plot.observation.window.density = "' +
                               str(plot_observation_window_density) + '"\n')
 
         if not isinstance(plot_observation_window_angle, numbers.Number):
-            warnings.warn('adhereR: argument "plot_observation_window_angle" \
-                          must be a positive number.')
+            warnings.warn('adhereR: argument "plot_observation_window_angle" '
+                          'must be a positive number.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.observation.window.angle = "' + \
+        parameters_file.write('plot.observation.window.angle = "' +
                               str(plot_observation_window_angle) + '"\n')
 
         if not isinstance(plot_show_real_obs_window_start, bool):
             warnings.warn('adhereR: argument "plot_show_real_obs_window_start" must be a bool.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.show.real.obs.window.start = "' + \
+        parameters_file.write('plot.show.real.obs.window.start = "' +
                               ('TRUE' if plot_show_real_obs_window_start else 'FALSE') + '"\n')
 
         if not isinstance(plot_real_obs_window_density, numbers.Number) or \
            plot_real_obs_window_density < 0:
-            warnings.warn('adhereR: argument "plot_real_obs_window_density" \
-                          must be a positive number.')
+            warnings.warn('adhereR: argument "plot_real_obs_window_density" '
+                          'must be a positive number.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.real.obs.window.density = "' + \
+        parameters_file.write('plot.real.obs.window.density = "' +
                               str(plot_real_obs_window_density) + '"\n')
 
         if not isinstance(plot_real_obs_window_angle, numbers.Number):
-            warnings.warn('adhereR: argument "plot_real_obs_window_angle" must \
-                          be a positive number.')
+            warnings.warn('adhereR: argument "plot_real_obs_window_angle" must '
+                          'be a positive number.')
             parameters_file.close()
             return None
-        parameters_file.write('plot.real.obs.window.angle = "' + \
+        parameters_file.write('plot.real.obs.window.angle = "' +
                               str(plot_real_obs_window_angle) + '"\n')
 
         if not isinstance(plot_bw_plot, bool):
@@ -1871,10 +1985,10 @@ class CMA0:
             adherer_messages = adherer_messages_file.readlines()
             adherer_messages_file.close()
         if print_adherer_messages:
-            print('Adherer returned code ' + str(return_code) + \
+            print('Adherer returned code ' + str(return_code) +
                   ' and said:\n' + ''.join(adherer_messages))
         if return_code != 0 or adherer_messages[-1][0:3] != 'OK:':
-            warnings.warn('adhereR: some error has occured when calling AdhereR (code ' + \
+            warnings.warn('adhereR: some error has occured when calling AdhereR (code ' +
                           str(return_code) + '): "' + ''.join(adherer_messages) + '".')
             return None
 
@@ -1885,28 +1999,30 @@ class CMA0:
         if function in ('CMA1', 'CMA2', 'CMA3', 'CMA4', 'CMA5', 'CMA6', 'CMA7',
                         'CMA8', 'CMA9', 'CMA_per_episode', 'CMA_sliding_window'):
             # Expecting CMA.csv and possibly EVENTINFO.csv
-            ret_val['CMA'] = pandas.read_csv(path_to_data_directory + \
-                             '/CMA' + ('-plotted' if plot_show else '') + \
-                             '.csv', sep='\t', header=0)
+            ret_val['CMA'] = pandas.read_csv(path_to_data_directory +
+                                             '/CMA' + ('-plotted' if plot_show else '') +
+                                             '.csv', sep='\t', header=0)
             if save_event_info:
-                ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory + \
-                                       '/EVENTINFO' + ('-plotted' if plot_show else '') + \
-                                       '.csv', sep='\t', header=0)
+                ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory +
+                                                       '/EVENTINFO' +
+                                                       ('-plotted' if plot_show else '') +
+                                                       '.csv', sep='\t', header=0)
         elif function == 'plot_interactive_cma':
             # Expecting nothing really...
             pass
         elif function == 'compute_event_int_gaps':
             # Expecting EVENTINFO.csv only:
-            ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory + \
-                                   '/EVENTINFO.csv', sep='\t', header=0)
+            ret_val['EVENTINFO'] = pandas.read_csv(path_to_data_directory +
+                                                   '/EVENTINFO.csv', sep='\t', header=0)
         elif function == 'compute_treatment_episodes':
             # Expect TREATMENTEPISODES.csv:
-            ret_val['TREATMENTEPISODES'] = pandas.read_csv(path_to_data_directory + \
-                                           '/TREATMENTEPISODES.csv', sep='\t', header=0)
+            ret_val['TREATMENTEPISODES'] = pandas.read_csv(path_to_data_directory +
+                                                           '/TREATMENTEPISODES.csv',
+                                                           sep='\t', header=0)
 
         if (plot_show is True) and (function != 'plot_interactive_cma'):
             # Load the produced image (if any):
-            ret_val['plot'] = Image.open((plot_save_to if not (plot_save_to is None) \
+            ret_val['plot'] = Image.open((plot_save_to if not (plot_save_to is None)
                                           else path_to_data_directory) +
                                          '/adherer-plot' + '.' + plot_save_as)
 
