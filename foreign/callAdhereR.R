@@ -292,6 +292,8 @@ if( .get.param.value("sliding.window.no.steps", type="numeric", default.value=-1
 .cast.param.to.type("force.NA.CMA.for.failed.patients",  "logical", TRUE);
 .cast.param.to.type("suppress.warnings",                 "logical", TRUE);
 .cast.param.to.type("save.event.info",                   "logical", TRUE);
+.cast.param.to.type("keep.event.interval.for.all.events","logical", TRUE);
+.cast.param.to.type("keep.window.start.end.dates",       "logical", TRUE);
 
 .cast.param.to.type("plot.width",                      "numeric", TRUE);
 .cast.param.to.type("plot.height",                     "numeric", TRUE);
@@ -455,11 +457,11 @@ if( is.null(results) ) # OOPS! some error occured: make it known and quit!
     {
       write.table(.apply.export.conversions(results$event.info), paste0(folder.path,"/EVENTINFO",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
     }
-  } else if( function.to.call == "compute.event.int.gaps" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
+  } else if( function.to.call == "compute_event_int_gaps" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
   {
     # event info:
     write.table(.apply.export.conversions(results), paste0(folder.path,"/EVENTINFO.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
-  } else if( function.to.call == "compute.treatment.episodes" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
+  } else if( function.to.call == "compute_treatment_episodes" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
   {
     # treatment episodes:
     write.table(.apply.export.conversions(results), paste0(folder.path,"/TREATMENTEPISODES.csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
