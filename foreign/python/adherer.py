@@ -838,7 +838,7 @@ class CMA0(object):
                       carry_only_for_same_medication=False,
                       consider_dosage_change=False,
                       medication_change_means_new_treatment_episode=False,
-                      maximum_permissible_gap=180,
+                      maximum_permissible_gap=90,
                       maximum_permissible_gap_unit='days',
                       followup_window_start_type='numeric',
                       followup_window_start=0,
@@ -2092,6 +2092,10 @@ class CMA0(object):
         return_code = subprocess.call(rscript_cmd, shell=True)
         #print('DEBUG: return code = ' + str(return_code))
 
+        if return_code != 0:
+            warnings.warn('adhereR: some error has occured when calling AdhereR (code ' +
+                          str(return_code) + '): ".')
+            return None
 
         # Check and load the results:
         with open(path_to_data_directory + "/Adherer-results.txt", 'r') as adherer_messages_file:
@@ -2100,7 +2104,7 @@ class CMA0(object):
         if print_adherer_messages:
             print('Adherer returned code ' + str(return_code) +
                   ' and said:\n' + ''.join(adherer_messages))
-        if return_code != 0 or adherer_messages[-1][0:3] != 'OK:':
+        if adherer_messages[-1][0:3] != 'OK:':
             warnings.warn('adhereR: some error has occured when calling AdhereR (code ' +
                           str(return_code) + '): "' + ''.join(adherer_messages) + '".')
             return None
@@ -2530,7 +2534,7 @@ class CMAPerEpisode(CMA0):
                  carry_only_for_same_medication=False,
                  consider_dosage_change=False,
                  medication_change_means_new_treatment_episode=False,
-                 maximum_permissible_gap=180,
+                 maximum_permissible_gap=90,
                  maximum_permissible_gap_unit='days',
                  followup_window_start_type='numeric',
                  followup_window_start=0,

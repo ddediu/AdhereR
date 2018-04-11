@@ -198,7 +198,7 @@ medication.class.colname			YES
 carry.only.for.same.medication			NO		FALSE
 consider.dosage.change				NO		FALSE
 medication.change.means.new.treatment.episode	NO		TRUE
-maximum.permissible.gap				NO		180
+maximum.permissible.gap				NO		90
 maximum.permissible.gap.unit			NO		days		days, weeks, months, years, percent
 followup.window.start.type			NO		numeric		numeric, character, date
 followup.window.start				NO		0
