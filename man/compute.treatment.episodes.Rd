@@ -18,7 +18,7 @@ compute.treatment.episodes(data, ID.colname = NA, event.date.colname = NA,
   date.format = "\%m/\%d/\%Y", parallel.backend = c("none", "multicore",
   "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)")[1],
   parallel.threads = "auto", suppress.warnings = FALSE,
-  return.data.table = FALSE)
+  return.data.table = FALSE, ...)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the events used to

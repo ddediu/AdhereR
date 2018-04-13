@@ -37,11 +37,17 @@ df.rename(columns={'ID': 'patientID',
 #                plot_show = True, plot_patients_to_plot = [2,3],
 #                save_event_info = True, path_to_adherer = '../')
 
-#y = call_adhereR(df, 'plot_interactive_cma',
-#                 ID_colname='patientID',
-#                 event_date_colname='prescriptionDate',
-#                 event_duration_colname='prescriptionDuration',
-#                 path_to_adherer = '../')
+if False:
+    # interactive plotting:
+    testcma0 = adherer.CMA0(df,
+                            id_colname='patientID',
+                            event_date_colname='prescriptionDate',
+                            event_duration_colname='prescriptionDuration',
+                            event_daily_dose_colname='quantityPerDay',
+                            medication_class_colname='medicationType',
+                            #save_event_info = True,
+                            path_to_adherer='../')
+    y = testcma0.plot_interactive()
 
 testcma1 = adherer.CMA1(df,
                         id_colname='patientID',

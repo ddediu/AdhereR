@@ -12,8 +12,8 @@ CMA0(data = NULL, ID.colname = NA, event.date.colname = NA,
   followup.window.start.unit = NA, followup.window.duration = NA,
   followup.window.duration.unit = NA, observation.window.start = NA,
   observation.window.start.unit = NA, observation.window.duration = NA,
-  observation.window.duration.unit = NA, date.format = NA, summary = NA,
-  suppress.warnings = FALSE, ...)
+  observation.window.duration.unit = NA, date.format = NA,
+  summary = "Base CMA object", suppress.warnings = FALSE, ...)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the medication events
