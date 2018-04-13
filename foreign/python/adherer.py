@@ -2085,9 +2085,17 @@ class CMA0(object):
         except OSError:
             pass
 
+        ## Call adhereR:
+        #rscript_cmd = path_to_rscript + ' --vanilla ' + path_to_adherer + \
+        #              'callAdhereR.R' + ' ' + path_to_data_directory
+        ##print('DEBUG: call = ' + Rscript_cmd)
+        #return_code = subprocess.call(rscript_cmd, shell=True)
+        ##print('DEBUG: return code = ' + str(return_code))
+
         # Call adhereR:
-        rscript_cmd = path_to_rscript + ' --vanilla ' + path_to_adherer + \
-                      'callAdhereR.R' + ' ' + path_to_data_directory
+        rscript_cmd = path_to_rscript + ' --vanilla -e ' + \
+                      "'library(AdhereR.devel); callAdhereR(\"" + \
+                      path_to_data_directory + "\")'"
         #print('DEBUG: call = ' + Rscript_cmd)
         return_code = subprocess.call(rscript_cmd, shell=True)
         #print('DEBUG: return code = ' + str(return_code))
