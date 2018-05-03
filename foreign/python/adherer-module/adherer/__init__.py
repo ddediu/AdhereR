@@ -33,7 +33,6 @@ import shutil
 # pylint: disable=C0302
 # We need these here (even if they might not be seen as too elegant).
 
-
 class CallAdhereRError(Exception):
     """Error occuring when calling AhereR"""
     pass
@@ -74,41 +73,41 @@ def _autodetect_rscript():
     _os_name = platform.system()
     if _os_name == "Darwin": # macOS
         # first, attempt 'which'
-        _rscript_path = shutil.which('Rscript')
-        if _check_rscript(_rscript_path):
-            return _rscript_path
+        __rscript_path = shutil.which('Rscript')
+        if _check_rscript(__rscript_path):
+            return __rscript_path
         else:
             # otherwise, fallback to the standard locations:
-            _rscript_path = None
-            for _rscript_path in ['/usr/bin/Rscript', 
-                                  '/usr/local/bin/Rscript', 
-                                  '/opt/local/bin/Rscript', 
-                                  '/Library/Frameworks/R.framework/Versions/Current/Resources/bin/Rscript']:
-                if _check_rscript(_rscript_path):
-                    break
-            # return the path (if any):
-            return _rscript_path
+            __rscript_path = None
+            for __rscript_path in ['/usr/bin/Rscript', 
+                                   '/usr/local/bin/Rscript', 
+                                   '/opt/local/bin/Rscript', 
+                                   '/Library/Frameworks/R.framework/Versions/Current/Resources/bin/Rscript']:
+                if _check_rscript(__rscript_path):
+                    return __rscript_path # found!
+            # not found:
+            return None
     elif _os_name == "Linux": # linux
         # first, attempt 'which'
-        _rscript_path = shutil.which('Rscript')
-        if _check_rscript(_rscript_path):
-            return _rscript_path
+        __rscript_path = shutil.which('Rscript')
+        if _check_rscript(__rscript_path):
+            return __rscript_path
         else:
             # otherwise, fallback to the standard locations:
-            _rscript_path = None
-            for _rscript_path in ['/usr/bin/Rscript', 
-                                  '/usr/local/bin/Rscript', 
-                                  '/opt/local/bin/Rscript',
-                                  '~/bin/Rscript']:
-                if _check_rscript(_rscript_path):
-                    break
-            # return the path (if any):
-            return _rscript_path
+            __rscript_path = None
+            for __rscript_path in ['/usr/bin/Rscript', 
+                                   '/usr/local/bin/Rscript', 
+                                   '/opt/local/bin/Rscript',
+                                   '~/bin/Rscript']:
+                if _check_rscript(__rscript_path):
+                    return __rscript_path # found!
+            # not found:
+            return None
     elif _os_name == "Windows": # windows
         # first, attempt 'which'
-        _rscript_path = shutil.which('Rscript')
-        if _check_rscript(_rscript_path):
-            return _rscript_path
+        __rscript_path = shutil.which('Rscript')
+        if _check_rscript(__rscript_path):
+            return __rscript_path
         else:
             # otherwise, look in the registry:
             # the relevant infor should be in 
@@ -134,16 +133,17 @@ def _autodetect_rscript():
                          [winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\R-core\R"],
                          [winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\R-core\R32"],
                          [winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\R-core\R64"]]
-            _rscript_path = None
+            __rscript_path = None
             for r in _reg_keys:
-                _rscript_path = _check_rscript_win_registry(r[0], r[1], is64bits)
-                if not (_rscript_path is None):
-                    break # found!
-            # return the path (if any):
-            return _rscript_path
+                __rscript_path = _check_rscript_win_registry(r[0], r[1], is64bits)
+                if not (__rscript_path is None):
+                    return __rscript_path # found!
+            # not found:
+            return None
 
 # Try to autodetect RScript on this sytem:
 _rscript_path = _autodetect_rscript()
+warnings.warn("_rscript_path = " + str(_rscript_path))
 if _rscript_path is None:
     warnings.warn('The automatic detection of "Rscript" on you system failed: '
                   'please make sure you do have a functioning "R" installed and '

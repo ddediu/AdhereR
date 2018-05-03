@@ -19,5 +19,5 @@ setup(name='adherer',
       author_email='ddediu@gmail.com',
       license='GPLv3',
       packages=['adherer'],
-      install_requires=['warnings','subprocess','os','numbers','datetime','pandas','pillow','tempfile','atexit','platform','shutil'],
+      install_requires=['pandas','pillow'],
       zip_safe=False)
