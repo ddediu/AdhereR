@@ -44,28 +44,20 @@ if False:
                             event_date_colname='prescriptionDate',
                             event_duration_colname='prescriptionDuration',
                             event_daily_dose_colname='quantityPerDay',
-                            medication_class_colname='medicationType',
-                            #save_event_info = True,
-                            path_to_adherer='../')
+                            medication_class_colname='medicationType')
     y = testcma0.plot_interactive()
 
 testcma1 = adherer.CMA1(df,
                         id_colname='patientID',
                         event_date_colname='prescriptionDate',
-                        event_duration_colname='prescriptionDuration',
-                        #event_daily_dose_colname='quantityPerDay',
-                        #medication_class_colname='medicationType',
-                        #save_event_info = True,
-                        path_to_adherer='../')
+                        event_duration_colname='prescriptionDuration')
 
 testcma8 = adherer.CMA8(df,
                         id_colname='patientID',
                         event_date_colname='prescriptionDate',
                         event_duration_colname='prescriptionDuration',
                         event_daily_dose_colname='quantityPerDay',
-                        medication_class_colname='medicationType',
-                        #save_event_info = True,
-                        path_to_adherer='../')
+                        medication_class_colname='medicationType')
 #testcma.plotInteractive(patient_to_plot=3)
 x = testcma8.plot(patients_to_plot=['1', '2', '3'],
                   save_as="tiff",
@@ -82,9 +74,7 @@ testcmaE = adherer.CMAPerEpisode(df,
                                  event_date_colname='prescriptionDate',
                                  event_duration_colname='prescriptionDuration',
                                  event_daily_dose_colname='quantityPerDay',
-                                 medication_class_colname='medicationType',
-                                 #save_event_info = True,
-                                 path_to_adherer='../')
+                                 medication_class_colname='medicationType')
 #testcma.plotInteractive(patient_to_plot=3)
 y = testcmaE.plot(patients_to_plot=['1', '2', '3'],
                   save_as="tiff",
@@ -105,9 +95,7 @@ testcmaW = adherer.CMASlidingWindow(df,
                                     sliding_window_duration=20,
                                     sliding_window_step_duration=10,
                                     parallel_backend='snow',
-                                    parallel_threads='2',
-                                    #save_event_info = True,
-                                    path_to_adherer='../')
+                                    parallel_threads='2')
 #testcma.plotInteractive(patient_to_plot=3)
 z = testcmaW.plot(patients_to_plot=['1', '2', '3'],
                   save_as="tiff",
@@ -129,9 +117,7 @@ if False:
                                         sliding_window_duration=20,
                                         sliding_window_step_duration=10,
                                         parallel_backend='snow',
-                                        parallel_threads="c(rep(list(list(host='worf@workhorse', rscript='/usr/local/bin/Rscript', snowlib='/usr/local/lib64/R/library/')),2))", # give the actual R spec here as a string to be passed to AdhereR (NOTE: use ' and not ")
-                                        #save_event_info = True,
-                                        path_to_adherer='../')
+                                        parallel_threads="c(rep(list(list(host='worf@workhorse', rscript='/usr/local/bin/Rscript', snowlib='/usr/local/lib64/R/library/')),2))") # give the actual R spec here as a string to be passed to AdhereR (NOTE: use ' and not ")
     w = testcmaW.plot(patients_to_plot=['1', '2', '3'],
                       save_as="tiff",
                       width=7, height=7,
@@ -145,8 +131,6 @@ testcma0 = adherer.CMA0(df,
                         event_date_colname='prescriptionDate',
                         event_duration_colname='prescriptionDuration',
                         event_daily_dose_colname='quantityPerDay',
-                        medication_class_colname='medicationType',
-                        #save_event_info = True,
-                        path_to_adherer='../')
+                        medication_class_colname='medicationType')
 ev_info = testcma0.compute_event_int_gaps()
 treat_epi = testcma0.compute_treatment_episodes()

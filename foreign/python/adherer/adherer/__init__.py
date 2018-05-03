@@ -16,6 +16,8 @@ import os
 import numbers
 import datetime
 import pandas
+import tempfile
+import atexit
 from PIL import Image
 
 # automatic detection of OS
@@ -77,14 +79,15 @@ def _autodetect_rscript():
             return _rscript_path
         else:
             # otherwise, fallback to the standard locations:
+            _rscript_path = None
             for _rscript_path in ['/usr/bin/Rscript', 
                                   '/usr/local/bin/Rscript', 
                                   '/opt/local/bin/Rscript', 
                                   '/Library/Frameworks/R.framework/Versions/Current/Resources/bin/Rscript']:
                 if _check_rscript(_rscript_path):
-                    return _rscript_path
-            # nothing works :(
-            return None
+                    break
+            # return the path (if any):
+            return _rscript_path
     elif _os_name == "Linux": # linux
         # first, attempt 'which'
         _rscript_path = shutil.which('Rscript')
@@ -92,14 +95,15 @@ def _autodetect_rscript():
             return _rscript_path
         else:
             # otherwise, fallback to the standard locations:
+            _rscript_path = None
             for _rscript_path in ['/usr/bin/Rscript', 
                                   '/usr/local/bin/Rscript', 
                                   '/opt/local/bin/Rscript',
                                   '~/bin/Rscript']:
                 if _check_rscript(_rscript_path):
-                    return _rscript_path
-            # nothing works :(
-            return None
+                    break
+            # return the path (if any):
+            return _rscript_path
     elif _os_name == "Windows": # windows
         # first, attempt 'which'
         _rscript_path = shutil.which('Rscript')
@@ -130,12 +134,13 @@ def _autodetect_rscript():
                          [winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\R-core\R"],
                          [winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\R-core\R32"],
                          [winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\R-core\R64"]]
+            _rscript_path = None
             for r in _reg_keys:
                 _rscript_path = _check_rscript_win_registry(r[0], r[1], is64bits)
-                if not _rscript_path is None:
-                    return _rscript_path # found!
-            # nothing works :(
-            return None
+                if not (_rscript_path is None):
+                    break # found!
+            # return the path (if any):
+            return _rscript_path
 
 # Try to autodetect RScript on this sytem:
 _rscript_path = _autodetect_rscript()
@@ -144,8 +149,60 @@ if _rscript_path is None:
                   'please make sure you do have a functioning "R" installed and '
                   'manually locate "Rscript" (should be in the same location as "R"). '
                   'Make sure you pass the full path (including "Rscript") to the '
-                  '"adherer" package either by setting the "adherer._rscript_path" variable '
-                  'or by passing the "path_to_rscript" argument to the methods you use!')
+                  '"adherer" package through the "adherer.set_rscript_path()" function!')
+
+# Getters and setters for _rscript_path:
+def set_rscript_path(path):
+    """
+    Manually set the path to Rscript.
+    Used if autodetection fails or if need to explicitely use a non-default R installation.
+    """
+    global _rscript_path
+    _rscript_path = path
+    
+def get_rscript_path():
+    """
+    Get the path to Rscript.
+    """
+    global _rscript_path
+    return _rscript_path
+
+
+# Try to use the temporary folder as data directory:
+_data_sharing_directory = None
+try:
+    _data_sharing_directory = tempfile.TemporaryDirectory(prefix='adherer-')
+except:
+    warnings.warn('The automatic creation of the temporary directory for data exchange '
+                  'between python and R failed. Please give a directory with read and write '
+                  'access by passing the full path to the "adherer.set__data_sharing_directory()" function!')
+    pass
+
+# Getters and setters for _data_sharing_directory:
+def set_data_sharing_directory(path):
+    """
+    Manually set the directory for data exchange.
+    This directory MUST exist and have read & wrote access for the current user.
+    """
+    global _data_sharing_directory
+    _data_sharing_directory = path
+    
+def get_data_sharing_directory():
+    """
+    Get the directory for data exchange.
+    """
+    global _data_sharing_directory
+    if isinstance(_data_sharing_directory, tempfile.TemporaryDirectory):
+        return _data_sharing_directory.name
+    else:
+        return _data_sharing_directory
+
+@atexit.register
+def _adherer_cleanup():
+    # Cleanup at the end of the module:
+    if not (_data_sharing_directory is None) and \
+       isinstance(_data_sharing_directory, tempfile.TemporaryDirectory):
+        _data_sharing_directory.cleanup()
 
 
 class CMA0(object):
@@ -210,9 +267,6 @@ class CMA0(object):
                  logical_symbol_false='FALSE',
                  colnames_dot_symbol='.',
                  colnames_start_dot='.',
-                 path_to_rscript='/usr/local/bin/Rscript',
-                 path_to_adherer=os.getcwd(),
-                 path_to_data_directory=os.getcwd(),
                  print_adherer_messages=True):
 
         # Store the parameter values:
@@ -270,9 +324,6 @@ class CMA0(object):
         self._logical_symbol_false = logical_symbol_false
         self._colnames_dot_symbol = colnames_dot_symbol
         self._colnames_start_dot = colnames_start_dot
-        self._path_to_rscript = path_to_rscript
-        self._path_to_adherer = path_to_adherer
-        self._path_to_data_directory = path_to_data_directory
         self._print_adherer_messages = print_adherer_messages
 
         # CMA-specific stuff:
@@ -282,6 +333,13 @@ class CMA0(object):
         self._plot_image = None
         self._computation_return_code = None
         self._computation_messages = None
+        
+    # Printing:
+    def __repr__(self):
+        return "CMA object of type " + self._adherer_function + " (on " + self._dataset.shape[0] + " rows)."
+    
+    def __str__(self):
+        return self.__repr__()
 
     # Accessors:
     def get_dataset(self):
@@ -431,9 +489,8 @@ class CMA0(object):
                                     colnames_dot_symbol=self._colnames_dot_symbol,
                                     colnames_start_dot=self._colnames_start_dot,
 
-                                    path_to_rscript=self._path_to_rscript,
-                                    path_to_adherer=self._path_to_adherer,
-                                    path_to_data_directory=self._path_to_data_directory,
+                                    path_to_rscript=get_rscript_path(),
+                                    path_to_data_directory=get_data_sharing_directory(),
                                     print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
@@ -544,9 +601,8 @@ class CMA0(object):
                                     colnames_dot_symbol=self._colnames_dot_symbol,
                                     colnames_start_dot=self._colnames_start_dot,
 
-                                    path_to_rscript=self._path_to_rscript,
-                                    path_to_adherer=self._path_to_adherer,
-                                    path_to_data_directory=self._path_to_data_directory,
+                                    path_to_rscript=get_rscript_path(),
+                                    path_to_data_directory=get_data_sharing_directory(),
                                     print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
@@ -872,9 +928,8 @@ class CMA0(object):
                                     plot_real_obs_window_angle=real_obs_window_angle,
                                     plot_bw_plot=bw_plot,
 
-                                    path_to_rscript=self._path_to_rscript,
-                                    path_to_adherer=self._path_to_adherer,
-                                    path_to_data_directory=self._path_to_data_directory,
+                                    path_to_rscript=get_rscript_path(),
+                                    path_to_data_directory=get_data_sharing_directory(),
                                     print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
@@ -924,8 +979,7 @@ class CMA0(object):
                                     event_duration_colname=self._event_duration_colname,
                                     event_daily_dose_colname=self._event_daily_dose_colname,
                                     medication_class_colname=self._medication_class_colname,
-                                    patient_to_plot=patient_to_plot,
-                                    path_to_adherer=self._path_to_adherer)
+                                    patient_to_plot=patient_to_plot)
 
         # Were there errors?
         if result is None:
@@ -1045,9 +1099,8 @@ class CMA0(object):
                       plot_real_obs_window_angle=30,
                       plot_bw_plot=False,
                       patient_to_plot=None,
-                      path_to_rscript='/usr/local/bin/Rscript',
-                      path_to_adherer=os.getcwd(),
-                      path_to_data_directory=os.getcwd(),
+                      path_to_rscript=get_rscript_path(),
+                      path_to_data_directory=get_data_sharing_directory(),
                       print_adherer_messages=True
                      ):
         """
@@ -1181,7 +1234,7 @@ class CMA0(object):
             Specification of the number of parallel threads; can be an actual
             number, 'auto' or a more complex list of nodes (defaults to 'auto').
             For example: "c(rep(list(list(host='user@remote-host',
-            rscript='/usr/local/bin/Rscript',
+            rscript=/usr/local/bin/Rscript,
             snowlib='/usr/local/lib64/R/library/')),2))" distributes computation
             to a Linux 'remote-host' (using passwordless ssh for user 'user') as
             two parallel threads
@@ -1331,12 +1384,8 @@ class CMA0(object):
             changed; deaults to None, i.e., the first patient)
         path_to_rscript : str
             The path to where Rscript is installed
-        path_to_adherer : str
-            The path to where the callAdhereR.R script is (defaults to the current
-            folder)
         path_to_data_directory : str
-            The path to the directory where the various data should be saved
-            (defaults to the current folder)
+            The path to the directory where the various data should be saved.
         print_adherer_messages : bool
             Print the AdhereR message (on top of returning them to the caller)?
 
@@ -2200,13 +2249,6 @@ class CMA0(object):
         except OSError:
             pass
 
-        ## Call adhereR:
-        #rscript_cmd = path_to_rscript + ' --vanilla ' + path_to_adherer + \
-        #              'callAdhereR.R' + ' ' + path_to_data_directory
-        ##print('DEBUG: call = ' + Rscript_cmd)
-        #return_code = subprocess.call(rscript_cmd, shell=True)
-        ##print('DEBUG: return code = ' + str(return_code))
-
         # Call adhereR:
         rscript_cmd = path_to_rscript + ' --vanilla -e ' + \
                       "'library(AdhereR.devel); callAdhereR(\"" + \
@@ -2310,9 +2352,8 @@ class CMA1(CMA0):
                  logical_symbol_false='FALSE',
                  colnames_dot_symbol='.',
                  colnames_start_dot='.',
-                 path_to_rscript='/usr/local/bin/Rscript',
-                 path_to_adherer=os.getcwd(),
-                 path_to_data_directory=os.getcwd(),
+                 path_to_rscript=get_rscript_path(),
+                 path_to_data_directory=get_data_sharing_directory(),
                  print_adherer_messages=True):
 
         # Call the base class constructor:
@@ -2347,7 +2388,6 @@ class CMA1(CMA0):
                          colnames_dot_symbol=colnames_dot_symbol,
                          colnames_start_dot=colnames_start_dot,
                          path_to_rscript=path_to_rscript,
-                         path_to_adherer=path_to_adherer,
                          path_to_data_directory=path_to_data_directory,
                          print_adherer_messages=print_adherer_messages)
 
@@ -2391,9 +2431,8 @@ class CMA1(CMA0):
                                        logical_symbol_false=self._logical_symbol_false,
                                        colnames_dot_symbol=self._colnames_dot_symbol,
                                        colnames_start_dot=self._colnames_start_dot,
-                                       path_to_rscript=self._path_to_rscript,
-                                       path_to_adherer=self._path_to_adherer,
-                                       path_to_data_directory=self._path_to_data_directory,
+                                       path_to_rscript=path_to_rscript,
+                                       path_to_data_directory=path_to_data_directory,
                                        print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
@@ -2486,9 +2525,8 @@ class CMA5(CMA0):
                  logical_symbol_false='FALSE',
                  colnames_dot_symbol='.',
                  colnames_start_dot='.',
-                 path_to_rscript='/usr/local/bin/Rscript',
-                 path_to_adherer=os.getcwd(),
-                 path_to_data_directory=os.getcwd(),
+                 path_to_rscript=get_rscript_path(),
+                 path_to_data_directory=get_data_sharing_directory(),
                  print_adherer_messages=True):
 
         # Call the base class constructor:
@@ -2527,7 +2565,6 @@ class CMA5(CMA0):
                          colnames_dot_symbol=colnames_dot_symbol,
                          colnames_start_dot=colnames_start_dot,
                          path_to_rscript=path_to_rscript,
-                         path_to_adherer=path_to_adherer,
                          path_to_data_directory=path_to_data_directory,
                          print_adherer_messages=print_adherer_messages)
 
@@ -2576,9 +2613,8 @@ class CMA5(CMA0):
                                        logical_symbol_false=self._logical_symbol_false,
                                        colnames_dot_symbol=self._colnames_dot_symbol,
                                        colnames_start_dot=self._colnames_start_dot,
-                                       path_to_rscript=self._path_to_rscript,
-                                       path_to_adherer=self._path_to_adherer,
-                                       path_to_data_directory=self._path_to_data_directory,
+                                       path_to_rscript=path_to_rscript,
+                                       path_to_data_directory=path_to_data_directory,
                                        print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
@@ -2685,9 +2721,8 @@ class CMAPerEpisode(CMA0):
                  logical_symbol_false='FALSE',
                  colnames_dot_symbol='.',
                  colnames_start_dot='.',
-                 path_to_rscript='/usr/local/bin/Rscript',
-                 path_to_adherer=os.getcwd(),
-                 path_to_data_directory=os.getcwd(),
+                 path_to_rscript=get_rscript_path(),
+                 path_to_data_directory=get_data_sharing_directory(),
                  print_adherer_messages=True):
 
         # Call the base class constructor:
@@ -2731,7 +2766,6 @@ class CMAPerEpisode(CMA0):
                          colnames_dot_symbol=colnames_dot_symbol,
                          colnames_start_dot=colnames_start_dot,
                          path_to_rscript=path_to_rscript,
-                         path_to_adherer=path_to_adherer,
                          path_to_data_directory=path_to_data_directory,
                          print_adherer_messages=print_adherer_messages)
 
@@ -2786,9 +2820,8 @@ class CMAPerEpisode(CMA0):
                                        logical_symbol_false=self._logical_symbol_false,
                                        colnames_dot_symbol=self._colnames_dot_symbol,
                                        colnames_start_dot=self._colnames_start_dot,
-                                       path_to_rscript=self._path_to_rscript,
-                                       path_to_adherer=self._path_to_adherer,
-                                       path_to_data_directory=self._path_to_data_directory,
+                                       path_to_rscript=path_to_rscript,
+                                       path_to_data_directory=path_to_data_directory,
                                        print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
@@ -2862,9 +2895,8 @@ class CMASlidingWindow(CMA0):
                  logical_symbol_false='FALSE',
                  colnames_dot_symbol='.',
                  colnames_start_dot='.',
-                 path_to_rscript='/usr/local/bin/Rscript',
-                 path_to_adherer=os.getcwd(),
-                 path_to_data_directory=os.getcwd(),
+                 path_to_rscript=get_rscript_path(),
+                 path_to_data_directory=get_data_sharing_directory(),
                  print_adherer_messages=True):
 
         # Call the base class constructor:
@@ -2914,7 +2946,6 @@ class CMASlidingWindow(CMA0):
                          colnames_dot_symbol=colnames_dot_symbol,
                          colnames_start_dot=colnames_start_dot,
                          path_to_rscript=path_to_rscript,
-                         path_to_adherer=path_to_adherer,
                          path_to_data_directory=path_to_data_directory,
                          print_adherer_messages=print_adherer_messages)
 
@@ -2978,9 +3009,8 @@ class CMASlidingWindow(CMA0):
                                        logical_symbol_false=self._logical_symbol_false,
                                        colnames_dot_symbol=self._colnames_dot_symbol,
                                        colnames_start_dot=self._colnames_start_dot,
-                                       path_to_rscript=self._path_to_rscript,
-                                       path_to_adherer=self._path_to_adherer,
-                                       path_to_data_directory=self._path_to_data_directory,
+                                       path_to_rscript=path_to_rscript,
+                                       path_to_data_directory=path_to_data_directory,
                                        print_adherer_messages=self._print_adherer_messages)
 
         # Were there errors?
