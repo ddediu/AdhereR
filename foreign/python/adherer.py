@@ -34,6 +34,13 @@ if platform.system() == "Windows":
 # pylint: disable=too-many-branches
 # pylint: disable=C0302
 # We need these here (even if they might not be seen as too elegant).
+    
+
+# The AdhereR R package name, minimum required version, and external call function:
+_r_package_name = 'AdhereR.devel' # 'AdhereR' if the released version and 'AdhereR.devel' the development version
+_r_package_min_version = '0.1.1' # minimum version
+_r_package_external_call_function = 'callAdhereR' # the function used to interface with non-R callers
+
 
 class CallAdhereRError(Exception):
     """Error occuring when calling AhereR"""
@@ -54,6 +61,39 @@ def _check_rscript(path):
     except subprocess.CalledProcessError as e:
         return False
     return True
+
+# Check if for the given Rscript, the right AdhereR package is installed:
+def _check_r_package_ahderer_is_installed(path_to_rscript):
+    if not _check_rscript(path_to_rscript):
+        return False
+    # Try to see if AdhereR is installed, has the right version and exports the callAdhereR() function:
+    # Call adhereR:
+    rscript_cmd = '"' + path_to_rscript + '"' + ' --vanilla -e ' + \
+                  '"if(!require(' + _r_package_name + '))' + \
+                  ' {quit(save=\'no\',status=10)}; ' + \
+                  'if( compareVersion(\'' + _r_package_min_version + '\', '+ \
+                  'as.character(packageVersion(\'' + _r_package_name + '\'))) < 0 ) ' + \
+                  '{quit(save=\'no\',status=11)}; ' + \
+                  'quit(save=\'no\',status=0);"'
+    return_code = subprocess.call(rscript_cmd, shell=True)
+
+    if return_code == 10:
+        warnings.warn('adhereR: the AdhereR package is not installed for ' + \
+                      'the version of R given by "' + path_to_rscript + '". ' + \
+                      'Please install at least version ' + _r_package_min_version + \
+                      ' or manually give another Rscript location through the ' + \
+                      '"adherer.set_rscript_path()" function!')
+        return False
+    elif return_code == 11:
+        warnings.warn('adhereR: the AdhereR package installed for ' + \
+                      'the version of R given by "' + path_to_rscript + '" ' + \
+                      'must be at least version ' + _r_package_min_version + '. ' + \
+                      'Please install at least version ' + _r_package_min_version + \
+                      ' or manually give another Rscript location through the ' + \
+                      '"adherer.set_rscript_path()" function!')
+        return False
+    else:
+        return True
 
 # On Windows, check if a given registry key points to a viable Rscript
 def _check_rscript_win_registry(reg_class, reg_key, is64bits):
@@ -151,6 +191,9 @@ if _rscript_path is None:
                   'manually locate "Rscript" (should be in the same location as "R"). '
                   'Make sure you pass the full path (including "Rscript") to the '
                   '"adherer" package through the "adherer.set_rscript_path()" function!')
+# And check if AdhereR is installed there as well:
+if not _check_r_package_ahderer_is_installed(_rscript_path):
+    _rscript_path = None # reset the path to None
 
 # Getters and setters for _rscript_path:
 def set_rscript_path(path):
@@ -177,6 +220,7 @@ except:
     warnings.warn('The automatic creation of the temporary directory for data exchange '
                   'between python and R failed. Please give a directory with read and write '
                   'access by passing the full path to the "adherer.set__data_sharing_directory()" function!')
+    _data_sharing_directory = None
     pass
 
 # Getters and setters for _data_sharing_directory:
@@ -1406,6 +1450,15 @@ class CMA0(object):
                 a pandas.Dataframe containing the event intervals and gaps
 
         """
+        # Check that the Rscript and data sharing paths work: 
+        if not _check_r_package_ahderer_is_installed(path_to_rscript):
+            warnings.warn('adhereR: Rscript is not given, not working or ' + \
+                          'does not have the correct version of the AdhereR package.')
+            return None
+        if path_to_data_directory is None:
+            warnings.warn('adhereR: the data sharing directory was not given.')
+            return None
+        
         # Check that dataset is of the right type and contains the required columns:
         if not isinstance(dataset, pandas.DataFrame):
             warnings.warn('adhereR: argument "dataset" must be a pandas DataFrame (or compatible).')
@@ -2253,18 +2306,10 @@ class CMA0(object):
 
         # Call adhereR:
         rscript_cmd = '"' + path_to_rscript + '"' + ' --vanilla -e ' + \
-                      '"library(AdhereR.devel); callAdhereR(\'' + \
-                      path_to_data_directory.replace('\\','\\\\') + \
-                      '\')"'
-        #print('DEBUG: call = ' + Rscript_cmd)
+                      '"library(' + _r_package_name + '); ' + \
+                      _r_package_external_call_function + \
+                      '(\'' + path_to_data_directory.replace('\\','\\\\') + '\')"'
         return_code = subprocess.call(rscript_cmd, shell=True)
-        #return_code = subprocess.run([path_to_rscript, 
-        #                              '--vanilla',
-        #                              '-e',
-        #                              '"library(AdhereR.devel); callAdhereR(\'' + \
-        #                              path_to_data_directory + \
-        #                              '\')"'], shell=True)
-        #print('DEBUG: return code = ' + str(return_code))
 
         if return_code != 0:
             warnings.warn('adhereR: some error has occured when calling AdhereR (code ' +
