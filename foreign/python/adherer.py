@@ -9,22 +9,23 @@ using a standard shell-and-files approach.
 @author: Dan Dediu, ddediu@gmail.com
 """
 
-# Import needed stuff:
+# Imports
 import warnings
 import subprocess
 import os
 import numbers
 import datetime
-import pandas
 import tempfile
 import atexit
-from PIL import Image
-
-# automatic detection of OS
 import platform
 import shutil
+import pandas
+from PIL import Image
+
+# Windows=specific registry access:
 if platform.system() == "Windows":
-    import winreg # import winreg only on Windows!
+    import winreg
+
 
 # pylint: disable=too-many-instance-attributes
 # pylint: disable=too-many-arguments
@@ -33,13 +34,17 @@ if platform.system() == "Windows":
 # pylint: disable=too-many-return-statements
 # pylint: disable=too-many-branches
 # pylint: disable=C0302
+# pylint: disable=C0103
+# pylint: disable=R1705
+# pylint: disable=W0703
+# pylint: disable=W0603
 # We need these here (even if they might not be seen as too elegant).
-    
+
 
 # The AdhereR R package name, minimum required version, and external call function:
-_r_package_name = 'AdhereR.devel' # 'AdhereR' if the released version and 'AdhereR.devel' the development version
-_r_package_min_version = '0.1.1' # minimum version
-_r_package_external_call_function = 'callAdhereR' # the function used to interface with non-R callers
+_R_PACKAGE_NAME = 'AdhereR.devel' # 'AdhereR' or 'AdhereR.devel'
+_R_PACKAGE_MIN_VERSION = '0.1.1' # minimum version
+_R_PACKAGE_EXTERNAL_CALL_FUNCTION = 'callAdhereR' # function interfacing with non-R callers
 
 
 class CallAdhereRError(Exception):
@@ -58,7 +63,7 @@ def _check_rscript(path):
     # try to execute it:
     try:
         subprocess.call(path)
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledProcessError:
         return False
     return True
 
@@ -66,13 +71,13 @@ def _check_rscript(path):
 def _check_r_package_ahderer_is_installed(path_to_rscript):
     if not _check_rscript(path_to_rscript):
         return False
-    # Try to see if AdhereR is installed, has the right version and exports the callAdhereR() function:
+    # Is AdhereR installed and has the right version?
     # Call adhereR:
     rscript_cmd = '"' + path_to_rscript + '"' + ' --vanilla -e ' + \
-                  '"if(!require(' + _r_package_name + '))' + \
+                  '"if(!require(' + _R_PACKAGE_NAME + '))' + \
                   ' {quit(save=\'no\',status=10)}; ' + \
-                  'if( compareVersion(\'' + _r_package_min_version + '\', '+ \
-                  'as.character(packageVersion(\'' + _r_package_name + '\'))) < 0 ) ' + \
+                  'if( compareVersion(\'' + _R_PACKAGE_MIN_VERSION + '\', '+ \
+                  'as.character(packageVersion(\'' + _R_PACKAGE_NAME + '\'))) < 0 ) ' + \
                   '{quit(save=\'no\',status=11)}; ' + \
                   'quit(save=\'no\',status=0);"'
     return_code = subprocess.call(rscript_cmd, shell=True)
@@ -80,17 +85,17 @@ def _check_r_package_ahderer_is_installed(path_to_rscript):
     if return_code == 10:
         warnings.warn('adhereR: the AdhereR package is not installed for ' + \
                       'the version of R given by "' + path_to_rscript + '". ' + \
-                      'Please install at least version ' + _r_package_min_version + \
+                      'Please install at least version ' + _R_PACKAGE_MIN_VERSION + \
                       ' or manually give another Rscript location through the ' + \
-                      '"adherer.set_rscript_path()" function!')
+                      '"adherer.set_RSCRIPT_PATH()" function!')
         return False
     elif return_code == 11:
         warnings.warn('adhereR: the AdhereR package installed for ' + \
                       'the version of R given by "' + path_to_rscript + '" ' + \
-                      'must be at least version ' + _r_package_min_version + '. ' + \
-                      'Please install at least version ' + _r_package_min_version + \
+                      'must be at least version ' + _R_PACKAGE_MIN_VERSION + '. ' + \
+                      'Please install at least version ' + _R_PACKAGE_MIN_VERSION + \
                       ' or manually give another Rscript location through the ' + \
-                      '"adherer.set_rscript_path()" function!')
+                      '"adherer.set_RSCRIPT_PATH()" function!')
         return False
     else:
         return True
@@ -99,63 +104,68 @@ def _check_r_package_ahderer_is_installed(path_to_rscript):
 def _check_rscript_win_registry(reg_class, reg_key, is64bits):
     _r_reg_path = None
     try:
-        _r_regkey = winreg.OpenKey(reg_class, reg_key, 0, winreg.KEY_READ + (winreg.KEY_WOW64_64KEY if is64bits else 0))
+        _r_regkey = winreg.OpenKey(reg_class,
+                                   reg_key,
+                                   0,
+                                   winreg.KEY_READ + (winreg.KEY_WOW64_64KEY if is64bits else 0))
         _r_reg_curver = winreg.QueryValueEx(_r_regkey, r"Current Version")
-        _r_regkey = winreg.OpenKey(reg_class, reg_key + '\\' + str(_r_reg_curver[0]), 0, winreg.KEY_READ + (winreg.KEY_WOW64_64KEY if is64bits else 0))
+        _r_regkey = winreg.OpenKey(reg_class,
+                                   reg_key + '\\' + str(_r_reg_curver[0]),
+                                   0,
+                                   winreg.KEY_READ + (winreg.KEY_WOW64_64KEY if is64bits else 0))
         _r_reg_path = winreg.QueryValueEx(_r_regkey, r"InstallPath")
-    except Exception as e:
-        #print(e)
+    except Exception:
         return None
-    if not (_r_reg_path is None):
+    if not _r_reg_path is None:
         _r_reg_path = str(_r_reg_path[0]) + "bin\\" + ("x64\\" if is64bits else "") + "Rscript.exe"
-        return _r_reg_path if _check_rscript(_r_reg_path) else None  
+        return _r_reg_path if _check_rscript(_r_reg_path) else None
     else:
         return None
 
 # Try to automatically detect R/Rscript
-# inspired from https://support.rstudio.com/hc/en-us/articles/200486138-Using-Different-Versions-of-R
+# from https://support.rstudio.com/hc/en-us/articles/200486138-Using-Different-Versions-of-R
 def _autodetect_rscript():
     _os_name = platform.system()
     if _os_name == "Darwin": # macOS
         # first, attempt 'which'
-        __rscript_path = shutil.which('Rscript')
-        if _check_rscript(__rscript_path):
-            return __rscript_path
+        _path = shutil.which('Rscript')
+        if _check_rscript(_path):
+            return _path
         else:
             # otherwise, fallback to the standard locations:
-            __rscript_path = None
-            for __rscript_path in ['/usr/bin/Rscript', 
-                                   '/usr/local/bin/Rscript', 
-                                   '/opt/local/bin/Rscript', 
-                                   '/Library/Frameworks/R.framework/Versions/Current/Resources/bin/Rscript']:
-                if _check_rscript(__rscript_path):
-                    return __rscript_path # found!
+            _path = None
+            for _path in ['/usr/bin/Rscript',
+                          '/usr/local/bin/Rscript',
+                          '/opt/local/bin/Rscript',
+                          '/Library/Frameworks/R.framework/Versions/Current/Resources/bin/Rscript']:
+                if _check_rscript(_path):
+                    return _path # found!
             # not found:
             return None
     elif _os_name == "Linux": # linux
         # first, attempt 'which'
-        __rscript_path = shutil.which('Rscript')
-        if _check_rscript(__rscript_path):
-            return __rscript_path
+        _path = shutil.which('Rscript')
+        if _check_rscript(_path):
+            return _path
         else:
             # otherwise, fallback to the standard locations:
-            __rscript_path = None
-            for __rscript_path in ['/usr/bin/Rscript', 
-                                   '/usr/local/bin/Rscript', 
-                                   '/opt/local/bin/Rscript',
-                                   '~/bin/Rscript']:
-                if _check_rscript(__rscript_path):
-                    return __rscript_path # found!
+            _path = None
+            for _path in ['/usr/bin/Rscript',
+                          '/usr/local/bin/Rscript',
+                          '/opt/local/bin/Rscript',
+                          '~/bin/Rscript']:
+                if _check_rscript(_path):
+                    return _path # found!
             # not found:
             return None
     elif _os_name == "Windows": # windows
         # first, attempt 'which'
-        __rscript_path = shutil.which('Rscript')
-        if _check_rscript(__rscript_path):
-            return __rscript_path
+        _path = shutil.which('Rscript')
+        if _check_rscript(_path):
+            return _path
         else:
             # otherwise, look in the registry:
-            # the relevant infor should be in 
+            # the relevant infor should be in
             # HKEY_LOCAL_MACHINE\Software\R-core\R or
             # HKEY_CURRENT_USER\Software\R-core\R
             # and the relevant values are:
@@ -175,79 +185,84 @@ def _autodetect_rscript():
                          [winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\R-core\R"],
                          [winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\R-core\R32"],
                          [winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\R-core\R64"]]
-            __rscript_path = None
-            for r in _reg_keys:
-                __rscript_path = _check_rscript_win_registry(r[0], r[1], is64bits)
-                if not (__rscript_path is None):
-                    return __rscript_path # found!
+            _path = None
+            for reg_key in _reg_keys:
+                _path = _check_rscript_win_registry(reg_key[0], reg_key[1], is64bits)
+                if not _path is None:
+                    return _path # found!
             # not found:
             return None
+    else:
+        # Unknown OS:
+        warnings.warn('Unknown Operating System "' + _os_name + '": ' +\
+                      'this currenty runs only on Windows, macOS and Linux.')
+        return None
 
 # Try to autodetect RScript on this sytem:
-_rscript_path = _autodetect_rscript()
-if _rscript_path is None:
+_RSCRIPT_PATH = _autodetect_rscript()
+if _RSCRIPT_PATH is None:
     warnings.warn('The automatic detection of "Rscript" on your system failed: '
                   'please make sure you do have a functioning "R" installed and '
                   'manually locate "Rscript" (should be in the same location as "R"). '
                   'Make sure you pass the full path (including "Rscript") to the '
                   '"adherer" package through the "adherer.set_rscript_path()" function!')
 # And check if AdhereR is installed there as well:
-if not _check_r_package_ahderer_is_installed(_rscript_path):
-    _rscript_path = None # reset the path to None
+if not _check_r_package_ahderer_is_installed(_RSCRIPT_PATH):
+    _RSCRIPT_PATH = None # reset the path to None
 
-# Getters and setters for _rscript_path:
+# Getters and setters for _RSCRIPT_PATH:
 def set_rscript_path(path):
     """
     Manually set the path to Rscript.
     Used if autodetection fails or if need to explicitely use a non-default R installation.
     """
-    global _rscript_path
-    _rscript_path = path
-    
+    global _RSCRIPT_PATH
+    _RSCRIPT_PATH = path
+
 def get_rscript_path():
     """
     Get the path to Rscript.
     """
-    global _rscript_path
-    return _rscript_path
+    global _RSCRIPT_PATH
+    return _RSCRIPT_PATH
 
 
 # Try to use the temporary folder as data directory:
-_data_sharing_directory = None
+_DATA_SHARING_DIRECTORY = None
 try:
-    _data_sharing_directory = tempfile.TemporaryDirectory(prefix='adherer-')
-except:
+    _DATA_SHARING_DIRECTORY = tempfile.TemporaryDirectory(prefix='adherer-')
+except Exception:
     warnings.warn('The automatic creation of the temporary directory for data exchange '
                   'between python and R failed. Please give a directory with read and write '
-                  'access by passing the full path to the "adherer.set__data_sharing_directory()" function!')
-    _data_sharing_directory = None
-    pass
+                  'access by passing the full path to the ' + \
+                  '"adherer.set__data_sharing_directory()" function!')
+    _DATA_SHARING_DIRECTORY = None
 
-# Getters and setters for _data_sharing_directory:
+# Getters and setters for _DATA_SHARING_DIRECTORY:
 def set_data_sharing_directory(path):
     """
     Manually set the directory for data exchange.
     This directory MUST exist and have read & wrote access for the current user.
     """
-    global _data_sharing_directory
-    _data_sharing_directory = path
-    
+    global _DATA_SHARING_DIRECTORY
+    _DATA_SHARING_DIRECTORY = path
+
 def get_data_sharing_directory():
     """
     Get the directory for data exchange.
     """
-    global _data_sharing_directory
-    if isinstance(_data_sharing_directory, tempfile.TemporaryDirectory):
-        return _data_sharing_directory.name
+    global _DATA_SHARING_DIRECTORY
+    if isinstance(_DATA_SHARING_DIRECTORY, tempfile.TemporaryDirectory):
+        return _DATA_SHARING_DIRECTORY.name
     else:
-        return _data_sharing_directory
+        return _DATA_SHARING_DIRECTORY
 
 @atexit.register
 def _adherer_cleanup():
     # Cleanup at the end of the module:
-    if not (_data_sharing_directory is None) and \
-       isinstance(_data_sharing_directory, tempfile.TemporaryDirectory):
-        _data_sharing_directory.cleanup()
+    if not (_DATA_SHARING_DIRECTORY is None) and \
+       isinstance(_DATA_SHARING_DIRECTORY, tempfile.TemporaryDirectory):
+        _DATA_SHARING_DIRECTORY.cleanup()
 
 
 class CMA0(object):
@@ -371,6 +386,8 @@ class CMA0(object):
         self._logical_symbol_false = logical_symbol_false
         self._colnames_dot_symbol = colnames_dot_symbol
         self._colnames_start_dot = colnames_start_dot
+        self._path_to_rscript = path_to_rscript
+        self._path_to_data_directory = path_to_data_directory
         self._print_adherer_messages = print_adherer_messages
 
         # CMA-specific stuff:
@@ -380,12 +397,12 @@ class CMA0(object):
         self._plot_image = None
         self._computation_return_code = None
         self._computation_messages = None
-        
+
     # Printing:
     def __repr__(self):
         return "CMA object of type " + self._adherer_function + \
                " (on " + str(self._dataset.shape[0]) + " rows)."
-    
+
     # Accessors:
     def get_dataset(self):
         """
@@ -1450,7 +1467,7 @@ class CMA0(object):
                 a pandas.Dataframe containing the event intervals and gaps
 
         """
-        # Check that the Rscript and data sharing paths work: 
+        # Check that the Rscript and data sharing paths work:
         if not _check_r_package_ahderer_is_installed(path_to_rscript):
             warnings.warn('adhereR: Rscript is not given, not working or ' + \
                           'does not have the correct version of the AdhereR package.')
@@ -1458,7 +1475,7 @@ class CMA0(object):
         if path_to_data_directory is None:
             warnings.warn('adhereR: the data sharing directory was not given.')
             return None
-        
+
         # Check that dataset is of the right type and contains the required columns:
         if not isinstance(dataset, pandas.DataFrame):
             warnings.warn('adhereR: argument "dataset" must be a pandas DataFrame (or compatible).')
@@ -1485,7 +1502,7 @@ class CMA0(object):
             return None
 
         # Export the dataset:
-        dataset.to_csv(os.path.join(path_to_data_directory, 'dataset.csv'), 
+        dataset.to_csv(os.path.join(path_to_data_directory, 'dataset.csv'),
                        sep='\t', na_rep='NA', header=True, index=False)
 
         # Create the parameters.log file:
@@ -2306,9 +2323,9 @@ class CMA0(object):
 
         # Call adhereR:
         rscript_cmd = '"' + path_to_rscript + '"' + ' --vanilla -e ' + \
-                      '"library(' + _r_package_name + '); ' + \
-                      _r_package_external_call_function + \
-                      '(\'' + path_to_data_directory.replace('\\','\\\\') + '\')"'
+                      '"library(' + _R_PACKAGE_NAME + '); ' + \
+                      _R_PACKAGE_EXTERNAL_CALL_FUNCTION + \
+                      '(\'' + path_to_data_directory.replace('\\', '\\\\') + '\')"'
         return_code = subprocess.call(rscript_cmd, shell=True)
 
         if return_code != 0:
@@ -2317,7 +2334,8 @@ class CMA0(object):
             return None
 
         # Check and load the results:
-        with open(os.path.join(path_to_data_directory, "Adherer-results.txt"), 'r') as adherer_messages_file:
+        with open(os.path.join(path_to_data_directory,
+                               "Adherer-results.txt"), 'r') as adherer_messages_file:
             adherer_messages = adherer_messages_file.readlines()
             adherer_messages_file.close()
         if print_adherer_messages:
@@ -2336,31 +2354,36 @@ class CMA0(object):
                         'CMA8', 'CMA9', 'CMA_per_episode', 'CMA_sliding_window'):
             # Expecting CMA.csv and possibly EVENTINFO.csv
             ret_val['CMA'] = pandas.read_csv(os.path.join(path_to_data_directory,
-                                             'CMA' + ('-plotted' if plot_show else '') +
-                                             '.csv'), sep='\t', header=0)
+                                                          'CMA' +
+                                                          ('-plotted' if plot_show else '') +
+                                                          '.csv'), sep='\t', header=0)
             if save_event_info:
                 ret_val['EVENTINFO'] = pandas.read_csv(os.path.join(path_to_data_directory,
-                                                       'EVENTINFO' +
-                                                       ('-plotted' if plot_show else '') +
-                                                       '.csv'), sep='\t', header=0)
+                                                                    'EVENTINFO' +
+                                                                    ('-plotted'
+                                                                     if plot_show else
+                                                                     '') +
+                                                                    '.csv'), sep='\t', header=0)
         elif function == 'plot_interactive_cma':
             # Expecting nothing really...
             pass
         elif function == 'compute_event_int_gaps':
             # Expecting EVENTINFO.csv only:
             ret_val['EVENTINFO'] = pandas.read_csv(os.path.join(path_to_data_directory,
-                                                   'EVENTINFO.csv'), sep='\t', header=0)
+                                                                'EVENTINFO.csv'),
+                                                   sep='\t', header=0)
         elif function == 'compute_treatment_episodes':
             # Expect TREATMENTEPISODES.csv:
             ret_val['TREATMENTEPISODES'] = pandas.read_csv(os.path.join(path_to_data_directory,
-                                                           'TREATMENTEPISODES.csv'),
+                                                                        'TREATMENTEPISODES.csv'),
                                                            sep='\t', header=0)
 
         if (plot_show is True) and (function != 'plot_interactive_cma'):
             # Load the produced image (if any):
-            ret_val['plot'] = Image.open(os.path.join((plot_save_to if not (plot_save_to is None)
-                                          else path_to_data_directory),
-                                         'adherer-plot' + '.' + plot_save_as))
+            ret_val['plot'] = Image.open(os.path.join((plot_save_to
+                                                       if not (plot_save_to is None) else
+                                                       path_to_data_directory),
+                                                      'adherer-plot' + '.' + plot_save_as))
 
         # Everything seems fine....
         return ret_val
@@ -3081,24 +3104,3 @@ class CMASlidingWindow(CMA0):
         self._cma = result['CMA']
         if 'EVENTINFO' in result:
             self._event_info = result['EVENTINFO']
-
-## DEBUG
-if False:
-    import pandas
-    
-    # Load the test dataset
-    df = pandas.read_csv('./test-dataset.csv', sep='\t', header=0)
-    
-    # Change the column names:
-    df.rename(columns={'ID': 'patientID',
-                       'DATE': 'prescriptionDate',
-                       'PERDAY': 'quantityPerDay',
-                       'CLASS': 'medicationType',
-                       'DURATION': 'prescriptionDuration'},
-              inplace=True)
-    testcma1 = CMA1(df,
-                    id_colname='patientID',
-                    event_date_colname='prescriptionDate',
-                    event_duration_colname='prescriptionDuration')
-    
-## END DEBUG
