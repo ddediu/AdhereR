@@ -1985,7 +1985,13 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     return (as.data.frame(ret.val));
   } else
   {
-    setkeyv(ret.val, c(ID.colname, ".DATE.as.Date")); # make sure it is keyed by patient ID and event date
+    if( ".DATE.as.Date" %in% names(ret.val) )
+    {
+      setkeyv(ret.val, c(ID.colname, ".DATE.as.Date")); # make sure it is keyed by patient ID and event date
+    } else
+    {
+      setkeyv(ret.val, c(ID.colname)); # make sure it is keyed by patient ID (as event date was removed)
+    }
     return (ret.val);
   }
 }
