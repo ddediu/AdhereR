@@ -1,4 +1,4 @@
-Data exchange with STATA:
+Data exchange with external callers (such as STATA or Python):
 
 1. There is a wrapper STATA function that calls R as below:
 
@@ -100,7 +100,7 @@ plot.CMA.plot.ratio			NO		0.10		[the proportion of the total horizontal plot to 
 plot.CMA.plot.col			NO		"lightgreen"	[attributes of the CMA plot]
 plot.CMA.plot.border			NO		"darkgreen"
 plot.CMA.plot.bkg			NO		"aquamarine"
-plot.CMA.plot.text			NO		""		[by default, the same as plot.CMA.plot.border] 
+plot.CMA.plot.text			NO		""		[by default, the same as plot.CMA.plot.border]
 plot.highlight.followup.window		NO		TRUE
 plot.followup.window.col		NO		"green"
 plot.highlight.observation.window	NO		TRUE
@@ -109,7 +109,7 @@ plot.observation.window.density		NO		35
 plot.observation.window.angle		NO		-30
 plot.show.real.obs.window.start		NO		TRUE		[for some CMAs, the real observation window starts at a different date]
 plot.real.obs.window.density		NO		35
-plot.real.obs.window.angle		NO		30 
+plot.real.obs.window.angle		NO		30
 plot.bw.plot				NO		FALSE		[if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting]
 
 
@@ -117,20 +117,20 @@ plot.bw.plot				NO		FALSE		[if TRUE, override all user-given colors and replace 
 ++ CMA1, CMA2, CMA3, CMA4:
 
 PARAMETER				REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
-ID.colname				YES 
+ID.colname				YES
 event.date.colname			YES
 event.duration.colname			YES
 followup.window.start.type		NO		numeric		numeric, character, date
 followup.window.start			NO		0
 followup.window.start.unit 		NO		days		days, weeks, months, years
 followup.window.duration.type		NO		numeric		numeric, character, date
-followup.window.duration 		NO		365 * 2		
+followup.window.duration 		NO		365 * 2
 followup.window.duration.unit 		NO		days		days, weeks, months, years
 observation.window.start.type		NO		numeric		numeric, character, date
 observation.window.start		NO		0
 observation.window.start.unit 		NO		days		days, weeks, months, years
 observation.window.duration.type	NO		numeric		numeric, character, date
-observation.window.duration 		NO		365 * 2		
+observation.window.duration 		NO		365 * 2
 observation.window.duration.unit 	NO		days		days, weeks, months, years
 date.format				NO		%m/%d/%Y
 event.interval.colname			NO		event.interval
@@ -151,7 +151,7 @@ EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
 ++ CMA5, CMA6, CMA7, CMA8, CMA9:
 
 PARAMETER				REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
-ID.colname				YES 
+ID.colname				YES
 event.date.colname			YES
 event.duration.colname			YES
 event.daily.dose.colname		YES
@@ -162,13 +162,13 @@ followup.window.start.type		NO		numeric		numeric, character, date
 followup.window.start			NO		0
 followup.window.start.unit 		NO		days		days, weeks, months, years
 followup.window.duration.type		NO		numeric		numeric, character, date
-followup.window.duration 		NO		365 * 2		
+followup.window.duration 		NO		365 * 2
 followup.window.duration.unit 		NO		days		days, weeks, months, years
 observation.window.start.type		NO		numeric		numeric, character, date
 observation.window.start		NO		0
 observation.window.start.unit 		NO		days		days, weeks, months, years
 observation.window.duration.type	NO		numeric		numeric, character, date
-observation.window.duration 		NO		365 * 2		
+observation.window.duration 		NO		365 * 2
 observation.window.duration.unit 	NO		days		days, weeks, months, years
 date.format				NO		%m/%d/%Y
 event.interval.colname			NO		event.interval
@@ -190,7 +190,7 @@ EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
 CMA.to.apply					YES
-ID.colname					YES 
+ID.colname					YES
 event.date.colname				YES
 event.duration.colname				YES
 event.daily.dose.colname			YES
@@ -204,13 +204,13 @@ followup.window.start.type			NO		numeric		numeric, character, date
 followup.window.start				NO		0
 followup.window.start.unit 			NO		days		days, weeks, months, years
 followup.window.duration.type			NO		numeric		numeric, character, date
-followup.window.duration 			NO		365 * 2		
+followup.window.duration 			NO		365 * 2
 followup.window.duration.unit 			NO		days		days, weeks, months, years
 observation.window.start.type			NO		numeric		numeric, character, date
 observation.window.start			NO		0
 observation.window.start.unit 			NO		days		days, weeks, months, years
 observation.window.duration.type		NO		numeric		numeric, character, date
-observation.window.duration 			NO		365 * 2		
+observation.window.duration 			NO		365 * 2
 observation.window.duration.unit 		NO		days		days, weeks, months, years
 date.format					NO		%m/%d/%Y
 event.interval.colname				NO		event.interval
@@ -232,7 +232,7 @@ EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
 CMA.to.apply					YES
-ID.colname					YES 
+ID.colname					YES
 event.date.colname				YES
 event.duration.colname				YES
 event.daily.dose.colname			YES
@@ -243,22 +243,22 @@ followup.window.start.type			NO		numeric		numeric, character, date
 followup.window.start				NO		0
 followup.window.start.unit 			NO		days		days, weeks, months, years
 followup.window.duration.type			NO		numeric		numeric, character, date
-followup.window.duration 			NO		365 * 2		
+followup.window.duration 			NO		365 * 2
 followup.window.duration.unit 			NO		days		days, weeks, months, years
 observation.window.start.type			NO		numeric		numeric, character, date
 observation.window.start			NO		0
 observation.window.start.unit 			NO		days		days, weeks, months, years
 observation.window.duration.type		NO		numeric		numeric, character, date
-observation.window.duration 			NO		365 * 2		
+observation.window.duration 			NO		365 * 2
 observation.window.duration.unit 		NO		days		days, weeks, months, years
 sliding.window.start.type			NO		numeric		numeric, character, date
 sliding.window.start				NO		0
 sliding.window.start.unit 			NO		days		days, weeks, months, years
 sliding.window.duration.type			NO		numeric		numeric, character, date
-sliding.window.duration 			NO		90		
+sliding.window.duration 			NO		90
 sliding.window.duration.unit 			NO		days		days, weeks, months, years
 sliding.window.step.duration.type		NO		numeric		numeric, character
-sliding.window.step.duration			NO		30		
+sliding.window.step.duration			NO		30
 sliding.window.step.unit			NO		days		days, weeks, months, years
 sliding.window.no.steps				NO		-1
 date.format					NO		%m/%d/%Y
@@ -279,7 +279,7 @@ EVENTINFO.csv <-- the gap days and event info data (by explicit request only)
 ++ compute_event_int_gaps:
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
-ID.colname					YES 
+ID.colname					YES
 event.date.colname				YES
 event.duration.colname				YES
 event.daily.dose.colname			NO
@@ -292,13 +292,13 @@ followup.window.start.type			NO		numeric		numeric, character, date
 followup.window.start				NO		0
 followup.window.start.unit 			NO		days		days, weeks, months, years
 followup.window.duration.type			NO		numeric		numeric, character, date
-followup.window.duration 			NO		365 * 2		
+followup.window.duration 			NO		365 * 2
 followup.window.duration.unit 			NO		days		days, weeks, months, years
 observation.window.start.type			NO		numeric		numeric, character, date
 observation.window.start			NO		0
 observation.window.start.unit 			NO		days		days, weeks, months, years
 observation.window.duration.type		NO		numeric		numeric, character, date
-observation.window.duration 			NO		365 * 2		
+observation.window.duration 			NO		365 * 2
 observation.window.duration.unit 		NO		days		days, weeks, months, years
 date.format					NO		%m/%d/%Y
 keep.window.start.end.dates			NO		FALSE
@@ -319,7 +319,7 @@ EVENTINFO.csv <-- the gap days and event info data (always)
 ++ compute_treatment_episodes:
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
-ID.colname					YES 
+ID.colname					YES
 event.date.colname				YES
 event.duration.colname				YES
 event.daily.dose.colname			NO
@@ -335,13 +335,13 @@ followup.window.start.type			NO		numeric		numeric, character, date
 followup.window.start				NO		0
 followup.window.start.unit 			NO		days		days, weeks, months, years
 followup.window.duration.type			NO		numeric		numeric, character, date
-followup.window.duration 			NO		365 * 2		
+followup.window.duration 			NO		365 * 2
 followup.window.duration.unit 			NO		days		days, weeks, months, years
 observation.window.start.type			NO		numeric		numeric, character, date
 observation.window.start			NO		0
 observation.window.start.unit 			NO		days		days, weeks, months, years
 observation.window.duration.type		NO		numeric		numeric, character, date
-observation.window.duration 			NO		365 * 2		
+observation.window.duration 			NO		365 * 2
 observation.window.duration.unit 		NO		days		days, weeks, months, years
 date.format					NO		%m/%d/%Y
 keep.window.start.end.dates			NO		FALSE
@@ -364,16 +364,16 @@ TREATMENTEPISODES.csv <-- the treatment episodes data (always)
 
 PARAMETER					REQUIRED	DEFAULT_VALUE	POSSIBLE_VALUES
 patient_to_plot					NO		[first patient in the data]
-ID.colname					YES 
+ID.colname					YES
 event.date.colname				YES
 event.duration.colname				YES
 event.daily.dose.colname			NO
 medication.class.colname			NO
 date.format					NO		%m/%d/%Y
-followup.window.start.max			NO		
-followup.window.duration.max			NO		
-observation.window.start.max			NO		
-observation.window.duration.max			NO	
+followup.window.start.max			NO
+followup.window.duration.max			NO
+observation.window.start.max			NO
+observation.window.duration.max			NO
 maximum.permissible.gap.max			NO
 sliding.window.start.max			NO
 sliding.window.duration.max			NO
