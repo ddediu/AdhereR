@@ -32,8 +32,9 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
                   ".INTERSECT.EPISODE.OBS.WIN.END", ".INTERSECT.EPISODE.OBS.WIN.START", ".OBS.DURATION.UPDATED",
                   ".OBS.END.DATE", ".OBS.END.DATE.PRECOMPUTED", "carry.only.for.same.medication", "chunk",
                   "consider.dosage.change", "end.episode.gap.days", "episode.ID", "episode.duration", "episode.end",
-                  "episode.start", "followup.window.duration", "followup.window.start", "maximum.permissible.gap",
-                  "maximum.permissible.gap.as.percent", "medication.change.means.new.treatment.episode",
+                  "episode.start", "followup.window.duration", "followup.window.start",
+                  "maximum.permissible.gap", "maximum.permissible.gap.as.percent",
+                  "medication.change.means.new.treatment.episode", "dosage.change.means.new.treatment.episode",
                   "observation.window.duration", "observation.window.start", "patientID", "plot.CMA.as.histogram", "selectedCMA",
                   "show.legend", "sliding.window.duration", "sliding.window.start", "sliding.window.step.duration"));
 
@@ -2060,6 +2061,8 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 #' is adjusted to reflect changes in dosage, or \code{NA} if not defined.
 #' @param medication.change.means.new.treatment.episode \emph{Logical}, should
 #' a change in medication automatically start a new treatment episode?
+#' @param dosage.change.means.new.treatment.episode \emph{Logical}, should
+#' a change in dosage automatically start a new treatment episode?
 #' @param maximum.permissible.gap The \emph{number} of units given by
 #' \code{maximum.permissible.gap.unit} representing the maximum duration of
 #' permissible gaps between treatment episodes (can also be a percent, see
@@ -2144,6 +2147,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         consider.dosage.change=TRUE, # if TRUE carry-over is adjusted to reflect changes in dosage
                                         # Treatment episodes:
                                         medication.change.means.new.treatment.episode=TRUE, # does a change in medication automatically start a new treatment episode?
+                                        dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                                         maximum.permissible.gap=90, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                                         maximum.permissible.gap.unit=c("days", "weeks", "months", "years", "percent")[1], # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days), "years" (fixed at 365 days), or "percent", in which case maximum.permissible.gap is interpreted as a percent (can be > 100%) of the duration of the current prescription
                                         # The follow-up window:
@@ -2221,6 +2225,11 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       {
         # If medication change triggers a new episode and there is more than one event, consider these changes as well:
         s <- (s | c(medication.class.column[1:(n.events-1)] != medication.class.column[2:n.events], TRUE));
+      }
+      if( dosage.change.means.new.treatment.episode && n.events > 1 )
+      {
+        # If dosage change triggers a new episode and there is more than one event, consider these changes as well:
+        s <- (s | c(event.daily.dose.colname[1:(n.events-1)] != event.daily.dose.colname[2:n.events], TRUE));
       }
       s <- which(s); s.len <- length(s);
 
@@ -5995,6 +6004,8 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' treatment episodes and the CMA on each treatment episode).
 #' @param medication.change.means.new.treatment.episode \emph{Logical}, should a
 #' change in medication automatically start a new treatment episode?
+#' @param dosage.change.means.new.treatment.episode \emph{Logical}, should a
+#' change in dosage automatically start a new treatment episode?
 #' @param maximum.permissible.gap The \emph{number} of units given by
 #' \code{maximum.permissible.gap.unit} representing the maximum duration of
 #' permissible gaps between treatment episodes (can also be a percent, see
@@ -6177,6 +6188,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              consider.dosage.change=NA, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = use the CMA's values)
                              # Treatment episodes:
                              medication.change.means.new.treatment.episode=TRUE, # does a change in medication automatically start a new treatment episode?
+                             dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                              maximum.permissible.gap=180, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                              maximum.permissible.gap.unit=c("days", "weeks", "months", "years", "percent")[1], # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days), "years" (fixed at 365 days), or "percent", in which case maximum.permissible.gap is interpreted as a percent (can be > 100%) of the duration of the current prescription
                              # The follow-up window:
@@ -6312,6 +6324,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                              carry.only.for.same.medication=carry.only.for.same.medication,
                                              consider.dosage.change=consider.dosage.change,
                                              medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                             dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
                                              maximum.permissible.gap=maximum.permissible.gap,
                                              maximum.permissible.gap.unit=maximum.permissible.gap.unit,
                                              followup.window.start=followup.window.start,
@@ -8164,6 +8177,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             observation.window.duration.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
                             # Treatment episodes:
                             medication.change.means.new.treatment.episode=TRUE, # does a change in medication automatically start a new treatment episode?
+                            dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                             maximum.permissible.gap=180, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                             maximum.permissible.gap.unit="days", # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days) or "years" (fixed at 365 days)
                             # Sliding window:
@@ -8196,6 +8210,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                  "observation.window.duration=",observation.window.duration,", ",
                  "observation.window.duration.unit=",observation.window.duration.unit,", ",
                  "medication.change.means.new.treatment.episode=",medication.change.means.new.treatment.episode,", ",
+                 "dosage.change.means.new.treatment.episode=",dosage.change.means.new.treatment.episode,", ",
                  "maximum.permissible.gap=",maximum.permissible.gap,", ",
                  "maximum.permissible.gap.unit=",maximum.permissible.gap.unit,", ",
                  "sliding.window.start=",sliding.window.start,", ",
@@ -8253,6 +8268,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                                   observation.window.duration=observation.window.duration,
                                                   observation.window.duration.unit=observation.window.duration.unit,
                                                   medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                                  dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
                                                   maximum.permissible.gap=maximum.permissible.gap,
                                                   maximum.permissible.gap.unit=maximum.permissible.gap.unit,
                                                   sliding.window.start=sliding.window.start,
@@ -8299,6 +8315,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                          observation.window.duration=observation.window.duration,
                                          observation.window.duration.unit="days", # observation.window.duration.unit,
                                          medication.change.means.new.treatment.episode=NA, #medication.change.means.new.treatment.episode,
+                                         dosage.change.means.new.treatment.episode=NA, #dosage.change.means.new.treatment.episode
                                          maximum.permissible.gap=NA, #maximum.permissible.gap,
                                          maximum.permissible.gap.unit="days", # maximum.permissible.gap.unit,
                                          sliding.window.start=NA, #sliding.window.start,
@@ -8326,6 +8343,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                            observation.window.duration = manipulate::slider(0, observation.window.duration.max, 2*365, "Obs. wnd. duration (days)", 1),
                            #observation.window.duration.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Obs. wnd. duration unit"),
                            #medication.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Treat. change starts new episode?"),
+                           #dosage.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Dosage change starts new episode?"),
                            #maximum.permissible.gap = manipulate::slider(0, 500, 0, "Max. permissible gap (days)", 1),
                            #maximum.permissible.gap.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Max. permis. gap duration unit"),
                            #maximum.permissible.gap.as.percent = manipulate::checkbox(FALSE, "Max. permissible gap as percent?"),
@@ -8357,6 +8375,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                          observation.window.duration=observation.window.duration,
                                          observation.window.duration.unit="days", # observation.window.duration.unit,
                                          medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                         dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
                                          maximum.permissible.gap=maximum.permissible.gap,
                                          maximum.permissible.gap.unit=ifelse(!maximum.permissible.gap.as.percent,"days","percent"), # maximum.permissible.gap.unit,
                                          sliding.window.start=NA, #sliding.window.start,
@@ -8384,6 +8403,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                            observation.window.duration = manipulate::slider(0, observation.window.duration.max, 2*365, "Obs. wnd. duration (days)", 1),
                            #observation.window.duration.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Obs. wnd. duration unit"),
                            medication.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Treat. change starts new episode?"),
+                           dosage.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Dosage change starts new episode?"),
                            maximum.permissible.gap = manipulate::slider(0, maximum.permissible.gap.max, 180, "Max. permissible gap (days or %)", 1),
                            maximum.permissible.gap.as.percent = manipulate::checkbox(FALSE, "Max. permissible gap as percent?"),
                            #maximum.permissible.gap.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Max. permis. gap duration unit"),
@@ -8416,6 +8436,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                          observation.window.duration=observation.window.duration,
                                          observation.window.duration.unit="days", # observation.window.duration.unit,
                                          medication.change.means.new.treatment.episode=NA,
+                                         dosage.change.means.new.treatment.episode=NA,
                                          maximum.permissible.gap=NA, #maximum.permissible.gap,
                                          maximum.permissible.gap.unit="days", # maximum.permissible.gap.unit,
                                          sliding.window.start=sliding.window.start,
@@ -8443,6 +8464,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                            observation.window.duration = manipulate::slider(0, observation.window.duration.max, 2*365, "Obs. wnd. duration (days)", 1),
                            #observation.window.duration.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Obs. wnd. duration unit"),
                            #medication.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Treat. change starts new episode?"),
+                           #dosage.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Dosage change starts new episode?"),
                            #maximum.permissible.gap = manipulate::slider(0, 500, 0, "Max. permissible gap (days)", 1),
                            #maximum.permissible.gap.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Max. permis. gap duration unit"),
                            #maximum.permissible.gap.as.percent = manipulate::checkbox(FALSE, "Max. permissible gap as percent?"),
@@ -8569,6 +8591,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             observation.window.duration.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
                             # Treatment episodes:
                             medication.change.means.new.treatment.episode=TRUE, # does a change in medication automatically start a new treatment episode?
+                            dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                             maximum.permissible.gap=180, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                             maximum.permissible.gap.unit="days", # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days) or "years" (fixed at 365 days)
                             # Sliding window:
@@ -8604,6 +8627,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                  "observation.window.duration=",observation.window.duration,", ",
                  "observation.window.duration.unit=",observation.window.duration.unit,", ",
                  "medication.change.means.new.treatment.episode=",medication.change.means.new.treatment.episode,", ",
+                 "dosage.change.means.new.treatment.episode=",dosage.change.means.new.treatment.episode,", ",
                  "maximum.permissible.gap=",maximum.permissible.gap,", ",
                  "maximum.permissible.gap.unit=",maximum.permissible.gap.unit,", ",
                  "sliding.window.start=",sliding.window.start,", ",
@@ -8663,6 +8687,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                                   observation.window.duration=observation.window.duration,
                                                   observation.window.duration.unit=observation.window.duration.unit,
                                                   medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                                  dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
                                                   maximum.permissible.gap=maximum.permissible.gap,
                                                   maximum.permissible.gap.unit=maximum.permissible.gap.unit,
                                                   sliding.window.start=sliding.window.start,

@@ -307,6 +307,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   .cast.param.to.type("carry.only.for.same.medication",  "logical", TRUE);
   .cast.param.to.type("consider.dosage.change",          "logical", TRUE);
   .cast.param.to.type("medication.change.means.new.treatment.episode", "logical", TRUE);
+  .cast.param.to.type("dosage_change_means_new_treatment_episode",     "logical", TRUE);
 
   if( suppressWarnings(!is.na(as.numeric(params.as.list[["parallel.threads"]]))) )
   {
@@ -536,3 +537,25 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   quit(save="no", status=0, runLast=FALSE); # everything seems OK
 }
 
+
+
+#' getCallerWrapperLocation.
+#'
+#' This function returns the full path to where the various \code{wrappers} that
+#' can call \code{AdhereR} are installed.
+#'
+#' In most cases, these wrappers are one or more files in the calling language
+#' that may be directly used as such.
+#' For more details see the vignette describing the included reference
+#' \code{Python 3} wrapper.
+#'
+#' @param callig.platform A \emph{string} specifying the desired wrapper.
+#' Currently it can be "python3".
+#' @return The full path to the requested wrapper or NULL if none exists.
+#' @export
+getCallerWrapperLocation <- function(callig.platform=c("python3")[1])
+{
+  switch(tolower(callig.platform),
+         "python3" = file.path(.libPaths(), "AdhereR", "wrappers", "python3", "adherer.py"),
+         NULL);
+}
