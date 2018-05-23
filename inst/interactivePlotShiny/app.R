@@ -184,10 +184,15 @@ ui <- fluidPage(
                                   label="Treat. change start new episode?",
                                   value=FALSE),
 
+                    # Does dosage change start new episode? ----
+                    checkboxInput(inputId="dosage_change_means_new_treatment_episode",
+                                  label="Dosage change start new episode?",
+                                  value=FALSE),
+
                     # Max. permis. gap duration unit ----
                     selectInput(inputId="maximum_permissible_gap_unit",
                                 label="Max. permis. gap duration unit",
-                                choices=c("days", "weeks", "months", "years"),
+                                choices=c("days", "weeks", "months", "years", "percent"),
                                 selected="days"),
 
                     # Max. permissible gap ----
@@ -430,6 +435,7 @@ server <- function(input, output, session) {
                                    observation.window.duration=as.numeric(input$observation_window_duration),
                                    observation.window.duration.unit=input$observation_window_duration_unit,
                                    medication.change.means.new.treatment.episode=input$medication_change_means_new_treatment_episode,
+                                   dosage.change.means.new.treatment.episode=input$dosage_change_means_new_treatment_episode,
                                    maximum.permissible.gap=as.numeric(input$maximum_permissible_gap),
                                    maximum.permissible.gap.unit=input$maximum_permissible_gap_unit,
                                    sliding.window.start=as.numeric(input$sliding_window_start),

@@ -9,6 +9,7 @@ compute.treatment.episodes(data, ID.colname = NA, event.date.colname = NA,
   medication.class.colname = NA, carryover.within.obs.window = TRUE,
   carry.only.for.same.medication = TRUE, consider.dosage.change = TRUE,
   medication.change.means.new.treatment.episode = TRUE,
+  dosage.change.means.new.treatment.episode = FALSE,
   maximum.permissible.gap = 90, maximum.permissible.gap.unit = c("days",
   "weeks", "months", "years", "percent")[1], followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
@@ -57,6 +58,9 @@ is adjusted to reflect changes in dosage, or \code{NA} if not defined.}
 
 \item{medication.change.means.new.treatment.episode}{\emph{Logical}, should
 a change in medication automatically start a new treatment episode?}
+
+\item{dosage.change.means.new.treatment.episode}{\emph{Logical}, should
+a change in dosage automatically start a new treatment episode?}
 
 \item{maximum.permissible.gap}{The \emph{number} of units given by
 \code{maximum.permissible.gap.unit} representing the maximum duration of

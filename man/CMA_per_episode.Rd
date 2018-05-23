@@ -9,6 +9,7 @@ CMA_per_episode(CMA.to.apply, data, ID.colname = NA,
   event.daily.dose.colname = NA, medication.class.colname = NA,
   carry.only.for.same.medication = NA, consider.dosage.change = NA,
   medication.change.means.new.treatment.episode = TRUE,
+  dosage.change.means.new.treatment.episode = FALSE,
   maximum.permissible.gap = 180, maximum.permissible.gap.unit = c("days",
   "weeks", "months", "years", "percent")[1], followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
@@ -61,6 +62,9 @@ treatment episodes and the CMA on each treatment episode).}
 
 \item{medication.change.means.new.treatment.episode}{\emph{Logical}, should a
 change in medication automatically start a new treatment episode?}
+
+\item{dosage.change.means.new.treatment.episode}{\emph{Logical}, should a
+change in dosage automatically start a new treatment episode?}
 
 \item{maximum.permissible.gap}{The \emph{number} of units given by
 \code{maximum.permissible.gap.unit} representing the maximum duration of

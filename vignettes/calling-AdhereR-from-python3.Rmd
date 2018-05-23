@@ -1,0 +1,13 @@
+---
+title: "Calling AdhereR from Python3"
+author: "Dan Dediu"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Calling AdhereR from Python3}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+A very basic vignette
+
