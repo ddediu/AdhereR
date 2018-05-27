@@ -1,5 +1,5 @@
 ---
-title: "Calling AdhereR from Python3"
+title: "Calling `AdhereR` from `Python 3`"
 author: "Dan Dediu"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
@@ -9,5 +9,115 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-A very basic vignette
+## Introduction
+
+While `AdhereR` is written in `R` and makes extensive use of various `R` packages and techniques (such as `data.table` and parallel processing), it is possible to use it from other programming languages and applications.
+This is accomplished through a very generic mecahnism that only requires the caller to be able to *read and write files* in a location of its choice and to *invoke an external command* with a set of arguments.
+These requirements are widely available in programming languages (such as `C`/`C++`, `Java`, `Python 2` and `3`, and `R` itself), can be accomplished from the scripting available in several applications (e.g., `VBA` in Microsoft Excel, `STATA` scripting or `SAS` programs), and works in similar ways across the major Operating Systems (`Linux` flavors, `macOS`/`Mac OS X`/`OS X` and `Microsoft Windows`).
+
+We present here this generic mechanism using its *reference implementation* for `Python 3`.
+While this reference implementation is definitely useable in production environments, this can probably be improved both in terms of calling and passing data between `Python` and `R`, as well as in terms of the "pythonicity" of the `Python` side of the implementation.
+Nevertheless, we hope this implementation will be useful to users of `Python` that would like to access `AdhereR` without switching to `R`, and will provide a template and working example for further implementations that aim to make `AdhereR` available to other programming languages and platforms.
+
+
+## General ideas
+
+The mechanism is very general, and is based on a *wrapper* being available on the *caller platform* (here, `Python 3`) that performs the following general tasks:
+
+  - *exposes* to the users on the caller platform a *set of functions/methods/objects* (or other mechanisms specific to that platform) that encapsulate, in a platform-specific way, the main functionalities from `AdhereR` that are of interest to the platform's users;
+  - when the user *calls* such an exposed function with a given set of argument values, the wrapper *transparently translates* these argument values in a format understandable by `AdhereR`; in particular, it saves any datasets to be processed (as TAB-separated `CSV files`) and writes the argument values to `text file` (in a standardised format), all in a directory of its choice (henceforth, the *data sharing directory*);
+  - the wrapper uses the *`shell` mechanism* to call `R` (as it is installed on the caller system) and instructs it to execute a simple sequence of `R` commands;
+  - these `R` commands load the `AdhereR` package and execute the `callAdhereR()` function from the package, passing it the path to the data sharing directory as its only argument;   
+  - internally, `callAdhereR()`:
+    - parses and loads the data and arguments, 
+    - performs basic consistency checks, 
+    - calls the appropriate `AdhereR` method(s) with the appropriate arguments, 
+    - checks the results and, as appropriate, 
+    - writes back to a predefined file any error messages, warnings or any other messages generated, and, if the case, 
+    - saves the results to TAB-separated `CSV` files or image files;
+  - the wrapper is notified when the `R` has finished executing, and:
+    - loads the file containing the errors, warnings and messages, and possibly the results, 
+    - packs them into objects appropriate to the caller platform, and 
+    - returns them to the user.
+
+The full protocol is detailed in [**Appendix I**](#appendix-1).
+
+
+## Fundamentals of calling `AdhereR` from `Python 3`
+
+We will use here a `macOS` setup for illustration purposes, but this is very similar on the other supported `OS`s. 
+Essentially, the `Python 3` wrapper creates the *input files* `parameters.log` and `dataset.csv` in the data sharing directory (let us denote it as `DATA_SHARING_DIRECTORY`, by default, a unique temorary directory).
+Let's assume that `DATA_SHARING_DIRECTORY` is set to `/var/folders/kx/bphryt7j5tz1n_fcjk5809940000gn/T/adherer-qmx4pw7t`; then, before calling `AdhereR`, this directory should contain the files:
+
+    ~
+     |-parameters.log
+     \-dataset.csv
+
+Please note that `R` must be *properly installed* on the system such that `Rscript` (or `Rscript.exe` on Windows) does exist and works; the `Python 3` wrapper tries to locate it using a variety of strategies (in order, `which`, followed by a set of standard locations on `macOS` and `Linux` or a set of standard Windows Registry Keys on `MS Windows`) but if this fails or if the user wants to use a non-standard `R` installation, the wrapper allows this through the exported function `set_rscript_path()`.
+Let's assume for now that `Rscript` is located in `/usr/local/bin/Rscript` and its automatic detection was successful (let us denote this path as `RSCRIPT_PATH`).
+
+With these path variables automatically or manually set, the `Python 3` wrapper is ready to call `AdhereR`:
+
+``` python
+import subprocess # allow shell calls
+
+[...]
+
+# Call adhereR:
+rscript_cmd = '"' + RSCRIPT_PATH + '"' + ' --vanilla -e ' + \
+              '"library(AdhereR); ' + \
+              `callAdhereR(` + DATA_SHARING_DIRECTORY + '\')"'
+return_code = subprocess.call(rscript_cmd, shell=True)
+```
+
+When the `Rscript` process returns, `return_code` should be `0` for success (in the sense of calling `AdhereR`, not in the sense that `AdhereR` also succeeded in the task it was assigned to do) or something else for errors.
+
+If `return_code != 0`, the process returns with a warning.
+Otherwise, an attempt is made to read the messages produced by `AdhereR` (available in the `Adherer-results.txt` file in the `DATA_SHARING_DIRECTORY` directory) and checking if the last line begins with `OK:`.
+If it does not, a warning contaning the messages is thrown and the process returns.
+
+If it does, the appropriate output files are read, parsed and loaded (depending on the invoked function, these files might differ).
+For example, after successfully invoking `CMA1`, the `DATA_SHARING_DIRECTORY` might look like:
+
+    ~
+     |-parameters.log
+     |-dataset.csv
+     |-Adherer-results.txt
+     \-CMA.csv
+
+In this example, the wrapper would parse and load `CMA.csv` as a `pandas` table:
+
+``` python
+import pandas # load pandas
+
+[...]
+
+# Expecting CMA.csv
+ret_val['CMA'] = pandas.read_csv(os.path.join(path_to_data_directory,
+                                              'CMA.csv'), sep='\t', header=0)
+```
+
+If plotting was requested, the resulting plot is also loaded using the `PIL`/`Pillow` library:
+
+``` python
+from PIL import Image # load images
+
+[...]
+
+# Load the produced image (if any):
+ret_val['plot'] = Image.open(os.path.join((plot_save_to
+                                          if not (plot_save_to is None) else
+                                          DATA_SHARING_DIRECTORY),
+                                          'adherer-plot' + '.' + plot_save_as))
+```
+
+where `plot_save_to` and `plot_save_as` may specify where the plots are to be saved and in which format.
+
+
+## The `Python 3` wrapper: the `adherer` module
+
+
+
+
+
 
