@@ -116,7 +116,68 @@ where `plot_save_to` and `plot_save_as` may specify where the plots are to be sa
 
 ## The `Python 3` wrapper: the `adherer` module
 
+The reference implementation is contained in single file (`adherer.py`) included with the `R` `AdhereR` package and whose location can be obtained using the function `getCallerWrapperLocation()` from `AdhereR` (*N.B.* it is located in the directory where the `AdhereR` package is installed on the system, subdirectory `wrappers/python3/adherer.py`; for example, on the example `macos` machine this is `/Library/Frameworks/R.framework/Versions/3.4/Resources/library/AdhereR/wrappers/python3/adherer.py`).
 
+This file can be either:
+
+  - *copied and placed* in `Python`'s "module search paths" (a list of directories comprising, in order, the directory contining the input script, the environment variable `PYTHONPATH`, and a default location; see [here](https://docs.python.org/3/tutorial/modules.html#the-module-search-path) for details), in which cae it can be simply imported using the standard `Python` syntax (e.g. `import adherer` or `import adherer as ad`), or
+  - *imported from its location* by either:
+    - adding its directory to the `PYTHONPATH` environment variable [the recommended solution], or
+    - using various tricks described, for example, [here](https://stackoverflow.com/a/67692).
+
+On the example `macos` machine, this can be achiveded by adding:
+``` bash
+# Add AdhereR to PYTHONPATH
+export PYTHONPATH=$PYTHONPATH:/Library/Frameworks/[...]/AdhereR/wrappers/python3
+```
+to the `.bash_profile` file in the user's home folder (if this file does not exist, then it can be created using a text editor such as `nano`; please note that the `[...]` are for shortening the path and should be replaced by the actual path given in full above).
+
+*NOTE:* we will consistently use `AdhereR` to refer to the `R` package, and `adherer` to refer to the `Python 3` module.
+
+
+### Importing the `adherer` module and initializations
+
+Thus, the reference implementation is technically a `module` called `adherer` that can be imported in your code (we assume here the recommended solution, but see above for other ways of doing it):
+
+``` python
+# Import adherer as ad:
+import adherer as ad
+```
+
+When the `adherer` module is imported for the first time, it runs the following *initialization code*:
+
+  1. it tries to **autodetect the location where `R` is installed on the system**. More precisely, it looks for `Rscript` (or `Rscript.exe` on Windows) using several strategies, in order: `which`, followed by a set of standard locations on `macOS` (`/usr/bin/Rscript`, `/usr/local/bin/Rscript`, `/opt/local/bin/Rscript` and `/Library/Frameworks/R.framework/Versions/Current/Resources/bin/Rscript`) and `Linux` (`/usr/bin/Rscript`, `/usr/local/bin/Rscript`, `/opt/local/bin/Rscript` and `~/bin/Rscript`) or a set of standard Windows Registry Keys on `MS Windows` (`HKEY_CURRENT_USER\SOFTWARE\R-core\R`, `HKEY_CURRENT_USER\SOFTWARE\R-core\R32`, `HKEY_CURRENT_USER\SOFTWARE\R-core\R64`, `HKEY_LOCAL_MACHINE\SOFTWARE\R-core\R`, `HKEY_LOCAL_MACHINE\SOFTWARE\R-core\R32` and `HKEY_LOCAL_MACHINE\SOFTWARE\R-core\R64`) which should contain `Current Version` and `InstallPath` (with the added complexity that 64 bits Windows hists both 32 and 64 bits regsistries). This procedure is inspired by the way [`RStudio` checks for `R`](https://support.rstudio.com/hc/en-us/articles/200486138-Using-Different-Versions-of-R):
+    - if this process **fails**, a warning is thrown instructing the user to manually set the path using the `set_rscript_path()` function exposed by the `adherer` module, and sets the internal variable `_RSCRIPT_PATH` to `None` (which insures that all future calls to `AdhereR` will fail;
+    - if the process **succeeds**, it checks if the `AdhereR` package is installed for the detected `R` and has a correct version:
+        + if this check **fails**, an appropriate warning is thrown and `_RSCRIPT_PATH` is set to `None`;
+        + if it **succeeds**, continue to step (2) below.
+  2. it tries to **create a temporary directory** (with prefix `adherer-`) with read and write access for the current user:
+    - if this **fails**, it throws a warning instructing the user to manually set this to a directory with read & write access using the `set_data_sharing_directory()` function, and sets the internal variable `_DATA_SHARING_DIRECTORY` to `None` (ensuring that calls to `AdhereR` will fail);
+    - if it **succeeds**, the initialization code is considered to have finished successfully; also, on exit this temporary `_DATA_SHARING_DIRECTORY` is automatically deleted.
+
+
+### The class hierarchy
+
+The `adherer` module tries to emulate the same philosophy as the `AhereR` package, where various *types* of *CMAs* ("continuous multiple-interval measures of medication availability/gaps") that implement different ways of computing adherence encapsulate the data on which they were computed, the various relevant parameter values used, as well as the results of the computation.
+
+Here, we implemented this through the following class hierarchy (image generated with [pyreverse](https://www.logilab.org/blogentry/6883), not showing the private attributes):
+
+<img src="classes_adherer.png" alt="class hierarchy" style="width: 100%;"/>
+
+We will discuss now the main classes in turn.
+
+
+#### The `CallAdhereRError` exception class
+
+Errors in the `adherer` code are signalled by throwing `CallAdhereRError` exceptions (the red class shown in the bottom right corner).
+
+
+#### The base class `CMA0`
+
+All classes that implement ways to compute adherence (`CMA`s) are derived from `CMA0`.
+`CMA0` does not in itself compute any sort of adherence, but instead provides the *infrastructure* for *storing* the data, parameter values and results (including errors), and for *interacting* with `AdhereR`:
+
+  1. *storage of data and parameter values*: 
 
 
 

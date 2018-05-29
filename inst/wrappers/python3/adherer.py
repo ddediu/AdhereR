@@ -77,7 +77,7 @@ def _check_r_package_ahderer_is_installed(path_to_rscript):
                   '"if(!require(' + _R_PACKAGE_NAME + '))' + \
                   ' {quit(save=\'no\',status=10)}; ' + \
                   'if( compareVersion(\'' + _R_PACKAGE_MIN_VERSION + '\', '+ \
-                  'as.character(packageVersion(\'' + _R_PACKAGE_NAME + '\'))) < 0 ) ' + \
+                  'as.character(packageVersion(\'' + _R_PACKAGE_NAME + '\'))) > 0 ) ' + \
                   '{quit(save=\'no\',status=11)}; ' + \
                   'quit(save=\'no\',status=0);"'
     return_code = subprocess.call(rscript_cmd, shell=True)
@@ -87,7 +87,7 @@ def _check_r_package_ahderer_is_installed(path_to_rscript):
                       'the version of R given by "' + path_to_rscript + '". ' + \
                       'Please install at least version ' + _R_PACKAGE_MIN_VERSION + \
                       ' or manually give another Rscript location through the ' + \
-                      '"adherer.set_RSCRIPT_PATH()" function!')
+                      '"set_rscript_path()" function!')
         return False
     elif return_code == 11:
         warnings.warn('adhereR: the AdhereR package installed for ' + \
@@ -95,7 +95,7 @@ def _check_r_package_ahderer_is_installed(path_to_rscript):
                       'must be at least version ' + _R_PACKAGE_MIN_VERSION + '. ' + \
                       'Please install at least version ' + _R_PACKAGE_MIN_VERSION + \
                       ' or manually give another Rscript location through the ' + \
-                      '"adherer.set_RSCRIPT_PATH()" function!')
+                      '"set_rscript_path()" function!')
         return False
     else:
         return True
@@ -205,7 +205,7 @@ if _RSCRIPT_PATH is None:
                   'please make sure you do have a functioning "R" installed and '
                   'manually locate "Rscript" (should be in the same location as "R"). '
                   'Make sure you pass the full path (including "Rscript") to the '
-                  '"adherer" package through the "adherer.set_rscript_path()" function!')
+                  '"adherer" package through the "set_rscript_path()" function!')
 # And check if AdhereR is installed there as well:
 if not _check_r_package_ahderer_is_installed(_RSCRIPT_PATH):
     _RSCRIPT_PATH = None # reset the path to None
@@ -235,7 +235,7 @@ except Exception:
     warnings.warn('The automatic creation of the temporary directory for data exchange '
                   'between python and R failed. Please give a directory with read and write '
                   'access by passing the full path to the ' + \
-                  '"adherer.set__data_sharing_directory()" function!')
+                  '"set_data_sharing_directory()" function!')
     _DATA_SHARING_DIRECTORY = None
 
 # Getters and setters for _DATA_SHARING_DIRECTORY:
