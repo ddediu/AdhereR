@@ -175,9 +175,245 @@ Errors in the `adherer` code are signalled by throwing `CallAdhereRError` except
 #### The base class `CMA0`
 
 All classes that implement ways to compute adherence (`CMA`s) are derived from `CMA0`.
-`CMA0` does not in itself compute any sort of adherence, but instead provides the *infrastructure* for *storing* the data, parameter values and results (including errors), and for *interacting* with `AdhereR`:
+`CMA0` does not in itself compute any sort of adherence, but instead provides the *infrastructure* for *storing* the data, parameter values and results (including errors), and for *interacting* with `AdhereR`.
+Please note that in the "higher" `CMA`s, the class constructor `__init()__` implicitely performs the actual computation of the `CMA` and saves the results (for `CMA0` there are no such computations and `__init()__' only saves the parameters internally)! 
 
-  1. *storage of data and parameter values*: 
+  1. *storage of data and parameter values*: `CMA0` allows the user to set various parameters through the constructor `__init()__`, parameters that are stored for later use, printing, saving, and for facilitating easy reconstruction of all types of computations. By main groups, these are (please, see the manual entry for `?CMA0` in the `AdhereR` package and the full protocol in [**Appendix I**](#appendix-1) as well):
+  
+    - `dataset` stores the primary data (as a `Pandas` table with various columns) containing the actual events; must be given;
+    
+    - `id_colname`, `event_date_colname`, `event_duration_colname`, `event_daily_dose_colname` and `medication_class_colname`: these give the *names* of the columns in the `dataset` table containing important information about the events (the first three are required, the last two are optional);
+    
+    - `carryover_within_obs_window`, `carryover_into_obs_window`, `carry_only_for_same_medication`, `consider_dosage_change`, `medication_change_means_new_treatment_episode`, `maximum_permissible_gap`, `maximum_permissible_gap_unit`: optional parameters defining the types of carry-over, changes and treatment episode triggers;
+    
+    - `followup_window_start_type`, `followup_window_start `followup_window_start_unit`, `followup_window_duration_type `followup_window_duration`, `followup_window_duration_unit`, `observation_window_start_type`, `observation_window_start`, `observation_window_start_unit `observation_window_duration_type`, `observation_window_duration`, `observation_window_duration_unit`: optional parameters defining the follow-up and observation windows;
+    
+    - `sliding_window_start_type`, `sliding_window_start`, `sliding_window_start_unit`, `sliding_window_duration_type`, `sliding_window_duration`, `sliding_window_duration_unit`, `sliding_window_step_duration_type`, `sliding_window_step_duration`, `sliding_window_step_unit`, `sliding_window_no_steps`: optional parameters defining the sliding windows;
+    
+    - `cma_to_apply`: optional parameter specifying which "simple" `CMA` is to be used when computing sliding windos and treatment episodes;
+    
+    - `date_format`: optional parameter describing the format of column dates in `dataset` (defaults to month/day/year);
+    
+    - `event_interval_colname`, `gap_days_colname`: optional parameters allowing the user to change the names of the columns where these computed data are stored in the resuling table;
+    
+    - `force_na_cma_for_failed_patients`, `keep_window_start_end_dates`, `remove_events_outside_followup_window`, `keep_event_interval_for_all_events`: optional parameters governing the content of the resuling table;
+    
+    - `parallel_backend`, `parallel_threads`: these optional parameters control the parallelism of the computations (if any); see **PARALLEL PROCESSING** for details;
+    
+    - `suppress_warnings`: should all the internal warning be shown?
+    
+    - `save_event_info`: should this "advanced" info be also made available?
+    
+    - `na_symbol_numeric`, `na_symbol_string`, `logical_symbol_true`, `logical_symbol_false`, `colnames_dot_symbol`, `colnames_start_dot`: these optional parameters allow `AdhereR` to adapt to "non-`R`" conventions concerning the data format for missing values, logicals and column names;
+    
+    - `path_to_rscript`, `path_to_data_directory`: these parameters allow the user to override the `_RSCRIPT_PATH` and `_DATA_SHARING_DIRECTORY` variables;
+    
+    - `print_adherer_messages`: should the important messages be printed to the user as well?
+
+  2. *storage of, and access to, the results*:
+  
+    - `get_dataset()`: returns the internally saved `Pandas` table `dataset`;
+    
+    - `get_cma()`: returns the computed `CMA` (if any);
+    
+    - `get_event_info()`: returns the computed event information (if any);
+    
+    - `get_treatment_episodes()`: returns the computed treatment episodes information (if any);
+    
+    2.5. `get_computation_results()`: return the results of the last computation (if any); more precisely, a `dictionary` containing the numeric `code` returned by `AdhereR` and the string `messages` written by `AdhereR` during the computation;
+
+  3. *computing event interval and treatment episode info*: this can be done by explicitelly calling the `compute_event_int_gaps()` and `compute_treatment_episodes()` functions;
+  
+  4. *plotting*: 
+  
+    - *static plotting*: this is realized by the `plot()` function that takes several plotting-specific parameters:
+    
+        + `patients_to_plot`: should a subset of the patients present in the `dataset` be plotted (by default, all will be)?
+      
+        + `save_to`, `save_as`, `width`, `height`, `quality`, `dpi`: where should the plot be saved, in what format, dimentions and quality?
+      
+        + `duration`, `align_all_patients`, `align_first_event_at_zero`, `show_period`, `period_in_days`: duration to plots and alignment of patients;
+        
+        + `show_legend`, `legend_x`, `legend_y`, `legend_bkg_opacity`: legend parameters;
+        
+        + `cex`, `cex_axis`, `cex_lab`: the relative size of various text elements;
+        
+        + `show_cma`, `print_cma`, `plot_cma`, `plot_cma_as_histogram`, `cma_plot_ratio`, `cma_plot_col`, `cma_plot_border`, `cma_plot_bkg`, `cma_plot_text`: should the cma be shown and how?
+        
+        + `unspecified_category_label`: implicit label of unlabelled categories?
+        
+        + `lty_event`, `lwd_event`, `pch_start_event`, `pch_end_event`, `show_event_intervals`, `col_na`, `col_continuation`, `lty_continuation`, `lwd_continuation`: visual aspects of events and continuations;
+        
+        + `highlight_followup_window`, `followup_window_col`, `highlight_observation_window`, `observation_window_col`, `observation_window_density`, `observation_window_angle`, `show_real_obs_window_start`, `real_obs_window_density`, `real_obs_window_angle`:  visual appearance of the follow-up, obervation and "real observation" windows (the latter for `CMA`s that djust it);
+        
+        + `bw_plot`: produce a grayscel plot?
+        
+     - *interactive plotting*: the `plot_interactive()` function launches a [Shiny](https://shiny.rstudio.com/)-powered interactive plot using the system's WEB browser; the only parameter `patient_to_plot` may specify which patient to show initially, as all the relevant parameters can be interactively altered ar run-time;
+     
+  5. *printing*: the `__repr__()` function implements a very simple printing mechanism showing the `CMA` type and a summary of the `dataset`;
+      
+  6. *calling `AdhereR`*: the private function `_call_adherer()` is the real workhorse that manages all the interaction with the `R` `AdhereR` package as described above. This function can take many parameters covering *all* that `AdhereR` can do, but it is not intended to be directly called by the end-user but instead to be internally called by various exposed functions such as `plot()`, `compute_event_int_gaps()` and `__init()__`. Roughly, after some checks, it creates the files needed for communication, calls `AdhereR`, analyses any errors, warnings and messages that it might have generated, and packs the results in a manageable format.
+
+To preserve the generality of the interaction with `AdhereR`, all the `CMA` classes define a private static member `_adherer_function` which is the name of the corresponding `S3` class as implemented in `AdhereR`.
+
+
+#### Class `CMA1` and its daughter classes `CMA2`, `CMA3` and `CMA4`
+
+`CMA1` is derived from `CMA0` by redefining the `__init__()` constructor to (a) take only a subset of arguments relevant for the `CMA`s 1--4 (see the `AdhereR` help for them), and (b) to internally call `_call_adherer()` with these parameters.
+It checks if the result of `_call_adherer()` signals an error, in which case ir throws a `CallAdhereRError` exception, otherwise packing the code, messages, cma and (possibly) event information in the corresponding member variables for later access.
+
+Due to the generic mechanism implemented by `_adherer_function`, `CMA2`, `CMA3` and `CMA4` are derived directly from `CMA1` but only redefine `_adherer_function` appropriately.
+
+
+#### Class `CMA5` and its daughter classes `CMA6`, `CMA6`, `CMA8` and `CMA9`
+
+The same story applies here, with `CMA5` being derived from `CMA0` and redefining `__init__()`, with `CMA6`--`CMA9` only using the `_adherer_function` mechanism.
+Compared with `CMA1`, `CMA5` defines new required arguments related to medication type and dosage.
+
+
+#### Classes `CMAPerEpisode` and `CMASlidingWindow`
+
+Just like `CMA1` and `CMA5`, these two require specific parameters and are thus derived directly from `CMA0` (but, in contrast, they don't have their own derived classes).
+
+
+### Examples of use
+
+Below we show some examples of using the `Python 3` reference wrapper.
+We are using [`IPython`](https://ipython.org/) from the [`Spyder 3`](https://github.com/spyder-ide/spyder) environment; the `In [n]: ` represents the *input* prompt, the `   ...: ` the *continuation* of the input on the following line(s), and `Out[n]: ` the produced output:
+
+``` python
+Python 3.6.5 (v3.6.5:f59c0932b4, Mar 28 2018, 05:52:31)
+Type "copyright", "credits" or "license" for more information.
+
+IPython 6.3.0 -- An enhanced Interactive Python.
+
+In [1]: # Import adherer as ad:
+   ...: import adherer as ad
+
+In [2]: # Show the _DATA_SHARING_DIRECTORY (should be set automatically to a temporary location):
+   ...: ad._DATA_SHARING_DIRECTORY.name
+Out[2]: '/var/folders/kx/bphryt7j5tz1n_fcjk5809940000gn/T/adherer-05hdq6el'
+
+In [3]: # Show the _RSCRIPT_PATH (should be dectedt automatically):
+   ...: ad._RSCRIPT_PATH
+Out[3]: '/usr/local/bin/Rscript'
+```
+
+Everything seems fine!
+Let's export the sample dataset `med.events` included in `AdhereR` as a TAB-separated CSV file in a location for use here (please note that this must be done from an `R` console, such as from `RStudio`, and not from `Python`!):
+
+``` R
+R version 3.4.3 (2017-11-30) -- "Kite-Eating Tree"
+Copyright (C) 2017 The R Foundation for Statistical Computing
+Platform: x86_64-apple-darwin15.6.0 (64-bit)
+
+R is free software and comes with ABSOLUTELY NO WARRANTY.
+You are welcome to redistribute it under certain conditions.
+Type 'license()' or 'licence()' for distribution details.
+
+  Natural language support but running in an English locale
+
+R is a collaborative project with many contributors.
+Type 'contributors()' for more information and
+'citation()' on how to cite R or R packages in publications.
+
+Type 'demo()' for some demos, 'help()' for on-line help, or
+'help.start()' for an HTML browser interface to help.
+Type 'q()' to quit R.
+
+> library(AdhereR) # load the AdhereR package
+> head(med.events) # see how the included med.events dataset looks like
+    PATIENT_ID       DATE PERDAY CATEGORY DURATION
+286          1 04/26/2033      4     medA       50
+287          1 07/04/2033      4     medB       30
+288          1 08/03/2033      4     medB       30
+289          1 08/17/2033      4     medB       30
+291          1 10/13/2033      4     medB       30
+290          1 10/16/2033      4     medB       30
+> write.table(med.events, file="~/Temp/med-events.csv", quote=FALSE, sep="\t", row.names=FALSE, col.names=TRUE) # save med.events as TAB-separated CSV file in a location (here, in the Temp folder)
+> 
+```
+
+Now, back to `Python`:
+
+``` python
+In [4]: # Import Pandas as pd:
+   ...: import pandas as pd
+
+In [5]: # Load the test dataset
+   ...: df = pd.read_csv('~/Temp/med-events.csv', sep='\t', header=0)
+
+In [6]: # Let's look at first 6 rows (it should match the R output above except for the row names):
+   ...: df.head(6)
+Out[6]: 
+   PATIENT_ID        DATE  PERDAY CATEGORY  DURATION
+0           1  04/26/2033       4     medA        50
+1           1  07/04/2033       4     medB        30
+2           1  08/03/2033       4     medB        30
+3           1  08/17/2033       4     medB        30
+4           1  10/13/2033       4     medB        30
+5           1  10/16/2033       4     medB        30
+```
+
+All good so far, the data was imported successfully as a `Pandas` table.
+Now let's compute `CMA8` on these data in `Python`:
+
+``` python
+In [7]: # Compute CMA8 as a test:
+   ...: cma8 = ad.CMA8(df,
+   ...:                id_colname='PATIENT_ID',
+   ...:                event_date_colname='DATE',
+   ...:                event_duration_colname='DURATION',
+   ...:                event_daily_dose_colname='PERDAY',
+   ...:                medication_class_colname='CATEGORY')
+   ...:  
+Adherer returned code 0 and said:
+AdhereR 0.1.1 on R 3.4.3 started at 2018-06-04 22:27:10:
+OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
+```
+
+We can see that things went pretty well, as no exceptions were being thrown and the message starts with a reassuring `Adherer returned code 0`, followed by precisely what `AdhereR` said: 
+
+  - `AdhereR 0.1.1 on R 3.4.3 started at 2018-06-04 22:27:10:`: first, self-identification (its own version and `R`'s version), followed by the date and time the processing was initated;
+  - `OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!`, which means that basically all seems allright but that there might still be some messages or warning displayed above that could be informative or point to subtler issues.
+
+Let's see how these results look like:
+
+``` python
+In [8]: # Summary of cma8:
+   ...: cma8
+Out[8]: CMA object of type CMA8 (on 1080 rows).
+
+In [9]: # The return value and messages:
+   ...: cma8.get_computation_results()
+Out[9]: 
+{'code': 0,
+ 'messages': ['AdhereR 0.1.0 on R 3.4.3 started at 2018-06-04 22:27:10:\n',
+  'OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!\n']}
+
+In [10]: # The CMA (the first 6 rows out of all 100):
+    ...: cma8.get_cma().head(6)
+Out[10]: 
+   PATIENT_ID       CMA
+0           1  0.947945
+1           2  0.616438
+2           3  0.994521
+3           4  0.379452
+4           5  0.369863
+5           6  0.406849
+
+# Plot it (statically):
+x = cma8.plot(patients_to_plot=['1', '2', '3'],
+              save_as="tiff",
+              width=7, height=7,
+              quality=90, dpi=92, align_all_patients=True,
+              period_in_days=30,
+              show_legend=True, legend_x='left', legend_y='top',
+              cex=0.5, col_continuation='blue', bw_plot=True)
+```
+
+
+
 
 
 
