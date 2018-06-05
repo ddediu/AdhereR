@@ -9,6 +9,77 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+## Table of Contents
+
+  - [Introduction](#introduction)
+  
+  - [General ideas](#general-ideas)
+  
+  - [Fundamentals of calling `AdhereR` from `Python 3`](#fundamentals-of-calling-adherer-from-python-3)
+  
+  - [The `Python 3` wrapper: the `adherer` module](#the-python-3-wrapper-the-adherer-module)
+  
+      - [Importing the `adherer` module and initializations](#importing-the-adherer-module-and-initializations)
+    
+      - [The class hierarchy](#the-class-hierarchy)
+    
+          - [The `CallAdhereRError` exception class](#the-calladherererror-exception-class)
+          
+          - [The base class `CMA0`](#the-base-class-cma0)
+          
+          - [Class `CMA1` and its daughter classes `CMA2`, `CMA3` and `CMA4`](#class-cma1-and-its-daughter-classes-cma2-cma3-and-cma4)
+          
+          - [Class `CMA5` and its daughter classes `CMA6`, `CMA7`, `CMA8` and `CMA9`](#class-cma5-and-its-daughter-classes-cma6-cma7-cma8-and-cma9)
+          
+          - [Classes `CMAPerEpisode` and `CMASlidingWindow`](#classes-cmaperepisode-and-cmaslidingwindow)
+          
+      - [Examples of use](#examples-of-use)
+      
+          - [Basic usage](#basic-usage)
+          
+             - [Importing `adherer` and checking autodetection](#importing-adherer-and-checking-autodetection)
+             
+             - [Export the test dataset from `R` and import it in `Python`](#export-the-test-dataset-from-r-and-import-it-in-python)
+             
+             - [Compute and plot test CMA](#compute-and-plot-test-cma)
+             
+             - [Interactive plotting](#interactive-plotting)
+          
+          - [Parallel processing (locally and on different machines)](#parallel-processing-locally-and-on-different-machines)
+          
+  - [Appendix I: the communication protocol](#appendix-i-the-communication-protocol)
+  
+      - [Context](#context)
+      
+      - [Protocol](#protocol)
+      
+      - [PARAMETERS](#parameters1)
+      
+      - [COMMENTS](#comments)
+      
+      - [SPECIAL PARAMETERS](#special-parameters2)
+      
+      - [FUNCTIONS](#functions)
+      
+      - [PLOTTING](#plotting)
+      
+      - [`CMA1`, `CMA2`, `CMA3`, `CMA4`](#cma1-cma2-cma3-cma4)
+      
+      - [`CMA5`, `CMA6`, `CMA7`, `CMA8`, `CMA9`](#cma5-cma6-cma7-cma8-cma9)
+      
+      - [`CMA_per_episode`](#cma_per_episode)
+      
+      - [`CMA_sliding_window`](#cma_sliding_window)
+      
+      - [`compute_event_int_gaps`](#compute_event_int_gaps)
+      
+      - [`compute_treatment_episodes`](#compute_treatment_episodes)
+      
+      - [`plot_interactive_cma`](#plot_interactive_cma)
+      
+  - [Notes](#notes)
+
+
 ## Introduction
 
 While `AdhereR` is written in `R` and makes extensive use of various `R` packages and techniques (such as `data.table` and parallel processing), it is possible to use it from other programming languages and applications.
@@ -265,7 +336,7 @@ It checks if the result of `_call_adherer()` signals an error, in which case ir 
 Due to the generic mechanism implemented by `_adherer_function`, `CMA2`, `CMA3` and `CMA4` are derived directly from `CMA1` but only redefine `_adherer_function` appropriately.
 
 
-#### Class `CMA5` and its daughter classes `CMA6`, `CMA6`, `CMA8` and `CMA9`
+#### Class `CMA5` and its daughter classes `CMA6`, `CMA7`, `CMA8` and `CMA9`
 
 The same story applies here, with `CMA5` being derived from `CMA0` and redefining `__init__()`, with `CMA6`--`CMA9` only using the `_adherer_function` mechanism.
 Compared with `CMA1`, `CMA5` defines new required arguments related to medication type and dosage.
@@ -283,6 +354,8 @@ We are using [`IPython`](https://ipython.org/) from the [`Spyder 3`](https://git
 
 
 #### Basic usage
+
+##### Importing `adherer` and checking autodetection
 
 ``` python
 Python 3.6.5 (v3.6.5:f59c0932b4, Mar 28 2018, 05:52:31)
@@ -303,6 +376,9 @@ Out[3]: '/usr/local/bin/Rscript'
 ```
 
 Everything seems fine!
+
+##### Export the test dataset from `R` and import it in `Python`
+
 Let's export the sample dataset `med.events` included in `AdhereR` as a TAB-separated CSV file in a location for use here (please note that this must be done from an `R` console, such as from `RStudio`, and not from `Python`!):
 
 ``` R
@@ -359,6 +435,9 @@ Out[6]:
 ```
 
 All good so far, the data was imported successfully as a `Pandas` table.
+
+##### Compute and plot test CMA
+
 Now let's compute `CMA8` on these data in `Python`:
 
 ``` python
@@ -412,14 +491,14 @@ In [11]: # Plot it (statically):
     ...:           cex=0.5)
     ...:           
 Adherer returned code 0 and said:
-AdhereR 0.1.0 on R 3.4.3 started at 2018-06-05 13:22:36:
+AdhereR 0.1.1 on R 3.4.3 started at 2018-06-05 13:22:36:
 OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
 
 Out[11]: 
 ```
 
 The output produced in this case (`Out[11]`) consists of the actual image plotted in the `IPython` console (thanks to the `PIL`/`Pillow` package) and reproduced below:
-<img src="plotting-python.jpg" alt="class hierarchy" style="width: 100%;"/>
+<img src="plotting-python.jpg" alt="static plotting in Python" style="width: 100%;"/>
 
 Now, we turn again to `R`:
 
@@ -453,9 +532,31 @@ Now, we turn again to `R`:
 ```
 
 Again, the output is an image (here, shown in the "Plots" panel in `RStudio`):
-<img src="plotting-r.jpg" alt="class hierarchy" style="width: 100%;"/>
+<img src="plotting-r.jpg" alt="static plotting in R" style="width: 100%;"/>
 
 It can be seen that, except for the slightly different dimensions (and x/y ratio and quality) due to the actual plotting and exporting, the images show identical patterns.
+
+##### Interactive plotting
+
+We will initate now an interactive plotting session from `Python`:
+
+``` python
+In [12]: cma8.plot_interactive()
+```
+
+The output is represented by an interactive session in the default browser; below is a screenshot of this session in `Firefox`:
+<img src="plotting-interactive.jpg" alt="interactive plotting screenshot" style="width: 100%;"/>
+The interactive session ends by pressing the "Exit" button in the browser (and optinally also closing the browser tab/window), at which point the usual text output is provided to `Python` and a `True` value signalling success is returned:
+
+``` python
+Adherer returned code 0 and said:
+AdhereR 0.1.1 on R 3.4.3 started at 2018-06-05 18:01:28:
+OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
+
+Out[12]: True
+```
+
+Please note that it does not matter how the interactive session is started, as it only needs access to the base `CMA0` object and, more precisely, the raw dataset; all relevant parameters, including the CMA type can be changed interactively (this is why the CMA shown in the screenshot is `CMA1` even if the function `cma8.plot_interactive()` was initiated from a `CMA8` object).
 
 
 #### Parallel processing (locally and on different machines)
@@ -463,7 +564,7 @@ It can be seen that, except for the slightly different dimensions (and x/y ratio
 
 
 
-## Appendix I: the communication protocol <a id="appendix-1"></a>
+## Appendix I: the communication protocol
 
 
 ### Context
