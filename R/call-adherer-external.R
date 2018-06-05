@@ -524,7 +524,13 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
       }
 
       # attemt to plot:
-      do.call("plot", c(list(results), plotting.params));
+      msg <- capture.output(do.call("plot", c(list(results), plotting.params)), file=NULL, type="output");
+      if( length(msg) > 0 )
+      {
+        dev.off(); # close the plotting device anyway
+        cat(msg); cat(paste0(msg,"\n"), file=msg.file, append=TRUE);
+        quit(save="no", status=0, runLast=FALSE); # Some plotting error seems to have occured
+      }
 
       # close the plotting device:
       dev.off();
