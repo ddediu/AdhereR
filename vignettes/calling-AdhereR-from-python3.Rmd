@@ -279,7 +279,10 @@ Just like `CMA1` and `CMA5`, these two require specific parameters and are thus 
 ### Examples of use
 
 Below we show some examples of using the `Python 3` reference wrapper.
-We are using [`IPython`](https://ipython.org/) from the [`Spyder 3`](https://github.com/spyder-ide/spyder) environment; the `In [n]: ` represents the *input* prompt, the `   ...: ` the *continuation* of the input on the following line(s), and `Out[n]: ` the produced output:
+We are using [`IPython`](https://ipython.org/) from the [`Spyder 3`](https://github.com/spyder-ide/spyder) environment; the `In [n]: ` represents the *input* prompt, the `   ...: ` the *continuation* of the input on the following line(s), and `Out[n]: ` the produced output.
+
+
+#### Basic usage
 
 ``` python
 Python 3.6.5 (v3.6.5:f59c0932b4, Mar 28 2018, 05:52:31)
@@ -388,7 +391,7 @@ In [9]: # The return value and messages:
    ...: cma8.get_computation_results()
 Out[9]: 
 {'code': 0,
- 'messages': ['AdhereR 0.1.0 on R 3.4.3 started at 2018-06-04 22:27:10:\n',
+ 'messages': ['AdhereR 0.1.1 on R 3.4.3 started at 2018-06-04 22:27:10:\n',
   'OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!\n']}
 
 In [10]: # The CMA (the first 6 rows out of all 100):
@@ -402,17 +405,457 @@ Out[10]:
 4           5  0.369863
 5           6  0.406849
 
-# Plot it (statically):
-x = cma8.plot(patients_to_plot=['1', '2', '3'],
-              save_as="tiff",
-              width=7, height=7,
-              quality=90, dpi=92, align_all_patients=True,
-              period_in_days=30,
-              show_legend=True, legend_x='left', legend_y='top',
-              cex=0.5, col_continuation='blue', bw_plot=True)
+In [11]: # Plot it (statically):
+    ...: cma8.plot(patients_to_plot=['1', '2', '3'],
+    ...:           align_all_patients=True,
+    ...:           period_in_days=30,
+    ...:           cex=0.5)
+    ...:           
+Adherer returned code 0 and said:
+AdhereR 0.1.0 on R 3.4.3 started at 2018-06-05 13:22:36:
+OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
+
+Out[11]: 
 ```
 
+The output produced in this case (`Out[11]`) consists of the actual image plotted in the `IPython` console (thanks to the `PIL`/`Pillow` package) and reproduced below:
+<img src="plotting-python.jpg" alt="class hierarchy" style="width: 100%;"/>
 
+Now, we turn again to `R`:
+
+``` R
+> # Compute the same CMA8 in R:
+> cma8 <- CMA8(data=med.events,
++              ID.colname="PATIENT_ID",
++              event.date.colname="DATE",
++              event.duration.colname="DURATION",
++              medication.class.colname="CATEGORY",
++              event.daily.dose.colname="PERDAY"
++ )
+>
+> # The computed CMA:
+> head(getCMA(cma8))
+  PATIENT_ID       CMA
+1          1 0.9479452
+2          2 0.6164384
+3          3 0.9945205
+4          4 0.3794521
+5          5 0.3698630
+6          6 0.4068493
+>
+> # Plot the cma:
+> plot(cma8,
++      patients.to.plot=c("1", "2", "3"),
++      align.all.patients=TRUE,
++      period.in.days=30,
++      cex=0.5)
+>
+```
+
+Again, the output is an image (here, shown in the "Plots" panel in `RStudio`):
+<img src="plotting-r.jpg" alt="class hierarchy" style="width: 100%;"/>
+
+It can be seen that, except for the slightly different dimensions (and x/y ratio and quality) due to the actual plotting and exporting, the images show identical patterns.
+
+
+#### Parallel processing (locally and on different machines)
+
+
+
+
+## Appendix I: the communication protocol <a id="appendix-1"></a>
+
+
+### Context
+
+All arguments are written to the text file `parameters.log`; the input data are in the TAB-separated no quotes file `dataset.csv`.
+The call returns any errors, warning and messages in the text file `Adherer-results.txt` file, and the actual results as TAB-separated no quotes files (not all necessarily produced, depending on the specific methods called) `CMA.csv`, `EVENTINFO.csv` and `TREATMENTEPISODES.csv`, and various image file(s).
+The argument values in the `parameters.log` are contained between single (`' '`) or double (`" "`) quotes.
+
+
+### Protocol
+
+#### PARAMETERS[^1]
+Some are *required* and must be explicitly defined, but for most we can use implicit values (i.e., if the user doesn't set them explicitly, we may simply not specify them to the `parameters.log` file and the default values in `AdhereR` will be used).
+
+
+#### COMMENTS
+Everything on a line following `///` or `#` is considered a comment and ignored (except when included within quotes `" "` or `' '`).
+
+
+#### SPECIAL PARAMETERS[^2]
+
+| PARAMETER  | MEANING  | DEFAULT VALUE IF MISSING | PYHTON 3 | STATA |
+|------------|----------|--------------------------|----------|-------|
+| `NA.SYMBOL.NUMERIC` | the numeric missing data symbol | `NA` | `NA` | `.` |
+| `NA.SYMBOL.STRING` | the string missing data symbol | `NA` | `NA` | `""` |
+| `LOGICAL.SYMBOL.TRUE` | the logical `TRUE` symbol | `TRUE` | `TRUE` | `1` |
+| `LOGICAL.SYMBOL.FALSE` | the logical `FALSE` symbol | `FALSE` | `FALSE` | `0` |
+| `COLNAMES.DOT.SYMBOL` | can we use `.` in column names, and if not, what to replace it with? | `.` | `.` | `_` |
+| `COLNAMES.START.DOT` | can begin column names with `.` (or equivalent symbol), and if not, what to replace it with? | `.` | `.` | `internal_` |
+
+
+#### FUNCTIONS
+Possible values are:
+
+  - `CMA0`,
+  - `CMA1` ...`CMA9`,
+  - `CMA_per_episode`,
+  - `CMA_sliding_window`,
+  - `compute.event.int.gaps`,
+  - `compute.treatment.episodes` and 
+  - `plot_interactive_cma`.
+
+
+#### PLOTTING 
+For all the `CMA` functions (i.e., `CMA0`, `CMA1` ...`CMA9`, `CMA_per_episode`, `CMA_sliding_window`) one can ask for a plot of (a subset) of the patients, in which case the parameter `plot.show` must be `TRUE`, and there are several plotting-specific parameters that can be set:
+
+| PARAMETER  | REQUIRED  | DEFAULT_VALUE | POSSIBLE_VALUES |
+|------------|-----------|---------------|-----------------|
+| `function`   | YES       | `"CMA0"`        | can also be `"CMA0"` for plotting! |
+| `plot.show`  | NO        | `"FALSE"`       | [do the plotting? If `TRUE`, save the resulting dataset with a `"-plotted"` suffix to avoid overwriting previous results] |
+| `plot.save.to` | NO | `""` | [the folder where to save the plots (by default, same folder as the results)] | 
+| `plot.save.as` | NO | `"jpg"` | `"jpg"`, `"png"`, `"tiff"`, `"eps"`, `"pdf"` [the type of image to save] | 
+| `plot.width` | NO | `"7"` | [plot width in inches] | 
+| `plot.height` | NO | `"7"` | [plot height in inches] | 
+| `plot.quality` | NO | `"90"` | [plot quality (applies only to some types of plots] | 
+| `plot.dpi` | NO | `"150"` | [plot DPI (applies only to some types of plots] | 
+| `plot.patients.to.plot` | NO | `""` | [the patient IDs to plot (if missing, all patients) given as `"id1;id2; .. ;idn"`] | 
+| `plot.duration`	 | NO | `""` | [duration to plot in days (if missing, determined from the data)] | 
+| `plot.align.all.patients` | NO | `"FALSE"` | [should all patients be aligned? and, if so, place the first event as the horizontal 0?] | 
+| `plot.align.first.event.at.zero` | NO | `"TRUE"` |  | 
+| `plot.show.period` | NO	 | `"days"` | `"dates"`, `"days"`  [draw vertical bars at regular interval as dates or days?] | 
+| `plot.period.in.days` | NO | `"90"` | [the interval (in days) at which to draw vertical lines] | 
+| `plot.show.legend` | NO | `"TRUE"` | [legend params and position] | 
+| `plot.legend.x` | NO | `"bottom right"` |  | 
+| `plot.legend.y` | NO | `""` |  | 
+| `plot.legend.bkg.opacity` | NO | `"0.5"` | [background opacity] | 
+| `plot.cex` | NO | `"1.0"`	 | [various plotting font sizes] | 
+| `plot.cex.axis` | NO | `"0.75"` |  | 
+| `plot.cex.lab` | NO	 | `"1.0"` |  | 
+| `plot.show.cma`	 | NO | `"TRUE"` | [show the CMA type] | 
+| `plot.unspecified.category.label` | NO | `"drug"` | [the label of the unspecified category of medication] | 
+| `plot.lty.event` | NO | `"solid"`	 | [style parameters controlling the plotting of events] | 
+| `plot.lwd.event` | NO | `"2"` |  | 
+| `plot.pch.start.event` | NO | `"15"` |  | 
+| `plot.pch.end.event` | NO | `"16"` |  | 
+| `plot.show.event.intervals`	 | NO | `"TRUE"` | [show the actual prescription intervals] | 
+| `plot.col.na` | NO | `"lightgray"` | [colour for missing data] | 
+| `plot.col.continuation` | NO | `"black"` | [colour, style and width of the continuation lines connecting consecutive events] | 
+| `plot.lty.continuation` | NO | `"dotted"` |  | 
+| `plot.lwd.continuation` | NO | `"1"` |  | 
+| `plot.print.CMA` | NO | `"TRUE"` | [print CMA next to the participant's ID?] | 
+| `plot.plot.CMA`	 | NO | `"TRUE"` | [plot the CMA next to the participant ID?] | 
+| `plot.plot.CMA.as.histogram` | NO | `"TRUE"` | [lot CMA as a histogram or as a density plot?] | 
+| `plot.CMA.plot.ratio` | NO | `"0.10"` | [the proportion of the total horizontal plot to be taken by the CMA plot] | 
+| `plot.CMA.plot.col`	 | NO | `"lightgreen"` | [attributes of the CMA plot] | 
+| `plot.CMA.plot.border` | NO	 | `"darkgreen"` |  | 
+| `plot.CMA.plot.bkg`	 | NO | `"aquamarine"` |  | 
+| `plot.CMA.plot.text` | NO | `""` | [by default, the same as `plot.CMA.plot.border`]  | 
+| `plot.highlight.followup.window` | NO | `"TRUE"` |  | 
+| `plot.followup.window.col` | NO	 | `"green"` |  | 
+| `plot.highlight.observation.window` | NO | `"TRUE"` |  | 
+| `plot.observation.window.col` | NO | `"yellow"` |  | 
+| `plot.observation.window.density` | NO | `"35"` |  | 
+| `plot.observation.window.angle`	 | NO | `"-30"` |  | 
+| `plot.show.real.obs.window.start` | NO | `"TRUE"` | [for some CMAs, the real observation window starts at a different date] | 
+| `plot.real.obs.window.density` | NO | `"35"` |  | 
+| `plot.real.obs.window.angle` | NO | `"30"` |  |  
+| `plot.bw.plot` | NO | `"FALSE"` | [if `TRUE`, override all user-given colours and replace them with a scheme suitable for grayscale plotting] | 
+
+
+#### `CMA1`, `CMA2`, `CMA3`, `CMA4`
+The parameters for these functions are (*N.B.*: the plotting parameters can also appear if  plotting is required):
+
+| PARAMETER  | REQUIRED  | DEFAULT_VALUE | POSSIBLE_VALUES |
+|------------|-----------|---------------|-----------------|
+| `ID.colname` | YES  |  | 
+| `event.date.colname` | YES |  | 
+| `event.duration.colname` | YES |  | 
+| `followup.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.start` | NO | `0` |  | 
+| `followup.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `followup.window.duration.type` | NO | `"numeric"`  | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.duration` | NO | `"365 * 2"` |  | 
+| `followup.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.start	` | NO | `0` |  | 
+| `observation.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.duration.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.duration` | NO | `"365 * 2"` |  | 
+| `observation.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `date.format` | NO | `"%m/%d/%Y"` |  | 
+| `event.interval.colname` | NO	 | `"event.interval"` |  | 
+| `gap.days.colname` | NO | `"gap.days"` |  | 
+| `force.NA.CMA.for.failed.patients` | NO | `"TRUE"` |  | 
+| `parallel.backend	` | NO | `"none"` | `"none"`, `"multicore"`, `"snow"`, `"snow(SOCK)"`, `"snow(MPI)"`, `"snow(NWS)"` | 
+| `parallel.threads` | NO | `"auto"` | | 
+| `suppress.warnings` | NO | `"FALSE"` |  | 
+| `save.event.info` | NO | `"FALSE"` |  | 
+
+| RETURN VALUE(S) | FILE | OBSERVATIONS |
+|-----------------|------|--------------|
+| Errors, warnings and other messages | `Adherer-results.txt` | Possibly more than one line; if the processing was successful, the last line must begin with `OK:` |
+| The computed CMAs, as a TAB-separated no quotes CSV file | `CMA.csv` | Always generated in case of successful processing |
+| The gap days and event info data, as a TAB-separated no quotes CSV file | `EVENTINFO.csv` | Only by explicit request (i.e., `save.event.info = "TRUE"`) |
+
+
+
+#### `CMA5`, `CMA6`, `CMA7`, `CMA8`, `CMA9`
+The parameters for these functions are (*N.B.*: the plotting parameters can also appear if  plotting is required):
+
+| PARAMETER  | REQUIRED  | DEFAULT_VALUE | POSSIBLE_VALUES |
+|------------|-----------|---------------|-----------------|
+| `ID.colname` | YES  |  | 
+| `event.date.colname` | YES |  | 
+| `event.duration.colname` | YES |  | 
+| `event.daily.dose.colname	` | YES |  | 
+| `medication.class.colname	` | YES |  | 
+| `carry.only.for.same.medication` | NO | `"FALSE"` |  | 
+| `consider.dosage.change` | NO	 | `"FALSE"` |  | 
+| `followup.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.start` | NO | `0` |  | 
+| `followup.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `followup.window.duration.type` | NO | `"numeric"`  | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.duration` | NO | `"365 * 2"` |  | 
+| `followup.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.start	` | NO | `0` |  | 
+| `observation.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.duration.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.duration` | NO | `"365 * 2"` |  | 
+| `observation.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `date.format` | NO | `"%m/%d/%Y"` |  | 
+| `event.interval.colname` | NO	 | `"event.interval"` |  | 
+| `gap.days.colname` | NO | `"gap.days"` |  | 
+| `force.NA.CMA.for.failed.patients` | NO | `"TRUE"` |  | 
+| `parallel.backend	` | NO | `"none"` | `"none"`, `"multicore"`, `"snow"`, `"snow(SOCK)"`, `"snow(MPI)"`, `"snow(NWS)"` | 
+| `parallel.threads` | NO | `"auto"` | | 
+| `suppress.warnings` | NO | `"FALSE"` |  | 
+| `save.event.info` | NO | `"FALSE"` |  | 
+
+| RETURN VALUE(S) | FILE | OBSERVATIONS |
+|-----------------|------|--------------|
+| Errors, warnings and other messages | `Adherer-results.txt` | Possibly more than one line; if the processing was successful, the last line must begin with `OK:` |
+| The computed CMAs, as a TAB-separated no quotes CSV file | `CMA.csv` | Always generated in case of successful processing |
+| The gap days and event info data, as a TAB-separated no quotes CSV file | `EVENTINFO.csv` | Only by explicit request (i.e., `save.event.info = "TRUE"`) |
+
+
+
+#### `CMA_per_episode`
+The parameters for this function are (*N.B.*: the plotting parameters can also appear if  plotting is required):
+
+| PARAMETER  | REQUIRED  | DEFAULT_VALUE | POSSIBLE_VALUES |
+|------------|-----------|---------------|-----------------|
+| `CMA.to.apply	` | YES | | `CMA1`, `CMA2`, `CMA3`, `CMA4`, `CMA5`, `CMA6`, `CMA7`, `CMA8`, `CMA9` |
+| `ID.colname` | YES  |  | 
+| `event.date.colname` | YES |  | 
+| `event.duration.colname` | YES |  | 
+| `event.daily.dose.colname	` | YES |  | 
+| `medication.class.colname	` | YES |  | 
+| `carry.only.for.same.medication` | NO | `"FALSE"` |  | 
+| `consider.dosage.change` | NO	 | `"FALSE"` |  | 
+| `medication.change.means.new.treatment.episode` | NO | `"TRUE"` |  | 
+| `maximum.permissible.gap` | NO | `"90"` |  | 
+| `maximum.permissible.gap.unit	` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"`, `"percent"` | 
+| `followup.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.start` | NO | `0` |  | 
+| `followup.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `followup.window.duration.type` | NO | `"numeric"`  | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.duration` | NO | `"365 * 2"` |  | 
+| `followup.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.start	` | NO | `0` |  | 
+| `observation.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.duration.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.duration` | NO | `"365 * 2"` |  | 
+| `observation.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `date.format` | NO | `"%m/%d/%Y"` |  | 
+| `event.interval.colname` | NO	 | `"event.interval"` |  | 
+| `gap.days.colname` | NO | `"gap.days"` |  | 
+| `force.NA.CMA.for.failed.patients` | NO | `"TRUE"` |  | 
+| `parallel.backend	` | NO | `"none"` | `"none"`, `"multicore"`, `"snow"`, `"snow(SOCK)"`, `"snow(MPI)"`, `"snow(NWS)"` | 
+| `parallel.threads` | NO | `"auto"` | | 
+| `suppress.warnings` | NO | `"FALSE"` |  | 
+| `save.event.info` | NO | `"FALSE"` |  | 
+
+| RETURN VALUE(S) | FILE | OBSERVATIONS |
+|-----------------|------|--------------|
+| Errors, warnings and other messages | `Adherer-results.txt` | Possibly more than one line; if the processing was successful, the last line must begin with `OK:` |
+| The computed CMAs, as a TAB-separated no quotes CSV file | `CMA.csv` | Always generated in case of successful processing |
+| The gap days and event info data, as a TAB-separated no quotes CSV file | `EVENTINFO.csv` | Only by explicit request (i.e., `save.event.info = "TRUE"`) |
+
+
+
+#### `CMA_sliding_window`
+The parameters for this function are (*N.B.*: the plotting parameters can also appear if  plotting is required):
+
+| PARAMETER  | REQUIRED  | DEFAULT_VALUE | POSSIBLE_VALUES |
+|------------|-----------|---------------|-----------------|
+| `CMA.to.apply	` | YES | | `CMA1`, `CMA2`, `CMA3`, `CMA4`, `CMA5`, `CMA6`, `CMA7`, `CMA8`, `CMA9` |
+| `ID.colname` | YES  |  | 
+| `event.date.colname` | YES |  | 
+| `event.duration.colname` | YES |  | 
+| `event.daily.dose.colname	` | YES |  | 
+| `medication.class.colname	` | YES |  | 
+| `carry.only.for.same.medication` | NO | `"FALSE"` |  | 
+| `consider.dosage.change` | NO	 | `"FALSE"` |  | 
+| `followup.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.start` | NO | `0` |  | 
+| `followup.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `followup.window.duration.type` | NO | `"numeric"`  | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.duration` | NO | `"365 * 2"` |  | 
+| `followup.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.start	` | NO | `0` |  | 
+| `observation.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.duration.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.duration` | NO | `"365 * 2"` |  | 
+| `observation.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `sliding.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character'`, `"date'` | 
+| `sliding.window.start` | NO | `0` |  | 
+| `sliding.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `sliding.window.duration.type	` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `sliding.window.duration` | NO | `"90"` |  | 
+| `sliding.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `sliding.window.step.duration.type` | NO | `"numeric"` | `"numeric"`, `"character"` | 
+| `sliding.window.step.duration	` | NO | `"30"` |  | 
+| `sliding.window.step.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `sliding.window.no.steps` | NO | `"-1"` |  | 
+| `date.format` | NO | `"%m/%d/%Y"` |  | 
+| `event.interval.colname` | NO	 | `"event.interval"` |  | 
+| `gap.days.colname` | NO | `"gap.days"` |  | 
+| `force.NA.CMA.for.failed.patients` | NO | `"TRUE"` |  | 
+| `parallel.backend	` | NO | `"none"` | `"none"`, `"multicore"`, `"snow"`, `"snow(SOCK)"`, `"snow(MPI)"`, `"snow(NWS)"` | 
+| `parallel.threads` | NO | `"auto"` | | 
+| `suppress.warnings` | NO | `"FALSE"` |  | 
+| `save.event.info` | NO | `"FALSE"` |  | 
+
+| RETURN VALUE(S) | FILE | OBSERVATIONS |
+|-----------------|------|--------------|
+| Errors, warnings and other messages | `Adherer-results.txt` | Possibly more than one line; if the processing was successful, the last line must begin with `OK:` |
+| The computed CMAs, as a TAB-separated no quotes CSV file | `CMA.csv` | Always generated in case of successful processing |
+| The gap days and event info data, as a TAB-separated no quotes CSV file | `EVENTINFO.csv` | Only by explicit request (i.e., `save.event.info = "TRUE"`) |
+
+
+#### `compute_event_int_gaps`
+This function is intended for advanced users only; the parameters for this function are:
+
+| PARAMETER  | REQUIRED  | DEFAULT_VALUE | POSSIBLE_VALUES |
+|------------|-----------|---------------|-----------------|
+| `ID.colname` | YES  |  |  | 
+| `event.date.colname` | YES |  |  | 
+| `event.duration.colname` | YES |  |  | 
+| `event.daily.dose.colname	` | NO |  |  | 
+| `medication.class.colname` | NO |  |  | 
+| `carryover.within.obs.window` | NO | `"FALSE"` |  | 
+| `carryover.into.obs.window` | NO | `"FALSE"` |  | 
+| `carry.only.for.same.medication` | NO | `"FALSE"` |  | 
+| `consider.dosage.change` | NO	 | `"FALSE"` |  | 
+| `followup.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.start` | NO | `"0"` |  | 
+| `followup.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `followup.window.duration.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.duration` | NO | `"365 * 2`" |  | 
+| `followup.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.start	` | NO | `"0"` |  | 
+| `observation.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.duration.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.duration` | NO | `"365 * 2"` |  | 
+| `observation.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `date.format` | NO | `"%m/%d/%Y"` |  | 
+| `keep.window.start.end.dates` | NO | `"FALSE"` |  | 
+| `remove.events.outside.followup.window` | NO	 | `"TRUE"` |  | 
+| `keep.event.interval.for.all.events` | NO | `"FALSE"` |  | 
+| `event.interval.colname` | NO	 | `"event.interval`" |  | 
+| `gap.days.colname	` | NO | `"gap.days"` |  | 
+| `force.NA.CMA.for.failed.patients` | NO | `"TRUE"` |  | 
+| `parallel.backend	` | NO | `"none	"` | `"none"`, `"multicore"`, `"snow"`, `"snow(SOCK)"`, `"snow(MPI)"`, `"snow(NWS)"` | 
+| `parallel.threads` | NO | `"auto"` |  | 
+| `suppress.warnings` | NO | `"FALSE"` |  | 
+
+| RETURN VALUE(S) | FILE | OBSERVATIONS |
+|-----------------|------|--------------|
+| Errors, warnings and other messages | `Adherer-results.txt` | Possibly more than one line; if the processing was successful, the last line must begin with `OK:` |
+| The gap days and event info data, as a TAB-separated no quotes CSV file | `EVENTINFO.csv` | In this case, always returned is successful |
+
+
+#### `compute_treatment_episodes`
+This function is intended for advanced users only; the parameters for this function are: 
+
+| PARAMETER  | REQUIRED  | DEFAULT_VALUE | POSSIBLE_VALUES |
+|------------|-----------|---------------|-----------------|
+| `ID.colname` | YES  |  | 
+| `event.date.colname` | YES |  | 
+| `event.duration.colname` | YES |  | 
+| `event.daily.dose.colname	` | NO |  | 
+| `medication.class.colname	` | NO |  | 
+| `carryover.within.obs.window` | NO | `"FALSE"` |  | 
+| `carryover.into.obs.window` | NO | `"FALSE"` |  | 
+| `carry.only.for.same.medication` | NO | `"FALSE"` |  | 
+| `consider.dosage.change` | NO	 | `"FALSE"` |  | 
+| `medication.change.means.new.treatment.episode` | NO | `"TRUE"` |  | 
+| `maximum.permissible.gap` | NO | `"90"` |  | 
+| `maximum.permissible.gap.unit	` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"`, `"percent"` | 
+| `followup.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.start` | NO | `0` |  | 
+| `followup.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `followup.window.duration.type` | NO | `"numeric"`  | `"numeric"`, `"character"`, `"date"` | 
+| `followup.window.duration` | NO | `"365 * 2"` |  | 
+| `followup.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.start	` | NO | `0` |  | 
+| `observation.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `observation.window.duration.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
+| `observation.window.duration` | NO | `"365 * 2"` |  | 
+| `observation.window.duration.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 
+| `date.format` | NO | `"%m/%d/%Y"` |  | 
+| `keep.window.start.end.dates` | NO | `"FALSE"` |  | 
+| `remove.events.outside.followup.window` | NO | `"TRUE"` |  | 
+| `keep.event.interval.for.all.events` | NO | `"FALSE"` |  | 
+| `event.interval.colname` | NO	 | `"event.interval"` |  | 
+| `gap.days.colname` | NO | `"gap.days"` |  | 
+| `force.NA.CMA.for.failed.patients` | NO | `"TRUE"` |  | 
+| `parallel.backend	` | NO | `"none"` | `"none"`, `"multicore"`, `"snow"`, `"snow(SOCK)"`, `"snow(MPI)"`, `"snow(NWS)"` | 
+| `parallel.threads` | NO | `"auto"` | | 
+| `suppress.warnings` | NO | `"FALSE"` |  | 
+
+| RETURN VALUE(S) | FILE | OBSERVATIONS |
+|-----------------|------|--------------|
+| Errors, warnings and other messages | `Adherer-results.txt` | Possibly more than one line; if the processing was successful, the last line must begin with `OK:` |
+| The treatment episodes data, as a TAB-separated no quotes CSV file | `TREATMENTEPISODES.csv ` | Always if successful |
+
+
+#### `plot_interactive_cma`
+This function initiates the interactive plotting in `AdhereR` using `Shiny`: all the plotting will be done in the current internet browser and there are no results expected (except for errors, warnings and other messages).
+This function ignores the argument `plot.show = "TRUE"` and takes very few arguments of its own, as most of the relevant parameters can be set interactively through the `Shiny` interface.
+
+| PARAMETER  | REQUIRED  | DEFAULT_VALUE | POSSIBLE_VALUES |
+|------------|-----------|---------------|-----------------|
+| `patient_to_plot`	 | NO | | defaults to the first patient in the dataset | 
+| `ID.colname` | YES  |  | 
+| `event.date.colname` | YES |  | 
+| `event.duration.colname` | YES |  | 
+| `event.daily.dose.colname	` | NO |  | 
+| `medication.class.colname	` | NO |  | 
+| `date.format` | NO | `"%m/%d/%Y"` |  | 
+| `followup.window.start.max` | NO | | integer >0 
+| `followup.window.duration.max` | NO | | integer >0 
+| `observation.window.start.max` | NO | | integer >0 
+| `observation.window.duration.max	` | NO | | integer >0 
+| `maximum.permissible.gap.max	` | NO | | integer >0 
+| `sliding.window.start.max` | NO | | integer >0 
+| `sliding.window.duration.max	` | NO | | integer >0 
+| `sliding.window.step.duration.max` | NO | | integer >0 
+
+
+## Notes
+
+
+[^1]: For more info on the parameters and their values for all these functions please see the `AdhereR` documentation and vignette.
+
+[^2]: While this document concerns mainly `Python 3`, we also give the default values for other platforms, in particular `STATA`.
 
 
 
