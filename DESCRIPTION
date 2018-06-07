@@ -1,7 +1,7 @@
 Package: AdhereR.devel
 Type: Package
 Title: Adherence to Medications
-Version: 0.2
+Version: 0.2.0
 Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
                      email = "ddediu@gmail.com"),
               person("Alexandra", "Dima", role = "aut",
@@ -26,8 +26,7 @@ Imports: lubridate (>= 1.5),
     parallel (>= 3.0),
     data.table (>= 1.9),
     manipulate (>= 1.0),
-    shiny (>= 1.0),
-    snow (>= 0.4)
+    shiny (>= 1.0)
 Depends: R (>= 3.0)
 Suggests: knitr (>= 1.15),
     rmarkdown (>= 1.1),

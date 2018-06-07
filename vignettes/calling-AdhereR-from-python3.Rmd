@@ -47,6 +47,12 @@ vignette: >
           
           - [Parallel processing (locally and on different machines)](#parallel-processing-locally-and-on-different-machines)
           
+             - [Single thread on the local machine](#single-thread-on-the-local-machine)
+             
+             - [Multi-threaded on the local machine](#multi-threaded-on-the-local-machine)
+             
+             - [Parallel on remote machines over a network](#parallel-on-remote-machines-over-a-network)
+          
   - [Appendix I: the communication protocol](#appendix-i-the-communication-protocol)
   
       - [Context](#context)
@@ -187,7 +193,8 @@ where `plot_save_to` and `plot_save_as` may specify where the plots are to be sa
 
 ## The `Python 3` wrapper: the `adherer` module
 
-The reference implementation is contained in single file (`adherer.py`) included with the `R` `AdhereR` package and whose location can be obtained using the function `getCallerWrapperLocation()` from `AdhereR` (*N.B.* it is located in the directory where the `AdhereR` package is installed on the system, subdirectory `wrappers/python3/adherer.py`; for example, on the example `macos` machine this is `/Library/Frameworks/R.framework/Versions/3.4/Resources/library/AdhereR/wrappers/python3/adherer.py`).
+The reference implementation is contained in single file (`adherer.py`) included with the `R` `AdhereR` package and whose location can be obtained using the function `getCallerWrapperLocation(full.path=TRUE)` from `AdhereR` (*N.B.* it is located in the directory where the `AdhereR` package is installed on the system, subdirectory `wrappers/python3/adherer.py`; for example, on the example `macos` machine this is `/Library/Frameworks/R.framework/Versions/3.4/Resources/library/AdhereR/wrappers/python3/adherer.py`).
+In the future, as more wrappers are added, the argument `callig.platform` will allow the selection of the desired wrapper (now it is implicitely set to `python3`).
 
 This file can be either:
 
@@ -202,6 +209,7 @@ On the example `macos` machine, this can be achiveded by adding:
 export PYTHONPATH=$PYTHONPATH:/Library/Frameworks/[...]/AdhereR/wrappers/python3
 ```
 to the `.bash_profile` file in the user's home folder (if this file does not exist, then it can be created using a text editor such as `nano`; please note that the `[...]` are for shortening the path and should be replaced by the actual path given in full above).
+The process should be very simular on `Linux`, while on `MS Windows` one should use the system's "Environment Variables" settings (for example, see [here](https://stackoverflow.com/a/4855685) for details).
 
 *NOTE:* we will consistently use `AdhereR` to refer to the `R` package, and `adherer` to refer to the `Python 3` module.
 
@@ -450,13 +458,13 @@ In [7]: # Compute CMA8 as a test:
    ...:                medication_class_colname='CATEGORY')
    ...:  
 Adherer returned code 0 and said:
-AdhereR 0.1.1 on R 3.4.3 started at 2018-06-04 22:27:10:
+AdhereR 0.2.0 on R 3.4.3 started at 2018-06-04 22:27:10:
 OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
 ```
 
 We can see that things went pretty well, as no exceptions were being thrown and the message starts with a reassuring `Adherer returned code 0`, followed by precisely what `AdhereR` said: 
 
-  - `AdhereR 0.1.1 on R 3.4.3 started at 2018-06-04 22:27:10:`: first, self-identification (its own version and `R`'s version), followed by the date and time the processing was initated;
+  - `AdhereR 0.2.0 on R 3.4.3 started at 2018-06-04 22:27:10:`: first, self-identification (its own version and `R`'s version), followed by the date and time the processing was initated;
   - `OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!`, which means that basically all seems allright but that there might still be some messages or warning displayed above that could be informative or point to subtler issues.
 
 Let's see how these results look like:
@@ -470,7 +478,7 @@ In [9]: # The return value and messages:
    ...: cma8.get_computation_results()
 Out[9]: 
 {'code': 0,
- 'messages': ['AdhereR 0.1.1 on R 3.4.3 started at 2018-06-04 22:27:10:\n',
+ 'messages': ['AdhereR 0.2.0 on R 3.4.3 started at 2018-06-04 22:27:10:\n',
   'OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!\n']}
 
 In [10]: # The CMA (the first 6 rows out of all 100):
@@ -491,7 +499,7 @@ In [11]: # Plot it (statically):
     ...:           cex=0.5)
     ...:           
 Adherer returned code 0 and said:
-AdhereR 0.1.1 on R 3.4.3 started at 2018-06-05 13:22:36:
+AdhereR 0.2.0 on R 3.4.3 started at 2018-06-05 13:22:36:
 OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
 
 Out[11]: 
@@ -550,7 +558,7 @@ The interactive session ends by pressing the "Exit" button in the browser (and o
 
 ``` python
 Adherer returned code 0 and said:
-AdhereR 0.1.1 on R 3.4.3 started at 2018-06-05 18:01:28:
+AdhereR 0.2.0 on R 3.4.3 started at 2018-06-05 18:01:28:
 OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
 
 Out[12]: True
@@ -561,7 +569,291 @@ Please note that it does not matter how the interactive session is started, as i
 
 #### Parallel processing (locally and on different machines)
 
+`AdhereR` uses `R`'s parallel procesing capacities to split expensive computations and distribute them across multiple CPUs/cores in a single computer or even across a network of computers.
+As an example, we will compute here `CMA1` across sliding windows on the whole dataset, first in `R` and then in `Python 3`.
 
+##### Single thread on the local machine
+
+The default mode of computation uses just a single CPU/core on the local machine.
+
+###### `R`
+
+``` R
+> # Sliding windows with CMA1 (single thread, locally):
+> cma1w.1l <- CMA_sliding_window(CMA.to.apply="CMA1",
++                                data=med.events,
++                                ID.colname='PATIENT_ID',
++                                event.date.colname='DATE',
++                                event.duration.colname='DURATION',
++                                event.daily.dose.colname='PERDAY',
++                                medication.class.colname='CATEGORY',
++                                sliding.window.duration=30,
++                                sliding.window.step.duration=30,
++                                parallel.backend="none",
++                                parallel.threads=1)
+> head(getCMA(cma1w.1l))
+  PATIENT_ID window.ID window.start window.end       CMA
+1          1         1   2033-04-26 2033-05-26        NA
+2          1         2   2033-05-26 2033-06-25        NA
+3          1         3   2033-06-25 2033-07-25        NA
+4          1         4   2033-07-25 2033-08-24  2.142857
+5          1         5   2033-08-24 2033-09-23        NA
+6          1         6   2033-09-23 2033-10-23 10.000000
+>
+```
+
+###### `Python 3`
+
+``` python
+In [13]: # Sliding windows with CMA1 (single thread, locally):
+    ...: cma1w_1l = ad.CMASlidingWindow(dataset=df,
+    ...:                                cma_to_apply="CMA1",
+    ...:                                id_colname='PATIENT_ID',
+    ...:                                event_date_colname='DATE',
+    ...:                                event_duration_colname='DURATION',
+    ...:                                event_daily_dose_colname='PERDAY',
+    ...:                                medication_class_colname='CATEGORY',
+    ...:                                sliding_window_duration=30,
+    ...:                                sliding_window_step_duration=30,
+    ...:                                parallel_backend="none",
+    ...:                                parallel_threads=1)
+    ...:                                
+Adherer returned code 0 and said:
+AdhereR  0.2.0 on R 3.4.3 started at 2018-06-06 15:19:07:
+OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
+
+In [14]: cma1w_1l.get_cma().head(6)
+Out[14]: 
+   PATIENT_ID  window.ID window.start  window.end        CMA
+0           1          1   04/26/2033  05/26/2033        NaN
+1           1          2   05/26/2033  06/25/2033        NaN
+2           1          3   06/25/2033  07/25/2033        NaN
+3           1          4   07/25/2033  08/24/2033   2.142857
+4           1          5   08/24/2033  09/23/2033        NaN
+5           1          6   09/23/2033  10/23/2033  10.000000
+```
+
+
+##### Multi-threaded on the local machine
+
+If the local machine has multiple CPUs/cores (even with hyperthreading), it might make sense to use them for lengthy computations.
+`AdhereR` can use several backends (as provided by the `parallel` package in `R`), of which the most used are "multicore" (preffered on `Linux` and `macOS` but currently not available on `Windows`) and "SNOW" (on all three OS's).
+`AdhereR` is smart enough to use "SNOW" on `Windows` even if "multicore" was requested.
+
+###### `R`
+
+``` R
+> # Sliding windows with CMA1 (two threads, multicore, locally):
+> cma1w.2ml <- CMA_sliding_window(CMA.to.apply="CMA1",
++                                 data=med.events,
++                                 ID.colname='PATIENT_ID',
++                                 event.date.colname='DATE',
++                                 event.duration.colname='DURATION',
++                                 event.daily.dose.colname='PERDAY',
++                                 medication.class.colname='CATEGORY',
++                                 sliding.window.duration=30,
++                                 sliding.window.step.duration=30,
++                                 parallel.backend="multicore", # <--- multicore
++                                 parallel.threads=2)
+> head(getCMA(cma1w.2ml))
+  PATIENT_ID window.ID window.start window.end       CMA
+1          1         1   2033-04-26 2033-05-26        NA
+2          1         2   2033-05-26 2033-06-25        NA
+3          1         3   2033-06-25 2033-07-25        NA
+4          1         4   2033-07-25 2033-08-24  2.142857
+5          1         5   2033-08-24 2033-09-23        NA
+6          1         6   2033-09-23 2033-10-23 10.000000
+> 
+> cma1w.2sl <- CMA_sliding_window(CMA.to.apply="CMA1",
++                                 data=med.events,
++                                 ID.colname='PATIENT_ID',
++                                 event.date.colname='DATE',
++                                 event.duration.colname='DURATION',
++                                 event.daily.dose.colname='PERDAY',
++                                 medication.class.colname='CATEGORY',
++                                 sliding.window.duration=30,
++                                 sliding.window.step.duration=30,
++                                 parallel.backend="snow", # <--- SNOW
++                                 parallel.threads=2)
+> head(getCMA(cma1w.2sl))
+  PATIENT_ID window.ID window.start window.end       CMA
+1          1         1   2033-04-26 2033-05-26        NA
+2          1         2   2033-05-26 2033-06-25        NA
+3          1         3   2033-06-25 2033-07-25        NA
+4          1         4   2033-07-25 2033-08-24  2.142857
+5          1         5   2033-08-24 2033-09-23        NA
+6          1         6   2033-09-23 2033-10-23 10.000000
+> 
+```
+
+###### `Python 3`
+
+``` python
+In [15]: # Sliding windows with CMA1 (two threads, multicore, locally):
+    ...: cma1w_2ml = ad.CMASlidingWindow(dataset=df,
+    ...:                                 cma_to_apply="CMA1",
+    ...:                                 id_colname='PATIENT_ID',
+    ...:                                 event_date_colname='DATE',
+    ...:                                 event_duration_colname='DURATION',
+    ...:                                 event_daily_dose_colname='PERDAY',
+    ...:                                 medication_class_colname='CATEGORY',
+    ...:                                 sliding_window_duration=30,
+    ...:                                 sliding_window_step_duration=30,
+    ...:                                 parallel_backend="multicore",  # <--- multicore
+    ...:                                 parallel_threads=2)
+    ...:                                 
+Adherer returned code 0 and said:
+AdhereR  0.2.0 on R 3.4.3 started at 2018-06-07 11:44:49:
+OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
+
+
+In [16]: cma1w_2ml.get_cma().head(6)
+Out[16]: 
+   PATIENT_ID  window.ID window.start  window.end        CMA
+0           1          1   04/26/2033  05/26/2033        NaN
+1           1          2   05/26/2033  06/25/2033        NaN
+2           1          3   06/25/2033  07/25/2033        NaN
+3           1          4   07/25/2033  08/24/2033   2.142857
+4           1          5   08/24/2033  09/23/2033        NaN
+5           1          6   09/23/2033  10/23/2033  10.000000
+
+In [17]: # Sliding windows with CMA1 (two threads, snow, locally):
+    ...: cma1w_2sl = ad.CMASlidingWindow(dataset=df,
+    ...:                                 cma_to_apply="CMA1",
+    ...:                                 id_colname='PATIENT_ID',
+    ...:                                 event_date_colname='DATE',
+    ...:                                 event_duration_colname='DURATION',
+    ...:                                 event_daily_dose_colname='PERDAY',
+    ...:                                 medication_class_colname='CATEGORY',
+    ...:                                 sliding_window_duration=30,
+    ...:                                 sliding_window_step_duration=30,
+    ...:                                 parallel_backend="snow",  # <--- SNOW
+    ...:                                 parallel_threads=2)
+    ...:                                 
+Adherer returned code 0 and said:
+AdhereR  0.2.0 on R 3.4.3 started at 2018-06-07 11:44:49:
+OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
+
+
+In [18]: cma1w_2sl.get_cma().head(6)
+Out[18]: 
+   PATIENT_ID  window.ID window.start  window.end        CMA
+0           1          1   04/26/2033  05/26/2033        NaN
+1           1          2   05/26/2033  06/25/2033        NaN
+2           1          3   06/25/2033  07/25/2033        NaN
+3           1          4   07/25/2033  08/24/2033   2.142857
+4           1          5   08/24/2033  09/23/2033        NaN
+5           1          6   09/23/2033  10/23/2033  10.000000
+```
+
+
+##### Parallel on remote machines over a network
+
+Sometimes it is better to use one or more powerful machines over a network to do very expensive computations, usually, a `Linux` cluster from a `Windows`/`macos` laptop.
+`AdhereR` leverages the power of `R`'s [`snow`](https://cran.r-project.org/web/packages/snow/index.html) package (as exposed through the `parallel` package) to distribute workloads across a network of computing nodes.
+There are several types of "Simple Network of Workstations" (`snow`), described in the package's manual.
+For example, one may use an already existing `MPI` ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) cluster, but an even simpler setup (and the one that we will illustrate here) involves a *collection of machines* running `Linux` and connected to a network (local or even over the Internet).
+
+The machines are called `workhorse1` and `workhorse2`, have differen hardware configurations (both sport quad-core i7 CPUs of different generations with 16Gb RAM) but run the same version of `Ubuntu 16.04` and `R 3.4.2` (not a requirement, as the architecture can be seriously heterogeneous, combining different OS's and versions of `R`).
+These two machines are connected to the same WiFi router (but they could be on different networks or even across the Internet).
+The "master" is the same `macOS` laptop used before, connected to the same WiFi router (not a requirement).
+
+As pre-requisites, the worker machines should allow [`SSH`](https://help.ubuntu.com/community/SSH/OpenSSH/Configuring) access (for easiness, we use here *passwordless SSH access* from the "master"; see for example [here](http://www.linuxproblem.org/art_9.html) for this setup) and should have the `snow` package installed in `R`.
+Let's assume that the username allowing `ssh` into the workers is `user`, so that
+``` bash
+laptop:~> ssh user@workhorse1
+```
+works with no password needed.
+With these, we can distribute our processing to the two "workers" (two parallel threads for each, totalling 4 parallel threads):
+
+###### `R`
+
+``` R
+> # Sliding windows with CMA1 (two remote machines with two threads each):
+> # First, we need to specify the workers
+> # This is a list of lists!
+> # rep(,2) means that we generate two threads on each worker
+> workers <- c(rep(list(list(host="workhorse1", # hostname (make sure this works from the "master", otherwise use the IP-address)
++                            user="user", # the username that can ssh into the worker (passwordless highly recommended)
++                            rscript="/usr/local/bin/Rscript", # the location of Rscript on the worker
++                            snowlib="/usr/local/lib64/R/library/")), # the location of the snow package on the worker
++                  2),
++                  rep(list(list(host="workhorse2", 
++                            user="user", 
++                            rscript="/usr/local/bin/Rscript", 
++                            snowlib="/usr/local/lib64/R/library/")),
++                  2));
+>
+> cma1w.2sw <- CMA_sliding_window(CMA="CMA1",
++                                 data=med.events,
++                                 ID.colname="PATIENT_ID",
++                                 event.date.colname="DATE",
++                                 event.duration.colname="DURATION",
++                                 event.daily.dose.colname="PERDAY",
++                                 medication.class.colname="CATEGORY",
++                                 carry.only.for.same.medication=FALSE,
++                                 consider.dosage.change=FALSE,
++                                 sliding.window.duration=30,
++                                 sliding.window.step.duration=30,
++                                 parallel.backend="snow",
++                                 parallel.threads=workers)
+> head(getCMA(cma1w.2sw))
+  PATIENT_ID window.ID window.start window.end       CMA
+1          1         1   2033-04-26 2033-05-26        NA
+2          1         2   2033-05-26 2033-06-25        NA
+3          1         3   2033-06-25 2033-07-25        NA
+4          1         4   2033-07-25 2033-08-24  2.142857
+5          1         5   2033-08-24 2033-09-23        NA
+6          1         6   2033-09-23 2033-10-23 10.000000
+> 
+```
+
+###### `Python 3`
+
+A quick for `Python` is that due to the communication protocol between the wrapper and `AdhereR`, the specification of the computer cluster must be a one-line string literally contaning the `R` code defining it, string that will be verbatim parsed and interpreted by `AdhereR`:
+
+``` python
+In [19]: # Sliding windows with CMA1 (two remote machines with two threads each):
+    ...: # The workers are defined as *literal R code* this is verbatim sent to AdhereR for parsing and interpretation
+    ...: # Please note, however, that this string should not contain line breaks (i.e., it should be a one-liner):
+    ...: workers = 'c(rep(list(list(host="workhorse1", user="user", rscript="/usr/local/bin/Rscript", snowlib="/usr/local/lib64/R/library/")), 2), rep(list(list(host="workhorse2", user="user", rscript="/usr/local/bin/Rscript", snowlib="/usr/local/lib64/R/library/")), 2))'
+
+In [20]: cma1w_2sw = ad.CMASlidingWindow(dataset=df,
+    ...:                                 cma_to_apply="CMA1",
+    ...:                                 id_colname='PATIENT_ID',
+    ...:                                 event_date_colname='DATE',
+    ...:                                 event_duration_colname='DURATION',
+    ...:                                 event_daily_dose_colname='PERDAY',
+    ...:                                 medication_class_colname='CATEGORY',
+    ...:                                 sliding_window_duration=30,
+    ...:                                 sliding_window_step_duration=30,
+    ...:                                 parallel_backend="snow",
+    ...:                                 parallel_threads=workers)
+Adherer returned code 0 and said:
+AdhereR 0.2.0 on R 3.4.3 started at 2018-06-07 13:22:21:
+OK: the results were exported successfully (but there might be warnings and messages above worth paying attention to)!
+
+
+In [21]: cma1w_2sw.get_cma().head(6)
+Out[21]: 
+   PATIENT_ID  window.ID window.start  window.end        CMA
+0           1          1   04/26/2033  05/26/2033        NaN
+1           1          2   05/26/2033  06/25/2033        NaN
+2           1          3   06/25/2033  07/25/2033        NaN
+3           1          4   07/25/2033  08/24/2033   2.142857
+4           1          5   08/24/2033  09/23/2033        NaN
+5           1          6   09/23/2033  10/23/2033  10.000000
+```
+
+###### Some caveats for over-the-network distributed computation
+
+While this is a very good way to transparently distribute processing to more powerful nodes over a network, there are several (potential) issues one must be aware of:
+
+  - *it may be very hard to debug failures*: failures of this might result from network issues, firewals blocking connections, incorrect `SSH` setup on the "workers" or errors in accesing the "workers" with the given user accounts; see, for examples, discussion [here](https://stackoverflow.com/q/17966055) and [here](https://stackoverflow.com/questions/17923256/r-making-cluster-in-doparallel-snowfall-hangs/17925618#17925618) in case you need to solve such problems;
+
+  - *latency over the network*: starting the "workers" and especially transmitting the data to the "workers" and the results back to the "master" may take a non-negligible time, especially on slow networks (such as the Internet) and for large datasets; therefore, the best scenarios would involve relatively large computations (but not too large; see below) distributed to several nodes over a fast network;
+  
+  - *you need to wait for the results*: this process assumes that the "master" will wait for the "workers" to finish and return their results; thus, putting the "master" to sleep, shutting it down or disconnecting it from the network will probably result in not being able to collect the resuls back. If one needs very long computations (say 3+ hours), offline mobility or the network is unreliable, we would suggest setting up a separate compute process (that may itself parallelise computations) on the remote machines using, for example, [`screen`](https://www.howtoforge.com/linux_screen), [`nohup`](https://en.wikipedia.org/wiki/Nohup) or a more specialised cluster management platform such as [Son of a Grid Engine (SGE)](https://arc.liv.ac.uk/trac/SGE).
 
 
 ## Appendix I: the communication protocol

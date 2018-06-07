@@ -1091,8 +1091,8 @@ getCMA.CMA0 <- function(x)
   }
 
   # Attempt to create the SNOW cluster:
-  cluster <- snow::makeCluster(parallel.threads, # process only "auto", otherwise trust makeCluster() to interpret the parameters
-                               type = cluster.type);
+  cluster <- parallel::makeCluster(parallel.threads, # process only "auto", otherwise trust makeCluster() to interpret the parameters
+                                   type = cluster.type);
   if( is.null(cluster) )
   {
     if( !suppress.warnings ) warning(paste0("Failed to create the cluster \"",parallel.backend,"\" with parallel.threads \"",parallel.threads,"\": will force sequential (\"none\").\n"));
@@ -1124,32 +1124,32 @@ getCMA.CMA0 <- function(x)
 
   # Pre-split the participants into a number of chunks equal to the number of created cluster nodes to reduce paying the overheads multiple times
   # and call the function for each cluster in parallel:
-  tmp <- snow::parLapply(cluster,
-                         snow::clusterSplit(cluster, patids),
-                         function(IDs) fnc(data=data[list(IDs),], # call the function sequentially for the patients in the current chunk
-                                           ID.colname=ID.colname,
-                                           event.date.colname=event.date.colname,
-                                           event.duration.colname=event.duration.colname,
-                                           event.daily.dose.colname=event.daily.dose.colname,
-                                           medication.class.colname=medication.class.colname,
-                                           event.interval.colname=event.interval.colname,
-                                           gap.days.colname=gap.days.colname,
-                                           carryover.within.obs.window=carryover.within.obs.window,
-                                           carryover.into.obs.window=carryover.into.obs.window,
-                                           carry.only.for.same.medication=carry.only.for.same.medication,
-                                           consider.dosage.change=consider.dosage.change,
-                                           followup.window.start=followup.window.start,
-                                           followup.window.start.unit=followup.window.start.unit,
-                                           followup.window.duration=followup.window.duration,
-                                           followup.window.duration.unit=followup.window.duration.unit,
-                                           observation.window.start=observation.window.start,
-                                           observation.window.start.unit=observation.window.start.unit,
-                                           observation.window.duration=observation.window.duration,
-                                           observation.window.duration.unit=observation.window.duration.unit,
-                                           date.format=date.format,
-                                           suppress.warnings=suppress.warnings));
+  tmp <- parallel::parLapply(cluster,
+                             parallel::clusterSplit(cluster, patids),
+                             function(IDs) fnc(data=data[list(IDs),], # call the function sequentially for the patients in the current chunk
+                                               ID.colname=ID.colname,
+                                               event.date.colname=event.date.colname,
+                                               event.duration.colname=event.duration.colname,
+                                               event.daily.dose.colname=event.daily.dose.colname,
+                                               medication.class.colname=medication.class.colname,
+                                               event.interval.colname=event.interval.colname,
+                                               gap.days.colname=gap.days.colname,
+                                               carryover.within.obs.window=carryover.within.obs.window,
+                                               carryover.into.obs.window=carryover.into.obs.window,
+                                               carry.only.for.same.medication=carry.only.for.same.medication,
+                                               consider.dosage.change=consider.dosage.change,
+                                               followup.window.start=followup.window.start,
+                                               followup.window.start.unit=followup.window.start.unit,
+                                               followup.window.duration=followup.window.duration,
+                                               followup.window.duration.unit=followup.window.duration.unit,
+                                               observation.window.start=observation.window.start,
+                                               observation.window.start.unit=observation.window.start.unit,
+                                               observation.window.duration=observation.window.duration,
+                                               observation.window.duration.unit=observation.window.duration.unit,
+                                               date.format=date.format,
+                                               suppress.warnings=suppress.warnings));
 
-  snow::stopCluster(cluster); # stop the cluster
+  parallel::stopCluster(cluster); # stop the cluster
 
   # Combine the results (there may be multiple return data.frames intermingled!)
   if( fnc.ret.vals == 1 )

@@ -33,5 +33,5 @@
 
   - automatically attempt to locate `RScript` depending on the platform and complain if this fails or if `RScript` is not located where the user said it should be <-- **DONE**
   - check if `Adherer` is installed for the located `RScript` <-- **DONE**
-  - where to place the python wrapper on install?
+  - where to place the python wrapper on install? <-- **DONE**
   

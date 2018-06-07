@@ -557,11 +557,13 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 #'
 #' @param callig.platform A \emph{string} specifying the desired wrapper.
 #' Currently it can be "python3".
+#' @param full.path A \emph{logical} specifying if the returned path should
+#' also include the wrapper's main file name.
 #' @return The full path to the requested wrapper or NULL if none exists.
 #' @export
-getCallerWrapperLocation <- function(callig.platform=c("python3")[1])
+getCallerWrapperLocation <- function(callig.platform=c("python3")[1], full.path=FALSE)
 {
   switch(tolower(callig.platform),
-         "python3" = file.path(.libPaths(), "AdhereR", "wrappers", "python3", "adherer.py"),
+         "python3" = file.path(system.file(package="AdhereR"), "wrappers", "python3", ifelse(full.path,"adherer.py","")),
          NULL);
 }
