@@ -669,7 +669,7 @@ test_that("compute.event.int.gaps() parallel processing with multicore", {
   														date.format="%m/%d/%Y",
   														keep.window.start.end.dates=FALSE, remove.events.outside.followup.window=TRUE, keep.event.interval.for.all.events=FALSE,
   														parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[2], parallel.threads=2,
-  														suppress.warnings=FALSE, return.data.table=FALSE);
+  														suppress.warnings=TRUE, return.data.table=FALSE); # suppress.warnings on Windows
 
   expect_is(d, "data.frame") # is a data.frame
   expect_equal(dim(d), c(1066,7)) # number of events and columns

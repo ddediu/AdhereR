@@ -4,11 +4,15 @@
 \alias{getCallerWrapperLocation}
 \title{getCallerWrapperLocation.}
 \usage{
-getCallerWrapperLocation(callig.platform = c("python3")[1])
+getCallerWrapperLocation(callig.platform = c("python3")[1],
+  full.path = FALSE)
 }
 \arguments{
 \item{callig.platform}{A \emph{string} specifying the desired wrapper.
 Currently it can be "python3".}
+
+\item{full.path}{A \emph{logical} specifying if the returned path should
+also include the wrapper's main file name.}
 }
 \value{
 The full path to the requested wrapper or NULL if none exists.

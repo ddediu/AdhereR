@@ -72,6 +72,10 @@ observation window can start.}
 \item{observation.window.duration.max}{The maximum duration of the
 observation window in days.}
 
+\item{align.all.patients}{Should the patients be aligend?}
+
+\item{align.first.event.at.zero}{Should the first event be put at zero?}
+
 \item{maximum.permissible.gap.max}{The maximum permissible gap in days.}
 
 \item{sliding.window.start.max}{The maximum number of days when the sliding
@@ -86,6 +90,10 @@ days.}
 \item{backend}{The plotting backend to use; "shiny" (the default) tries to
 use the Shiny framework, while "rstudio" uses the manipulate RStudio
 capability.}
+
+\item{use.system.browser}{For shiny, use the system browser?}
+
+\item{...}{Extra arguments.}
 }
 \value{
 Nothing

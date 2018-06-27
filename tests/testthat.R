@@ -1,4 +1,4 @@
 library(testthat)
-library(AdhereR.devel)
+library(AdhereR)
 
-test_check("AdhereR.devel")
+test_check("AdhereR")

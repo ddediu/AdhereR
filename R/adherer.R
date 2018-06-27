@@ -22,6 +22,7 @@
 #' @import graphics
 #' @import stats
 #' @import data.table
+#' @import utils
 NULL
 
 # Declare some variables as global to avoid NOTEs during package building:
@@ -581,7 +582,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' various types of text.
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{\link[grDevices]{cm.colors}}.
+#' default \code{cm.colors}.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param col.continuation,lty.continuation,lwd.continuation The style of the
@@ -1270,6 +1271,7 @@ getCMA.CMA0 <- function(x)
 #' warnings.
 #' @param return.data.table \emph{Logical}, if \code{TRUE} return a
 #' \code{data.table} object, otherwise a \code{data.frame}.
+#' @param ... extra arguments.
 #' @return A \code{data.frame} or \code{data.table} extending the
 #' \code{event.info} parameter with:
 #' \itemize{
@@ -1629,7 +1631,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       if( observation.window.start.type %in% c(2,3) ){ columns.to.cache <- c(columns.to.cache, observation.window.start); observation.window.start.index <- curr.index; curr.index <- curr.index + 1;}
       if( !observation.window.duration.is.number ){ columns.to.cache <- c(columns.to.cache, observation.window.duration); observation.window.duration.index <- curr.index; curr.index <- curr.index + 1;}
       # ... select these columns:
-      data4ID.selected.columns <- data4ID[,..columns.to.cache];
+      data4ID.selected.columns <- data4ID[, columns.to.cache, with=FALSE]; # alternative to: data4ID[,..columns.to.cache]
       # ... cache the columns based on their indices:
       event.date2.column <- data4ID.selected.columns[[event.date2.colname.index]]; event.duration.column <- data4ID.selected.columns[[event.duration.colname.index]];
       if( !is.na(medication.class.colname) ) medication.class.column <- data4ID.selected.columns[[medication.class.colname.index]];
@@ -2123,6 +2125,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 #' warnings.
 #' @param return.data.table \emph{Logical}, if \code{TRUE} return a
 #' \code{data.table} object, otherwise a \code{data.frame}.
+#' @param ... extra arguments.
 #' @return A \code{data.frame} or \code{data.table} with the following columns
 #' (or \code{NULL} if no
 #' treatment episodes could be computed):
@@ -3064,7 +3067,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
       # ... which columns to select (with their indices):
       columns.to.cache <- c(".EVENT.STARTS.BEFORE.OBS.WINDOW", ".EVENT.STARTS.AFTER.OBS.WINDOW", ".DATE.as.Date", event.duration.colname);
       # ... select these columns:
-      data4ID.selected.columns <- data4ID[,..columns.to.cache];
+      data4ID.selected.columns <- data4ID[, columns.to.cache, with=FALSE]; # alternative to: data4ID[,..columns.to.cache];
       # ... cache the columns based on their indices:
       .EVENT.STARTS.BEFORE.OBS.WINDOW <- data4ID.selected.columns[[1]];
       .EVENT.STARTS.AFTER.OBS.WINDOW <- data4ID.selected.columns[[2]];
@@ -3244,7 +3247,7 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{\link[grDevices]{cm.colors}}.
+#' default \code{cm.colors}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -7192,7 +7195,7 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{\link[grDevices]{cm.colors}}.
+#' default \code{cm.colors}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -7971,6 +7974,8 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #' observation window can start.
 #' @param observation.window.duration.max The maximum duration of the
 #' observation window in days.
+#' @param align.all.patients Should the patients be aligend?
+#' @param align.first.event.at.zero Should the first event be put at zero?
 #' @param maximum.permissible.gap.max The maximum permissible gap in days.
 #' @param sliding.window.start.max The maximum number of days when the sliding
 #' windows can start.
@@ -7981,6 +7986,8 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #' @param backend The plotting backend to use; "shiny" (the default) tries to
 #' use the Shiny framework, while "rstudio" uses the manipulate RStudio
 #' capability.
+#' @param use.system.browser For shiny, use the system browser?
+#' @param ... Extra arguments.
 #' @return Nothing
 #' @examples
 #' \dontrun{
@@ -8743,15 +8750,15 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       ".plotting.fnc"=.plotting.fnc
                                      );
   # make sure they are deleted on exit from shiny:
-  on.exit(rm(.plotting.params, envir=.GlobalEnv));
+  on.exit(rm(list=c(".plotting.params"), envir=.GlobalEnv));
 
   # call shiny:
   if( use.system.browser )
   {
-    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'), launch.browser=TRUE);
+    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR'), launch.browser=TRUE);
   } else
   {
-    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'));
+    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR'));
   }
 }
 

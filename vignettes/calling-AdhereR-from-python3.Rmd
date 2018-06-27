@@ -83,6 +83,8 @@ vignette: >
       
       - [`plot_interactive_cma`](#plot_interactive_cma)
       
+  - [Appendix II: the `Python 3` code](#appendix-ii-the-python-3-code)
+      
   - [Notes](#notes)
 
 
@@ -750,7 +752,7 @@ Out[18]:
 ##### Parallel on remote machines over a network
 
 Sometimes it is better to use one or more powerful machines over a network to do very expensive computations, usually, a `Linux` cluster from a `Windows`/`macos` laptop.
-`AdhereR` leverages the power of `R`'s [`snow`](https://cran.r-project.org/web/packages/snow/index.html) package (as exposed through the `parallel` package) to distribute workloads across a network of computing nodes.
+`AdhereR` leverages the power of `R`'s [`snow`](https://CRAN.R-project.org/package=snow) package (as exposed through the `parallel` package) to distribute workloads across a network of computing nodes.
 There are several types of "Simple Network of Workstations" (`snow`), described in the package's manual.
 For example, one may use an already existing `MPI` ([Message Passing Interface](https://en.wikipedia.org/wiki/Message_Passing_Interface)) cluster, but an even simpler setup (and the one that we will illustrate here) involves a *collection of machines* running `Linux` and connected to a network (local or even over the Internet).
 
@@ -1241,6 +1243,113 @@ This function ignores the argument `plot.show = "TRUE"` and takes very few argum
 | `sliding.window.start.max` | NO | | integer >0 
 | `sliding.window.duration.max	` | NO | | integer >0 
 | `sliding.window.step.duration.max` | NO | | integer >0 
+
+
+## Appendix II: the `Python 3` code
+
+This annex lists the `Python 3` code included in this vignette in an easy-to-run form (i.e., no `In []`, `Out []` and prompts):
+
+``` python
+# Import adherer as ad:
+import adherer as ad
+
+# Show the _DATA_SHARING_DIRECTORY (should be set automatically to a temporary location):
+ad._DATA_SHARING_DIRECTORY.name
+# Show the _RSCRIPT_PATH (should be dectedt automatically):
+ad._RSCRIPT_PATH
+
+
+# Import Pandas as pd:
+import pandas as pd
+# Load the test dataset
+df = pd.read_csv('~/Temp/med-events.csv', sep='\t', header=0)
+# Let's look at first 6 rows (it should match the R output above except for the row names):
+df.head(6)
+
+
+# Compute CMA8 as a test:
+cma8 = ad.CMA8(df,
+               id_colname='PATIENT_ID',
+               event_date_colname='DATE',
+               event_duration_colname='DURATION',
+               event_daily_dose_colname='PERDAY',
+               medication_class_colname='CATEGORY')
+# Summary of cma8:
+cma8
+# The return value and messages:
+cma8.get_computation_results()
+# The CMA (the first 6 rows out of all 100):
+cma8.get_cma().head(6)
+# Plot it (statically):
+cma8.plot(patients_to_plot=['1', '2', '3'],
+          align_all_patients=True,
+          period_in_days=30,
+          cex=0.5)
+
+# Interactive plotting:
+cma8.plot_interactive()
+
+
+# Sliding windows with CMA1 (single thread, locally):
+cma1w_1l = ad.CMASlidingWindow(dataset=df,
+                               cma_to_apply="CMA1",
+                               id_colname='PATIENT_ID',
+                               event_date_colname='DATE',
+                               event_duration_colname='DURATION',
+                               event_daily_dose_colname='PERDAY',
+                               medication_class_colname='CATEGORY',
+                               sliding_window_duration=30,
+                               sliding_window_step_duration=30,
+                               parallel_backend="none",
+                               parallel_threads=1)
+cma1w_1l.get_cma().head(6)
+
+# Sliding windows with CMA1 (two threads, multicore, locally):
+cma1w_2ml = ad.CMASlidingWindow(dataset=df,
+                                cma_to_apply="CMA1",
+                                id_colname='PATIENT_ID',
+                                event_date_colname='DATE',
+                                event_duration_colname='DURATION',
+                                event_daily_dose_colname='PERDAY',
+                                medication_class_colname='CATEGORY',
+                                sliding_window_duration=30,
+                                sliding_window_step_duration=30,
+                                parallel_backend="multicore",  # <--- multicore
+                                parallel_threads=2)
+cma1w_2ml.get_cma().head(6)
+
+# Sliding windows with CMA1 (two threads, snow, locally):
+cma1w_2sl = ad.CMASlidingWindow(dataset=df,
+                                cma_to_apply="CMA1",
+                                id_colname='PATIENT_ID',
+                                event_date_colname='DATE',
+                                event_duration_colname='DURATION',
+                                event_daily_dose_colname='PERDAY',
+                                medication_class_colname='CATEGORY',
+                                sliding_window_duration=30,
+                                sliding_window_step_duration=30,
+                                parallel_backend="snow",  # <--- SNOW
+                                parallel_threads=2)
+cma1w_2sl.get_cma().head(6)
+
+# Sliding windows with CMA1 (two remote machines with two threads each):
+# The workers are defined as *literal R code* this is verbatim sent to AdhereR for parsing and interpretation
+# Please note, however, that this string should not contain line breaks (i.e., it should be a one-liner):
+workers = 'c(rep(list(list(host="workhorse1", user="user", rscript="/usr/local/bin/Rscript", snowlib="/usr/local/lib64/R/library/")), 2), rep(list(list(host="workhorse2", user="user", rscript="/usr/local/bin/Rscript", snowlib="/usr/local/lib64/R/library/")), 2))'
+cma1w_2sw = ad.CMASlidingWindow(dataset=df,
+                               cma_to_apply="CMA1",
+                                id_colname='PATIENT_ID',
+                                event_date_colname='DATE',
+                                event_duration_colname='DURATION',
+                                event_daily_dose_colname='PERDAY',
+                                medication_class_colname='CATEGORY',
+                                sliding_window_duration=30,
+                                sliding_window_step_duration=30,
+                                parallel_backend="snow",
+                                parallel_threads=workers)
+cma1w_2sw.get_cma().head(6)
+```
+
 
 
 ## Notes

@@ -141,6 +141,8 @@ warnings.}
 
 \item{return.data.table}{\emph{Logical}, if \code{TRUE} return a
 \code{data.table} object, otherwise a \code{data.frame}.}
+
+\item{...}{extra arguments.}
 }
 \value{
 A \code{data.frame} or \code{data.table} extending the

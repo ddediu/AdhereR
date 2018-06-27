@@ -1,4 +1,4 @@
-Package: AdhereR.devel
+Package: AdhereR
 Type: Package
 Title: Adherence to Medications
 Version: 0.2.0
@@ -29,6 +29,5 @@ Imports: lubridate (>= 1.5),
     shiny (>= 1.0)
 Depends: R (>= 3.0)
 Suggests: knitr (>= 1.15),
-    rmarkdown (>= 1.1),
-    testthat
+    rmarkdown (>= 1.1)
 VignetteBuilder: knitr

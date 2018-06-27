@@ -42,7 +42,7 @@ if platform.system() == "Windows":
 
 
 # The AdhereR R package name, minimum required version, and external call function:
-_R_PACKAGE_NAME = 'AdhereR.devel' # 'AdhereR' or 'AdhereR.devel'
+_R_PACKAGE_NAME = 'AdhereR' # package name
 _R_PACKAGE_MIN_VERSION = '0.1.1' # minimum version
 _R_PACKAGE_EXTERNAL_CALL_FUNCTION = 'callAdhereR' # function interfacing with non-R callers
 
