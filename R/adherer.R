@@ -1,7 +1,7 @@
 ###############################################################################################
 #
 #    AdhereR: an R package for computing various estimates of medication adherence.
-#    Copyright (C) 2015-2017  Dan Dediu & Alexandra Dima
+#    Copyright (C) 2015-2018  Dan Dediu & Alexandra Dima
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #' @import graphics
 #' @import stats
 #' @import data.table
+#' @import utils
 NULL
 
 # Declare some variables as global to avoid NOTEs during package building:
@@ -32,8 +33,9 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
                   ".INTERSECT.EPISODE.OBS.WIN.END", ".INTERSECT.EPISODE.OBS.WIN.START", ".OBS.DURATION.UPDATED",
                   ".OBS.END.DATE", ".OBS.END.DATE.PRECOMPUTED", "carry.only.for.same.medication", "chunk",
                   "consider.dosage.change", "end.episode.gap.days", "episode.ID", "episode.duration", "episode.end",
-                  "episode.start", "followup.window.duration", "followup.window.start", "maximum.permissible.gap",
-                  "maximum.permissible.gap.as.percent", "medication.change.means.new.treatment.episode",
+                  "episode.start", "followup.window.duration", "followup.window.start",
+                  "maximum.permissible.gap", "maximum.permissible.gap.as.percent",
+                  "medication.change.means.new.treatment.episode", "dosage.change.means.new.treatment.episode",
                   "observation.window.duration", "observation.window.start", "patientID", "plot.CMA.as.histogram", "selectedCMA",
                   "show.legend", "sliding.window.duration", "sliding.window.start", "sliding.window.step.duration"));
 
@@ -244,7 +246,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  # Date format:
                  date.format=NA, # the format of the dates used in this function (NA = undefined)
                  # Comments and metadata:
-                 summary=NA,
+                 summary="Base CMA object",
                  # Misc:
                  suppress.warnings=FALSE,
                  ...
@@ -309,12 +311,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
     }
     if( !is.na(consider.dosage.change) && !is.logical(consider.dosage.change) )
     {
-      if( !suppress.warnings ) warning(paste0("Parameter 'carry.only.for.same.medication' must be logical!\n"));
-      return (NULL);
-    }
-    if( !is.na(consider.dosage.change) && !is.logical(consider.dosage.change) )
-    {
-      if( !suppress.warnings ) warning(paste0("Parameter 'carry.only.for.same.medication' must be logical!\n"));
+      if( !suppress.warnings ) warning(paste0("Parameter 'consider.dosage.change' must be logical!\n"));
       return (NULL);
     }
     if( (!is.na(carryover.within.obs.window) && !is.na(carryover.into.obs.window) && !is.na(carry.only.for.same.medication)) &&
@@ -473,7 +470,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 )
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
-  if( is.null(cma) || !inherits(cma, "CMA0") ) return;
+  if( is.null(cma) || !inherits(cma, "CMA0") ) return (invisible(NULL));
 
   if( format[1] == "text" )
   {
@@ -532,7 +529,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
   } else
   {
     warning("Unknown format for printing!\n");
-    return;
+    return (invisible(NULL));
   }
 }
 
@@ -585,7 +582,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' various types of text.
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{\link[grDevices]{cm.colors}}.
+#' default \code{cm.colors}.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param col.continuation,lty.continuation,lwd.continuation The style of the
@@ -641,7 +638,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA0") || is.null(cma$data) || nrow(cma$data) < 1 ||
       is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) ||
-      is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) ) return;
+      is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) ) return (invisible(NULL));
 
   # Check compatibility between subtypes of plots:
   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
@@ -656,7 +653,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   # The patients:
   patids <- unique(as.character(cma$data[,cma$ID.colname])); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
-  if( length(patids) == 0 ) return;
+  if( length(patids) == 0 ) return (invisible(NULL));
   # Select only the patients to display:
   cma$data <- cma$data[ cma$data[,cma$ID.colname] %in% patids, ];
   # Make sure the patients are ordered by ID and date:
@@ -865,19 +862,42 @@ getCMA.CMA0 <- function(x)
   }
   time.interval <- round(time.interval);
 
+  # return (switch( as.character(unit),
+  #                 "days"  = (start.date + time.interval),
+  #                 "weeks" = (start.date + time.interval*7),
+  #                 "months" = {tmp <- (start.date + months(time.interval));
+  #                             i <- which(is.na(tmp));
+  #                             if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + months(time.interval);
+  #                             tmp;},
+  #                 "years"  = {tmp <- (start.date + lubridate::years(time.interval));
+  #                             i <- which(is.na(tmp));
+  #                             if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + lubridate::years(time.interval);
+  #                             tmp;},
+  #                 {if( !suppress.warnings ) warning(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n")); NA;} # default
+  # ));
+
+  # Faster but assumes that the internal representation of "Date" object is in number of days since the begining of time (probably stably true):
   return (switch( as.character(unit),
-                  "days"  = (start.date + time.interval),
-                  "weeks" = (start.date + time.interval*7),
-                  "months" = {tmp <- (start.date + months(time.interval));
-                              i <- which(is.na(tmp));
-                              if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + months(time.interval);
-                              tmp;},
-                  "years"  = {tmp <- (start.date + lubridate::years(time.interval));
-                              i <- which(is.na(tmp));
-                              if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + lubridate::years(time.interval);
-                              tmp;},
-                  {if( !suppress.warnings ) warning(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n")); NA;} # default
+                            "days"  = structure(unclass(start.date) + time.interval, class="Date"),
+                            "weeks" = structure(unclass(start.date) + time.interval*7, class="Date"),
+                            "months" = lubridate::add_with_rollback(start.date, lubridate::period(time.interval,"months"), roll_to_first=TRUE), # take care of cases such as 2001/01/29 + 1 month
+                            "years"  = lubridate::add_with_rollback(start.date, lubridate::period(time.interval,"years"),  roll_to_first=TRUE), # take care of cases such as 2000/02/29 + 1 year
+                            {if( !suppress.warnings ) warning(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n")); NA;} # default
   ));
+}
+
+# Auxiliary function: subtract two dates to obtain the number of days in between:
+# WARNING! Faster than difftime() but makes the assumption that the internal representation of Date objects is the number of days since a given begining of time
+# (true as of R 3.4 and probably conserved in the future versions)
+.difftime.Dates.as.days <- function( start.dates, end.dates, suppress.warnings=FALSE )
+{
+  # Checks
+  if( !inherits(start.dates,"Date") || !inherits(end.dates,"Date") )
+  {
+    if( !suppress.warnings ) warning("start.dates and end.dates to '.difftime.Dates.as.days' must be a Date() objects.\n");
+    return (NA);
+  }
+  return (unclass(start.dates) - unclass(end.dates)); # the difference between the raw internal representations of Date objects is in days
 }
 
 # Auxiliary function generating colors for bw plotting:
@@ -918,7 +938,7 @@ getCMA.CMA0 <- function(x)
 )
 {
   # Quick decision for sequential processing:
-  if( parallel.backend == "none" || parallel.threads == 1 )
+  if( parallel.backend == "none" || (is.numeric(parallel.threads) && parallel.threads == 1) )
   {
     # Single threaded: simply call the function with the given data:
     return (fnc(data=data,
@@ -1072,8 +1092,8 @@ getCMA.CMA0 <- function(x)
   }
 
   # Attempt to create the SNOW cluster:
-  cluster <- snow::makeCluster(parallel.threads, # process only "auto", otherwise trust makeCluster() to interpret the parameters
-                               type = cluster.type);
+  cluster <- parallel::makeCluster(parallel.threads, # process only "auto", otherwise trust makeCluster() to interpret the parameters
+                                   type = cluster.type);
   if( is.null(cluster) )
   {
     if( !suppress.warnings ) warning(paste0("Failed to create the cluster \"",parallel.backend,"\" with parallel.threads \"",parallel.threads,"\": will force sequential (\"none\").\n"));
@@ -1105,32 +1125,32 @@ getCMA.CMA0 <- function(x)
 
   # Pre-split the participants into a number of chunks equal to the number of created cluster nodes to reduce paying the overheads multiple times
   # and call the function for each cluster in parallel:
-  tmp <- snow::parLapply(cluster,
-                         snow::clusterSplit(cluster, patids),
-                         function(IDs) fnc(data=data[list(IDs),], # call the function sequentially for the patients in the current chunk
-                                           ID.colname=ID.colname,
-                                           event.date.colname=event.date.colname,
-                                           event.duration.colname=event.duration.colname,
-                                           event.daily.dose.colname=event.daily.dose.colname,
-                                           medication.class.colname=medication.class.colname,
-                                           event.interval.colname=event.interval.colname,
-                                           gap.days.colname=gap.days.colname,
-                                           carryover.within.obs.window=carryover.within.obs.window,
-                                           carryover.into.obs.window=carryover.into.obs.window,
-                                           carry.only.for.same.medication=carry.only.for.same.medication,
-                                           consider.dosage.change=consider.dosage.change,
-                                           followup.window.start=followup.window.start,
-                                           followup.window.start.unit=followup.window.start.unit,
-                                           followup.window.duration=followup.window.duration,
-                                           followup.window.duration.unit=followup.window.duration.unit,
-                                           observation.window.start=observation.window.start,
-                                           observation.window.start.unit=observation.window.start.unit,
-                                           observation.window.duration=observation.window.duration,
-                                           observation.window.duration.unit=observation.window.duration.unit,
-                                           date.format=date.format,
-                                           suppress.warnings=suppress.warnings));
+  tmp <- parallel::parLapply(cluster,
+                             parallel::clusterSplit(cluster, patids),
+                             function(IDs) fnc(data=data[list(IDs),], # call the function sequentially for the patients in the current chunk
+                                               ID.colname=ID.colname,
+                                               event.date.colname=event.date.colname,
+                                               event.duration.colname=event.duration.colname,
+                                               event.daily.dose.colname=event.daily.dose.colname,
+                                               medication.class.colname=medication.class.colname,
+                                               event.interval.colname=event.interval.colname,
+                                               gap.days.colname=gap.days.colname,
+                                               carryover.within.obs.window=carryover.within.obs.window,
+                                               carryover.into.obs.window=carryover.into.obs.window,
+                                               carry.only.for.same.medication=carry.only.for.same.medication,
+                                               consider.dosage.change=consider.dosage.change,
+                                               followup.window.start=followup.window.start,
+                                               followup.window.start.unit=followup.window.start.unit,
+                                               followup.window.duration=followup.window.duration,
+                                               followup.window.duration.unit=followup.window.duration.unit,
+                                               observation.window.start=observation.window.start,
+                                               observation.window.start.unit=observation.window.start.unit,
+                                               observation.window.duration=observation.window.duration,
+                                               observation.window.duration.unit=observation.window.duration.unit,
+                                               date.format=date.format,
+                                               suppress.warnings=suppress.warnings));
 
-  snow::stopCluster(cluster); # stop the cluster
+  parallel::stopCluster(cluster); # stop the cluster
 
   # Combine the results (there may be multiple return data.frames intermingled!)
   if( fnc.ret.vals == 1 )
@@ -1202,7 +1222,7 @@ getCMA.CMA0 <- function(x)
 #' dates (in which case the column must be of type \code{Date}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
-#' participant's first event; or \code{NA} if not defined.
+#' participant's first event.
 #' @param followup.window.start.unit can be either \emph{"days"},
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
@@ -1251,6 +1271,7 @@ getCMA.CMA0 <- function(x)
 #' warnings.
 #' @param return.data.table \emph{Logical}, if \code{TRUE} return a
 #' \code{data.table} object, otherwise a \code{data.frame}.
+#' @param ... extra arguments.
 #' @return A \code{data.frame} or \code{data.table} extending the
 #' \code{event.info} parameter with:
 #' \itemize{
@@ -1299,7 +1320,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                    followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)
                                    # The observation window (embedded in the follow-up window):
                                    observation.window.start=0, # the number of time units relative to followup.window.start, otherwise a date.format date or variable date
-                                   observation.window.start.unit="days", # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)
+                                   observation.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)
                                    observation.window.duration=365*2, # the duration of the observation window in time units
                                    observation.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)
                                    # Date format:
@@ -1313,150 +1334,203 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                    parallel.threads="auto", # specification (or number) of parallel threads
                                    # Misc:
                                    suppress.warnings=FALSE,
-                                   return.data.table=FALSE  # should the result be converted to data.frame (default) or returned as a data.table (keyed by patient ID and event date)?
+                                   return.data.table=FALSE,  # should the result be converted to data.frame (default) or returned as a data.table (keyed by patient ID and event date)?
+                                   ... # other stuff
 )
 {
-  data.names <- names(data); # cache names(data) as it is used a lot
-
   # preconditions concerning column names:
   if( is.null(data) || !inherits(data,"data.frame") || nrow(data) < 1 )
   {
-    if( !suppress.warnings ) warning("Event data must be a non-empty data.frame!\n")
+    if( !suppress.warnings ) warning("Event data must be a non-empty data frame!\n")
     return (NULL);
   }
-  if( !(ID.colname %in% data.names) )
+  data.names <- names(data); # cache names(data) as it is used a lot
+  if( is.null(ID.colname) || is.na(ID.colname) ||                                           # avoid empty stuff
+      !(is.character(ID.colname) ||                                                         # it must be a character...
+        (is.factor(ID.colname) && is.character(ID.colname <- as.character(ID.colname)))) || # ...or a factor (forced to character)
+      length(ID.colname) != 1 ||                                                            # make sure it's a single value
+      !(ID.colname %in% data.names)                                                         # make sure it's a valid column name
+      )
   {
-    if( !suppress.warnings ) warning("The patient ID column \"",ID.colname,"\" cannot be empty and must be present in the event data!\n")
+    if( !suppress.warnings ) warning("The patient ID column \"",ID.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
     return (NULL);
   }
-  if( !(event.date.colname %in% data.names) )
+  if( is.null(event.date.colname) || is.na(event.date.colname) ||                                                   # avoid empty stuff
+      !(is.character(event.date.colname) ||                                                                         # it must be a character...
+        (is.factor(event.date.colname) && is.character(event.date.colname <- as.character(event.date.colname)))) || # ...or a factor (forced to character)
+      length(event.date.colname) != 1 ||                                                                            # make sure it's a single value
+      !(event.date.colname %in% data.names)                                                                         # make sure it's a valid column name
+      )
   {
-    if( !suppress.warnings ) warning("The event date column \"",event.date.colname,"\" cannot be empty and must be present in the event data!\n")
+    if( !suppress.warnings ) warning("The event date column \"",event.date.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
     return (NULL);
   }
-  if( !(event.duration.colname %in% data.names) )
+  if( is.null(event.duration.colname) || is.na(event.duration.colname) ||                                                       # avoid empty stuff
+      !(is.character(event.duration.colname) ||                                                                                 # it must be a character...
+        (is.factor(event.duration.colname) && is.character(event.duration.colname <- as.character(event.duration.colname)))) || # ...or a factor (forced to character)
+      length(event.duration.colname) != 1 ||                                                                                    # make sure it's a single value
+      !(event.duration.colname %in% data.names)                                                                                 # make sure it's a valid column name
+      )
   {
-    if( !suppress.warnings ) warning("The event duration column \"",event.duration.colname,"\" cannot be empty and must be present in the event data!\n")
+    if( !suppress.warnings ) warning("The event duration column \"",event.duration.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
     return (NULL);
   }
-  if( !is.na(event.daily.dose.colname) && !(event.daily.dose.colname %in% data.names) )
+  if( (!is.null(event.daily.dose.colname) && !is.na(event.daily.dose.colname)) &&                                                      # if actually given:
+      (!(is.character(event.daily.dose.colname) ||                                                                                     # it must be a character...
+         (is.factor(event.daily.dose.colname) && is.character(event.daily.dose.colname <- as.character(event.daily.dose.colname)))) || # ...or a factor (forced to character)
+       length(event.daily.dose.colname) != 1 ||                                                                                        # make sure it's a single value
+       !(event.daily.dose.colname %in% data.names))                                                                                    # make sure it's a valid column name
+      )
   {
-    if( !suppress.warnings ) warning("If given, the event daily dose column \"",event.daily.dose.colname,"\" must be present in the event data!\n")
+    if( !suppress.warnings ) warning("If given, the event daily dose column \"",event.daily.dose.colname,"\" must be a single value and must be present in the event data!\n")
     return (NULL);
   }
-  if( !is.na(medication.class.colname) && !(medication.class.colname %in% data.names) )
+  if( (!is.null(medication.class.colname) && !is.na(medication.class.colname)) &&                                                      # if actually given:
+      (!(is.character(medication.class.colname) ||                                                                                     # it must be a character...
+         (is.factor(medication.class.colname) && is.character(medication.class.colname <- as.character(medication.class.colname)))) || # ...or a factor (forced to character)
+       length(medication.class.colname) != 1 ||                                                                                        # make sure it's a single value
+       !(medication.class.colname %in% data.names))                                                                                    # make sure it's a valid column name
+      )
   {
-    if( !suppress.warnings ) warning("If given, the event type column \"",medication.class.colname,"\" must be present in the event data!\n")
+    if( !suppress.warnings ) warning("If given, the event type column \"",medication.class.colname,"\" must be a single value and must be present in the event data!\n")
     return (NULL);
   }
 
   # preconditions concerning carry-over:
+  if( !is.logical(carryover.within.obs.window)    || is.na(carryover.within.obs.window)    || length(carryover.within.obs.window) != 1    ||
+      !is.logical(carryover.into.obs.window)      || is.na(carryover.into.obs.window)      || length(carryover.into.obs.window) != 1      ||
+      !is.logical(carry.only.for.same.medication) || is.na(carry.only.for.same.medication) || length(carry.only.for.same.medication) != 1 )
+  {
+    if( !suppress.warnings ) warning("Carry over arguments must be single value logicals!\n")
+    return (NULL);
+  }
   if( !carryover.within.obs.window && !carryover.into.obs.window && carry.only.for.same.medication )
   {
     if( !suppress.warnings ) warning("Cannot carry over only for same medication when no carry over at all is considered!\n")
     return (NULL);
   }
-  # preconditions concerning follow-up window:
-  if( is.numeric(followup.window.start) && followup.window.start < 0 )
+
+  # preconditions concerning dosage change:
+  if( !is.logical(consider.dosage.change) || is.na(consider.dosage.change) || length(consider.dosage.change) != 1 )
   {
-    if( !suppress.warnings ) warning("The follow-up window must start a positive number of time units after the first event!\n")
+    if( !suppress.warnings ) warning("Consider dosage change must be single value logical!\n")
     return (NULL);
   }
-  if( !inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) && !(followup.window.start %in% data.names) )
+
+  # preconditions concerning follow-up window (as all violations result in the same error, aggregate them in a single if):
+  if( (is.null(followup.window.start) || is.na(followup.window.start) || length(followup.window.start) != 1) ||                   # cannot be missing or have more than one values
+      (is.numeric(followup.window.start) && (followup.window.start < 0)) ||                                                       # if a number, must be a single positive one
+      (!inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) &&                                           # not a Date or number:
+          (!(is.character(followup.window.start) ||                                                                               # it must be a character...
+             (is.factor(followup.window.start) && is.character(followup.window.start <- as.character(followup.window.start)))) || # ...or a factor (forced to character)
+           !(followup.window.start %in% data.names))) )                                                                           # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The follow-up window start must be a valid column name!\n")
+    if( !suppress.warnings ) warning("The follow-up window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n")
     return (NULL);
   }
-  if( !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
+  if( is.null(followup.window.start.unit) || is.na(followup.window.start.unit) ||
+      length(followup.window.start.unit) != 1 ||
+      !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The follow-up window start unit is not recognized!\n")
+    if( !suppress.warnings ) warning("The follow-up window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
     return (NULL);
   }
-  if( is.numeric(followup.window.duration) && followup.window.duration <= 0 )
+  if( is.numeric(followup.window.duration) && (followup.window.duration <= 0 || length(followup.window.duration) != 1) ||               # cannot be missing or have more than one values
+      (!is.numeric(followup.window.duration) &&
+       (!(is.character(followup.window.duration) ||                                                                                     # it must be a character...
+          (is.factor(followup.window.duration) && is.character(followup.window.duration <- as.character(followup.window.duration)))) || # ...or a factor (forced to character)
+        !(followup.window.duration %in% data.names))))                                                                                  # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The follow-up window duration must be greater than 0!\n")
+    if( !suppress.warnings ) warning("The follow-up window duration must be a single value, either a positive number, or a string giving a column name in the data!\n")
     return (NULL);
   }
-  if( !is.numeric(followup.window.duration) && !(followup.window.duration %in% data.names) )
+  if( is.null(followup.window.duration.unit) || is.na(followup.window.duration.unit) ||
+      length(followup.window.duration.unit) != 1 ||
+      !(followup.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The follow-up window duration must be a positive number of a valid column name!\n")
+    if( !suppress.warnings ) warning("The follow-up window duration unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
     return (NULL);
   }
-  if( !(followup.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
+
+  # preconditions concerning observation window (as all violations result in the same error, aggregate them in a single if):
+  if( (is.null(observation.window.start) || is.na(observation.window.start) || length(observation.window.start) != 1) ||                   # cannot be missing or have more than one values
+      (is.numeric(observation.window.start) && (observation.window.start < 0)) ||                                                          # if a number, must be a single positive one
+      (!inherits(observation.window.start,"Date") && !is.numeric(observation.window.start) &&                                              # not a Date or number:
+          (!(is.character(observation.window.start) ||                                                                                     # it must be a character...
+             (is.factor(observation.window.start) && is.character(observation.window.start <- as.character(observation.window.start)))) || # ...or a factor (forced to character)
+           !(observation.window.start %in% data.names))) )                                                                                 # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The follow-up window duration unit is not recognized!\n")
+    if( !suppress.warnings ) warning("The observation window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n")
     return (NULL);
   }
-  # preconditions concerning observation window:
-  if( is.numeric(observation.window.start) && observation.window.start < 0 )
+  if( is.null(observation.window.start.unit) || is.na(observation.window.start.unit) ||
+      length(observation.window.start.unit) != 1 ||
+      !(observation.window.start.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The observation window must start a positive number of time units after the first event!\n")
+    if( !suppress.warnings ) warning("The observation window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
     return (NULL);
   }
-  if( !inherits(observation.window.start,"Date") && !is.numeric(observation.window.start) && !(observation.window.start %in% data.names) )
+  if( is.numeric(observation.window.duration) && (observation.window.duration <= 0 || length(observation.window.duration) != 1) ||               # cannot be missing or have more than one values
+      (!is.numeric(observation.window.duration) &&
+       (!(is.character(observation.window.duration) ||                                                                                           # it must be a character...
+          (is.factor(observation.window.duration) && is.character(observation.window.duration <- as.character(observation.window.duration)))) || # ...or a factor (forced to character)
+        !(observation.window.duration %in% data.names))))                                                                                        # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The observation window start must be a valid column name!\n")
+    if( !suppress.warnings ) warning("The observation window duration must be a single value, either a positive number, or a string giving a column name in the data!\n")
     return (NULL);
   }
-  if( !(observation.window.start.unit %in% c("days", "weeks", "months", "years") ) )
+  if( is.null(observation.window.duration.unit) || is.na(observation.window.duration.unit) ||
+      length(observation.window.duration.unit) != 1 ||
+      !(observation.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The observation window start unit is not recognized!\n")
-    return (NULL);
-  }
-  if( is.numeric(observation.window.duration) && observation.window.duration <= 0 )
-  {
-    if( !suppress.warnings ) warning("The observation window duration must be greater than 0!\n")
-    return (NULL);
-  }
-  if( !is.numeric(observation.window.duration) && !(observation.window.duration %in% data.names) )
-  {
-    if( !suppress.warnings ) warning("The obervation window duration must be a positive number of a valid column name!\n")
-    return (NULL);
-  }
-  if( !(observation.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
-  {
-    if( !suppress.warnings ) warning("The observation window duration unit is not recognized!\n")
+    if( !suppress.warnings ) warning("The observation window duration unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
     return (NULL);
   }
 
   # Check the patient IDs:
-  if( any(s <- (is.na(data[,ID.colname]))) )
+  if( anyNA(data[,ID.colname]) )
   {
-    if( !suppress.warnings ) warning(paste0("The patient unique identifiers in the \"",ID.colname,"\" column must be non-missing; first issue occurs on row ",min(which(s)),".\n"));
+    if( !suppress.warnings ) warning(paste0("The patient unique identifiers in the \"",ID.colname,"\" column must not contain NAs; the first occurs on row ",min(which(is.na(data[,ID.colname]))),"!\n"));
     return (NULL);
   }
 
   # Check the date format (and save the conversion to Date() for later use):
-  if( any(s <- is.na(Date.converted.to.DATE <- as.Date(data[,event.date.colname],format=date.format))) )
+  if( is.na(date.format) || is.null(date.format) || length(date.format) != 1 || !is.character(date.format) )
   {
-    if( !suppress.warnings ) warning(paste0("Not all entries in the event date \"",event.date.colname,"\" column are valid dates or conform to the date format \"",date.format,"\"; first issue occurs on row ",min(which(s)),".\n"));
+    if( !suppress.warnings ) warning(paste0("The date format must be a single string!\n"));
+    return (NULL);
+  }
+  if( anyNA(Date.converted.to.DATE <- as.Date(data[,event.date.colname],format=date.format)) )
+  {
+    if( !suppress.warnings ) warning(paste0("Not all entries in the event date \"",event.date.colname,"\" column are valid dates or conform to the date format \"",date.format,"\"; first issue occurs on row ",min(which(is.na(Date.converted.to.DATE))),"!\n"));
     return (NULL);
   }
 
   # Check the duration:
-  s <- 1;
-  if( !is.numeric(data[,event.duration.colname]) || any(s <- (is.na(data[,event.duration.colname]) || data[,event.duration.colname] <= 0)) )
+  tmp <- data[,event.duration.colname]; # caching for speed
+  if( !is.numeric(tmp) || any(is.na(tmp) | tmp <= 0) )
   {
-    if( !suppress.warnings ) warning(paste0("The event duration in the \"",event.duration.colname,"\" column must be non-missing strictly positive numbers; first issue occurs on row ",min(which(s)),".\n"));
+    if( !suppress.warnings ) warning(paste0("The event durations in the \"",event.duration.colname,"\" column must be non-missing strictly positive numbers!\n"));
     return (NULL);
   }
 
   # Check the event daily dose:
-  if( !is.na(event.daily.dose.colname) && (!is.numeric(data[,event.daily.dose.colname]) || any(data[,event.daily.dose.colname] < 0)) )
+  if( !is.na(event.daily.dose.colname) && !is.null(event.daily.dose.colname) &&             # if actually given:
+      (!is.numeric(tmp <- data[,event.daily.dose.colname]) || any(is.na(tmp) | tmp <= 0)) ) # must be a non-missing strictly positive number (and cache it for speed)
   {
-    if( !suppress.warnings ) warning(paste0("If given, the event daily dose in the \"",event.daily.dose.colname,"\" column must be a positive number.\n"));
+    if( !suppress.warnings ) warning(paste0("If given, the event daily dose in the \"",event.daily.dose.colname,"\" column must be a non-missing strictly positive numbers!\n"));
     return (NULL);
   }
 
   # Check the newly created columns:
-  if( is.na(event.interval.colname) || (event.interval.colname %in% data.names) )
+  if( is.na(event.interval.colname) || is.null(event.interval.colname) || !is.character(event.interval.colname) || (event.interval.colname %in% data.names) )
   {
-    if( !suppress.warnings ) warning(paste0("The column name where the event interval will be stored \"",event.interval.colname,"\" cannot be NA nor already present in the event data.\n"));
+    if( !suppress.warnings ) warning(paste0("The column name where the event interval will be stored \"",event.interval.colname,"\" cannot be missing nor already present in the event data!\n"));
     return (NULL);
   }
-  if( is.na(gap.days.colname) || (gap.days.colname %in% data.names) )
+  if( is.na(gap.days.colname) || is.null(gap.days.colname) || !is.character(gap.days.colname) || (gap.days.colname %in% data.names) )
   {
-    if( !suppress.warnings ) warning(paste0("The column name where the gap days will be stored \"",gap.days.colname,"\" cannot be NA nor already present in the event data.\n"));
+    if( !suppress.warnings ) warning(paste0("The column name where the gap days will be stored \"",gap.days.colname,"\" cannot be mising nor already present in the event data.\n"));
     return (NULL);
   }
 
@@ -1543,19 +1617,36 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     # Auxliary internal function: For a given patient, compute the gaps and return the required columns:
     .process.patient <- function(data4ID)
     {
+      # Number of events:
       n.events <- nrow(data4ID);
-      # Cache used columns:
-      event.date2.column    <- data4ID[,get(event.date2.colname)];
-      event.duration.column <- data4ID[,get(event.duration.colname)];
-      if( !is.na(medication.class.colname) ) medication.class.column <- data4ID[,get(medication.class.colname)];
-      if( !is.na(event.daily.dose.colname) ) event.daily.dose.column <- data4ID[,get(event.daily.dose.colname)];
+
+      # Force the selection, evaluation of promises and caching of the needed columns:
+      # ... which columns to select (with their indices):
+      columns.to.cache <- c(event.date2.colname, event.duration.colname); event.date2.colname.index <- 1; event.duration.colname.index <- 2;
+      curr.index <- 3;
+      if( !is.na(medication.class.colname) ){ columns.to.cache <- c(columns.to.cache, medication.class.colname); medication.class.colname.index <- curr.index; curr.index <- curr.index + 1;}
+      if( !is.na(event.daily.dose.colname) ){ columns.to.cache <- c(columns.to.cache, event.daily.dose.colname); event.daily.dose.colname.index <- curr.index; curr.index <- curr.index + 1;}
+      if( followup.window.start.type %in% c(2,3) ){ columns.to.cache <- c(columns.to.cache, followup.window.start); followup.window.start.index <- curr.index; curr.index <- curr.index + 1;}
+      if( !followup.window.duration.is.number ){ columns.to.cache <- c(columns.to.cache, followup.window.duration); followup.window.duration.index <- curr.index; curr.index <- curr.index + 1;}
+      if( observation.window.start.type %in% c(2,3) ){ columns.to.cache <- c(columns.to.cache, observation.window.start); observation.window.start.index <- curr.index; curr.index <- curr.index + 1;}
+      if( !observation.window.duration.is.number ){ columns.to.cache <- c(columns.to.cache, observation.window.duration); observation.window.duration.index <- curr.index; curr.index <- curr.index + 1;}
+      # ... select these columns:
+      data4ID.selected.columns <- data4ID[, columns.to.cache, with=FALSE]; # alternative to: data4ID[,..columns.to.cache]
+      # ... cache the columns based on their indices:
+      event.date2.column <- data4ID.selected.columns[[event.date2.colname.index]]; event.duration.column <- data4ID.selected.columns[[event.duration.colname.index]];
+      if( !is.na(medication.class.colname) ) medication.class.column <- data4ID.selected.columns[[medication.class.colname.index]];
+      if( !is.na(event.daily.dose.colname) ) event.daily.dose.column <- data4ID.selected.columns[[event.daily.dose.colname.index]];
+      if( followup.window.start.type %in% c(2,3) ) followup.window.start.column <- data4ID.selected.columns[[followup.window.start.index]];
+      if( !followup.window.duration.is.number ) followup.window.duration.column <- data4ID.selected.columns[[followup.window.duration.index]];
+      if( observation.window.start.type %in% c(2,3) ) observation.window.start.column <- data4ID.selected.columns[[observation.window.start.index]];
+      if( !observation.window.duration.is.number ) observation.window.duration.column <- data4ID.selected.columns[[observation.window.duration.index]];
 
       # Cache also follow-up window start and end dates:
       # start dates
       .FU.START.DATE <- switch(followup.window.start.type,
                                .add.time.interval.to.date(event.date2.column[1], followup.window.start, followup.window.start.unit, suppress.warnings),                 # 1
-                               data4ID[1,get(followup.window.start)],                                                                                                   # 2
-                               .add.time.interval.to.date(event.date2.column[1], data4ID[1,get(followup.window.start)], followup.window.start.unit, suppress.warnings), # 3
+                               followup.window.start.column[1],                                                                                                         # 2
+                               .add.time.interval.to.date(event.date2.column[1], followup.window.start.column[1], followup.window.start.unit, suppress.warnings),       # 3
                                followup.window.start);                                                                                                                  # 4
       if( is.na(.FU.START.DATE) )
       {
@@ -1566,7 +1657,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                      ".OBS.END.DATE"=as.Date(NA),
                      ".EVENT.STARTS.BEFORE.OBS.WINDOW"=NA,
                      ".EVENT.STARTS.AFTER.OBS.WINDOW"=NA,
-                     ".EVENT.WITHIN.FU.WINDOW"=.EVENT.WITHIN.FU.WINDOW,
+                     ".EVENT.WITHIN.FU.WINDOW"=NA,
                      ".TDIFF1"=NA_real_,
                      ".TDIFF2"=NA_real_,
                      ".OBS.WITHIN.FU"=FALSE,
@@ -1576,7 +1667,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       }
       # end dates
       .FU.END.DATE <- .add.time.interval.to.date(.FU.START.DATE,
-                                                 ifelse(followup.window.duration.is.number, followup.window.duration, data4ID[1,get(followup.window.duration)]),
+                                                 ifelse(followup.window.duration.is.number, followup.window.duration, followup.window.duration.column[1]),
                                                  followup.window.duration.unit,
                                                  suppress.warnings);
       if( is.na(.FU.END.DATE) )
@@ -1588,7 +1679,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                      ".OBS.END.DATE"=as.Date(NA),
                      ".EVENT.STARTS.BEFORE.OBS.WINDOW"=NA,
                      ".EVENT.STARTS.AFTER.OBS.WINDOW"=NA,
-                     ".EVENT.WITHIN.FU.WINDOW"=.EVENT.WITHIN.FU.WINDOW,
+                     ".EVENT.WITHIN.FU.WINDOW"=NA,
                      ".TDIFF1"=NA_real_,
                      ".TDIFF2"=NA_real_,
                      ".OBS.WITHIN.FU"=FALSE,
@@ -1603,8 +1694,8 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       # start dates
       .OBS.START.DATE <- switch(observation.window.start.type,
                                 .add.time.interval.to.date(.FU.START.DATE, observation.window.start, observation.window.start.unit, suppress.warnings),                 # 1
-                                data4ID[1,get(observation.window.start)],                                                                                               # 2
-                                .add.time.interval.to.date(.FU.START.DATE, data4ID[1,get(observation.window.start)], observation.window.start.unit, suppress.warnings), # 3
+                                observation.window.start.column[1],                                                                                                     # 2
+                                .add.time.interval.to.date(.FU.START.DATE, observation.window.start.column[1], observation.window.start.unit, suppress.warnings),       # 3
                                 observation.window.start);                                                                                                              # 4
       if( is.na(.OBS.START.DATE) )
       {
@@ -1625,7 +1716,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       }
       # end dates
       .OBS.END.DATE <- .add.time.interval.to.date(.OBS.START.DATE,
-                                                  ifelse(observation.window.duration.is.number, observation.window.duration, data4ID[1,get(observation.window.duration)]),
+                                                  ifelse(observation.window.duration.is.number, observation.window.duration, observation.window.duration.column[1]),
                                                   observation.window.duration.unit,
                                                   suppress.warnings);
       if( is.na(.OBS.END.DATE) )
@@ -1652,11 +1743,11 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 
       # Cache some time differences:
       # event.duration.colname - (.OBS.START.DATE - event.date2.colname):
-      .TDIFF1 <- (event.duration.column - as.numeric(difftime(.OBS.START.DATE, event.date2.column, units="days")));
+      .TDIFF1 <- (event.duration.column - .difftime.Dates.as.days(.OBS.START.DATE, event.date2.column));
       # event.date2.colname[current+1] - event.date2.colname[current]:
       if( n.events > 1 )
       {
-        .TDIFF2 <- c(as.numeric(difftime(event.date2.column[-1], event.date2.column[-n.events], units="days")),NA_real_);
+        .TDIFF2 <- c(.difftime.Dates.as.days(event.date2.column[-1], event.date2.column[-n.events]),NA_real_);
       } else
       {
         .TDIFF2 <- NA_real_;
@@ -1697,64 +1788,96 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       if( slen == 1 ) # only one event in the observation window
       {
         # Computations happen within the observation window
-        .EVENT.INTERVAL[s] <- as.numeric(difftime(.OBS.END.DATE, event.date2.column[s], units="days")); # for last event, the interval ends at the end of OW
+        .EVENT.INTERVAL[s] <- .difftime.Dates.as.days(.OBS.END.DATE, event.date2.column[s]); # for last event, the interval ends at the end of OW
         .CARRY.OVER.FROM.BEFORE[s] <- 0.0; # no carry-over into this unique event
         .GAP.DAYS[s] <- max(0.0, (.EVENT.INTERVAL[s] - event.duration.column[s])); # the actual gap cannot be negative
       } else if( slen > 1 ) # at least one event in the observation window
       {
         # Computations happen within the observation window
-        # was there a change in medication?
-        if( !is.na(medication.class.colname) )
+        if( carryover.within.obs.window )
         {
-          medication.changed <- c((medication.class.column[s[1:(slen-1)]] != medication.class.column[s[2:slen]]), FALSE);
-        } else
-        {
-          medication.changed <- rep(FALSE,slen);
-        }
-        # was there a change in dosage?
-        if( !is.na(event.daily.dose.colname) )
-        {
-          dosage.change.ratio <- c((event.daily.dose.column[s[1:(slen-1)]] / event.daily.dose.column[s[2:slen]]), 1.0);
-        } else
-        {
-          dosage.change.ratio <- rep(1.0,slen);
-        }
-        # event intervals:
-        .EVENT.INTERVAL[s]       <- .TDIFF2[s]; # save the time difference between next and current event start dates, but
-        .EVENT.INTERVAL[s[slen]] <- as.numeric(difftime(.OBS.END.DATE, event.date2.column[s[slen]], units="days")); # for last event, the interval ends at the end of OW
-        # event.interval - event.duration:
-        .event.interval.minus.duration <- (.EVENT.INTERVAL[s] - event.duration.column[s]);
-        # cache various medication and dosage change conditions:
-        cond1 <- (carry.only.for.same.medication & medication.changed);
-        cond2 <- ((carry.only.for.same.medication & consider.dosage.change & !medication.changed) | (!carry.only.for.same.medication & consider.dosage.change));
+          # do carry over within the observation window:
 
-        carry.over <- 0; # Initially, no carry-over into the first event
-        # for each event:
-        for( i in seq_along(s) )
-        {
-          si <- s[i]; # caching s[i] as it's used a lot
-
-          # Save the carry-over into the event:
-          .CARRY.OVER.FROM.BEFORE[si] <- carry.over;
-
-          # Computing the gap between events:
-          gap <- (.event.interval.minus.duration[i] - carry.over); # subtract the event duration and carry-over from event interval
-          if( gap < 0.0 ) # the actual gap cannot be negative
+          # was there a change in medication?
+          if( !is.na(medication.class.colname) )
           {
-            .GAP.DAYS[si] <- 0.0; carry.over <- (-gap);
+            medication.changed <- c((medication.class.column[s[-slen]] != medication.class.column[s[-1]]), FALSE);
           } else
           {
-            .GAP.DAYS[si] <- gap; carry.over <- 0.0;
+            medication.changed <- rep(FALSE,slen);
           }
+          # was there a change in dosage?
+          if( !is.na(event.daily.dose.colname) )
+          {
+            dosage.change.ratio <- c((event.daily.dose.column[s[-slen]] / event.daily.dose.column[s[-1]]), 1.0);
+          } else
+          {
+            dosage.change.ratio <- rep(1.0,slen);
+          }
+          # event intervals:
+          .EVENT.INTERVAL[s]       <- .TDIFF2[s]; # save the time difference between next and current event start dates, but
+          .EVENT.INTERVAL[s[slen]] <- .difftime.Dates.as.days(.OBS.END.DATE, event.date2.column[s[slen]]); # for last event, the interval ends at the end of OW
+          # event.interval - event.duration:
+          .event.interval.minus.duration <- (.EVENT.INTERVAL[s] - event.duration.column[s]);
+          # cache various medication and dosage change conditions:
+          cond1 <- (carry.only.for.same.medication & medication.changed);
+          cond2 <- ((carry.only.for.same.medication & consider.dosage.change & !medication.changed) | (!carry.only.for.same.medication & consider.dosage.change));
 
-          if( cond1[i] )
+          carry.over <- 0; # Initially, no carry-over into the first event
+          # for each event:
+          for( i in seq_along(s) ) # this for loop is not a performance bottleneck!
           {
-            # Do not carry over across medication changes:
-            carry.over <- 0;
-          } else if( cond2[i] )
+            si <- s[i]; # caching s[i] as it's used a lot
+
+            # Save the carry-over into the event:
+            .CARRY.OVER.FROM.BEFORE[si] <- carry.over;
+
+            # Computing the gap between events:
+            gap <- (.event.interval.minus.duration[i] - carry.over); # subtract the event duration and carry-over from event interval
+            if( gap < 0.0 ) # the actual gap cannot be negative
+            {
+              .GAP.DAYS[si] <- 0.0; carry.over <- (-gap);
+            } else
+            {
+              .GAP.DAYS[si] <- gap; carry.over <- 0.0;
+            }
+
+            if( cond1[i] )
+            {
+              # Do not carry over across medication changes:
+              carry.over <- 0;
+            } else if( cond2[i] )
+            {
+              # Apply the dosage change ratio:
+              carry.over <- carry.over * dosage.change.ratio[i]; # adjust the carry-over relative to dosage change
+            }
+          }
+        } else
+        {
+          # do not consider carry over within the observation window:
+
+          # event intervals:
+          .EVENT.INTERVAL[s]       <- .TDIFF2[s]; # save the time difference between next and current event start dates, but
+          .EVENT.INTERVAL[s[slen]] <- .difftime.Dates.as.days(.OBS.END.DATE, event.date2.column[s[slen]]); # for last event, the interval ends at the end of OW
+          # event.interval - event.duration:
+          .event.interval.minus.duration <- (.EVENT.INTERVAL[s] - event.duration.column[s]);
+          # no carry over in this case:
+          .CARRY.OVER.FROM.BEFORE[s] <- 0.0;
+
+          # for each event:
+          for( i in seq_along(s) ) # this for loop is not a performance bottleneck!
           {
-            # Apply the dosage change ratio:
-            carry.over <- carry.over * dosage.change.ratio[i]; # adjust the carry-over relative to dosage change
+            si <- s[i]; # caching s[i] as it's used a lot
+
+            # Computing the gap between events:
+            gap <- .event.interval.minus.duration[i]; # the event duration
+            if( gap < 0.0 ) # the actual gap cannot be negative
+            {
+              .GAP.DAYS[si] <- 0.0;
+            } else
+            {
+              .GAP.DAYS[si] <- gap;
+            }
           }
         }
       }
@@ -1865,7 +1988,13 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     return (as.data.frame(ret.val));
   } else
   {
-    setkeyv(ret.val, c(ID.colname, ".DATE.as.Date")); # make sure it is keyed by patient ID and event date
+    if( ".DATE.as.Date" %in% names(ret.val) )
+    {
+      setkeyv(ret.val, c(ID.colname, ".DATE.as.Date")); # make sure it is keyed by patient ID and event date
+    } else
+    {
+      setkeyv(ret.val, c(ID.colname)); # make sure it is keyed by patient ID (as event date was removed)
+    }
     return (ret.val);
   }
 }
@@ -1934,6 +2063,8 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 #' is adjusted to reflect changes in dosage, or \code{NA} if not defined.
 #' @param medication.change.means.new.treatment.episode \emph{Logical}, should
 #' a change in medication automatically start a new treatment episode?
+#' @param dosage.change.means.new.treatment.episode \emph{Logical}, should
+#' a change in dosage automatically start a new treatment episode?
 #' @param maximum.permissible.gap The \emph{number} of units given by
 #' \code{maximum.permissible.gap.unit} representing the maximum duration of
 #' permissible gaps between treatment episodes (can also be a percent, see
@@ -1994,6 +2125,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 #' warnings.
 #' @param return.data.table \emph{Logical}, if \code{TRUE} return a
 #' \code{data.table} object, otherwise a \code{data.frame}.
+#' @param ... extra arguments.
 #' @return A \code{data.frame} or \code{data.table} with the following columns
 #' (or \code{NULL} if no
 #' treatment episodes could be computed):
@@ -2018,6 +2150,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         consider.dosage.change=TRUE, # if TRUE carry-over is adjusted to reflect changes in dosage
                                         # Treatment episodes:
                                         medication.change.means.new.treatment.episode=TRUE, # does a change in medication automatically start a new treatment episode?
+                                        dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                                         maximum.permissible.gap=90, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                                         maximum.permissible.gap.unit=c("days", "weeks", "months", "years", "percent")[1], # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days), "years" (fixed at 365 days), or "percent", in which case maximum.permissible.gap is interpreted as a percent (can be > 100%) of the duration of the current prescription
                                         # The follow-up window:
@@ -2035,7 +2168,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         parallel.threads="auto", # specification (or number) of parallel threads
                                         # Misc:
                                         suppress.warnings=FALSE,
-                                        return.data.table=FALSE
+                                        return.data.table=FALSE,
+                                        ... # other stuff
 )
 {
   # Convert maximum permissible gap units into days or proprtion:
@@ -2094,6 +2228,11 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       {
         # If medication change triggers a new episode and there is more than one event, consider these changes as well:
         s <- (s | c(medication.class.column[1:(n.events-1)] != medication.class.column[2:n.events], TRUE));
+      }
+      if( dosage.change.means.new.treatment.episode && n.events > 1 )
+      {
+        # If dosage change triggers a new episode and there is more than one event, consider these changes as well:
+        s <- (s | c(event.daily.dose.colname[1:(n.events-1)] != event.daily.dose.colname[2:n.events], TRUE));
       }
       s <- which(s); s.len <- length(s);
 
@@ -2241,6 +2380,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                            show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                           min.plot.size.in.characters.horiz=20, min.plot.size.in.characters.vert=15,  # the minimum plot size (in character)
+                           max.patients.to.plot=100,        # maximum number of patients to plot
                            ...
 )
 {
@@ -2262,7 +2403,17 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   # The patients (use event.info as it contains all the info required, plus the specifics of the CMA):
   patids <- unique(cma$event.info[,cma$ID.colname]); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
-  if( length(patids) == 0 ) return;
+  if( length(patids) == 0 )
+  {
+    cat("No patients to plot!\n");
+    return (invisible(NULL));
+  } else if( length(patids) > max.patients.to.plot )
+  {
+    cat(paste0("Too many patients to plot (",length(patids),
+               ")! If you really want that, please change the 'max.patients.to.plot' parameter value (now set at ",
+               max.patients.to.plot,"!\n"));
+    return (invisible(NULL));
+  }
   # Select only the patients to display:
   cma$data <- cma$data[ cma$data[,cma$ID.colname] %in% patids, ];
   cma$event.info <- cma$event.info[ cma$event.info[,cma$ID.colname] %in% patids, ];
@@ -2335,16 +2486,50 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   duration.total <- duration + adh.plot.space[2];
 
   # The actual plotting:
-  plot( 0, 1,
-        xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
-        ylim=c(0,nrow(cma$event.info)+1), yaxs="i", type="n",
-        main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
-                    ifelse(show.cma,paste0(" (",class(cma)[1],")"),"")),
-        axes=FALSE, xlab=ifelse(show.period=="dates","","days"),
-        ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"), cex.lab=cex.lab ); box();
+  if(inherits(msg <- try(plot( 0, 1,
+                               xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
+                               ylim=c(0,nrow(cma$event.info)+1), yaxs="i", type="n",
+                               axes=FALSE,
+                               xlab="", ylab=""),
+                         silent=TRUE),
+              "try-error"))
+  {
+    # Some error occured when creatig the plot...
+    cat(msg);
+    return (invisible(NULL));
+  }
 
   # Character height and width in the current plotting system:
-  char.height <- strheight("O",cex=cex); char.width <- strwidth("O",cex=cex);
+  char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
+
+  # Minimum plot dimensions:
+  if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
+      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * length(patids))
+  {
+    cat(paste0("Plotting area is too small (it must be at least ",
+               min.plot.size.in.characters.horiz,
+               " x ",
+               min.plot.size.in.characters.vert,
+               " characters per patient, but now it is only ",
+               round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
+               " x ",
+               round(abs(par("usr")[4] - par("usr")[3]) / (char.height * length(patids)),1),
+               ")!\n"));
+    #segments(x0=c(par("usr")[1], par("usr")[1]),
+    #         y0=c(par("usr")[3], par("usr")[4]),
+    #         x1=c(par("usr")[2], par("usr")[2]),
+    #         y1=c(par("usr")[4], par("usr")[3]),
+    #         col="red", lwd=3);
+    return (invisible(NULL));
+  }
+
+  # Continue plotting:
+  box();
+  title(main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
+                    ifelse(show.cma,paste0(" (",class(cma)[1],")"),"")),
+        xlab=ifelse(show.period=="dates","","days"),
+        ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
+        cex.lab=cex.lab);
 
   # The patient axis and CMA plots:
   if( plot.CMA && !is.null(getCMA(cma)) )
@@ -2374,7 +2559,19 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       adh <- getCMA(cma)[x,"CMA"];
       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(min(adh,adh.max)), mean(s)+1, col=CMA.plot.col, border=NA);
       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)), mean(s)+1, col=NA, border=CMA.plot.border);
-      if(!is.na(adh)) text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s), labels=sprintf("%.1f%%",adh*100), col=CMA.plot.text, cex=cex.axis);
+      if( !is.na(adh) )
+      {
+        cma.string <- sprintf("%.1f%%",adh*100); available.x.space <- abs(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0));
+        if( strwidth(cma.string, cex=cex.axis) <= available.x.space )
+        { # horizontal writing of the CMA:
+          text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s),
+               labels=cma.string, col=CMA.plot.text, cex=cex.axis);
+        } else if( strheight(cma.string, cex=cex.axis) <= available.x.space )
+        { # vertical writing of the CMA:
+          text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s),
+               labels=cma.string, col=CMA.plot.text, cex=cex.axis, srt=90);
+        } # otherwise, theres' no space for showing the CMA here
+      }
     }
 
     # The follow-up and observation windows:
@@ -2866,17 +3063,29 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
     # Auxliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
-      sel.data4ID <- data4ID[ !.EVENT.STARTS.BEFORE.OBS.WINDOW & !.EVENT.STARTS.AFTER.OBS.WINDOW, ]; # select the events within the observation window only
-      n.events <- nrow(sel.data4ID); # cache number of events
-      if( n.events < 2 || sel.data4ID$.DATE.as.Date[1] == sel.data4ID$.DATE.as.Date[n.events] )
+      # Force the selection, evaluation of promises and caching of the needed columns:
+      # ... which columns to select (with their indices):
+      columns.to.cache <- c(".EVENT.STARTS.BEFORE.OBS.WINDOW", ".EVENT.STARTS.AFTER.OBS.WINDOW", ".DATE.as.Date", event.duration.colname);
+      # ... select these columns:
+      data4ID.selected.columns <- data4ID[, columns.to.cache, with=FALSE]; # alternative to: data4ID[,..columns.to.cache];
+      # ... cache the columns based on their indices:
+      .EVENT.STARTS.BEFORE.OBS.WINDOW <- data4ID.selected.columns[[1]];
+      .EVENT.STARTS.AFTER.OBS.WINDOW <- data4ID.selected.columns[[2]];
+      .DATE.as.Date <- data4ID.selected.columns[[3]];
+      event.duration.column <- data4ID.selected.columns[[4]];
+
+      # which data to consider:
+      s <- which(!(.EVENT.STARTS.BEFORE.OBS.WINDOW | .EVENT.STARTS.AFTER.OBS.WINDOW));
+      s.len <- length(s); s1 <- s[1]; ss.len <- s[s.len];
+
+      if( s.len < 2 || (.date.diff <- .difftime.Dates.as.days(.DATE.as.Date[ss.len], .DATE.as.Date[s1])) == 0 )
       {
         # For less than two events or when the first and the last events are on the same day, CMA1 does not make sense
         return (NA_real_);
       } else
       {
         # Otherwise, the sum of durations of the events excluding the last divided by the number of days between the first and the last event
-        return (as.numeric(sum(sel.data4ID[-n.events, get(event.duration.colname)],na.rm=TRUE) /
-                                 (as.numeric(difftime(sel.data4ID$.DATE.as.Date[n.events], sel.data4ID$.DATE.as.Date[1], units="days")))));
+        return (as.numeric(sum(event.duration.column[s[-s.len]],na.rm=TRUE) / .date.diff));
       }
     }
 
@@ -3038,7 +3247,7 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{\link[grDevices]{cm.colors}}.
+#' default \code{cm.colors}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -5798,6 +6007,8 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' treatment episodes and the CMA on each treatment episode).
 #' @param medication.change.means.new.treatment.episode \emph{Logical}, should a
 #' change in medication automatically start a new treatment episode?
+#' @param dosage.change.means.new.treatment.episode \emph{Logical}, should a
+#' change in dosage automatically start a new treatment episode?
 #' @param maximum.permissible.gap The \emph{number} of units given by
 #' \code{maximum.permissible.gap.unit} representing the maximum duration of
 #' permissible gaps between treatment episodes (can also be a percent, see
@@ -5980,6 +6191,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              consider.dosage.change=NA, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = use the CMA's values)
                              # Treatment episodes:
                              medication.change.means.new.treatment.episode=TRUE, # does a change in medication automatically start a new treatment episode?
+                             dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                              maximum.permissible.gap=180, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                              maximum.permissible.gap.unit=c("days", "weeks", "months", "years", "percent")[1], # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days), "years" (fixed at 365 days), or "percent", in which case maximum.permissible.gap is interpreted as a percent (can be > 100%) of the duration of the current prescription
                              # The follow-up window:
@@ -6115,6 +6327,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                              carry.only.for.same.medication=carry.only.for.same.medication,
                                              consider.dosage.change=consider.dosage.change,
                                              medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                             dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
                                              maximum.permissible.gap=maximum.permissible.gap,
                                              maximum.permissible.gap.unit=maximum.permissible.gap.unit,
                                              followup.window.start=followup.window.start,
@@ -6277,7 +6490,7 @@ print.CMA_per_episode <- function(x,                                     # the C
 )
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
-  if( is.null(cma) ) return;
+  if( is.null(cma) ) return (invisible(NULL));
 
   if( format[1] == "text" )
   {
@@ -6336,7 +6549,7 @@ print.CMA_per_episode <- function(x,                                     # the C
   } else
   {
     warning("Unknown format for printing!\n");
-    return;
+    return (invisible(NULL));
   }
 }
 
@@ -6364,6 +6577,8 @@ print.CMA_per_episode <- function(x,                                     # the C
                                highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                                show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
                                bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                               min.plot.size.in.characters.horiz=20, min.plot.size.in.characters.vert=15,  # the minimum plot size (in character)
+                               max.patients.to.plot=100,        # maximum number of patients to plot
                                ...
 )
 {
@@ -6403,7 +6618,17 @@ print.CMA_per_episode <- function(x,                                     # the C
   # The patients:
   patids <- unique(cmas[,cma$ID.colname]); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
-  if( length(patids) == 0 ) return;
+  if( length(patids) == 0 )
+  {
+    cat("No patients to plot!\n");
+    return (invisible(NULL));
+  } else if( length(patids) > max.patients.to.plot )
+  {
+    cat(paste0("Too many patients to plot (",length(patids),
+               ")! If you really want that, please change the 'max.patients.to.plot' parameter value (now set at ",
+               max.patients.to.plot,"!\n"));
+    return (invisible(NULL));
+  }
   # Select only the patients to display:
   cma$data <- cma$data[ cma$data[,cma$ID.colname] %in% patids, ];
   cmas <- cmas[ cmas[,cma$ID.colname] %in% patids, ];
@@ -6491,16 +6716,55 @@ print.CMA_per_episode <- function(x,                                     # the C
   duration.total <- duration + adh.plot.space[2];
 
   # The actual plotting:
-  plot( 0, 1,
-        xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
-        ylim=c(0,nrow(cma$data)+ifelse(plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0)+1), yaxs="i", type="n",
-        main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
-                    ifelse(show.cma,paste0(" (",class(cma)[1]," using ",cma$computed.CMA,")"),"")),
-        axes=FALSE, xlab=ifelse(show.period=="dates","","days"),
-        ylab="patient", cex.lab=cex.lab ); box();
+  if(inherits(msg <- try(plot( 0, 1,
+                               xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
+                               ylim=c(0,nrow(cma$data)+ifelse(plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0)+1), yaxs="i", type="n",
+                               axes=FALSE,
+                               xlab="", ylab="" ),
+                         silent=TRUE),
+              "try-error"))
+  {
+    # Some error occured when creatig the plot...
+    cat(msg);
+    return (invisible(NULL));
+  }
 
   # Character width and height in the current plotting system:
   char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
+  char.height.CMA <- strheight("0",cex=CMA.cex);
+
+  # Minimum plot dimensions:
+  if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
+      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * length(patids))
+  {
+    cat(paste0("Plotting area is too small (it must be at least ",
+               min.plot.size.in.characters.horiz,
+               " x ",
+               min.plot.size.in.characters.vert,
+               " characters per patient, but now it is only ",
+               round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
+               " x ",
+               round(abs(par("usr")[4] - par("usr")[3]) / (char.height * length(patids)),1),
+               ")!\n"));
+    #segments(x0=c(par("usr")[1], par("usr")[1]),
+    #         y0=c(par("usr")[3], par("usr")[4]),
+    #         x1=c(par("usr")[2], par("usr")[2]),
+    #         y1=c(par("usr")[4], par("usr")[3]),
+    #         col="red", lwd=3);
+    return (invisible(NULL));
+  }
+
+  # Continue plotting:
+  box();
+  title(main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
+                    ifelse(show.cma,paste0(" ",
+                                           switch(class(cma)[1],
+                                                  "CMA_sliding_window"="sliding window",
+                                                  "CMA_per_episode"="per episode"),
+                                           " (",cma$computed.CMA,")"),"")),
+        xlab=ifelse(show.period=="dates","","days"),
+        ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
+        cex.lab=cex.lab);
 
   # The patient axis and CMA plots:
   if( plot.CMA && !is.null(getCMA(cma)) )
@@ -6543,9 +6807,16 @@ print.CMA_per_episode <- function(x,                                     # the C
           adh.y <- adh.hist$counts; adh.y <- adh.y / max(adh.y);
           adh.x.max <- adh.x[which.max(adh.hist$counts)];
           segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4*adh.y, lty="solid", lwd=1, col=CMA.plot.border);
-          text(x=.rescale.xcoord.for.CMA.plot(0), y.mean-2, sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)), srt=0, pos=1, cex=CMA.cex, col=CMA.plot.text);
-          text(x=.rescale.xcoord.for.CMA.plot(1), y.mean-2, sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)), srt=0, pos=1, cex=CMA.cex, col=CMA.plot.text);
-          text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean+2, sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=0, pos=3, cex=CMA.cex, col=CMA.plot.text);
+          if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+          {
+            # enough space for vertical writing all three of them:
+            text(x=.rescale.xcoord.for.CMA.plot(0),         y.mean-2-char.height.CMA/2,
+                 sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            text(x=.rescale.xcoord.for.CMA.plot(1),         y.mean-2-char.height.CMA/2,
+                 sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean+2+char.height.CMA/2,
+                 sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=90, pos=3, cex=CMA.cex, col=CMA.plot.text);
+          }
         }
       } else
       {
@@ -6562,7 +6833,22 @@ print.CMA_per_episode <- function(x,                                     # the C
             #if( length(adh) == 1 || isTRUE(all.equal(min(adh), max(adh))) ) adh.x <- pmax(pmin(adh,1.0),0.0) else adh.x <- (adh - min(adh)) / (max(adh) - min(adh));
             adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
             segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
-            for( i in 1:length(adh) ) text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean+ifelse(i %% 2==0,2,-2), sprintf("%.1f%%",100*adh[i]), srt=0, pos=ifelse(i %% 2==0,3,1), cex=CMA.cex, col=CMA.plot.text);
+            if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            {
+              # enough space for vertical writing all of them:
+              for( i in 1:length(adh) )
+              {
+                text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean+ifelse(i %% 2==0,2+char.height.CMA/2,-2-char.height.CMA/2),
+                     sprintf("%.1f%%",100*adh[i]), srt=90, pos=ifelse(i %% 2==0,3,1), cex=CMA.cex, col=CMA.plot.text);
+              }
+            } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            {
+              # enough space for vertical writing only the extremes:
+              text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean-2-char.height.CMA/2,
+                   sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean-2-char.height.CMA/2,
+                   sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            }
           } else
           {
             adh.density$x <- adh.density$x[ss]; adh.density$y <- adh.density$y[ss];
@@ -6570,8 +6856,12 @@ print.CMA_per_episode <- function(x,                                     # the C
             adh.x <- adh.density$x; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
             adh.y <- adh.density$y; adh.y <- (adh.y - min(adh.y)) / (max(adh.y) - min(adh.y));
             points(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4*adh.y, type="l", col=CMA.plot.border);
-            text(x=.rescale.xcoord.for.CMA.plot(0), y.mean-2, sprintf("%.1f%%",100*adh.x.0), srt=0, pos=1, cex=CMA.cex, col=CMA.plot.text);
-            text(x=.rescale.xcoord.for.CMA.plot(1), y.mean-2, sprintf("%.1f%%",100*adh.x.1), srt=0, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            {
+              # enough space for vertical writing:
+              text(x=.rescale.xcoord.for.CMA.plot(0), y.mean-2-char.height.CMA/2, sprintf("%.1f%%",100*adh.x.0), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              text(x=.rescale.xcoord.for.CMA.plot(1), y.mean-2-char.height.CMA/2, sprintf("%.1f%%",100*adh.x.1), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            }
           }
         } else
         {
@@ -6585,7 +6875,22 @@ print.CMA_per_episode <- function(x,                                     # the C
             #if( length(adh) == 1 || isTRUE(all.equal(min(adh), max(adh))) ) adh.x <- pmax(pmin(adh,1.0),0.0) else adh.x <- (adh - min(adh)) / (max(adh) - min(adh));
             adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
             segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
-            for( i in 1:length(adh) ) text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean+ifelse(i %% 2==0,2,-2), sprintf("%.1f%%",100*adh[i]), srt=0, pos=ifelse(i %% 2==0,3,1), cex=CMA.cex, col=CMA.plot.text);
+            if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            {
+              # enough space for vertical writing all of them:
+              for( i in 1:length(adh) )
+              {
+                text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean+ifelse(i %% 2==0,2+char.height.CMA/2,-2-char.height.CMA/2),
+                     sprintf("%.1f%%",100*adh[i]), srt=90, pos=ifelse(i %% 2==0,3,1), cex=CMA.cex, col=CMA.plot.text);
+              }
+            } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            {
+              # enough space for vertical writing only the extremes:
+              text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean-2-char.height.CMA/2,
+                   sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean-2-char.height.CMA/2,
+                   sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+            }
           }
         }
       }
@@ -6654,8 +6959,12 @@ print.CMA_per_episode <- function(x,                                     # the C
               if( !is.na(cmas$CMA[s[j]]) )
               {
                 h <- start + (end - start)*max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
-                rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
-                if( print.CMA ) text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10,
+                      adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
+                if( print.CMA && char.height.CMA <= 0.80 )
+                {
+                  text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                }
               }
               y.cur <- y.cur+1;
             }
@@ -6680,7 +6989,10 @@ print.CMA_per_episode <- function(x,                                     # the C
         {
           h <- start + (end - start)*max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
           rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
-          if( print.CMA ) text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+          if( print.CMA && char.height.CMA <= .80 )
+          {
+            text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+          }
         }
         y.cur <- y.cur+1;
       }
@@ -6883,7 +7195,7 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{\link[grDevices]{cm.colors}}.
+#' default \code{cm.colors}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -7662,6 +7974,8 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #' observation window can start.
 #' @param observation.window.duration.max The maximum duration of the
 #' observation window in days.
+#' @param align.all.patients Should the patients be aligend?
+#' @param align.first.event.at.zero Should the first event be put at zero?
 #' @param maximum.permissible.gap.max The maximum permissible gap in days.
 #' @param sliding.window.start.max The maximum number of days when the sliding
 #' windows can start.
@@ -7669,6 +7983,11 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #' windows in days.
 #' @param sliding.window.step.duration.max The maximum sliding window step in
 #' days.
+#' @param backend The plotting backend to use; "shiny" (the default) tries to
+#' use the Shiny framework, while "rstudio" uses the manipulate RStudio
+#' capability.
+#' @param use.system.browser For shiny, use the system browser?
+#' @param ... Extra arguments.
 #' @return Nothing
 #' @examples
 #' \dontrun{
@@ -7685,16 +8004,102 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                                   # Date format:
-                                  date.format=NA, # the format of the dates used in this function (NA = undefined)
+                                  date.format="%m/%d/%Y", # the format of the dates used in this function (NA = undefined)
                                   # Parameter ranges:
                                   followup.window.start.max=5*365, # in days
                                   followup.window.duration.max=5*365, # in days
                                   observation.window.start.max=followup.window.start.max, # in days
                                   observation.window.duration.max=followup.window.duration.max, # in days
+                                  align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place the first event as the horizontal 0?
                                   maximum.permissible.gap.max=2*365, # in days
                                   sliding.window.start.max=followup.window.start.max, # in days
                                   sliding.window.duration.max=2*365, # in days
-                                  sliding.window.step.duration.max=2*365 # in days
+                                  sliding.window.step.duration.max=2*365, # in days
+                                  backend=c("shiny","rstudio"), # the interactive backend to use
+                                  use.system.browser=FALSE, # if shiny backend, use the system browser?
+                                  ...
+)
+{
+  if( backend == "shiny" )
+  {
+    .plot_interactive_cma_shiny(data=data,
+                                ID=ID,
+                                cma.class=cma.class,
+                                print.full.params=print.full.params,
+                                ID.colname=ID.colname,
+                                event.date.colname=event.date.colname,
+                                event.duration.colname=event.duration.colname,
+                                event.daily.dose.colname=event.daily.dose.colname,
+                                medication.class.colname=medication.class.colname,
+                                date.format=date.format,
+                                followup.window.start.max=followup.window.start.max,
+                                followup.window.duration.max=followup.window.duration.max,
+                                observation.window.start.max=observation.window.start.max,
+                                observation.window.duration.max=observation.window.duration.max,
+                                align.all.patients=align.all.patients,
+                                align.first.event.at.zero=align.first.event.at.zero,
+                                maximum.permissible.gap.max=maximum.permissible.gap.max,
+                                sliding.window.start.max=sliding.window.start.max,
+                                sliding.window.duration.max=sliding.window.duration.max,
+                                sliding.window.step.duration.max=sliding.window.step.duration.max,
+                                use.system.browser=use.system.browser,
+                                ...
+    );
+  } else if( backend == "rstudio" )
+  {
+    .plot_interactive_cma_rstudio(data=data,
+                                  ID=ID,
+                                  cma.class=cma.class,
+                                  print.full.params=print.full.params,
+                                  ID.colname=ID.colname,
+                                  event.date.colname=event.date.colname,
+                                  event.duration.colname=event.duration.colname,
+                                  event.daily.dose.colname=event.daily.dose.colname,
+                                  medication.class.colname=medication.class.colname,
+                                  date.format=date.format,
+                                  followup.window.start.max=followup.window.start.max,
+                                  followup.window.duration.max=followup.window.duration.max,
+                                  observation.window.start.max=observation.window.start.max,
+                                  observation.window.duration.max=observation.window.duration.max,
+                                  #align.all.patients=align.all.patients,
+                                  #align.first.event.at.zero=align.first.event.at.zero,
+                                  maximum.permissible.gap.max=maximum.permissible.gap.max,
+                                  sliding.window.start.max=sliding.window.start.max,
+                                  sliding.window.duration.max=sliding.window.duration.max,
+                                  sliding.window.step.duration.max=sliding.window.step.duration.max,
+                                  ...
+    );
+  } else
+  {
+    warning("Interactive plotting: dont' know backend '",backend,"'; only use 'shiny' or 'rstudio'.\n");
+  }
+}
+
+
+
+# Auxiliary function: interactive plot using RStudio's manipulate:
+.plot_interactive_cma_rstudio <- function( data=NULL, # the data used to compute the CMA on
+                                           ID=NULL, # the ID of the patient to be plotted (automatically taken to be the first)
+                                           cma.class=c("simple","per episode","sliding window")[1], # the CMA class to plot
+                                           print.full.params=FALSE, # should the parameter values for the currently plotted plot be printed?
+                                           # Important columns in the data
+                                           ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
+                                           event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
+                                           event.duration.colname=NA, # the event duration in days (NA = undefined)
+                                           event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
+                                           medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
+                                           # Date format:
+                                           date.format=NA, # the format of the dates used in this function (NA = undefined)
+                                           # Parameter ranges:
+                                           followup.window.start.max=5*365, # in days
+                                           followup.window.duration.max=5*365, # in days
+                                           observation.window.start.max=followup.window.start.max, # in days
+                                           observation.window.duration.max=followup.window.duration.max, # in days
+                                           maximum.permissible.gap.max=2*365, # in days
+                                           sliding.window.start.max=followup.window.start.max, # in days
+                                           sliding.window.duration.max=2*365, # in days
+                                           sliding.window.step.duration.max=2*365, # in days
+                                           ...
 )
 {
   # Check if manipulate can be run:
@@ -7779,6 +8184,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             observation.window.duration.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
                             # Treatment episodes:
                             medication.change.means.new.treatment.episode=TRUE, # does a change in medication automatically start a new treatment episode?
+                            dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                             maximum.permissible.gap=180, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                             maximum.permissible.gap.unit="days", # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days) or "years" (fixed at 365 days)
                             # Sliding window:
@@ -7811,6 +8217,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                  "observation.window.duration=",observation.window.duration,", ",
                  "observation.window.duration.unit=",observation.window.duration.unit,", ",
                  "medication.change.means.new.treatment.episode=",medication.change.means.new.treatment.episode,", ",
+                 "dosage.change.means.new.treatment.episode=",dosage.change.means.new.treatment.episode,", ",
                  "maximum.permissible.gap=",maximum.permissible.gap,", ",
                  "maximum.permissible.gap.unit=",maximum.permissible.gap.unit,", ",
                  "sliding.window.start=",sliding.window.start,", ",
@@ -7825,10 +8232,10 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     cat("\n");
 
     # Preconditions:
-    if( is.null(ID) || is.null(data <- data[data[,ID.colname] == ID,]) || nrow(data)==0 )
+    if( is.null(ID) || is.null(data <- data[data[,ID.colname] %in% ID,]) || nrow(data)==0 )
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
-      return;
+      return (invisible(NULL));
     }
 
     # Compute the CMA:
@@ -7868,6 +8275,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                                   observation.window.duration=observation.window.duration,
                                                   observation.window.duration.unit=observation.window.duration.unit,
                                                   medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                                  dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
                                                   maximum.permissible.gap=maximum.permissible.gap,
                                                   maximum.permissible.gap.unit=maximum.permissible.gap.unit,
                                                   sliding.window.start=sliding.window.start,
@@ -7914,6 +8322,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                          observation.window.duration=observation.window.duration,
                                          observation.window.duration.unit="days", # observation.window.duration.unit,
                                          medication.change.means.new.treatment.episode=NA, #medication.change.means.new.treatment.episode,
+                                         dosage.change.means.new.treatment.episode=NA, #dosage.change.means.new.treatment.episode
                                          maximum.permissible.gap=NA, #maximum.permissible.gap,
                                          maximum.permissible.gap.unit="days", # maximum.permissible.gap.unit,
                                          sliding.window.start=NA, #sliding.window.start,
@@ -7941,6 +8350,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                            observation.window.duration = manipulate::slider(0, observation.window.duration.max, 2*365, "Obs. wnd. duration (days)", 1),
                            #observation.window.duration.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Obs. wnd. duration unit"),
                            #medication.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Treat. change starts new episode?"),
+                           #dosage.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Dosage change starts new episode?"),
                            #maximum.permissible.gap = manipulate::slider(0, 500, 0, "Max. permissible gap (days)", 1),
                            #maximum.permissible.gap.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Max. permis. gap duration unit"),
                            #maximum.permissible.gap.as.percent = manipulate::checkbox(FALSE, "Max. permissible gap as percent?"),
@@ -7972,6 +8382,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                          observation.window.duration=observation.window.duration,
                                          observation.window.duration.unit="days", # observation.window.duration.unit,
                                          medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                         dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
                                          maximum.permissible.gap=maximum.permissible.gap,
                                          maximum.permissible.gap.unit=ifelse(!maximum.permissible.gap.as.percent,"days","percent"), # maximum.permissible.gap.unit,
                                          sliding.window.start=NA, #sliding.window.start,
@@ -7999,6 +8410,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                            observation.window.duration = manipulate::slider(0, observation.window.duration.max, 2*365, "Obs. wnd. duration (days)", 1),
                            #observation.window.duration.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Obs. wnd. duration unit"),
                            medication.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Treat. change starts new episode?"),
+                           dosage.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Dosage change starts new episode?"),
                            maximum.permissible.gap = manipulate::slider(0, maximum.permissible.gap.max, 180, "Max. permissible gap (days or %)", 1),
                            maximum.permissible.gap.as.percent = manipulate::checkbox(FALSE, "Max. permissible gap as percent?"),
                            #maximum.permissible.gap.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Max. permis. gap duration unit"),
@@ -8031,6 +8443,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                          observation.window.duration=observation.window.duration,
                                          observation.window.duration.unit="days", # observation.window.duration.unit,
                                          medication.change.means.new.treatment.episode=NA,
+                                         dosage.change.means.new.treatment.episode=NA,
                                          maximum.permissible.gap=NA, #maximum.permissible.gap,
                                          maximum.permissible.gap.unit="days", # maximum.permissible.gap.unit,
                                          sliding.window.start=sliding.window.start,
@@ -8058,6 +8471,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                            observation.window.duration = manipulate::slider(0, observation.window.duration.max, 2*365, "Obs. wnd. duration (days)", 1),
                            #observation.window.duration.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Obs. wnd. duration unit"),
                            #medication.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Treat. change starts new episode?"),
+                           #dosage.change.means.new.treatment.episode = manipulate::checkbox(TRUE, "Dosage change starts new episode?"),
                            #maximum.permissible.gap = manipulate::slider(0, 500, 0, "Max. permissible gap (days)", 1),
                            #maximum.permissible.gap.unit = manipulate::picker(list("days", "weeks", "months", "years"), initial="days", label="Max. permis. gap duration unit"),
                            #maximum.permissible.gap.as.percent = manipulate::checkbox(FALSE, "Max. permissible gap as percent?"),
@@ -8074,4 +8488,277 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   }
 }
 
+
+# Auxiliary function: interactive plot using shiny
+.plot_interactive_cma_shiny <- function(data=NULL, # the data used to compute the CMA on
+                                        ID=NULL, # the ID of the patient to be plotted (automatically taken to be the first)
+                                        cma.class=c("simple","per episode","sliding window")[1], # the CMA class to plot
+                                        print.full.params=FALSE, # should the parameter values for the currently plotted plot be printed?
+                                        # Important columns in the data
+                                        ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
+                                        event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
+                                        event.duration.colname=NA, # the event duration in days (NA = undefined)
+                                        event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
+                                        medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
+                                        # Date format:
+                                        date.format=NA, # the format of the dates used in this function (NA = undefined)
+                                        # Parameter ranges:
+                                        followup.window.start.max=5*365, # in days
+                                        followup.window.duration.max=5*365, # in days
+                                        observation.window.start.max=followup.window.start.max, # in days
+                                        observation.window.duration.max=followup.window.duration.max, # in days
+                                        align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
+                                        maximum.permissible.gap.max=2*365, # in days
+                                        sliding.window.start.max=followup.window.start.max, # in days
+                                        sliding.window.duration.max=2*365, # in days
+                                        sliding.window.step.duration.max=2*365, # in days
+                                        use.system.browser=FALSE, # by default, don't necessarily use the system browser
+                                        ...
+)
+{
+  # pass things to shiny using the global environment (as discussed at https://github.com/rstudio/shiny/issues/440):
+
+  # checks:
+  if( !(cma.class %in% c("simple","per episode","sliding window")) )
+  {
+    warning(paste0("Only know how to interactively plot 'cma.class' of type 'simple', 'per episode' and 'sliding window', but you requested '",cma.class,"': assuming 'simple'."));
+    cma.class <- "simple";
+  }
+
+  # Preconditions:
+  if( !is.null(data) )
+  {
+    # data's class and dimensions:
+    if( class(data) == "matrix" ) data <- as.data.frame(data); #make it a data.frame
+    if( !inherits(data, "data.frame") )
+    {
+      stop("The 'data' must be of type 'data.frame'!\n");
+      return (NULL);
+    }
+    if( nrow(data) < 1 )
+    {
+      stop("The 'data' must have at least one row!\n");
+      return (NULL);
+    }
+    # the column names must exist in data:
+    if( !is.na(ID.colname) && !(ID.colname %in% names(data)) )
+    {
+      stop(paste0("Column ID.colname='",ID.colname,"' must appear in the 'data'!\n"));
+      return (NULL);
+    }
+    if( !is.na(event.date.colname) && !(event.date.colname %in% names(data)) )
+    {
+      stop(paste0("Column event.date.colname='",event.date.colname,"' must appear in the 'data'!\n"));
+      return (NULL);
+    }
+    if( !is.na(event.duration.colname) && !(event.duration.colname %in% names(data)) )
+    {
+      stop(paste0("Column event.duration.colname='",event.duration.colname,"' must appear in the 'data'!\n"));
+      return (NULL);
+    }
+    if( !is.na(event.daily.dose.colname) && !(event.daily.dose.colname %in% names(data)) )
+    {
+      stop(paste0("Column event.daily.dose.colname='",event.daily.dose.colname,"' must appear in the 'data'!\n"));
+      return (NULL);
+    }
+    if( !is.na(medication.class.colname) && !(medication.class.colname %in% names(data)) )
+    {
+      stop(paste0("Column medication.class.colname='",medication.class.colname,"' must appear in the 'data'!\n"));
+      return (NULL);
+    }
+  } else
+  {
+    stop("The 'data' cannot be empty!\n");
+    return (NULL);
+  }
+
+  # All patient IDs:
+  all.IDs <- sort(unique(data[,ID.colname]));
+  if( is.null(ID) || is.na(ID) || !(ID %in% all.IDs) ) ID <- all.IDs[1];
+
+  # The function encapsulating the plotting:
+  .plotting.fnc <- function(data=NULL, # the data used to compute the CMA on
+                            ID=NULL, # the ID of the patient to plot
+                            cma="none", # the CMA to use for plotting
+                            cma.to.apply="none", # cma to compute per episode or sliding window
+                            # Various types medhods of computing gaps:
+                            carryover.within.obs.window=NA, # if TRUE consider the carry-over within the observation window (NA = undefined)
+                            carryover.into.obs.window=NA, # if TRUE consider the carry-over from before the starting date of the observation window (NA = undefined)
+                            carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
+                            consider.dosage.change=NA, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
+                            # The follow-up window:
+                            followup.window.start=NA, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
+                            followup.window.start.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            followup.window.duration=NA, # the duration of the follow-up window in the time units given below (NA = undefined)
+                            followup.window.duration.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
+                            # The observation window (embedded in the follow-up window):
+                            observation.window.start=NA, # the number of time units relative to followup.window.start (NA = undefined)
+                            observation.window.start.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            observation.window.duration=NA, # the duration of the observation window in time units (NA = undefined)
+                            observation.window.duration.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            # Treatment episodes:
+                            medication.change.means.new.treatment.episode=TRUE, # does a change in medication automatically start a new treatment episode?
+                            dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
+                            maximum.permissible.gap=180, # if a number, is the duration in units of max. permissible gaps between treatment episodes
+                            maximum.permissible.gap.unit="days", # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days) or "years" (fixed at 365 days)
+                            # Sliding window:
+                            sliding.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
+                            sliding.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            sliding.window.duration=90,  # the duration of the sliding window in time units (NA = undefined)
+                            sliding.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            sliding.window.step.duration=7, # the step ("jump") of the sliding window in time units (NA = undefined)
+                            sliding.window.step.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                            sliding.window.no.steps=NA, # the number of steps to jump; if both sliding.win.no.steps & sliding.win.duration are NA, fill the whole observation window
+                            plot.CMA.as.histogram=TRUE, # plot the CMA as historgram or density plot?
+                            align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
+
+                            # Legend:
+                            show.legend=TRUE # show the legend?
+  )
+  {
+    # Progress messages:
+    cat(paste0("Plotting patient ID '",ID,"' with CMA '",cma,"'",ifelse(cma.to.apply != "none",paste0(" ('",cma.to.apply,"')"),"")));
+    if( print.full.params )
+    {
+      cat(paste0(" with params: ",
+                 "carryover.within.obs.window=",carryover.within.obs.window,", ",
+                 "carryover.into.obs.window=",carryover.into.obs.window,", ",
+                 "carry.only.for.same.medication=",carry.only.for.same.medication,", ",
+                 "consider.dosage.change=",consider.dosage.change,", ",
+                 "followup.window.start=",followup.window.start,", ",
+                 "followup.window.start.unit=",followup.window.start.unit,", ",
+                 "followup.window.duration=",followup.window.duration,", ",
+                 "followup.window.duration.unit=",followup.window.duration.unit,", ",
+                 "observation.window.start=",observation.window.start,", ",
+                 "observation.window.start.unit=",observation.window.start.unit,", ",
+                 "observation.window.duration=",observation.window.duration,", ",
+                 "observation.window.duration.unit=",observation.window.duration.unit,", ",
+                 "medication.change.means.new.treatment.episode=",medication.change.means.new.treatment.episode,", ",
+                 "dosage.change.means.new.treatment.episode=",dosage.change.means.new.treatment.episode,", ",
+                 "maximum.permissible.gap=",maximum.permissible.gap,", ",
+                 "maximum.permissible.gap.unit=",maximum.permissible.gap.unit,", ",
+                 "sliding.window.start=",sliding.window.start,", ",
+                 "sliding.window.start.unit=",sliding.window.start.unit,", ",
+                 "sliding.window.duration=",sliding.window.duration,", ",
+                 "sliding.window.duration.unit=",sliding.window.duration.unit,", ",
+                 "sliding.window.step.duration=",sliding.window.step.duration,", ",
+                 "sliding.window.step.unit=",sliding.window.step.unit,", ",
+                 "sliding.window.no.steps=",sliding.window.no.steps,", ",
+                 "align.all.patients=",align.all.patients,", ",
+                 "align.first.event.at.zero=",align.first.event.at.zero
+      ));
+    }
+    cat("\n");
+
+    # Preconditions:
+    if( is.null(ID) || is.null(data <- data[data[,ID.colname] %in% ID,]) || nrow(data)==0 )
+    {
+      plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
+      return (invisible(NULL));
+    }
+
+    # Compute the CMA:
+    cma.fnc <- switch(cma,
+                      "CMA1" = CMA1,
+                      "CMA2" = CMA2,
+                      "CMA3" = CMA3,
+                      "CMA4" = CMA4,
+                      "CMA5" = CMA5,
+                      "CMA6" = CMA6,
+                      "CMA7" = CMA7,
+                      "CMA8" = CMA8,
+                      "CMA9" = CMA9,
+                      "per episode" = CMA_per_episode,
+                      "sliding window" = CMA_sliding_window,
+                      CMA0); # by default, fall back to CMA0
+    # Try to catch errors and warnings for nice displaying:
+    results <- NULL;
+    full.results <- tryCatch( results <- cma.fnc( data,
+                                                  CMA=cma.to.apply,
+                                                  ID.colname=ID.colname,
+                                                  event.date.colname=event.date.colname,
+                                                  event.duration.colname=event.duration.colname,
+                                                  event.daily.dose.colname=event.daily.dose.colname,
+                                                  medication.class.colname=medication.class.colname,
+                                                  date.format=date.format,
+                                                  carryover.within.obs.window=carryover.within.obs.window,
+                                                  carryover.into.obs.window=carryover.into.obs.window,
+                                                  carry.only.for.same.medication=carry.only.for.same.medication,
+                                                  consider.dosage.change=consider.dosage.change,
+                                                  followup.window.start=followup.window.start,
+                                                  followup.window.start.unit=followup.window.start.unit,
+                                                  followup.window.duration=followup.window.duration,
+                                                  followup.window.duration.unit=followup.window.duration.unit,
+                                                  observation.window.start=observation.window.start,
+                                                  observation.window.start.unit=observation.window.start.unit,
+                                                  observation.window.duration=observation.window.duration,
+                                                  observation.window.duration.unit=observation.window.duration.unit,
+                                                  medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                                  dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
+                                                  maximum.permissible.gap=maximum.permissible.gap,
+                                                  maximum.permissible.gap.unit=maximum.permissible.gap.unit,
+                                                  sliding.window.start=sliding.window.start,
+                                                  sliding.window.start.unit=sliding.window.start.unit,
+                                                  sliding.window.duration=sliding.window.duration,
+                                                  sliding.window.duration.unit=sliding.window.duration.unit,
+                                                  sliding.window.step.duration=sliding.window.step.duration,
+                                                  sliding.window.step.unit=sliding.window.step.unit,
+                                                  sliding.window.no.steps=sliding.window.no.steps),
+                              error  =function(e) return(list(results=results,error=conditionMessage(e))),
+                              warning=function(w) return(list(results=results,warning=conditionMessage(w))));
+    if( is.null(results) )
+    {
+      # Plot an error message:
+      plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab="");
+      text(0,0,paste0("Error computing '",cma,"' for patient '",ID,"'\n(see console for possible warnings or errors)!"),col="red");
+      if( !is.null(full.results$error) )   cat(paste0("Error(s): ",paste0(full.results$error,collapse="\n")));
+      if( !is.null(full.results$warning) ) cat(paste0("Warning(s): ",paste0(full.results$warning,collapse="\n")));
+    } else
+    {
+      # Plot the results:
+      plot(results,
+           show.legend=show.legend,
+           plot.CMA.as.histogram=plot.CMA.as.histogram,
+           align.all.patients=align.all.patients,
+           align.first.event.at.zero=align.first.event.at.zero
+          );
+    }
+  }
+
+
+  # put things in the global environment for shiny:
+  .GlobalEnv$.plotting.params <- list("data"=data,
+                                      "ID"=ID, "all.IDs"=all.IDs,
+                                      "cma.class"=cma.class,
+                                      "print.full.params"=print.full.params,
+                                      "ID.colname"=ID.colname,
+                                      "event.date.colname"=event.date.colname,
+                                      "event.duration.colname"=event.duration.colname,
+                                      "event.daily.dose.colname"=event.daily.dose.colname,
+                                      "medication.class.colname"=medication.class.colname,
+                                      "date.format"=date.format,
+                                      "followup.window.start.max"=followup.window.start.max,
+                                      "followup.window.duration.max"=followup.window.duration.max,
+                                      "observation.window.start.max"=observation.window.start.max,
+                                      "observation.window.duration.max"=observation.window.duration.max,
+                                      "maximum.permissible.gap.max"=maximum.permissible.gap.max,
+                                      "sliding.window.start.max"=sliding.window.start.max,
+                                      "sliding.window.duration.max"=sliding.window.duration.max,
+                                      "sliding.window.step.duration.max"=sliding.window.step.duration.max,
+                                      "align.all.patients"=align.all.patients,
+                                      "align.first.event.at.zero"=align.first.event.at.zero,
+                                      ".plotting.fnc"=.plotting.fnc
+                                     );
+  # make sure they are deleted on exit from shiny:
+  on.exit(rm(list=c(".plotting.params"), envir=.GlobalEnv));
+
+  # call shiny:
+  if( use.system.browser )
+  {
+    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR'), launch.browser=TRUE);
+  } else
+  {
+    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR'));
+  }
+}
 

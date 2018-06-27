@@ -12,6 +12,8 @@ The package is implemented in pure `R`, but optimised to work on mid-range hardw
 
 Feedback is welcome either directly by e-mailing us or by using GitHub's system for bug reporting and suggestions.
 
+For what is new in each release, please see the `NEWS.md` file.
+
 -----
 
 <sup>1</sup> There might be a delay between the release of new versions here and their availability on CRAN; in this case, we would recommend, if possible, to wait for the version to appear on CRAN.
