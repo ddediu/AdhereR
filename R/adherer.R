@@ -378,6 +378,12 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
       if( !suppress.warnings ) warning("The observation window duration unit is not recognized!\n")
       return (NULL);
     }
+    # date format:
+    if( is.na(date.format) )
+    {
+      if( !suppress.warnings ) warning("The date format must be a valid date format (see as.Date() for details)!\n")
+      return (NULL);
+    }
   } else
   {
     return (NULL);
