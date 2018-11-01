@@ -1,4 +1,4 @@
-# AdhereR 0.2.0
+# AdhereR 0.2.1
 
 ## Optimisations, small features, and bug fixes
 
