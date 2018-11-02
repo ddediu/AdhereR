@@ -640,13 +640,15 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
 )
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
-  if( is.null(cma) || !inherits(cma, "CMA0") || is.null(cma$data) || nrow(cma$data) < 1 ||
+  if( is.null(cma) || !inherits(cma, "CMA0") || is.null(cma$data) || !inherits(cma$data, "data.frame") || nrow(cma$data) < 1 ||
       is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) ||
       is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) )
   {
     warning(paste0("Can only plot a correctly specified CMA0 object (i.e., with valid data and column names): cannot continue plotting!\n"));
     return (invisible(NULL));
   }
+
+  if( inherits(cma$data, "data.table") ) cma$data <- as.data.frame(cma$data); # guard against inconsistencies between data.table and data.frame in how they handle d[,i]
 
   # Check compatibility between subtypes of plots:
   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
