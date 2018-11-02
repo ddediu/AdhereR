@@ -578,6 +578,10 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' @param period.in.days The \emph{number} of days at which the regular grid is
 #' drawn.
 #' @param show.legend \emph{Logical}, should the legend be drawn?
+#' @param legend.x,legend.y where should the legend be drawn (please see
+#' \code{legend} for details).
+#' @param legend.bkg.opacity \emph{numerc} value specifying the opacity of the
+#' legend's background.
 #' @param cex,cex.axis,cex.lab \emph{numeric} values specifying the cex of the
 #' various types of text.
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
@@ -623,41 +627,65 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       align.all.patients=FALSE,              # should all patients be aligned?
                       show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                       period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
-                      show.legend=TRUE,                      # show the legend?
+                      show.legend=TRUE, legend.x="bottomright", legend.y=NULL, legend.bkg.opacity=0.5, # legend params and position (see ?legend for details)
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
-                      col.cats=cm.colors,         # single color or a function mapping the categories to colors
+                      col.cats=cm.colors,                    # single color or a function mapping the categories to colors
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                       col.na="lightgray",                    # color for mising data
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                      print.CMA=TRUE,                  # print CMA next to the participant's ID?
-                      plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
-                      CMA.plot.ratio=0.10              # the proportion of the total horizontal plot to be taken by the CMA plot
+                      print.CMA=TRUE,                        # print CMA next to the participant's ID?
+                      plot.CMA=TRUE,                         # plot the CMA next to the participant ID?
+                      CMA.plot.ratio=0.10                    # the proportion of the total horizontal plot to be taken by the CMA plot
 )
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA0") || is.null(cma$data) || nrow(cma$data) < 1 ||
       is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) ||
-      is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) ) return (invisible(NULL));
+      is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) )
+  {
+    warning(paste0("Can only plot a correctly specified CMA0 object (i.e., with valid data and column names): cannot continue plotting!\n"));
+    return (invisible(NULL));
+  }
 
   # Check compatibility between subtypes of plots:
   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
 
-  # Make sure the dates are strings in the right format:
-  if( inherits(cma$data[,cma$event.date.colname], "Date") )
-  {
-    cma$date.format <- "%m/%d/%Y"; # use the default format
-    cma$data[,cma$event.date.colname] <- as.character(cma$data[,cma$event.date.colname], format=cma$date.format);
-  }
+  ## Make sure the dates are strings in the right format:
+  #if( inherits(cma$data[,cma$event.date.colname], "Date") )
+  #{
+  #  cma$date.format <- "%m/%d/%Y"; # use the default format
+  #  cma$data[,cma$event.date.colname] <- as.character(cma$data[,cma$event.date.colname], format=cma$date.format);
+  #}
 
-  # The patients:
+  # Select the patients:
   patids <- unique(as.character(cma$data[,cma$ID.colname])); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
   if( length(patids) == 0 ) return (invisible(NULL));
   # Select only the patients to display:
   cma$data <- cma$data[ cma$data[,cma$ID.colname] %in% patids, ];
+
+  # Check the date format (and cache the conversion for later use):
+  if( inherits(cma$data[,cma$event.date.colname], "Date") )
+  {
+    Date.converted.to.DATE <- cma$data[,cma$event.date.colname];
+  } else
+  {
+    if( is.na(cma$date.format) || is.null(cma$date.format) || length(cma$date.format) != 1 || !is.character(cma$date.format) )
+    {
+      warning(paste0("The date format must be a single string: cannot continue plotting!\n"));
+      return (invisible(NULL));
+    }
+
+    if( anyNA(Date.converted.to.DATE <- as.Date(cma$data[,cma$event.date.colname],format=cma$date.format)) )
+    {
+      warning(paste0("Not all entries in the event date \"",cma$event.date.colname,"\" column are valid dates or conform to the date format \"",cma$date.format,"\"; first issue occurs on row ",min(which(is.na(Date.converted.to.DATE))),": cannot continue plotting!\n"));
+      return (invisible(NULL));
+    }
+  }
+
   # Make sure the patients are ordered by ID and date:
-  cma$data <- cma$data[ order( cma$data[,cma$ID.colname], as.Date(cma$data[,cma$event.date.colname],format=cma$date.format)), ];
+  cma$data <- cma$data[ order( cma$data[,cma$ID.colname], Date.converted.to.DATE), ];
 
   # Grayscale plotting:
   if( bw.plot )
@@ -684,22 +712,27 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
 
   # Find the earliest date:
-  earliest.date <- min(as.Date(cma$data[,cma$event.date.colname],format=cma$date.format));
+  earliest.date <- min(Date.converted.to.DATE);
+  if( is.na(earliest.date) )
+  {
+    warning(paste0("I need at least one non-NA date (please check the data.format fits the actual format of the dates): cannot continue plotting!\n"));
+    return (invisible(NULL));
+  }
 
   # If aligning all participants to the same date, simply relocate all dates relative to the earliest date:
   if( align.all.patients )
   {
     for( i in 1:nrow(cma$data) )
     {
-      if( i == 1 || cma$data[i,cma$ID.colname] != cma$data[i-1,cma$ID.colname] ) align.to <- as.Date(cma$data[i,cma$event.date.colname],format=cma$date.format);
-      cma$data[i,cma$event.date.colname] <- as.character(earliest.date + (as.Date(cma$data[i,cma$event.date.colname], format=cma$date.format) - align.to), format=cma$date.format);
+      if( i == 1 || cma$data[i,cma$ID.colname] != cma$data[i-1,cma$ID.colname] ) align.to <- Date.converted.to.DATE[i];
+      cma$data[i,cma$event.date.colname] <- as.character(earliest.date + (Date.converted.to.DATE[i] - align.to), format=cma$date.format);
     }
   }
 
   # Compute the duration if not given:
   if( is.na(duration) )
   {
-    latest.date <- max(as.Date(cma$data[,cma$event.date.colname],format=cma$date.format) + cma$data[,cma$event.duration.colname]);
+    latest.date <- max(Date.converted.to.DATE + cma$data[,cma$event.duration.colname]);
     duration <- as.numeric(difftime(latest.date, earliest.date, "days"));
   }
   endperiod <- duration;
@@ -709,13 +742,13 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   duration.total <- duration + adh.plot.space[2];
 
   # The actual plotting:
-  plot( 0, 1, xlim=c(0,duration.total), ylim=c(0,nrow(cma$data)+1), type="n",
+  plot( 0, 1, xlim=c(0,duration.total), ylim=c(0,nrow(cma$data)+1), type="n", xaxs="i", yaxs="i",
         main=ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
         axes=FALSE, xlab=ifelse(show.period=="dates","","days"), ylab=ifelse(print.CMA && !is.null(getCMA(cma)),"patient (& CMA)","patient"), cex.lab=cex.lab ); box();
   curpat <- TRUE;
   for( i in 1:nrow(cma$data) )
   {
-    start <- as.numeric(difftime(as.Date(cma$data[i,cma$event.date.colname],format=cma$date.format), earliest.date, "days" ) );
+    start <- as.numeric(difftime(Date.converted.to.DATE[i], earliest.date, "days" ) );
     end <- start + cma$data[i,cma$event.duration.colname];
     col <- .map.category.to.color(ifelse(is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)),"unspec. type",cma$data[i,cma$medication.class.colname]));
     points( adh.plot.space[2]+start, i, pch=pch.start.event, col=col, cex=cex); points(adh.plot.space[2]+end, i, pch=pch.end.event, col=col, cex=cex);
@@ -725,7 +758,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     {
       if( cma$data[i,cma$ID.colname] == cma$data[i+1,cma$ID.colname] )
       {
-        start.next <- as.numeric(difftime(as.Date(cma$data[i+1,cma$event.date.colname],format=cma$date.format), earliest.date, "days"));
+        start.next <- as.numeric(difftime(Date.converted.to.DATE[i+1], earliest.date, "days"));
         segments( adh.plot.space[2]+end, i, adh.plot.space[2]+start.next, i, col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
         segments( adh.plot.space[2]+start.next, i, adh.plot.space[2]+start.next, i+1, col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
       } else
@@ -789,7 +822,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   # The legend:
   if( show.legend )
   {
-    legend("bottomright", bty="o", bg=rgb(0.9,0.9,0.9,0.6),
+    legend(x=legend.x, y=legend.y, bty="o", bg=rgb(0.9,0.9,0.9,legend.bkg.opacity),
            legend=c("event","no event",vapply(names(cols), function(s) ifelse(is.na(s),"<missing>",s), character(1))),
            col=c("black","black",cols),
            lty=c("solid","dotted",rep("solid",length(cols))),
