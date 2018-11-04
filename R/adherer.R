@@ -7950,32 +7950,31 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #'
 #' Interactively plot a given patient's data, allowing the real-time exploration
 #' of the various CMAs and their parameters.
-#' It is not intended for heavy use but simply for the exploration of various
-#' parameters and ways of computing the CMA. The interface is constrained by the
-#' current limitations of the \code{manipulate} library.
+#' It can use \code{Rstudio}'s \code{manipulate} library or \code{Shiny}.
 #'
-#' This function must be run within \code{RStudio} (as it uses the
-#' \code{manipulate} library), and it allows the interactive manipulation of
-#' various parameters and ways of computing the CMA for a participant's event
-#' data.
-#' Please note that:
-#' \itemize{
-#'   \item the graphical interface may allow the user to change certain
-#'   parameters (such as considering carry over) even in the case of simple CMAs
-#'   that do not consider these parameters (such as CMA1 for carry over) -- in
-#'   this case changing these parameters has no effect;
-#'   \item for CMA-per-episode only, additional parameters can be accessed in
-#'   the interface regarding permissible gap length (days or percent) and
-#'   whether medication changes indicate new episodes
-#'   \item for sliding-window-CMA only, additional parameters can be accessed
-#'   in the interface regarding the sliding window start, duration and step.
-#' }
+#' The \code{manipulate} is kept for backward compatibility only, as it is much
+#' more limited than \code{Shiny} and will receive no new development in the
+#' future.
+#' \code{Shiny} currently allows the use of any other data source besides a
+#' default (and usual) \code{data.frame} (or derived), such a connection to an
+#' \code{SQL} database. In this case, the user \emph{must} redefine the three
+#' argument functions \code{get.colnames.fnc}, \code{get.patients.fnc} and
+#' \code{get.data.for.patients.fnc} which collectively define an interface for
+#' listing the column names, all the patient IDs, and for retreiving the actual
+#' data for a (set of) patient ID(s). A fully worked example is described in
+#' the vignette detailing the access to standard databases storaging the
+#' patient information.
 #'
-#' @param data A \emph{\code{data.frame}} containing the events (prescribing or
-#' dispensing) used to compute the CMA. Must contain, at a minimum, the patient
+#' @param data Usually a \emph{\code{data.frame}} containing the events (prescribing
+#' or dispensing) used to compute the CMA. Must contain, at a minimum, the patient
 #' unique ID, the event date and duration, and might also contain the daily
 #' dosage and medication type (the actual column names are defined in the
-#' following four parameters).
+#' following four parameters). Alternatively, this can be any other data source
+#' (for example, a connection to a database), in which case the user must redefine
+#' the arguments \code{get.colnames.fnc}, \code{get.patients.fnc} and
+#' \code{get.data.for.patients.fnc} appropriately. Currently, this works only when
+#' using Shiny for interactive rendering. For a working example, please see
+#' the vignette describing the interfacing with databases.
 #' @param ID The ID (as given in the \code{ID.colname} column) of the patient
 #' whose data to interactively plot (if absent, pick the first one); please not
 #' that this an be interactively selected during plotting.
@@ -8022,6 +8021,16 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #' use the Shiny framework, while "rstudio" uses the manipulate RStudio
 #' capability.
 #' @param use.system.browser For shiny, use the system browser?
+#' @param get.colnames.fnc A \emph{function} taking as parameter the data source
+#' and returning the column names. Must be overridden when the data source is
+#' not derived from a \code{data.frame}.
+#' @param get.patients.fnc A \emph{function} taking as parameter the data source
+#' and the patient ID column name, and returns the list of all patient IDs.
+#' Must be overridden when the data source is not derived from a \code{data.frame}.
+#' @param get.data.for.patients.fnc A \emph{function} taking as parameter a (set
+#' of) patient ID(s), the data source, and the patient ID column name, and returns
+#' the list of all patient IDs. Must be overridden when the data source is not
+#' derived from a \code{data.frame}.
 #' @param ... Extra arguments.
 #' @return Nothing
 #' @examples
@@ -8052,6 +8061,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   sliding.window.step.duration.max=2*365, # in days
                                   backend=c("shiny","rstudio"), # the interactive backend to use
                                   use.system.browser=FALSE, # if shiny backend, use the system browser?
+                                  get.colnames.fnc=function(d) names(d),
+                                  get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
+                                  get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
                                   ...
 )
 {
@@ -8078,6 +8090,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 sliding.window.duration.max=sliding.window.duration.max,
                                 sliding.window.step.duration.max=sliding.window.step.duration.max,
                                 use.system.browser=use.system.browser,
+                                get.colnames.fnc=get.colnames.fnc,
+                                get.patients.fnc=get.patients.fnc,
+                                get.data.for.patients.fnc=get.data.for.patients.fnc,
                                 ...
     );
   } else if( backend == "rstudio" )
@@ -8548,6 +8563,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                         sliding.window.duration.max=2*365, # in days
                                         sliding.window.step.duration.max=2*365, # in days
                                         use.system.browser=FALSE, # by default, don't necessarily use the system browser
+                                        get.colnames.fnc=function(d) names(d),
+                                        get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
+                                        get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
                                         ...
 )
 {
@@ -8565,38 +8583,46 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   {
     # data's class and dimensions:
     if( class(data) == "matrix" ) data <- as.data.frame(data); #make it a data.frame
-    if( !inherits(data, "data.frame") )
-    {
-      stop("The 'data' must be of type 'data.frame'!\n");
-      return (NULL);
-    }
-    if( nrow(data) < 1 )
-    {
-      stop("The 'data' must have at least one row!\n");
-      return (NULL);
-    }
+    #if( !inherits(data, "data.frame") )
+    #{
+    #  stop("The 'data' must be of type 'data.frame'!\n");
+    #  return (NULL);
+    #}
+    #if( nrow(data) < 1 )
+    #{
+    #  stop("The 'data' must have at least one row!\n");
+    #  return (NULL);
+    #}
     # the column names must exist in data:
-    if( !is.na(ID.colname) && !(ID.colname %in% names(data)) )
+    column.names <- get.colnames.fnc(data);
+    if( !is.na(ID.colname) && !(ID.colname %in% column.names) )
     {
       stop(paste0("Column ID.colname='",ID.colname,"' must appear in the 'data'!\n"));
       return (NULL);
     }
-    if( !is.na(event.date.colname) && !(event.date.colname %in% names(data)) )
+    # get the patients:
+    all.IDs <- sort(get.patients.fnc(data, ID.colname));
+    if( length(all.IDs) < 1 )
+    {
+      stop("The 'data' must contain at least one patient!\n");
+      return (NULL);
+    }
+    if( !is.na(event.date.colname) && !(event.date.colname %in% column.names) )
     {
       stop(paste0("Column event.date.colname='",event.date.colname,"' must appear in the 'data'!\n"));
       return (NULL);
     }
-    if( !is.na(event.duration.colname) && !(event.duration.colname %in% names(data)) )
+    if( !is.na(event.duration.colname) && !(event.duration.colname %in% column.names) )
     {
       stop(paste0("Column event.duration.colname='",event.duration.colname,"' must appear in the 'data'!\n"));
       return (NULL);
     }
-    if( !is.na(event.daily.dose.colname) && !(event.daily.dose.colname %in% names(data)) )
+    if( !is.na(event.daily.dose.colname) && !(event.daily.dose.colname %in% column.names) )
     {
       stop(paste0("Column event.daily.dose.colname='",event.daily.dose.colname,"' must appear in the 'data'!\n"));
       return (NULL);
     }
-    if( !is.na(medication.class.colname) && !(medication.class.colname %in% names(data)) )
+    if( !is.na(medication.class.colname) && !(medication.class.colname %in% column.names) )
     {
       stop(paste0("Column medication.class.colname='",medication.class.colname,"' must appear in the 'data'!\n"));
       return (NULL);
@@ -8607,8 +8633,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     return (NULL);
   }
 
-  # All patient IDs:
-  all.IDs <- sort(unique(data[,ID.colname]));
+  # Check the requested ID (if any):
   if( is.null(ID) || is.na(ID) || !(ID %in% all.IDs) ) ID <- all.IDs[1];
 
   # The function encapsulating the plotting:
@@ -8646,9 +8671,12 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             sliding.window.no.steps=NA, # the number of steps to jump; if both sliding.win.no.steps & sliding.win.duration are NA, fill the whole observation window
                             plot.CMA.as.histogram=TRUE, # plot the CMA as historgram or density plot?
                             align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
-
                             # Legend:
-                            show.legend=TRUE # show the legend?
+                            show.legend=TRUE, # show the legend?
+                            # Data accessor functions:
+                            get.colnames.fnc=function(d) names(d),
+                            get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
+                            get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ]
   )
   {
     # Progress messages:
@@ -8686,7 +8714,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     cat("\n");
 
     # Preconditions:
-    if( is.null(ID) || is.null(data <- data[data[,ID.colname] %in% ID,]) || nrow(data)==0 )
+    if( is.null(ID) || is.null(data <- get.data.for.patients.fnc(ID, data, ID.colname)) || nrow(data)==0 )
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
       return (invisible(NULL));
@@ -8782,6 +8810,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       "sliding.window.step.duration.max"=sliding.window.step.duration.max,
                                       "align.all.patients"=align.all.patients,
                                       "align.first.event.at.zero"=align.first.event.at.zero,
+                                      "get.colnames.fnc"=get.colnames.fnc,
+                                      "get.patients.fnc"=get.patients.fnc,
+                                      "get.data.for.patients.fnc"=get.data.for.patients.fnc,
                                       ".plotting.fnc"=.plotting.fnc
                                      );
   # make sure they are deleted on exit from shiny:
@@ -8790,10 +8821,10 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   # call shiny:
   if( use.system.browser )
   {
-    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR'), launch.browser=TRUE);
+    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'), launch.browser=TRUE);
   } else
   {
-    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR'));
+    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'));
   }
 }
 

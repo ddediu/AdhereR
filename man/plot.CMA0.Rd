@@ -6,12 +6,14 @@
 \usage{
 \method{plot}{CMA0}(x, ..., patients.to.plot = NULL, duration = NA,
   align.all.patients = FALSE, show.period = c("dates", "days")[2],
-  period.in.days = 90, show.legend = TRUE, cex = 1, cex.axis = 0.75,
-  cex.lab = 1, col.cats = cm.colors, lty.event = "solid", lwd.event = 2,
-  pch.start.event = 15, pch.end.event = 16, col.continuation = "black",
-  lty.continuation = "dotted", lwd.continuation = 1, col.na = "lightgray",
-  bw.plot = FALSE, print.CMA = TRUE, plot.CMA = TRUE,
-  CMA.plot.ratio = 0.1)
+  period.in.days = 90, show.legend = TRUE, legend.x = "bottomright",
+  legend.y = NULL, legend.bkg.opacity = 0.5, cex = 1,
+  cex.axis = 0.75, cex.lab = 1, col.cats = cm.colors,
+  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
+  pch.end.event = 16, col.continuation = "black",
+  lty.continuation = "dotted", lwd.continuation = 1,
+  col.na = "lightgray", bw.plot = FALSE, print.CMA = TRUE,
+  plot.CMA = TRUE, CMA.plot.ratio = 0.1)
 }
 \arguments{
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
@@ -40,6 +42,12 @@ taken as "days".}
 drawn.}
 
 \item{show.legend}{\emph{Logical}, should the legend be drawn?}
+
+\item{legend.x, legend.y}{where should the legend be drawn (please see
+\code{legend} for details).}
+
+\item{legend.bkg.opacity}{\emph{numerc} value specifying the opacity of the
+legend's background.}
 
 \item{cex, cex.axis, cex.lab}{\emph{numeric} values specifying the cex of the
 various types of text.}
