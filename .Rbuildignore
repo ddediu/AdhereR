@@ -3,3 +3,5 @@
 ^ReadMe\.md$
 ^NEWS\.md$
 ^tests$
+^\\./vignettes/adherer_with_databases\\.Rmd$
+

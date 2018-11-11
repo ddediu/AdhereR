@@ -1,3 +1,22 @@
+# AdhereR 0.2.2
+
+## Small features and bug fixes
+
+  - removed margins when plotting CMA0 (they could become too large when plotting many patients);
+  
+  - now allow custom placement of legend when plotting CMA0; 
+  
+## Allow `AdhereR` to use databases
+
+`AdhereR` can access data (read and write) stored in various types of databases, ranging from "classic" relational databases (such as `MySQL` and `SQLite`) to new approaches (such as Apache's `Hadoop`).
+This allows the seamless processing of very large datasets across many types of architectures, ranging from a consumer-grade laptop to large heterogeneous computer clusers, without loading the dataset in memory.
+Even interactive plotting is now capable of accessing data stored using various engines in real-time by allowing the user to define accessor functions that implement the details of this access (e.g., use `SQL` queries for accessing data stored in a classic relational database).
+
+A new vignette (*Using AdhereR with various database technologies for processing very large datasets*) gives all the needed details, including actual code, for running `AdhereR` on *relational databases* (using either explicit `SQL` or implicitely through `dbplyr`) and on *Apache `Hadoop`* (using `RHadoop` for access to HDFS and MapReduce).
+(Please note that this vignette is pre-compiled due to its requirements in terms of thrid-party software such as `MySQL` and Apache `Hadoop`.)
+
+
+
 # AdhereR 0.2.1
 
 ## Optimisations, small features, and bug fixes
