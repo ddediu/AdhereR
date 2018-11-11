@@ -3,15 +3,15 @@ title: "Using `AdhereR` with various database technologies for processing very l
 author: "Dan Dediu"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output:
-  pdf_document:
-    fig_caption: yes
-    highlight: tango
-    toc: yes
-    toc_depth: 6
   html_document:
     df_print: kable
     highlight: tango
     theme: readable
+    toc: yes
+    toc_depth: 6
+  pdf_document:
+    fig_caption: yes
+    highlight: tango
     toc: yes
     toc_depth: 6
 editor_options:
