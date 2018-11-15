@@ -586,7 +586,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' various types of text.
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{cm.colors}.
+#' default \code{rainbow}.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param col.continuation,lty.continuation,lwd.continuation The style of the
@@ -629,7 +629,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                       show.legend=TRUE, legend.x="bottomright", legend.y=NULL, legend.bkg.opacity=0.5, # legend params and position (see ?legend for details)
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
-                      col.cats=cm.colors,                    # single color or a function mapping the categories to colors
+                      col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                       col.na="lightgray",                    # color for mising data
@@ -2407,7 +2407,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
                            cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                            show.cma=TRUE,                         # show the CMA type
-                           col.cats=cm.colors,         # single color or a function mapping the categories to colors
+                           col.cats=rainbow,                      # single color or a function mapping the categories to colors
                            unspecified.category.label="drug",     # the label of the unspecified category of medication
                            lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                            show.event.intervals=TRUE,             # show the actual rpescription intervals
@@ -3294,7 +3294,7 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{cm.colors}.
+#' default \code{rainbow}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -6609,7 +6609,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                                show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
                                cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                                show.cma=TRUE,                         # show the CMA type
-                               col.cats=cm.colors,         # single color or a function mapping the categories to colors
+                               col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                unspecified.category.label="drug",     # the label of the unspecified category of medication
                                lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                                show.event.intervals=TRUE,             # show the actual rpescription intervals
@@ -6973,7 +6973,13 @@ print.CMA_per_episode <- function(x,                                     # the C
   {
     start <- as.numeric(cma$data$.DATE.as.Date[i] - earliest.date);
     end <- start + cma$data[i,cma$event.duration.colname];
-    col <- .map.category.to.color(ifelse(is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)),unspecified.category.label,cma$data[i,cma$medication.class.colname]));
+    if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
+    {
+      col <- .map.category.to.color(unspecified.category.label);
+    } else
+    {
+      col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
+    }
     points( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur, pch=pch.start.event, col=col, cex=cex);
     points(adh.plot.space[2]+end+correct.earliest.followup.window, y.cur, pch=pch.end.event, col=col, cex=cex);
     segments( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur, col=col, lty=lty.event, lwd=lwd.event);
@@ -7242,7 +7248,7 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{cm.colors}.
+#' default \code{rainbow}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -7327,7 +7333,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
                                  cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                                  show.cma=TRUE,                         # show the CMA type
-                                 col.cats=cm.colors,         # single color or a function mapping the categories to colors
+                                 col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                  unspecified.category.label="drug",     # the label of the unspecified category of medication
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                                  show.event.intervals=TRUE,             # show the actual rpescription intervals

@@ -11,7 +11,7 @@
   "days")[2], period.in.days = 90, show.legend = TRUE,
   legend.x = "right", legend.y = "bottom", legend.bkg.opacity = 0.5,
   cex = 1, cex.axis = 0.75, cex.lab = 1, show.cma = TRUE,
-  col.cats = cm.colors, unspecified.category.label = "drug",
+  col.cats = rainbow, unspecified.category.label = "drug",
   lty.event = "solid", lwd.event = 2, pch.start.event = 15,
   pch.end.event = 16, show.event.intervals = TRUE,
   col.na = "lightgray", col.continuation = "black",
@@ -76,7 +76,7 @@ various types of text.}
 
 \item{col.cats}{A \emph{color} or a \emph{function} that specifies the single
 colour or the colour palette used to plot the different medication; by
-default \code{cm.colors}.}
+default \code{rainbow}.}
 
 \item{unspecified.category.label}{A \emph{string} giving the name of the
 unspecified (generic) medication category.}

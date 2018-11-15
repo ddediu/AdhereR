@@ -8,7 +8,7 @@
   align.all.patients = FALSE, show.period = c("dates", "days")[2],
   period.in.days = 90, show.legend = TRUE, legend.x = "bottomright",
   legend.y = NULL, legend.bkg.opacity = 0.5, cex = 1,
-  cex.axis = 0.75, cex.lab = 1, col.cats = cm.colors,
+  cex.axis = 0.75, cex.lab = 1, col.cats = rainbow,
   lty.event = "solid", lwd.event = 2, pch.start.event = 15,
   pch.end.event = 16, col.continuation = "black",
   lty.continuation = "dotted", lwd.continuation = 1,
@@ -54,7 +54,7 @@ various types of text.}
 
 \item{col.cats}{A \emph{color} or a \emph{function} that specifies the single
 colour or the colour palette used to plot the different medication; by
-default \code{cm.colors}.}
+default \code{rainbow}.}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
