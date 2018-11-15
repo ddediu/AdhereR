@@ -586,7 +586,8 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' various types of text.
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{rainbow}.
+#' default \code{rainbow}, but we recommend, whenever possible, a
+#' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param col.continuation,lty.continuation,lwd.continuation The style of the
@@ -3294,7 +3295,8 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{rainbow}.
+#' default \code{rainbow}, but we recommend, whenever possible, a
+#' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -7248,7 +7250,8 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{rainbow}.
+#' default \code{rainbow}, but we recommend, whenever possible, a
+#' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the

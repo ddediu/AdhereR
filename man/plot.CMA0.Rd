@@ -54,7 +54,8 @@ various types of text.}
 
 \item{col.cats}{A \emph{color} or a \emph{function} that specifies the single
 colour or the colour palette used to plot the different medication; by
-default \code{rainbow}.}
+default \code{rainbow}, but we recommend, whenever possible, a
+colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
