@@ -752,7 +752,13 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   {
     start <- as.numeric(difftime(Date.converted.to.DATE[i], earliest.date, "days" ) );
     end <- start + cma$data[i,cma$event.duration.colname];
-    col <- .map.category.to.color(ifelse(is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)),"unspec. type",cma$data[i,cma$medication.class.colname]));
+    if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
+    {
+      col <- .map.category.to.color("unspec. type");
+    } else
+    {
+      col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
+    }
     points( adh.plot.space[2]+start, i, pch=pch.start.event, col=col, cex=cex); points(adh.plot.space[2]+end, i, pch=pch.end.event, col=col, cex=cex);
     segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
 
@@ -2679,7 +2685,13 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   {
     start <- as.numeric(cma$event.info$.DATE.as.Date[i] - earliest.date);
     end <- start + cma$event.info[i,cma$event.duration.colname];
-    col <- .map.category.to.color(ifelse(is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)),unspecified.category.label,cma$event.info[i,cma$medication.class.colname]));
+    if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
+    {
+      col <- .map.category.to.color(unspecified.category.label);
+    } else
+    {
+      col <- .map.category.to.color(cma$event.info[i,cma$medication.class.colname]);
+    }
     points( adh.plot.space[2]+start+correct.earliest.followup.window, i, pch=pch.start.event, col=col, cex=cex);
     points(adh.plot.space[2]+end+correct.earliest.followup.window, i, pch=pch.end.event, col=col, cex=cex);
     segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
