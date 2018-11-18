@@ -632,6 +632,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
+                      print.dose=FALSE, cex.dose=0.75, plot.dose=FALSE, lwd.evend.max.dose=8,
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                       col.na="lightgray",                    # color for mising data
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
@@ -688,7 +689,8 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   }
 
   # Make sure the patients are ordered by ID and date:
-  cma$data <- cma$data[ order( cma$data[,cma$ID.colname], Date.converted.to.DATE), ];
+  new.order <- order( cma$data[,cma$ID.colname], Date.converted.to.DATE);
+  cma$data <- cma$data[ new.order, ]; Date.converted.to.DATE <- Date.converted.to.DATE[ new.order ]; # make sure both the data and the cached dates are ordered in the same way
 
   # Grayscale plotting:
   if( bw.plot )
@@ -713,6 +715,24 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   }
   names(cols) <- categories;
   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
+
+  # Daily dose:
+  if( is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) )
+  {
+    print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
+  }
+  if( print.dose )
+  {
+    dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
+  }
+  if( plot.dose )
+  {
+    dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.evend.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
+  } else
+  {
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.evend.max.dose) lwd.min; # no adjustment
+  }
 
   # Find the earliest date:
   earliest.date <- min(Date.converted.to.DATE);
@@ -761,7 +781,17 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
       col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
     }
     points( adh.plot.space[2]+start, i, pch=pch.start.event, col=col, cex=cex); points(adh.plot.space[2]+end, i, pch=pch.end.event, col=col, cex=cex);
-    segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
+    if( plot.dose )
+    {
+      segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+    } else
+    {
+      segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
+    }
+    if( print.dose )
+    {
+      text(adh.plot.space[2]+(start + end)/2, i - dose.text.height*2/3, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
+    }
 
     if( i < nrow(cma$data) )
     {
