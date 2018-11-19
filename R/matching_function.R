@@ -1,25 +1,121 @@
 #function to construct treatment episodes from dispensing and prescription databases
 
-process_medication_events <- function(disp.data = disp_events,
-                                        presc.data = presc_events,
-                                        hosp.data = hosp_events,
-                                        ID.colname = "ID",
-                                        presc.date.colname = "DATE.PRESC",
-                                        disp.date.colname = "DATE.DISP",
-                                        date.format = "%d.%m.%Y",
-                                        medication.class.colname = "DCI",
-                                        total.dose.colname = "TOTAL.DOSE",
-                                        presc.daily.dose.colname = "DAILY.DOSE",
-                                        presc.duration.colname = "RYTHM.3",
-                                        unit.colname = "Unit",
-                                        form.colname = "Form",
-                                        visit.colname = "VISIT",
-                                        force.init.presc = TRUE,
-                                        force.presc.renew = TRUE,
-                                        consider.dosage.change = TRUE,
-                                      suppress.warnings = FALSE){
+#' Computation of event durations.
+#'
+#' Computes event durations based on dispensing, prescription, and hospitalization
+#' data and returns a data.frame which can be used with the CMA constructors
+#' in \code{AdhereR}.
+#'
+#' Computation of CMAs requires a supply duration for medications dispensed to patients.
+#' If medications are not supplied for fixed durations, but as a quantity that may last for various durations
+#' based on the prescribed dose, the supply duration has to be calculated based on dispensed and prescribed doses.
+#' Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be taken into account.
+#' Patients may be hospitalized or incarcerated, and may not use their own supplies during these periods.
+#' This function allows to calculate supply durations, taking into account the aforementiont situations and offering flexible
+#' parameters to deal with various situations.
+#'
+#'
+#' @param disp.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
+#' the dispensing events. Must contain, at a minimum, the patient unique ID, one medication identifier,
+#' the dispensing date, and total dispensed dose, and might also
+#' contain additional columns to identify and group medications (the actual column names are
+#' defined in the \emph{\code{medication.class.colnames}} parameter).
+#' @param presc.data A \emph{\code{data.frame}} containing the prescribing events. Must contain,
+#' at a minimum, the same unique patient ID and medication identifier(s) as the dispensing data,
+#' the prescription date, the daily prescribed dose, and the prescription duration. Optionally, it might
+#' also contain a visit number.
+#' @param hosp.data Optional, \emph{\code{NULL}} or a \emph{\code{data.frame}} containing the hospitalization periods (or other periods
+#' where medications were likely supplied from a different source, e.g. incarcerations). Must contain the
+#' same unique patient ID as dispensing and prescription data, and the start- and end dates of the
+#' hospitalizations with the exact column names \emph{\code{DATE.IN}} and \emph{\code{DATE.OUT}}.
+#' @param ID.colname A \emph{string}, the name of the column in \code{disp.data}, \code{presc.data},
+#' and \code{hosp.data} containing the unique patient ID, or \code{NA} if not defined.
+#' @param presc.date.colname A \emph{string} or \emph{\code{Date}}, the name of the column in
+#' \code{presc.data} containing the prescription date (in the format given in
+#' the \code{date.format} parameter), or \code{NA} if not defined.
+#' @param disp.date.colname A \emph{string} or \emph{\code{Date}}, the name of the column in
+#' \code{disp.data} containing the dispensing date (in the format given in
+#' the \code{date.format} parameter), or \code{NA} if not defined.
+#' @param date.format A \emph{string} giving the format of the dates used in
+#' the \code{data} and the other parameters; see the \code{format} parameters
+#' of the \code{\link[base]{as.Date}} function for details (NB, this concerns
+#' only the dates given as strings and not as \code{Date} objects).
+#' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the name(s) of the column(s) in
+#' \code{disp.data} and \code{presc.data} containing the classes/types/groups of medication, or \code{NA}
+#' if not defined.
+#' @param total.dose.colname A \emph{string}, the name of the column in
+#' \code{disp.data} containing the total dispensed dose as \code{numeric} (e.g. 500 for 10 tablets of 50 mg),
+#' or \code{NA} if not defined.
+#' @param presc.daily.dose.colname A \emph{string}, the name of the column in
+#' \code{presc.data} containing the daily prescribed dose as \code{numeric} (e.g. 50 for 50 mg once per day,
+#' or 25 for 50 mg once ever 2 days), or \code{NA} if not defined.
+#' @param presc.duration.colname A \emph{string}, the name of the column in
+#' \code{presc.data} containing the duration of the prescription as \code{numeric} or \code{NA} if
+#' duration is unknown.
+#' @param visit.colname A \emph{string}, the name of the column in
+#' \code{presc.data} containing the number of the visit, or \code{NA} if not defined.
+#' @param force.init.presc \emph{Logical}. If \code{TRUE} if the first prescription event is after the
+#' first dispensing event for a specific medication, advance the date of the first prescription event to
+#' the date of the first dispensing event.Only if the first prescription event
+#' is not limited in duration (as set with \code{presc.duration.colname}).
+#' @param force.presc.renew \emph{Logical} or \emph{string}. If \code{TRUE} require a new prescription for all medications for
+#' every prescription event (visit), otherwise prescriptions end on the first visit without renewal.
+#' If \emph{string}, the name of the column #' containing the \code{Logical} for each medication class separatly.
+#' @param split.on.dosage.change \emph{Logical} or \emph{string}. If \code{TRUE} split the dispensing event on days with dosage change
+#' and create a new event with the new dosage for the remaining supply.
+#' If \emph{string}, the name of the column #' containing the \code{Logical} for each medication class separatly.
+#' Important if carryover should be considered later on.
+#' @param trt.interruption can be either \emph{continue}, \emph{discard}, or \emph{carryover}, and indicates how to
+#' handle supplies affected by treatment interruptions or hospitalizations. With \emph{continue}, interruptions have no effect.
+#' With \emph{discard}, supplies are truncated at the beginning of an interruption or hospitalization and the remaining
+#' supply is discarded. With \emph{carryover}, supplies are truncated at the beginning of an interruption or hospitalization
+#' and the remaining supply is carried forward until after the end of the interruption or hospitalization.
+#' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
+#' warnings.
+#' @param return.data.table \emph{Logical}, if \code{TRUE} return a
+#' \code{data.table} object, otherwise a \code{data.frame}.
+#' @param ... other possible parameters
+#' @return A \code{data.frame} or \code{data.table} with the following columns:
+#' \itemize{
+#'  \item \code{ID.colname} the unique patient ID, as given by the \code{ID.colname} parameter.
+#'  \item \code{medication.class.colnames} the column(s) with classes/types/groups of medication, as given by the
+#'  \item \code{total.dose.colname} the total dispensed dose, as given by the \code{total.dose.colname} parameter.
+#'  \item \code{disp.date.colnema} the date of the dispensing event, as given by the \code{disp.date.colnema} parameter.
+#'  \item \code{DISP.START} the start date of the dispensing event, either the same as in \code{disp.date.colnema}
+#'  or a later date in case of dosage changes or treatment interruptions/hospitalizations.
+#'  \item \code{presc.daily.dose.colname} the prescribed daily dose, as given by the \code{presc.daily.dose.colname} parameter.
+#'  \item \code{DURATION} the calculated duration of the supply, based on the total dispensed dose
+#'  and the prescribed daily dose, starting from the \code{DISP.START} date.
+#'  \item \code{START.PRESC} the start date of the prescription episode.
+#'  \item \code{END.PRESC} the end date of the prescription episode.
+#'  \item \code{HOSP.DURATION} the number of days during the current supply period
+#'  affected by hospitalizations.
+#'  \item \code{tot.presc.interruptions} the total number of prescription interruptions per patient for a specific medication.
+#'  \item \code{tot.dosage.changes} the total number of dosage changes per patient for a specific medication.
+#'  }
+#' @export
+compute_event_durations <- function(disp.data = NULL,
+                                    presc.data = NULL,
+                                    hosp.data = NULL,
+                                    ID.colname = NA,
+                                    presc.date.colname = NA,
+                                    disp.date.colname = NA,
+                                    date.format = "%d.%m.%Y",
+                                    medication.class.colnames = NA,
+                                    total.dose.colname = NA,
+                                    presc.daily.dose.colname = NA,
+                                    presc.duration.colname = NA,
+                                    visit.colname = NA,
+                                    force.init.presc = FALSE,
+                                    force.presc.renew = FALSE,
+                                    split.on.dosage.change = TRUE,
+                                    trt.interruption = c("continue", "discard", "carryover")[1],
+                                    suppress.warnings = FALSE,
+                                    return.data.table = FALSE,
+                                    ...){
 
   # Preconditions:
+  {
 
     # dispensing data class and dimensions:
     if( inherits(disp.data, "matrix") ) disp.data <- as.data.table(disp.data); # convert matrix to data.table
@@ -76,9 +172,9 @@ process_medication_events <- function(disp.data = disp_events,
       if( !suppress.warnings ) warning(paste0("Column disp.date.colname='",disp.date.colname,"' must appear in the dispensing data!\n"));
       return (NULL);
     }
-    if( !is.na(medication.class.colname) && !(medication.class.colname %in% names(disp.data))  && !(medication.class.colname %in% names(presc.data)) )
+    if( !is.na(medication.class.colnames) && !(medication.class.colnames %in% names(disp.data))  && !(medication.class.colnames %in% names(presc.data)) )
     {
-      if( !suppress.warnings ) warning(paste0("Column medication.class.colname='",medication.class.colname,"' must appear in the dispensing and prescribing data!\n"));
+      if( !suppress.warnings ) warning(paste0("Column medication.class.colnames='",medication.class.colnames,"' must appear in the dispensing and prescribing data!\n"));
       return (NULL);
     }
     if( !is.na(total.dose.colname) && !(total.dose.colname %in% names(disp.data)) )
@@ -96,16 +192,7 @@ process_medication_events <- function(disp.data = disp_events,
       if( !suppress.warnings ) warning(paste0("Column presc.duration.colname='",presc.duration.colname,"' must appear in the prescribing data!\n"));
       return (NULL);
     }
-    if( !is.na(unit.colname) && !(unit.colname %in% names(disp.data)) && !(unit.colname %in% names(presc.data)) )
-    {
-      if( !suppress.warnings ) warning(paste0("Column unit.colname='",unit.colname,"' must appear in the dispensing and prescribing data!\n"));
-      return (NULL);
-    }
-    if( !is.na(form.colname) && !(form.colname %in% names(disp.data)) && !(form.colname %in% names(presc.data)) )
-    {
-      if( !suppress.warnings ) warning(paste0("Column form.colname='",form.colname,"' must appear in the dispensing and prescribing data!\n"));
-      return (NULL);
-    }
+
     if(".episode" %in% colnames(presc.data)){
       {
         if( !suppress.warnings ) warning("The column name \'.episode\' is used internally, please use another column name.");
@@ -113,185 +200,325 @@ process_medication_events <- function(disp.data = disp_events,
       }
     }
 
-  # convert dates
-  disp.data[,(disp.date.colname) := as.Date(get(disp.date.colname), format = date.format)]
-  presc.data[,(presc.date.colname) := as.Date(get(presc.date.colname), format = date.format)]
-  if(!is.null(hosp.data)){
-    hosp.data[,`:=` (DATE.IN = as.Date(DATE.IN, format = date.format),
-             DATE.OUT = as.Date(DATE.OUT, format = date.format))]
-  }
+    # convert dates
+    disp.data[,(disp.date.colname) := as.Date(get(disp.date.colname), format = date.format)]
+    presc.data[,(presc.date.colname) := as.Date(get(presc.date.colname), format = date.format)]
+    if(!is.null(hosp.data)){
+      hosp.data[,`:=` (DATE.IN = as.Date(DATE.IN, format = date.format),
+                       DATE.OUT = as.Date(DATE.OUT, format = date.format))]
+    }
 
-  # force medication class, unit, and form to character
-  if(inherits(disp.data[[medication.class.colname]], "factor")){
-    disp.data[,(medication.class.colname) := as.character(get(medication.class.colname))]
-  }
-  if(inherits(disp.data[[unit.colname]], "factor")){
-    disp.data[,(unit.colname) := as.character(get(unit.colname))]
-  }
-  if(inherits(disp.data[[form.colname]], "factor")){
-    disp.data[,(form.colname) := as.character(get(form.colname))]
-  }
+    # force medication class to character
+    for(class.colname in medication.class.colnames){
 
-  if(inherits(presc.data[[medication.class.colname]], "factor")){
-    presc.data[,(medication.class.colname) := as.character(get(medication.class.colname))]
-  }
-  if(inherits(presc.data[[unit.colname]], "factor")){
-    presc.data[,(unit.colname) := as.character(get(unit.colname))]
-  }
-  if(inherits(presc.data[[form.colname]], "factor")){
-    presc.data[,(form.colname) := as.character(get(form.colname))]
+      if(inherits(disp.data[[class.colname]], "factor")){
+        disp.data[,(class.colname) := as.character(get(class.colname))]
+      }
+
+      if(inherits(presc.data[[class.colname]], "factor")){
+        presc.data[,(class.colname) := as.character(get(class.colname))]
+      }
+    }
   }
 
   # function to process each patient
   process_patient <- function(pat){
 
+    if(exists("debug.mode") && debug.mode==TRUE) print(paste("Patient:",pat))
+
     # function to process each medication
     process_medication <- function(med){
 
-      # function to process each dispensing event
-      process_dispensing_events <- function(event){
+      if(exists("debug.mode") && debug.mode==TRUE) print(paste("Medication:", med))
+
+      process_dispensing_events <- function(event) {
+
+        if(exists("debug.mode") && debug.mode==TRUE) print(paste("Event:", event))
 
         ## !Important: We assume that the prescribed dose can be accomodated with the dispensed medication
 
-        #identify last prescribed dosage before dispense
+        #subset data to event
         curr_disp <- med_disp[event]
-        curr_presc <- med_presc[1]
-        curr_presc_date <- curr_presc[[presc.date.colname]]
+        orig.disp.date <- curr_disp[[disp.date.colname]]
 
         # if current dispensing event is before first prescription date, don't calculate a duration
-        if(curr_disp[[disp.date.colname]] < first_presc[[presc.date.colname]]) {
-          med_event <- cbind(curr_disp[,c(ID.colname, disp.date.colname, medication.class.colname, unit.colname, form.colname, total.dose.colname), with = FALSE],
-                             PRESC.DURATION = NA,
+        if(orig.disp.date < first_presc[[presc.date.colname]]) {
+          med_event <- cbind(curr_disp[,c(ID.colname, medication.class.colnames, total.dose.colname, disp.date.colname), with = FALSE],
+                             DISP.START = orig.disp.date,
+                             DURATION = 0,
                              DAILY.DOSE = NA,
                              START.PRESC = as.Date(NA, format = date.format),
-                             END.PRESC = as.Date(NA, format = date.format))
+                             END.PRESC = as.Date(NA, format = date.format),
+                             HOSP.DURATION = NA)
 
-        # if current dispensing event is after end of last prescription date, don't calculate a duration (only when last prescription indicates termination)
-        } else if(!is.na(tail(med_presc$END.PRESC,1)) && curr_disp[[disp.date.colname]] > tail(med_presc$END.PRESC,1)){
-          med_event <- cbind(curr_disp[,c(ID.colname, disp.date.colname, medication.class.colname, unit.colname, form.colname, total.dose.colname), with = FALSE],
-                             PRESC.DURATION = NA,
-                             DAILY.DOSE = NA,
-                             START.PRESC = as.Date(NA, format = date.format),
-                             END.PRESC = as.Date(NA, format = date.format))
-        } else { # otherwise search last prescription before the current dispensing event
+          # if current dispensing event is after end of last prescription date, don't calculate a duration (only when last prescription indicates termination)
+        } else {
 
-        curr_presc <- tail(med_presc[get(presc.date.colname) <= curr_disp[[disp.date.colname]]], 1)
-        curr_presc_date <- curr_presc[[presc.date.colname]]
+          #select prescription episodes ending after the original dispensing date and add the one immediately before
+          episodes <- med_presc[orig.disp.date < END.PRESC | is.na(END.PRESC), which = TRUE]
 
-        # set current prescribed dose
-        curr_presc_dose <- as.numeric(curr_presc[[presc.daily.dose.colname]])
+          # if the current dispensing event is after the last prescription episode, don't calculate a duration
+          if(length(episodes) == 0){
 
-        # calculate duration of dispensation with this dosage
-        disp_duration <- curr_disp[[total.dose.colname]]/curr_presc_dose
+            med_event <- cbind(curr_disp[,c(ID.colname, medication.class.colnames, total.dose.colname, disp.date.colname), with = FALSE],
+                               DISP.START = orig.disp.date,
+                               DURATION = 0,
+                               DAILY.DOSE = NA,
+                               START.PRESC = as.Date(NA, format = date.format),
+                               END.PRESC = as.Date(NA, format = date.format),
+                               HOSP.DURATION = NA)
 
-     ## add hospitalizations
-        curr_hosp_event <- 0
-        if(nrow(hosp_events) != 0 & !is.na(disp_duration) ){
+          } else {
 
-          # check if end date of dispensiung duration is after start and before end of hospitalization
-          curr_disp_end <- curr_disp[[disp.date.colname]] + disp_duration
-          for(i in 1:nrow(hosp_events)){
-            if(curr_disp_end >= hosp_events[i, DATE.IN] & curr_disp_end <= hosp_events[i, DATE.OUT]){
-              # adjust end of dispensing duration until no further hospitalization is encountered within this duration
-              disp_duration <- disp_duration + as.numeric(hosp_events[i, HOSP.DURATION])
-              curr_disp_end <- curr_disp_end + disp_duration
-              curr_hosp_event <- curr_hosp_event + as.numeric(hosp_events[i, HOSP.DURATION])
+            ## for each prescription episode, calculate the duration with the current dose
+            total.dose.i <- curr_disp[[total.dose.colname]] #dispensed dose
+            presc.dose.i <- 0 #initialize prescibed dose as 0
+            disp.start.date.i <- orig.disp.date #start date of dispensing event
+
+            rm.trt.episode <- FALSE #will be set to TRUE in case of calculations during treatment interruptions
+
+            stop = 0
+
+            med_event <- NULL
+            for(episode in episodes) {
+
+              presc.dose.i <- med_presc[[episode,presc.daily.dose.colname]] #prescribed daily dose
+
+              if(presc.dose.i == 0) { #if event happens during treatment interruption (prescribed dose = 0), check what to do
+
+                if(trt.interruption == "continue") {#if trt.interruption is set to continue, continue with last prescribed dose
+
+                  presc.dose.i <- med_presc[[episode-1,presc.daily.dose.colname]]
+
+                  rm.trt.episode <- TRUE #make sure that prescription start- and end date are removed at the end
+
+                } else if(trt.interruption == "discard") {# if trt.interruption is set to discard, don't calculate anything
+
+                  if(is.null(med_event)) {
+
+                    med_event <- cbind(curr_disp[,c(ID.colname, medication.class.colnames, total.dose.colname, disp.date.colname), with = FALSE],
+                                       DISP.START = disp.start.date.i,
+                                       DURATION = 0,
+                                       DAILY.DOSE = NA,
+                                       START.PRESC = as.Date(NA, format = date.format),
+                                       END.PRESC = as.Date(NA, format = date.format),
+                                       HOSP.DURATION = NA)
+                  }
+
+                  break
+                } else {episode <- episode + 1 #else skip to next episode
+                next}
+              }
+
+              start.episode <- med_presc[episode,START.PRESC]
+              end.episode <- med_presc[episode,END.PRESC]
+
+              #if it is not the first episode, adjust supply start date to prescription start date
+              if(episode != episodes[1]) disp.start.date.i <- start.episode
+
+              duration.i <- total.dose.i/presc.dose.i #calculate duration
+
+              disp.end.date.i <- disp.start.date.i + duration.i #calculate end date of supply
+
+              #add hospitalizations during the supply period
+              hosp.duration.i <- 0
+              if(nrow(hosp_events) != 0 & !is.na(duration.i)){
+
+                #check for hospitalizations within the episode
+                hosp_events_i <- hosp_events[(DATE.IN <= end.episode|is.na(end.episode)) & DATE.OUT > start.episode]
+
+                # check end of supply date is after start of hospitalization and end of hospitalization is after start of dispsense
+                curr_hosp_event <- hosp_events_i[DATE.IN <= disp.end.date.i & DATE.OUT > disp.start.date.i]
+
+                if(nrow(curr_hosp_event) > 0) {
+
+                  if(trt.interruption == "continue") {#if trt.interruption is set to continue, calculate duration of hospitalization and continue
+
+                    hosp.duration.i <- sum(curr_hosp_event$HOSP.DURATION)
+
+                  } else if(trt.interruption == "discard") {# if trt.interruption is set to discard, calculate until start of hospitalization and discard the rest
+
+                    duration.i <- curr_hosp_event[[1,"DATE.IN"]] - disp.start.date.i #calculate duration until start of hospitalization
+                    if(duration.i < 0) duration.i <- 0
+
+                    stop <- 1
+                  } else {#for carryover, construct medication events taking into account all hospitalizations within an episode
+
+                    #hosp.durations <- as.numeric(curr_hosp_event$HOSP.DURATION) #get hospitalization periods
+
+                    hosp_dates <- sort(c(curr_hosp_event$DATE.IN, curr_hosp_event$DATE.OUT)) #sort hostpitalization dates
+
+                    #if the dispensing event starts before the hospitalization, add the dispensing date
+                    if(disp.start.date.i <= hosp_dates[1]) {
+                      episode.dates <- c(disp.start.date.i, hosp_dates)
+                    } else {#else remove the first hospitalization date and adjust hosp.durations
+                      #hosp.durations[1] <- as.numeric(hosp_dates[2]- disp.start.date.i)
+                      episode.dates <- hosp_dates[-1]
+                    }
+
+                    #if end of episode is before the last discharge, remove last discharge date and adjust hosp.durations
+                    if(!is.na(end.episode) && end.episode < tail(hosp_dates,1)) {
+                      episode.dates <- head(episode.dates,-1)
+                      if(length(episode.dates) == 0){next}
+                      #hosp.durations[length(hosp.durations)] <- as.numeric(end.episode-tail(episode.dates,1))
+                    } else {#add end of episode
+                      episode.dates <- c(episode.dates,end.episode)
+                      #hosp.durations <- c(hosp.durations, 0)
+                    }
+
+                    #create data table with all events in an episode
+                    disp.start.dates <- episode.dates[seq(1, by = 2, length.out = length(episode.dates)/2)]
+                    disp.end.dates <- episode.dates[seq(2, by = 2, length.out = length(episode.dates)/2)]
+                    durations <- as.numeric(disp.end.dates - disp.start.dates)
+
+                    all.events <- data.table(DISP.START = disp.start.dates,
+                                             DURATION = durations,
+                                             DAILY.DOSE = as.numeric(presc.dose.i),
+                                             START.PRESC = start.episode,
+                                             END.PRESC = end.episode,
+                                             HOSP.DURATION = rep(0,length(durations)))
+
+                    #calculat sum of all durations
+                    sum.duration <- sum(all.events$DURATION,na.rm= TRUE)
+
+                    #if episode is not terminated (last duration is NA)
+                    if(is.na(tail(all.events$DURATION,1))){
+
+                      all.events[nrow(all.events), DURATION := duration.i-sum.duration]
+
+                      med_event <-  rbind(med_event,
+                                          cbind(curr_disp[,c(ID.colname, medication.class.colnames, total.dose.colname, disp.date.colname), with = FALSE],
+                                                all.events[,1:6]))
+
+                      break
+
+                    } else if(duration.i <= sum.duration){ #if the supply duration is shorter than the sum of the duration
+
+                      #calculate cumulative sum of durations
+                      all.events[,cum.duration := cumsum(DURATION)]
+                      #subset to all rows until supply is exhaused and add 1
+                      .rows <- all.events[cum.duration <= duration.i,which=TRUE]
+                      if(length(.rows) == 0) .rows <- 0
+                      all.events <- all.events[c(.rows, tail(.rows,1)+1)]
+
+                      #calculate remaining duration for last row
+                      sum.duration <- sum(head(all.events,-1)$DURATION)
+                      all.events[nrow(all.events), DURATION := duration.i-sum.duration]
+
+                      med_event <-  rbind(med_event,
+                                          cbind(curr_disp[,c(ID.colname, medication.class.colnames, total.dose.colname, disp.date.colname), with = FALSE],
+                                                all.events[,1:6]))
+
+                      break
+
+                    } else {#if supply duration is longer than the sum of the durations
+
+                      #calculate the carryover dose
+                      oversupply <- duration.i-sum.duration #calculate remaining days of oversupply
+                      total.dose.i <- presc.dose.i*oversupply #calculate remaining total dose
+
+                      med_event <-  cbind(curr_disp[,c(ID.colname, medication.class.colnames, total.dose.colname, disp.date.colname), with = FALSE],
+                                          all.events[,1:6])
+
+                      next
+                    }
+                  }
+                }
+              }
+
+              #check various parameters to decide wheter to stop or continue
+
+              #check if end of supply is before end of episode OR last row of prescription episodes is reached
+              if(disp.end.date.i < end.episode | episode == tail(episodes,1)) {stop <- 1} else {
+
+                episode <- episode + 1 #get next prescription episode
+                next.presc.dose <- med_presc[[episode,presc.daily.dose.colname]] #get next episode's dosage
+
+                #if there is a treatment interruption and trt.interruption is set to continue, stop
+                if(next.presc.dose == 0 & trt.interruption == "continue") stop <- 1
+
+                #if there is no treatment interruption, but a dosage change and split.on.dosage.change is set FALSE, stop
+                if(next.presc.dose != 0 & next.presc.dose != presc.dose.i & split.on.dosage.change == FALSE) stop <- 1
+              }
+
+              if(stop == 1){
+
+                if(rm.trt.episode == TRUE) {
+                  start.episode <- as.Date(NA, format = date.format)
+                  end.episode <- as.Date(NA, format = date.format)
+                }
+
+                med_event <- rbind(med_event,
+                                   cbind(curr_disp[,c(ID.colname, medication.class.colnames, total.dose.colname, disp.date.colname), with = FALSE],
+                                         data.table(DISP.START = disp.start.date.i,
+                                                    DURATION = as.numeric(duration.i),
+                                                    DAILY.DOSE = as.numeric(presc.dose.i),
+                                                    START.PRESC = start.episode,
+                                                    END.PRESC = end.episode,
+                                                    HOSP.DURATION = as.numeric(hosp.duration.i))))
+
+                break
+
+              } else {
+
+                duration.i <- end.episode - disp.start.date.i #calculate duration until end of episode
+                oversupply <- disp.end.date.i - end.episode #calculate remaining days of oversupply
+                total.dose.i <- presc.dose.i*oversupply #calculate remaining total dose
+
+                if(rm.trt.episode == TRUE) {
+                  start.episode <- as.Date(NA, format = date.format)
+                  end.episode <- as.Date(NA, format = date.format)
+                }
+
+                #create medication event
+                med_event <- rbind(med_event,
+                                   cbind(curr_disp[,c(ID.colname, medication.class.colnames, total.dose.colname, disp.date.colname), with = FALSE],
+                                         data.table(DISP.START = disp.start.date.i,
+                                                    DURATION = as.numeric(duration.i),
+                                                    DAILY.DOSE = as.numeric(presc.dose.i),
+                                                    START.PRESC = start.episode,
+                                                    END.PRESC = end.episode,
+                                                    HOSP.DURATION = as.numeric(hosp.duration.i))))
+              }
+
             }
+
+            med_event
+
           }
         }
-
-    ## check for dosage changes (including interruptions) within the duration of the dispensation
-        if(!is.null(dosage_changes) && consider.dosage.change == TRUE){
-
-          med_event <- NULL
-          curr_dosage_change <- NULL
-          presc_date_i <- curr_presc_date
-          presc_dose_i <- curr_presc_dose
-          total_dose_i <- curr_disp[[total.dose.colname]]
-          date_i <- curr_disp[[disp.date.colname]]
-          nb_dosage_change <- 0
-
-          # while there is a dosage change within the calculated duration, recalculate duration accounting for dosage changes
-          while (total_dose_i > presc_dose_i) {
-            curr_dosage_change <- head(dosage_changes[dosage_changes[[presc.date.colname]] > date_i &
-                                                        dosage_changes[[presc.date.colname]] < curr_disp[[disp.date.colname]] + disp_duration], 1)
-
-            if(nrow(curr_dosage_change) > 0) {
-
-              disp_duration_i <- as.numeric(curr_dosage_change[[1, presc.date.colname]] - date_i)
-              total_dose_i <- total_dose_i - disp_duration_i*presc_dose_i
-
-              med_event <- rbind(med_event,
-                                 cbind(curr_disp[,c(ID.colname, disp.date.colname, medication.class.colname, unit.colname, form.colname, total.dose.colname), with = FALSE],
-                                 data.table(DATE.PRESC = presc_date_i,
-                                            DAILY.DOSE = presc_dose_i,
-                                            DURATION = disp_duration_i,
-                                            FIRST.PRESC = first_presc[[presc.date.colname]],
-                                            START.PRESC = curr_presc$START.PRESC,
-                                            END.PRESC = curr_presc$END.PRESC,
-                                            PRESC.DURATION = curr_presc[[presc.duration.colname]],
-                                            HOSP.DURATION = 0,
-                                            DOSAGE.CHANGE = 1)))
-
-              curr_presc <- tail(med_presc[START.PRESC <= (date_i + disp_duration_i)], 1)
-
-              date_i <- curr_dosage_change[[1,presc.date.colname]]
-              presc_date_i <- date_i
-              presc_dose_i <- curr_dosage_change[[1,presc.daily.dose.colname]]
-              disp_duration <- as.numeric(curr_dosage_change[[1, presc.date.colname]] - curr_disp[[disp.date.colname]]) + total_dose_i/presc_dose_i
-              nb_dosage_change <- nb_dosage_change + 1
-
-            } else { #if there is no further dosage change, calculate total dispensiung duration including hospitalization
-
-              rest <- cbind(curr_disp[,c(ID.colname, disp.date.colname, medication.class.colname, unit.colname, form.colname, total.dose.colname), with = FALSE],
-                            data.table(DATE.PRESC = presc_date_i,
-                                       DAILY.DOSE = presc_dose_i,
-                                       DURATION = (total_dose_i/presc_dose_i) + curr_hosp_event, #add hospitalization duration to the last row
-                                       FIRST.PRESC = first_presc[[presc.date.colname]],
-                                       START.PRESC = curr_presc$START.PRESC,
-                                       END.PRESC = curr_presc$END.PRESC,
-                                       PRESC.DURATION = curr_presc[[presc.duration.colname]],
-                                       HOSP.DURATION = curr_hosp_event,
-                                       DOSAGE.CHANGE = 1))
-              rest[,(total.dose.colname) := total_dose_i]
-              med_event <- rbind(med_event, rest)
-
-              total_dose_i <- 0
-            }
-          }
-        } else { # if there is no dosage change, return dispensing duration
-
-          med_event <- cbind(curr_disp[,c(ID.colname, disp.date.colname, medication.class.colname, unit.colname, form.colname, total.dose.colname), with = FALSE],
-                             data.table(DATE.PRESC = curr_presc[[presc.date.colname]],
-                                        DAILY.DOSE = curr_presc[[presc.daily.dose.colname]],
-                                        DURATION = disp_duration,
-                                        FIRST.PRESC = first_presc[[presc.date.colname]],
-                                        START.PRESC = curr_presc$START.PRESC,
-                                        END.PRESC = curr_presc$END.PRESC,
-                                        PRESC.DURATION = curr_presc[[presc.duration.colname]],
-                                        HOSP.DURATION = curr_hosp_event,
-                                        DOSAGE.CHANGE = NA
-                             ))
-        }
-        }
-        med_event
       }
 
-  ## subset data to medication
+      ## subset data to medication
 
-      med_disp <- pat_disp[get(medication.class.colname) == disp_presc[[med, medication.class.colname]] & get(form.colname) == disp_presc[[med, form.colname]]]
+      setkeyv(pat_disp, medication.class.colnames)
 
-      med_presc <- pat_presc[get(medication.class.colname) == disp_presc[[med, medication.class.colname]] & get(form.colname) == disp_presc[[med, form.colname]]]
+      med_disp <- pat_disp[.(disp_presc[med, medication.class.colnames, with = FALSE])]
+
+      med_presc <- pat_presc[.(disp_presc[med, medication.class.colnames, with = FALSE])]
 
       setkeyv(med_disp, cols = disp.date.colname)
       setkeyv(med_presc, cols = presc.date.colname)
 
-   ## calculate treatment interruptions and end of prescription date
+      # determine date of initial prescription
+      first_presc <- med_presc[1]
 
-   ## determine end of prescription and prescription interruptions if prescription reneval is enforced for each subsequent prescription event (requires the "visit" column)
+      # determine date of initial dispense
+      first_disp <- med_disp[[disp.date.colname]][1]
+
+      #if force.presc.renew and split.on.dosage.change are not set globally, set for medication based on first dispensing event
+      if(!is.logical(force.presc.renew)) {
+        force.presc.renew <- as.logical(first_disp[[force.presc.renew]])
+      }
+      if(!is.logical(split.on.dosage.change)) {
+        split.on.dosage.change <- as.logical(first_disp[[split.on.dosage.change]])
+      }
+
+      ## calculate treatment interruptions and end of prescription date
+
+      ## determine end of prescription and prescription interruptions if prescription reneval is enforced for each subsequent prescription event (requires the "visit" column)
       presc_interruptions <- data.table(NULL)
       if(force.presc.renew == TRUE){
-
         presc_visit <- presc_events[[visit.colname]] %in% unique(med_presc[[visit.colname]]) #determine for each visit if medication was prescribed
 
         first_presc_event <- head(which(presc_visit),1) #extract first prescription event
@@ -311,86 +538,142 @@ process_medication_events <- function(disp.data = disp_events,
 
         med_presc[,.episode := rleidv(med_presc, cols = presc.daily.dose.colname)] # add counter for treatment episodes
 
-        # remove interruptions after prescriptions with limited durations
-        .episodes_rm <- med_presc[shift(!is.na(get(presc.duration.colname)), type = "lag") & get(presc.daily.dose.colname) == 0, .episode]
-        med_presc <- med_presc[!.episode %in% .episodes_rm]
       }
 
-   ## determine dates of dosage changes
-      dosage_changes <- NULL
-      if(consider.dosage.change == TRUE){
-        if(nrow(med_presc) > 1 & diff(range(med_presc[[presc.daily.dose.colname]])) != 0){
+      setorder(med_presc)
 
-    ## postpone date of dosage change to end of hospitalizations
-        for(i in nrow(med_presc):2) {# go backwards to catch later dosage changes first; important for hospitalisations
-          if(!identical(med_presc[[i, presc.daily.dose.colname]],med_presc[[i-1, presc.daily.dose.colname]])){# check if dosage has changed since last prescription
-            if(nrow(hosp_events) != 0){# if patient has been hospitalized
-              for(j in 1:nrow(hosp_events)){# check if dosage changes during hospitalizations and if yes, postpone the date of dosage change to the end of hospitalization
-                if(med_presc[[i, presc.date.colname]] >= hosp_events[[j, "DATE.IN"]] & med_presc[[i, presc.date.colname]] <= hosp_events[[j, "DATE.OUT"]]){
-                  med_presc[i, (presc.date.colname) := hosp_events[[j, "DATE.OUT"]]]
-                }
-              }
-            }
-            dosage_changes <- rbind(dosage_changes, med_presc[i, c(presc.date.colname, presc.daily.dose.colname, presc.duration.colname), with = FALSE])
-            }
-        }
-        # make sure to have only one dosage change for each date
-        dosage_changes <- unique(dosage_changes, by = presc.date.colname)
-        setorderv(dosage_changes, presc.date.colname) # order again by ascending date
-
-        # do the same for the med_presc
-        setorderv(med_presc, visit.colname, order=-1)
-        med_presc <- unique(med_presc, by = presc.date.colname)
-        setorderv(med_presc, visit.colname, order=1) # order again by ascending date
-        }
-      }
-
-   ## construct treatment episodes
+      ## construct treatment episodes
       # create new .episode counter
       med_presc[,.episode := rleidv(med_presc, cols = c(presc.daily.dose.colname, presc.duration.colname))]
 
-      # determine date of initial prescription
-      first_presc <- med_presc[1]
+      #add episodes with same dose but set end date to last episode
+      med_presc[is.na(shift(get(presc.duration.colname), type = "lag")) & shift(get(presc.daily.dose.colname), type = "lag") == get(presc.daily.dose.colname) & !is.na(get(presc.duration.colname)), .episode := as.integer(.episode-1)]
 
-      # determine date of initial dispense
-      first_disp <- med_disp[[disp.date.colname]][1]
-      if(force.init.presc == TRUE) {
-        # if initial dispense is before initial prescription, adjust date of initial prescription to match initial dispense
-        # but only if first prescription is unlimited
-        if(first_disp < first_presc[[presc.date.colname]] & is.na(first_presc[[presc.duration.colname]])) {
-          first_presc[[presc.date.colname]] = first_disp
-
-          #adjust first prescription date
-          med_presc[1, (presc.date.colname) := first_presc[[presc.date.colname]]]
-
-          }
-      }
-
-   ## set start and end of prescription dates per group
+      ## set start and end of prescription dates per group
       med_presc[, `:=` (START.PRESC = get(presc.date.colname), # set prescription date as start date
-                                       END.PRESC = get(presc.date.colname)-1)] # set end date to one day before prescription date ...
+                        END.PRESC = get(presc.date.colname))] # set end date to prescription date ...
 
       med_presc[,END.PRESC := shift(END.PRESC, type = "lead")] # ... and shift end dates up by one
 
+      # adjust end date if prescription duration is provided and change start date of following prescriptions
+      med_presc[!is.na(get(presc.duration.colname)), END.PRESC := DATE.PRESC + get(presc.duration.colname)]
+      end.limited.presc <- head(med_presc,-1)[!is.na(get(presc.duration.colname))]$END.PRESC #don't include last prescription episode
+      med_presc[shift(!is.na(get(presc.duration.colname)), type = "lag"), START.PRESC := end.limited.presc]
+      med_presc[DATE.PRESC>START.PRESC & get(presc.daily.dose.colname) != 0,START.PRESC:=DATE.PRESC]
+
       # fill in start and end dates by group
-      med_presc[,START.PRESC := head(START.PRESC,1), by = .episode] # first prescription date per episode
-      med_presc[,END.PRESC:= tail(END.PRESC,1), by = .episode] # last prescription date per episode
+      med_presc[,START.PRESC := head(START.PRESC,1), by = .episode] # first start date per episode
+      med_presc[,END.PRESC:= tail(END.PRESC,1), by = .episode] # last end date per episode
 
-      med_presc[!is.na(get(presc.duration.colname)), `:=` (START.PRESC = DATE.PRESC,
-                                                        END.PRESC = DATE.PRESC + get(presc.duration.colname) - 1)] # adjust end date if prescription duration is provided
+      #collapse episodes
+      med_presc <- unique(med_presc, by = ".episode")
+      med_presc[,.episode := rleidv(med_presc, cols = c("START.PRESC", "END.PRESC"))]
 
-  ## apply process_dispensing_events to each dispensing event
-      medication_events <- do.call(rbindlist,
-                                   list(l = lapply(1:nrow(med_disp), FUN = function(i) process_dispensing_events(event = i)),
-                                        fill = TRUE))
+      #remove episodes where end date is before start date
+      rm.episode <- med_presc[END.PRESC <= START.PRESC, which = TRUE]
+      if(length(rm.episode) > 0){
+        med_presc <- med_presc[-rm.episode]
+      }
+      med_presc[,.episode := rleidv(med_presc)]
 
-      med_presc <- med_presc[,`:=` (.episode=NULL,VISIT=NULL)]
+      #collapse consecutive episodes where end date of the former is before start date of the latter
+      med_presc[shift(END.PRESC,type = "lag") > START.PRESC & shift(get(presc.daily.dose.colname),type = "lag") == get(presc.daily.dose.colname),
+                .episode := as.integer(.episode-1)]
+      med_presc[,START.PRESC := head(START.PRESC,1), by = .episode] # first start date per episode
+      med_presc[,END.PRESC:= tail(END.PRESC,1), by = .episode] # last end date per episode
+      med_presc <- unique(med_presc, by = ".episode")
+      med_presc[,.episode := rleidv(med_presc, cols = c("START.PRESC", "END.PRESC"))]
+
+      #add treatment interruptions
+      med_presc <- rbind(med_presc,med_presc[shift(START.PRESC,type = "lead")!=END.PRESC][,c(presc.daily.dose.colname, "START.PRESC", ".episode") := list(0, END.PRESC, 0)])
+      setorder(med_presc, START.PRESC, END.PRESC)
+      end.trt.interruptions <- med_presc[shift(END.PRESC,type = "lag")!=START.PRESC]$START.PRESC
+      med_presc[.episode == 0, END.PRESC := end.trt.interruptions]
+
+      if(force.init.presc == TRUE) {
+        # if initial dispense is before initial prescription, adjust date of initial prescription to match initial dispense
+        # but only if first prescription is unlimited
+        if(first_disp < head(med_presc[[presc.date.colname]],1) & is.na(head(med_presc[[presc.duration.colname]],1))) {
+
+          #adjust first prescription date
+          first_presc[1, (presc.date.colname) := first_disp]
+          med_presc[1, START.PRESC := first_disp]
+
+        }
+      }
+
+      ##calculate medication events for "simple" events not extending over multiple episodes or affected by hospitalizations
+      #add prescription events to dispensing events
+      for(i in 1:nrow(med_presc)){
+        med_disp[get(disp.date.colname) >= med_presc[i,START.PRESC] & (get(disp.date.colname) < med_presc[i,END.PRESC] | is.na(med_presc[i,END.PRESC])),
+                 c("START.PRESC", "END.PRESC", presc.daily.dose.colname) := list(med_presc[i,START.PRESC], med_presc[i,END.PRESC],med_presc[i,get(presc.daily.dose.colname)])]
+      }
+      med_disp[,DURATION := (TOTAL.DOSE)/(DAILY.DOSE)]
+      med_disp[,`:=` (DISP.START = get(disp.date.colname),
+                      DISP.END = get(disp.date.colname)+DURATION)]
+
+      med_disp[DISP.END > END.PRESC, .out := 1]
+
+      #add hospitalization events to dispensing events
+      med_disp[,.hosp := as.numeric(NA)]
+      if(nrow(hosp_events) != 0){
+        for(i in 1:nrow(hosp_events)){
+          med_disp[(DISP.END >= hosp_events[i,DATE.IN] & DISP.START < hosp_events[i,DATE.OUT])|(DISP.START >= hosp_events[i,DATE.IN] & DISP.START < hosp_events[i,DATE.OUT]),
+                   .hosp := 1]
+        }
+
+      }
+
+      medication_events <- med_disp[DURATION != Inf & is.na(.out) & is.na(.hosp),
+                                    c(ID.colname,
+                                      medication.class.colnames,
+                                      total.dose.colname,
+                                      disp.date.colname,
+                                      "DISP.START",
+                                      "DURATION",
+                                      presc.daily.dose.colname,
+                                      "START.PRESC",
+                                      "END.PRESC"), with = FALSE]
+      medication_events[,HOSP.DURATION := 0]
+
+      med_disp <- med_disp[DURATION == Inf | .out == 1 | .hosp == 1]
+
+      ## apply process_dispensing_events to each dispensing event
+      medication_events_rest <- NULL
+      if(nrow(med_disp) > 0){
+        medication_events_rest <- do.call(rbindlist,
+                                          list(l = lapply(1:nrow(med_disp), FUN = function(i) process_dispensing_events(event = i)),
+                                               fill = TRUE))
+      }
+
+      medication_events <- rbind(medication_events, medication_events_rest, fill = TRUE)
+
+      setorderv(medication_events,cols=c(disp.date.colname, "DISP.START"))
+
+      if(force.presc.renew == TRUE) {
+
+        tot.presc.interruptions <- nrow(med_presc[get(presc.daily.dose.colname)==0])
+
+        medication_events[,tot.presc.interruptions := tot.presc.interruptions]
+      }
+
+      if(split.on.dosage.change == TRUE) {
+
+        tot.dosage.changes <- (nrow(med_presc) - 1 - 2*nrow(med_presc[get(presc.daily.dose.colname)==0]))
+
+        medication_events[,tot.dosage.changes := tot.dosage.changes]
+
+      }
+
+      #med_presc <- med_presc[,`:=` (.episode=NULL,VISIT=NULL)]
       setnames(med_presc,
                old = c(presc.daily.dose.colname, presc.duration.colname),
                new = c("DAILY.DOSE", "PRESC.DURATION"))
 
-      presc_episode_no_dispense <- med_presc[!medication_events[,c("DAILY.DOSE","PRESC.DURATION","START.PRESC","END.PRESC")],
-                                             on = c("DAILY.DOSE","PRESC.DURATION", "START.PRESC", "END.PRESC")]
+      presc_episode_no_dispense <- med_presc[!medication_events[,c("DAILY.DOSE","START.PRESC","END.PRESC")],
+                                             on = c("DAILY.DOSE","START.PRESC", "END.PRESC")]
+
+      presc_episode_no_dispense[,c(".episode","VISIT", "PRESC.DURATION", presc.date.colname) := NULL]
 
       medication_events <- rbind(medication_events, presc_episode_no_dispense, fill = TRUE)
 
@@ -398,20 +681,28 @@ process_medication_events <- function(disp.data = disp_events,
     }
 
     #subset data to patient
-    pat_disp <- disp.data[get(ID.colname) == pat]
+    pat_disp <- disp.data[get(ID.colname) == pat, c(ID.colname,
+                                                    disp.date.colname,
+                                                    medication.class.colnames,
+                                                    total.dose.colname), with = FALSE]
 
-    pat_presc <- presc.data[get(ID.colname) == pat]
+    pat_presc <- presc.data[get(ID.colname) == pat, c(ID.colname,
+                                                      presc.date.colname,
+                                                      visit.colname,
+                                                      medication.class.colnames,
+                                                      presc.daily.dose.colname,
+                                                      presc.duration.colname), with = FALSE]
 
     #sort by DCI
-    setkeyv(pat_disp, cols = medication.class.colname)
-    setkeyv(pat_presc, cols = medication.class.colname)
+    setkeyv(pat_disp, cols = medication.class.colnames)
+    setkeyv(pat_presc, cols = medication.class.colnames)
 
     #extract unique dispensed/prescribed DCIs
-    disp_unique <- unique(pat_disp[,c(medication.class.colname, unit.colname, form.colname), with = FALSE])
-    presc_unique <- unique(pat_presc[,c(medication.class.colname, unit.colname, form.colname), with = FALSE])
+    disp_unique <- unique(pat_disp[,c(medication.class.colnames), with = FALSE])
+    presc_unique <- unique(pat_presc[,c(medication.class.colnames), with = FALSE])
 
     #extract medications present in both dispensing and prescription database (by DCI, Unit, and Form)
-    disp_presc <- merge(disp_unique, presc_unique, by = c(medication.class.colname, unit.colname, form.colname), all=FALSE)
+    disp_presc <- merge(disp_unique, presc_unique, by = c(medication.class.colnames), all=FALSE)
 
     #extract unique dispensed/prescribed DCIs not present in both databases
     disp_no_presc <- disp_unique[!presc_unique]
@@ -422,7 +713,7 @@ process_medication_events <- function(disp.data = disp_events,
       presc_events <- unique(pat_presc[,c(presc.date.colname), with = FALSE])
       presc_events[,(visit.colname) := 0:(nrow(presc_events)-1)]
       pat_presc <- merge(pat_presc, presc_events, by = presc.date.colname)
-      setorderv(pat_presc, medication.class.colname)
+      setorderv(pat_presc, medication.class.colnames)
 
     } else {presc_events <- unique(pat_presc[,c(presc.date.colname, visit.colname), with = FALSE])} #extract prescription instances
 
@@ -449,9 +740,12 @@ process_medication_events <- function(disp.data = disp_events,
     }
 
     patient_events <- rbind(patient_events,
-                            pat_disp[get(medication.class.colname) %in% disp_no_presc[[medication.class.colname]], c(ID.colname, disp.date.colname, medication.class.colname, unit.colname, form.colname, total.dose.colname), with = FALSE],
-                            pat_presc[get(medication.class.colname) %in% presc_no_disp[[medication.class.colname]], c(ID.colname, presc.date.colname, medication.class.colname, unit.colname, form.colname, presc.daily.dose.colname), with = FALSE],
+                            pat_disp[.(disp_no_presc[,medication.class.colnames, with = FALSE]), c(ID.colname, disp.date.colname, medication.class.colnames, total.dose.colname), with = FALSE],
+                            pat_presc[.(presc_no_disp[,medication.class.colnames, with = FALSE]), c(ID.colname, medication.class.colnames, presc.daily.dose.colname), with = FALSE],
                             fill = TRUE)
+
+    #update progress bar
+    setTxtProgressBar(pb, pat)
 
     patient_events
 
@@ -460,6 +754,10 @@ process_medication_events <- function(disp.data = disp_events,
   # extract IDs of all patients present in dispensing and prescription database
   disp_presc_IDs <- intersect(disp.data[[ID.colname]], presc.data[[ID.colname]])
 
+  #Progress bar
+
+  pb <- txtProgressBar(min = 0, max = length(disp_presc_IDs), style = 3)
+
   # apply process_patient function
   setkeyv(disp.data, cols = ID.colname)
   setkeyv(presc.data, cols = ID.colname)
@@ -467,20 +765,76 @@ process_medication_events <- function(disp.data = disp_events,
   treatment_episodes <- do.call(rbindlist, list(l = lapply(disp_presc_IDs, FUN = function(i) process_patient(pat = i)),
                                                 fill = TRUE))
 
-  treatment_episodes
+  #key by ID, medication class, and dispensing date
+  setkeyv(treatment_episodes, cols = c(ID.colname, medication.class.colnames, disp.date.colname))
+
+  if( !return.data.table )
+  {
+    return (as.data.frame(treatment_episodes))
+  } else {return(treatment_episodes)}
 }
+
+#function to compute time to initiation
 
 time_to_initiation <- function(data = NULL,
                                ID.colname = NA,
-                               medication.class.colname = NA,
+                               medication.class.colnames = NA,
                                dispensing.date.colname = NA,
-                               prescription.start.colname = NA){
+                               prescription.start.colname = NA,
+                               return.data.table = FALSE,
+                               ...){
 
   #Preconditions
+  {
+    # data class and dimensions:
+    if( inherits(data, "matrix") ) data <- as.data.table(data); # convert matrix to data.table
+    if( !inherits(data, "data.frame") )
+    {
+      if( !suppress.warnings ) warning("The data must be of type 'data.frame'!\n");
+      return (NULL);
+    }
 
-  #
-  data[,list(first.disp = min(get(dispensing.date.colname)),
-                     time.to.initialization = as.numeric(min(get(dispensing.date.colname))-get(prescription.start.colname))),
-               by = c(ID.colname, medication.class.colname, prescription.start.colname)]
+    if( !is.na(ID.colname) && !(ID.colname %in% names(data)) )
+    {
+      if( !suppress.warnings ) warning(paste0("Column ID.colname='",ID.colname,"' must appear in the data!\n"));
+      return (NULL);
+    }
+
+    if( !is.na(medication.class.colnames) && !(medication.class.colnames %in% names(data)) )
+    {
+      if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames='",medication.class.colnames,"' must appear in the data!\n"));
+      return (NULL);
+    }
+
+    if( !is.na(dispensing.date.colname) && !(dispensing.date.colname %in% names(data)) )
+    {
+      if( !suppress.warnings ) warning(paste0("Column dispensing.date.colname='",dispensing.date.colname,"' must appear in the data!\n"));
+      return (NULL);
+    }
+
+    if( !is.na(prescription.start.colname) && !(prescription.start.colname %in% names(data)) )
+    {
+      if( !suppress.warnings ) warning(paste0("Column prescription.start.colname='",prescription.start.colname,"' must appear in the data!\n"));
+      return (NULL);
+    }
+  }
+
+  if(sum(is.na(data[[dispensing.date.colname]])) > 0)
+  {if( !suppress.warnings ) warning(paste0("Dispensing dates in dispensing.date.colname='",dispensing.date.colname,"' cannot contain NAs!\n"));
+    return (NULL); }
+
+  dt_t2i <- data[,list(first.disp = min(get(dispensing.date.colname), na.rm=TRUE),
+                       first.presc = get(prescription.start.colname),
+                       time.to.initialization = as.numeric(min(get(dispensing.date.colname), na.rm = TRUE)-get(prescription.start.colname))),
+                 by = c(ID.colname, medication.class.colnames, prescription.start.colname)]
+
+  #key by ID, medication class, and dispensing daste
+  setkeyv(dt_t2i, cols = c(ID.colname, medication.class.colnames, dispensing.date.colname))
+
+  if( !return.data.table )
+  {
+    return (as.data.frame(dt_t2i))
+  } else {return(dt_t2i)}
 }
+
 
