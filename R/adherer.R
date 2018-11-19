@@ -533,6 +533,16 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
   }
 }
 
+.shadow.text <- function(x, y=NULL, labels, col='white', bg='black', theta= seq(pi/4, 2*pi, length.out=8), r=0.1, ... )
+{
+
+	xy <- xy.coords(x,y);
+	xo <- r*strwidth('A');
+	yo <- r*strheight('A');
+
+	for (i in theta) text( xy$x + cos(i)*xo, xy$y + sin(i)*yo, labels, col=bg, ... );
+	text(xy$x, xy$y, labels, col=col, ... );
+}
 
 #' Plot CMA0 objects.
 #'
@@ -632,7 +642,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
-                      print.dose=FALSE, cex.dose=0.75, plot.dose=FALSE, lwd.evend.max.dose=8,
+                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.below=TRUE, plot.dose=FALSE, lwd.evend.max.dose=8,
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                       col.na="lightgray",                    # color for mising data
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
@@ -721,17 +731,10 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   {
     print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
   }
-  if( print.dose )
-  {
-    dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
-  }
   if( plot.dose )
   {
     dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
     adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.evend.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
-  } else
-  {
-    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.evend.max.dose) lwd.min; # no adjustment
   }
 
   # Find the earliest date:
@@ -768,6 +771,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   plot( 0, 1, xlim=c(0,duration.total), ylim=c(0,nrow(cma$data)+1), type="n", xaxs="i", yaxs="i",
         main=ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
         axes=FALSE, xlab=ifelse(show.period=="dates","","days"), ylab=ifelse(print.CMA && !is.null(getCMA(cma)),"patient (& CMA)","patient"), cex.lab=cex.lab ); box();
+  if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
   curpat <- TRUE;
   for( i in 1:nrow(cma$data) )
   {
@@ -788,9 +792,16 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     {
       segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
     }
-    if( print.dose )
+    if( print.dose ) # print daily dose
     {
-      text(adh.plot.space[2]+(start + end)/2, i - dose.text.height*2/3, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
+      dose.text.y <- i - ifelse(print.dose.below, dose.text.height*2/3, 0); # print it on or below the dose segment?
+      if( is.na(print.dose.outline.col) ) # simple or outlined?
+      {
+        text(adh.plot.space[2]+(start + end)/2, dose.text.y, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
+      } else
+      {
+        .shadow.text(adh.plot.space[2]+(start + end)/2, dose.text.y, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
+      }
     }
 
     if( i < nrow(cma$data) )
