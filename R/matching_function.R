@@ -1,4 +1,4 @@
-#function to construct treatment episodes from dispensing and prescription databases
+################ function to construct treatment episodes from dispensing and prescription databases
 
 #' Computation of event durations.
 #'
@@ -7,33 +7,32 @@
 #' in \code{AdhereR}.
 #'
 #' Computation of CMAs requires a supply duration for medications dispensed to patients.
-#' If medications are not supplied for fixed durations, but as a quantity that may last for various durations
+#' If medications are not supplied for fixed durations but as a quantity that may last for various durations
 #' based on the prescribed dose, the supply duration has to be calculated based on dispensed and prescribed doses.
-#' Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be taken into account.
-#' Patients may be hospitalized or incarcerated, and may not use their own supplies during these periods.
-#' This function allows to calculate supply durations, taking into account the aforementiont situations and offering flexible
-#' parameters to deal with various situations.
-#'
+#' Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be
+#' taken into account. Patients may be hospitalized or incarcerated, and may not use their own supplies during these
+#' periods. This function allows to calculate supply durations, taking into account the aforementiont situations and
+#' offering parameters for flexible adjustments.
 #'
 #' @param disp.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
 #' the dispensing events. Must contain, at a minimum, the patient unique ID, one medication identifier,
-#' the dispensing date, and total dispensed dose, and might also
-#' contain additional columns to identify and group medications (the actual column names are
-#' defined in the \emph{\code{medication.class.colnames}} parameter).
+#' the dispensing date, and total dispensed dose, and might also contain additional columns to identify
+#' and group medications (the actual column names are defined in the \emph{\code{medication.class.colnames}}
+#' parameter).
 #' @param presc.data A \emph{\code{data.frame}} containing the prescribing events. Must contain,
 #' at a minimum, the same unique patient ID and medication identifier(s) as the dispensing data,
 #' the prescription date, the daily prescribed dose, and the prescription duration. Optionally, it might
 #' also contain a visit number.
-#' @param hosp.data Optional, \emph{\code{NULL}} or a \emph{\code{data.frame}} containing the hospitalization periods (or other periods
-#' where medications were likely supplied from a different source, e.g. incarcerations). Must contain the
+#' @param hosp.data Optional, \emph{\code{NULL}} or a \emph{\code{data.frame}} containing the hospitalization periods
+#' (or other situations where patients may not use their own supply, e.g. during incarcerations). Must contain the
 #' same unique patient ID as dispensing and prescription data, and the start- and end dates of the
 #' hospitalizations with the exact column names \emph{\code{DATE.IN}} and \emph{\code{DATE.OUT}}.
 #' @param ID.colname A \emph{string}, the name of the column in \code{disp.data}, \code{presc.data},
 #' and \code{hosp.data} containing the unique patient ID, or \code{NA} if not defined.
-#' @param presc.date.colname A \emph{string} or \emph{\code{Date}}, the name of the column in
+#' @param presc.date.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the prescription date (in the format given in
 #' the \code{date.format} parameter), or \code{NA} if not defined.
-#' @param disp.date.colname A \emph{string} or \emph{\code{Date}}, the name of the column in
+#' @param disp.date.colname A \emph{string}, the name of the column in
 #' \code{disp.data} containing the dispensing date (in the format given in
 #' the \code{date.format} parameter), or \code{NA} if not defined.
 #' @param date.format A \emph{string} giving the format of the dates used in
@@ -44,32 +43,33 @@
 #' \code{disp.data} and \code{presc.data} containing the classes/types/groups of medication, or \code{NA}
 #' if not defined.
 #' @param total.dose.colname A \emph{string}, the name of the column in
-#' \code{disp.data} containing the total dispensed dose as \code{numeric} (e.g. 500 for 10 tablets of 50 mg),
+#' \code{disp.data} containing the total dispensed dose as \code{numeric} (e.g. \code{500} for 10 tablets of 50 mg),
 #' or \code{NA} if not defined.
 #' @param presc.daily.dose.colname A \emph{string}, the name of the column in
-#' \code{presc.data} containing the daily prescribed dose as \code{numeric} (e.g. 50 for 50 mg once per day,
+#' \code{presc.data} containing the daily prescribed dose as \code{numeric} (e.g. \code{50} for 50 mg once per day,
 #' or 25 for 50 mg once ever 2 days), or \code{NA} if not defined.
 #' @param presc.duration.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the duration of the prescription as \code{numeric} or \code{NA} if
 #' duration is unknown.
 #' @param visit.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the number of the visit, or \code{NA} if not defined.
-#' @param force.init.presc \emph{Logical}. If \code{TRUE} if the first prescription event is after the
-#' first dispensing event for a specific medication, advance the date of the first prescription event to
-#' the date of the first dispensing event.Only if the first prescription event
-#' is not limited in duration (as set with \code{presc.duration.colname}).
-#' @param force.presc.renew \emph{Logical} or \emph{string}. If \code{TRUE} require a new prescription for all medications for
-#' every prescription event (visit), otherwise prescriptions end on the first visit without renewal.
-#' If \emph{string}, the name of the column #' containing the \code{Logical} for each medication class separatly.
-#' @param split.on.dosage.change \emph{Logical} or \emph{string}. If \code{TRUE} split the dispensing event on days with dosage change
-#' and create a new event with the new dosage for the remaining supply.
+#' @param force.init.presc \emph{Logical}. If \code{TRUE} advance the date of the first prescription event to
+#' the date of the first dispensing event, if the first prescription event is after the
+#' first dispensing event for a specific medication.Only if the first prescription event
+#' is not limited in duration (as indicated in the \code{presc.duration.colname}).
+#' @param force.presc.renew \emph{Logical} or \emph{string}. If \code{TRUE} require a new prescription for all
+#' medications for every prescription event (visit), otherwise prescriptions end on the first visit without renewal.
+#' If \emph{string}, the name of the column containing the \code{Logical} for each medication class separatly.
+#' @param split.on.dosage.change \emph{Logical} or \emph{string}. If \code{TRUE} split the dispensing event on days
+#' with dosage change and create a new event with the new dosage for the remaining supply.
 #' If \emph{string}, the name of the column #' containing the \code{Logical} for each medication class separatly.
 #' Important if carryover should be considered later on.
 #' @param trt.interruption can be either \emph{continue}, \emph{discard}, or \emph{carryover}, and indicates how to
-#' handle supplies affected by treatment interruptions or hospitalizations. With \emph{continue}, interruptions have no effect.
-#' With \emph{discard}, supplies are truncated at the beginning of an interruption or hospitalization and the remaining
-#' supply is discarded. With \emph{carryover}, supplies are truncated at the beginning of an interruption or hospitalization
-#' and the remaining supply is carried forward until after the end of the interruption or hospitalization.
+#' handle supplies affected by treatment interruptions or hospitalizations. With \emph{continue}, interruptions have
+#' no effect on durations and dispensing start dates. With \emph{discard}, supplies are truncated at the beginning of
+#' an interruption or hospitalization and the remaining supply is discarded. With \emph{carryover}, supplies are
+#' truncated at the beginning of an interruption or hospitalization and a new dispensing start event with the remaining
+#' supply is created after the end of the interruption or hospitalization.
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
 #' @param return.data.table \emph{Logical}, if \code{TRUE} return a
@@ -79,8 +79,9 @@
 #' \itemize{
 #'  \item \code{ID.colname} the unique patient ID, as given by the \code{ID.colname} parameter.
 #'  \item \code{medication.class.colnames} the column(s) with classes/types/groups of medication, as given by the
+#'  \code{medication.class.colnames} parameter.
 #'  \item \code{total.dose.colname} the total dispensed dose, as given by the \code{total.dose.colname} parameter.
-#'  \item \code{disp.date.colnema} the date of the dispensing event, as given by the \code{disp.date.colnema} parameter.
+#'  \item \code{disp.date.colname} the date of the dispensing event, as given by the \code{disp.date.colnema} parameter.
 #'  \item \code{DISP.START} the start date of the dispensing event, either the same as in \code{disp.date.colnema}
 #'  or a later date in case of dosage changes or treatment interruptions/hospitalizations.
 #'  \item \code{presc.daily.dose.colname} the prescribed daily dose, as given by the \code{presc.daily.dose.colname} parameter.
@@ -546,13 +547,30 @@ compute_event_durations <- function(disp.data = NULL,
       # create new .episode counter
       med_presc[,.episode := rleidv(med_presc, cols = c(presc.daily.dose.colname, presc.duration.colname))]
 
+      #if consecutive episodes with set end date, increase .episode counter
+      if(nrow(med_presc) > 2) {
+        for(n in 2:(nrow(med_presc)-1)){
+          if(!is.na(med_presc[n,presc.duration.colname, with = FALSE]) & !is.na(med_presc[n-1,presc.duration.colname, with = FALSE])){
+            med_presc[n:nrow(med_presc), .episode := as.integer(.episode + 1)]
+          }
+        }
+      } else if(nrow(med_presc) == 2) {
+        med_presc[!is.na(shift(get(presc.duration.colname), type = "lag")) & !is.na(get(presc.duration.colname)), .episode := as.integer(.episode + 1)]
+      }
+
+
       #add episodes with same dose but set end date to last episode
-      med_presc[is.na(shift(get(presc.duration.colname), type = "lag")) & shift(get(presc.daily.dose.colname), type = "lag") == get(presc.daily.dose.colname) & !is.na(get(presc.duration.colname)), .episode := as.integer(.episode-1)]
+      .row <- med_presc[is.na(shift(get(presc.duration.colname), type = "lag")) & shift(get(presc.daily.dose.colname), type = "lag") == get(presc.daily.dose.colname) & !is.na(get(presc.duration.colname)), which = TRUE]
+      if(length(.row)>0){
+        med_presc[.row:nrow(med_presc),.episode := as.integer(.episode-1)]
+        }
+
 
       ## set start and end of prescription dates per group
       med_presc[, `:=` (START.PRESC = get(presc.date.colname), # set prescription date as start date
                         END.PRESC = get(presc.date.colname))] # set end date to prescription date ...
 
+      #connect episodes with limited durations with following episodes if they have the same dosage and matching end- and start dates.
       med_presc[,END.PRESC := shift(END.PRESC, type = "lead")] # ... and shift end dates up by one
 
       # adjust end date if prescription duration is provided and change start date of following prescriptions
@@ -561,12 +579,14 @@ compute_event_durations <- function(disp.data = NULL,
       med_presc[shift(!is.na(get(presc.duration.colname)), type = "lag"), START.PRESC := end.limited.presc]
       med_presc[DATE.PRESC>START.PRESC & get(presc.daily.dose.colname) != 0,START.PRESC:=DATE.PRESC]
 
+      med_presc[shift(get(presc.daily.dose.colname),type="lag")==get(presc.daily.dose.colname) & !is.na(shift(get(presc.duration.colname),type="lag")) & shift(END.PRESC, type = "lag") == START.PRESC, .episode := as.integer(.episode-1)]
+
       # fill in start and end dates by group
       med_presc[,START.PRESC := head(START.PRESC,1), by = .episode] # first start date per episode
       med_presc[,END.PRESC:= tail(END.PRESC,1), by = .episode] # last end date per episode
 
       #collapse episodes
-      med_presc <- unique(med_presc, by = ".episode")
+      med_presc <- unique(med_presc, by = ".episode", fromLast = TRUE)
       med_presc[,.episode := rleidv(med_presc, cols = c("START.PRESC", "END.PRESC"))]
 
       #remove episodes where end date is before start date
@@ -774,62 +794,134 @@ compute_event_durations <- function(disp.data = NULL,
   } else {return(treatment_episodes)}
 }
 
-#function to compute time to initiation
+############ function to compute time to initiation
 
-time_to_initiation <- function(data = NULL,
+#' Computation of initiation times.
+#'
+#' Computes the time between the first prescription event and the first dispensing event for each medication
+#' class.
+#'
+#' The period between the first prescription event and the first dose administration may impact health outcomes
+#' differently than the omitting doses once on treatment or interrupting medication for longer periods of time.
+#' Primary non-adherence (not acquiring the first prescription) or delayed initiation may have a negative impact
+#' on health outcomes.
+#' This function allows to calculate the time between the firs prescription and a first dispensing event,
+#' taking into account multiple arguments to differentiate between treatments.
+#'
+#' @param presc.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
+#' the prescription events. Must contain, at a minimum, the patient unique ID, one medication identifier,
+#' and the start date of the prescription, and might also contain additional columns to identify
+#' and group medications (the actual column names are defined in the \emph{\code{medication.class.colnames}}
+#' parameter).
+#' @param disp.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
+#' the dispensing events. Must contain, at a minimum, the patient unique ID, one medication identifier,
+#' the dispensing date, and might also contain additional columns to identify and group medications
+#' (the actual column names are defined in the \emph{\code{medication.class.colnames}}
+#' parameter).
+#' @param ID.colname A \emph{string}, the name of the column in \code{presc.data} and \code{disp.data}
+#' containing the unique patient ID, or \code{NA} if not defined.
+#' @param presc.start.colname A \emph{string}, the name of the column in
+#' \code{presc.data} containing the prescription date (in the format given in
+#' the \code{date.format} parameter), or \code{NA} if not defined.
+#' @param disp.date.colname A \emph{string}, the name of the column in
+#' \code{disp.data} containing the dispensing date (in the format given in
+#' the \code{date.format} parameter), or \code{NA} if not defined.
+#' @param date.format A \emph{string} giving the format of the dates used in
+#' the \code{data} and the other parameters; see the \code{format} parameters
+#' of the \code{\link[base]{as.Date}} function for details (NB, this concerns
+#' only the dates given as strings and not as \code{Date} objects).
+#' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the name(s) of the column(s) in
+#' \code{data} containing the classes/types/groups of medication, or \code{NA}
+#' if not defined.
+#' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
+#' warnings.
+#' @param return.data.table \emph{Logical}, if \code{TRUE} return a
+#' \code{data.table} object, otherwise a \code{data.frame}.
+#' @param ... other possible parameters
+#' @return A \code{data.frame} or \code{data.table} with the following columns:
+#' \itemize{
+#'  \item \code{ID.colname} the unique patient ID, as given by the \code{ID.colname} parameter.
+#'  \item \code{medication.class.colnames} the column(s) with classes/types/groups of medication, as given by the
+#'  \code{medication.class.colnames} parameter.
+#'  \item \code{first.presc} the date of the first prescription event.
+#'  \item \code{first.disp} the date of the first dispensing event.
+#'  \item \code{time.to.initialization} the difference in days between the first dispensing date and the
+#'  first prescription date.
+#'  }
+#'  @export
+time_to_initiation <- function(presc.data = NULL,
+                               disp.data = NULL,
                                ID.colname = NA,
+                               presc.start.colname = NA,
+                               disp.date.colname = NA,
                                medication.class.colnames = NA,
-                               dispensing.date.colname = NA,
-                               prescription.start.colname = NA,
+                               date.format = "%d.%m.%Y",
+                               suppress.warnings = FALSE,
                                return.data.table = FALSE,
                                ...){
 
   #Preconditions
   {
     # data class and dimensions:
-    if( inherits(data, "matrix") ) data <- as.data.table(data); # convert matrix to data.table
-    if( !inherits(data, "data.frame") )
+    if( inherits(presc.data, "matrix") ) presc.data <- as.data.table(presc.data); # convert matrix to data.table
+    if( !inherits(presc.data, "data.frame") )
     {
-      if( !suppress.warnings ) warning("The data must be of type 'data.frame'!\n");
+      if( !suppress.warnings ) warning("The presc.data must be of type 'data.frame'!\n");
       return (NULL);
     }
 
-    if( !is.na(ID.colname) && !(ID.colname %in% names(data)) )
+    if( inherits(disp.data, "matrix") ) disp.data <- as.data.table(disp.data); # convert matrix to data.table
+    if( !inherits(disp.data, "data.frame") )
+    {
+      if( !suppress.warnings ) warning("The presc.data must be of type 'data.frame'!\n");
+      return (NULL);
+    }
+
+    if( !is.na(ID.colname) && !(ID.colname %in% names(disp.data))  && !(ID.colname %in% names(presc.data)))
     {
       if( !suppress.warnings ) warning(paste0("Column ID.colname='",ID.colname,"' must appear in the data!\n"));
       return (NULL);
     }
 
-    if( !is.na(medication.class.colnames) && !(medication.class.colnames %in% names(data)) )
+    if( !is.na(medication.class.colnames) && !(medication.class.colnames %in% names(disp.data)) && !(medication.class.colnames %in% names(presc.data)))
     {
       if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames='",medication.class.colnames,"' must appear in the data!\n"));
       return (NULL);
     }
 
-    if( !is.na(dispensing.date.colname) && !(dispensing.date.colname %in% names(data)) )
+    if( !is.na(disp.date.colname) && !(disp.date.colname %in% names(disp.data)) )
     {
-      if( !suppress.warnings ) warning(paste0("Column dispensing.date.colname='",dispensing.date.colname,"' must appear in the data!\n"));
+      if( !suppress.warnings ) warning(paste0("Column disp.date.colname='",disp.date.colname,"' must appear in the data!\n"));
       return (NULL);
     }
 
-    if( !is.na(prescription.start.colname) && !(prescription.start.colname %in% names(data)) )
+    if( !is.na(presc.start.colname) && !(presc.start.colname %in% names(presc.data)) )
     {
-      if( !suppress.warnings ) warning(paste0("Column prescription.start.colname='",prescription.start.colname,"' must appear in the data!\n"));
+      if( !suppress.warnings ) warning(paste0("Column presc.start.colname='",presc.start.colname,"' must appear in the data!\n"));
       return (NULL);
     }
+
+
+  if(sum(is.na(disp.data[[disp.date.colname]])) > 0)
+  {if( !suppress.warnings ) warning(paste0("Dispensing dates in disp.date.colname='",disp.date.colname,"' cannot contain NAs!\n"));
+    return (NULL); }
   }
 
-  if(sum(is.na(data[[dispensing.date.colname]])) > 0)
-  {if( !suppress.warnings ) warning(paste0("Dispensing dates in dispensing.date.colname='",dispensing.date.colname,"' cannot contain NAs!\n"));
-    return (NULL); }
+  # convert dates
+  presc.data[,(presc.start.colname) := as.Date(get(presc.start.colname), format = date.format)]
+  disp.data[,(disp.date.colname) := as.Date(get(disp.date.colname), format = date.format)]
 
-  dt_t2i <- data[,list(first.disp = min(get(dispensing.date.colname), na.rm=TRUE),
-                       first.presc = get(prescription.start.colname),
-                       time.to.initialization = as.numeric(min(get(dispensing.date.colname), na.rm = TRUE)-get(prescription.start.colname))),
-                 by = c(ID.colname, medication.class.colnames, prescription.start.colname)]
+  first_presc <- presc.data[,list(first.presc = min(get(presc.start.colname),na.rm=TRUE)),
+                            by = c(ID.colname, medication.class.colnames)]
+  first_disp <- disp.data[,list(first.disp = min(get(disp.date.colname),na.rm=TRUE)),
+                           by = c(ID.colname, medication.class.colnames)]
+
+  dt_t2i <- merge(first_presc, first_disp, by = c(ID.colname, medication.class.colnames), all = TRUE)
+
+  dt_t2i[,time.to.initialization := as.numeric(first.disp-first.presc)]
 
   #key by ID, medication class, and dispensing daste
-  setkeyv(dt_t2i, cols = c(ID.colname, medication.class.colnames, dispensing.date.colname))
+  setkeyv(dt_t2i, cols = c(ID.colname, medication.class.colnames, "first.disp"))
 
   if( !return.data.table )
   {
