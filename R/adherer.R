@@ -533,6 +533,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
   }
 }
 
+# Draws shadowed/outlined text (taken directly from TeachingDemos to reduced the dependencies on other packages):
 .shadow.text <- function(x, y=NULL, labels, col='white', bg='black', theta= seq(pi/4, 2*pi, length.out=8), r=0.1, ... )
 {
 
@@ -642,7 +643,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
-                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.below=TRUE, plot.dose=FALSE, lwd.evend.max.dose=8,
+                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.evend.max.dose=8,
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                       col.na="lightgray",                    # color for mising data
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
@@ -794,7 +795,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     }
     if( print.dose ) # print daily dose
     {
-      dose.text.y <- i - ifelse(print.dose.below, dose.text.height*2/3, 0); # print it on or below the dose segment?
+      dose.text.y <- i - ifelse(print.dose.centered,0 , dose.text.height*2/3); # print it on or below the dose segment?
       if( is.na(print.dose.outline.col) ) # simple or outlined?
       {
         text(adh.plot.space[2]+(start + end)/2, dose.text.y, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
@@ -2462,8 +2463,9 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            highlight.followup.window=TRUE, followup.window.col="green",
                            highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                            show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
+                           print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.evend.max.dose=8,
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                           min.plot.size.in.characters.horiz=20, min.plot.size.in.characters.vert=15,  # the minimum plot size (in character)
+                           min.plot.size.in.characters.horiz=15, min.plot.size.in.characters.vert=10,  # the minimum plot size (in character)
                            max.patients.to.plot=100,        # maximum number of patients to plot
                            ...
 )
@@ -2533,6 +2535,17 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   names(cols) <- categories;
   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
 
+  # Daily dose:
+  if( is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) )
+  {
+    print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
+  }
+  if( plot.dose )
+  {
+    dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.evend.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
+  }
+
   # Find the earliest date:
   earliest.date <- min(cma$event.info$.DATE.as.Date, cma$event.info$.OBS.START.DATE, cma$event.info$.FU.START.DATE);
 
@@ -2581,6 +2594,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     cat(msg);
     return (invisible(NULL));
   }
+
+  if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
 
   # Character height and width in the current plotting system:
   char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
@@ -2736,7 +2751,13 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     }
     points( adh.plot.space[2]+start+correct.earliest.followup.window, i, pch=pch.start.event, col=col, cex=cex);
     points(adh.plot.space[2]+end+correct.earliest.followup.window, i, pch=pch.end.event, col=col, cex=cex);
-    segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
+    if( plot.dose )
+    {
+      segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+    } else
+    {
+      segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
+    }
 
     if( show.event.intervals && !is.na(cma$event.info$event.interval[i]) )
     {
@@ -2748,6 +2769,29 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         rect(adh.plot.space[2]+end.pi+correct.earliest.followup.window, i-char.height/2,
              adh.plot.space[2]+end.pi+cma$event.info$gap.days[i]+correct.earliest.followup.window, i+char.height/2,
              density=25, col=adjustcolor(col,alpha.f=0.5), border=col);
+    }
+
+    if( print.dose ) # print daily dose
+    {
+      if( !print.dose.centered ) # print it on or to the left of the dose segment?
+      {
+        if( is.na(print.dose.outline.col) ) # simple or outlined?
+        {
+          text(adh.plot.space[2]+start+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, pos=2, offset=0.25);
+        } else
+        {
+          .shadow.text(adh.plot.space[2]+start+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col, pos=2, offset=0.25);
+        }
+      } else
+      {
+        if( is.na(print.dose.outline.col) ) # simple or outlined?
+        {
+          text(adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
+        } else
+        {
+          .shadow.text(adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
+        }
+      }
     }
 
     if( i < nrow(cma$event.info) )

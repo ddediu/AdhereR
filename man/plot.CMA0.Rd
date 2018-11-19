@@ -11,7 +11,7 @@
   cex.axis = 0.75, cex.lab = 1, col.cats = rainbow,
   lty.event = "solid", lwd.event = 2, pch.start.event = 15,
   pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
-  print.dose.outline.col = "white", print.dose.below = TRUE,
+  print.dose.outline.col = "white", print.dose.centered = FALSE,
   plot.dose = FALSE, lwd.evend.max.dose = 8,
   col.continuation = "black", lty.continuation = "dotted",
   lwd.continuation = 1, col.na = "lightgray", bw.plot = FALSE,
