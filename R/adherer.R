@@ -2,6 +2,7 @@
 #
 #    AdhereR: an R package for computing various estimates of medication adherence.
 #    Copyright (C) 2015-2018  Dan Dediu & Alexandra Dima
+#    Copyright (C) 2018  Dan Dediu, Alexandra Dima & Samuel Allemann
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -601,6 +602,17 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
+#' @param print.dose \emph{Logical}, should the daily dose be printed as text?
+#' @param cex.dose \emph{Numeric}, if daily dose is printed, what text size
+#' to use?
+#' @param print.dose.outline.col If \emph{\code{NA}}, don't print dose text with
+#' outline, otherwise a color name/code for the outline.
+#' @param print.dose.centered \emph{Logical}, print the daily dose centered on
+#' the segment or slightly below it?
+#' @param plot.dose \emph{Logical}, should the daily dose be indicated through
+#' segment width?
+#' @param lwd.event.max.dose \emph{Numeric}, the segment width corresponding to
+#' the maximum daily dose (must be >= lwd.event but not too big either).
 #' @param col.continuation,lty.continuation,lwd.continuation The style of the
 #' "continuation" lines connecting consecutive events (colour, line style and
 #' width).
@@ -643,13 +655,9 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
-                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.evend.max.dose=8,
+                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8, # show daily dose
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                       col.na="lightgray",                    # color for mising data
-                      events=NULL,                           # if given, must be a data.frame with events per patient
-                      events.ID.colname=NA, events.start.colname=NA, events.end.colname=NA, # if events is given, these columns must be in there
-                      events.date.format=NA,                 # if NA, use the same date.format as the CMA object x
-                      col.events=adjustcolor("gray20",alpha.f=0.5), # if events is given, plot them using this color
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       print.CMA=TRUE,                        # print CMA next to the participant's ID?
                       plot.CMA=TRUE,                         # plot the CMA next to the participant ID?
@@ -663,60 +671,6 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   {
     warning(paste0("Can only plot a correctly specified CMA0 object (i.e., with valid data and column names): cannot continue plotting!\n"));
     return (invisible(NULL));
-  }
-
-  if( !is.null(events) )
-  {
-    # Check the events: this should be a data.frame with valid events.ID.colname, events.start.colname, events.end.colname
-    if( !inherits(events, "data.frame") || nrow(events) < 1 || ncol(events) < 3 )
-    {
-      warning(paste0("Events must be a non-empty data.frame with at least three columns!\n"));
-      return (invisible(NULL));
-    }
-    if( inherits(events, "data.table") ) events <- as.data.frame(events); # guard against inconsistencies between data.table and data.frame in how they handle d[,i]
-    if( is.na(events.ID.colname) || !(events.ID.colname %in% names(events)) )
-    {
-      warning(paste0("The events.ID.colname '",events.ID.colname,"' must be given and must be present in events!\n"));
-      return (invisible(NULL));
-    }
-    if( is.na(events.start.colname) || !(events.start.colname %in% names(events)) )
-    {
-      warning(paste0("The events.ID.colname '",events.start.colname,"' must be given and must be present in events!\n"));
-      return (invisible(NULL));
-    }
-    if( is.na(events.end.colname) || !(events.end.colname %in% names(events)) )
-    {
-      warning(paste0("The events.ID.colname '",events.end.colname,"' must be given and must be present in events!\n"));
-      return (invisible(NULL));
-    }
-    # Convert the date columns to Date:
-    if( is.na(events.date.format) ) events.date.format <- cma$date.format;
-    if( !inherits(events[,events.start.colname], "Date") )
-    {
-      if( is.na(events.date.format) || is.null(events.date.format) || length(events.date.format) != 1 || !is.character(events.date.format) )
-      {
-        warning(paste0("The event date format must be a single string: cannot continue plotting!\n"));
-        return (invisible(NULL));
-      }
-      if( anyNA(events[,events.start.colname] <- as.Date(events[,events.start.colname],format=events.date.format)) )
-      {
-        warning(paste0("Not all entries in the event start date \"",events.start.colname,"\" column are valid dates or conform to the date format \"",events.date.format,"\"; first issue occurs on row ",min(which(is.na(events[,events.start.colname]))),": cannot continue plotting!\n"));
-        return (invisible(NULL));
-      }
-    }
-    if( !inherits(events[,events.end.colname], "Date") )
-    {
-      if( is.na(events.date.format) || is.null(events.date.format) || length(events.date.format) != 1 || !is.character(events.date.format) )
-      {
-        warning(paste0("The event date format must be a single string: cannot continue plotting!\n"));
-        return (invisible(NULL));
-      }
-      if( anyNA(events[,events.end.colname] <- as.Date(events[,events.end.colname],format=events.date.format)) )
-      {
-        warning(paste0("Not all entries in the event start date \"",events.end.colname,"\" column are valid dates or conform to the date format \"",events.date.format,"\"; first issue occurs on row ",min(which(is.na(events[,events.end.colname]))),": cannot continue plotting!\n"));
-        return (invisible(NULL));
-      }
-    }
   }
 
   if( inherits(cma$data, "data.table") ) cma$data <- as.data.frame(cma$data); # guard against inconsistencies between data.table and data.frame in how they handle d[,i]
@@ -793,7 +747,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   if( plot.dose )
   {
     dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
-    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.evend.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
   }
 
   # Find the earliest date:
@@ -920,16 +874,6 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(min(adh,adh.max)), mean(s)+1, col="lightblue", border=NA);
       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)), mean(s)+1, col=NA, border="blue");
       text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s), labels=sprintf("%.1f%%",adh*100), col="darkblue", cex=cex.axis);
-    }
-
-    # The participant events:
-    if( !is.null(events) && !is.null(events.for.p <- events[ events[,events.ID.colname] == p, ]) && nrow(events.for.p) > 0 )
-    {
-      rect(adh.plot.space[2]+as.numeric(difftime(events.for.p[,events.start.colname], earliest.date, "days")),
-           min(s)-0.5,
-           adh.plot.space[2]+as.numeric(difftime(events.for.p[,events.end.colname], earliest.date, "days")),
-           max(s)+0.5,
-           border=col.events, col=col.events, lwd=1, density=20, angle=-60);
     }
   }
 
@@ -2531,7 +2475,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            highlight.followup.window=TRUE, followup.window.col="green",
                            highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                            show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
-                           print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.evend.max.dose=8,
+                           print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8,
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                            min.plot.size.in.characters.horiz=15, min.plot.size.in.characters.vert=10,  # the minimum plot size (in character)
                            max.patients.to.plot=100,        # maximum number of patients to plot
@@ -2611,7 +2555,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   if( plot.dose )
   {
     dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
-    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.evend.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
   }
 
   # Find the earliest date:
@@ -3475,6 +3419,17 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' (colour, shading density and angle).
 #' @param show.real.obs.window.start,real.obs.window.density,real.obs.window.angle For some CMAs, the observation window might
 #' be adjusted, in which case should it be plotted and with that attributes?
+#' @param print.dose \emph{Logical}, should the daily dose be printed as text?
+#' @param cex.dose \emph{Numeric}, if daily dose is printed, what text size
+#' to use?
+#' @param print.dose.outline.col If \emph{\code{NA}}, don't print dose text with
+#' outline, otherwise a color name/code for the outline.
+#' @param print.dose.centered \emph{Logical}, print the daily dose centered on
+#' the segment or slightly below it?
+#' @param plot.dose \emph{Logical}, should the daily dose be indicated through
+#' segment width?
+#' @param lwd.event.max.dose \emph{Numeric}, the segment width corresponding to
+#' the maximum daily dose (must be >= lwd.event but not too big either).
 #' @param ... other possible parameters
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -3510,6 +3465,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       highlight.followup.window=TRUE, followup.window.col="green",
                       highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                       show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
+                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8,
                       bw.plot=FALSE                          # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                      )
 .plot.CMA1plus(cma=x,
@@ -3544,6 +3500,8 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                observation.window.angle=observation.window.angle,
                show.real.obs.window.start=show.real.obs.window.start,
                real.obs.window.density=real.obs.window.density, real.obs.window.angle=real.obs.window.angle,
+               print.dose=print.dose, cex.dose=cex.dose, print.dose.outline.col=print.dose.outline.col, print.dose.centered=print.dose.centered,
+               plot.dose=plot.dose, lwd.event.max.dose,
                bw.plot=bw.plot,
                ...)
 
@@ -8995,10 +8953,10 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   # call shiny:
   if( use.system.browser )
   {
-    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'), launch.browser=TRUE);
+    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR'), launch.browser=TRUE);
   } else
   {
-    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'));
+    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR'));
   }
 }
 

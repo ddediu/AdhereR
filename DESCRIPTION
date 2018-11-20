@@ -1,13 +1,16 @@
-Package: AdhereR.devel
+Package: AdhereR
 Type: Package
 Title: Adherence to Medications
-Version: 0.2.1
+Version: 0.3
 Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
                      email = "ddediu@gmail.com"),
-              person("Alexandra", "Dima", role = "aut",
-                     email = "alexadima@gmail.com"))
+             person("Alexandra", "Dima", role = "aut",
+                     email = "alexadima@gmail.com"),
+             person("Samuel", "Allemann", role = "aut",
+                     email = "samuel.allemann@univ-lyon1.fr"))
 Author: Dan Dediu [aut, cre],
-        Alexandra Dima [aut]
+        Alexandra Dima [aut],
+        Samuel Allemann [aut]
 Maintainer: Dan Dediu <ddediu@gmail.com>
 Description: Computation of adherence to medications from Electronic Health care 
     Data and visualization of individual medication histories and adherence 
@@ -16,12 +19,16 @@ Description: Computation of adherence to medications from Electronic Health care
     It allows the computation of different measures of
     adherence (as defined in the literature, but also several original ones), 
     their publication-quality plotting,
+    the estimation of event duration and time to initation,
     the interactive exploration of patient medication history and 
-    the real-time estimation of adherence given various parameter settings. 
+    the real-time estimation of adherence given various parameter settings.
+    It scales from very small datasets stored in flat CSV files to very large SQL
+    or Hadoop databases and from single-thread processing on lower-end consumer
+    laptops to parallel processing on large heterogeneus computing clusters.
 URL: https://github.com/ddediu/AdhereR 
 License: GPL (>= 2)
 LazyData: TRUE
-RoxygenNote: 6.1.1
+RoxygenNote: 6.0.1
 Imports: lubridate (>= 1.5),
     parallel (>= 3.0),
     data.table (>= 1.9),

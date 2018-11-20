@@ -18,17 +18,18 @@
   show.legend = TRUE, legend.x = "right", legend.y = "bottom",
   legend.bkg.opacity = 0.5, cex = 1, cex.axis = 0.75, cex.lab = 1,
   show.cma = TRUE, col.cats = cm.colors,
-  unspecified.category.label = "drug", lty.event = "solid",
-  lwd.event = 2, pch.start.event = 15, pch.end.event = 16,
-  show.event.intervals = TRUE, col.na = "lightgray",
-  print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1,
-  CMA.plot.col = "lightgreen", CMA.plot.border = "darkgreen",
-  CMA.plot.bkg = "aquamarine", CMA.plot.text = CMA.plot.border,
-  highlight.followup.window = TRUE, followup.window.col = "green",
-  highlight.observation.window = TRUE,
+  unspecified.category.label = "drug", lty.event = "solid", lwd.event = 2,
+  pch.start.event = 15, pch.end.event = 16, show.event.intervals = TRUE,
+  col.na = "lightgray", print.CMA = TRUE, plot.CMA = TRUE,
+  CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
+  CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
+  CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
+  followup.window.col = "green", highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
   observation.window.angle = -30, show.real.obs.window.start = TRUE,
   real.obs.window.density = 35, real.obs.window.angle = 30,
+  print.dose = FALSE, cex.dose = 0.75, print.dose.outline.col = "white",
+  print.dose.centered = FALSE, plot.dose = FALSE, lwd.event.max.dose = 8,
   bw.plot = FALSE)
 
 \method{plot}{CMA2}(...)
@@ -132,6 +133,23 @@ window be plotted?}
 
 \item{show.real.obs.window.start, real.obs.window.density, real.obs.window.angle}{For some CMAs, the observation window might
 be adjusted, in which case should it be plotted and with that attributes?}
+
+\item{print.dose}{\emph{Logical}, should the daily dose be printed as text?}
+
+\item{cex.dose}{\emph{Numeric}, if daily dose is printed, what text size
+to use?}
+
+\item{print.dose.outline.col}{If \emph{\code{NA}}, don't print dose text with
+outline, otherwise a color name/code for the outline.}
+
+\item{print.dose.centered}{\emph{Logical}, print the daily dose centered on
+the segment or slightly below it?}
+
+\item{plot.dose}{\emph{Logical}, should the daily dose be indicated through
+segment width?}
+
+\item{lwd.event.max.dose}{\emph{Numeric}, the segment width corresponding to
+the maximum daily dose (must be >= lwd.event but not too big either).}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}

@@ -3,8 +3,6 @@
 #  Test matching function to combine dispensing, prescription, and hospitalization data
 #
 #########################################################################################
-load("data/matching_data.rda")
-
 context("Matching functions")
 
 # # Test arguments for illegal values
@@ -12,9 +10,9 @@ context("Matching functions")
 
 # Test output format
 test_that("output format is correct", {
-  test_results <- compute_event_durations(disp.data = test_disp,
-                                            presc.data = test_presc,
-                                            hosp.data = test_hosp,
+  test_results <- compute_event_durations(disp.data = durcomp.dispensing,
+                                            presc.data = durcomp.prescribing,
+                                            hosp.data = durcomp.hospitalisation,
                                             ID.colname = "ID",
                                             presc.date.colname = "DATE.PRESC",
                                             disp.date.colname = "DATE.DISP",
@@ -63,9 +61,9 @@ test_that("output format is correct", {
 
 # Test process_patient function
 test_that("all patients are processed", {
-  test_results <- compute_event_durations(disp.data = test_disp,
-                                          presc.data = test_presc,
-                                          hosp.data = test_hosp,
+  test_results <- compute_event_durations(disp.data = durcomp.dispensing,
+                                          presc.data = durcomp.prescribing,
+                                          hosp.data = durcomp.hospitalisation,
                                           ID.colname = "ID",
                                           presc.date.colname = "DATE.PRESC",
                                           disp.date.colname = "DATE.DISP",
@@ -87,9 +85,9 @@ test_that("all patients are processed", {
 
 # Test process_medication function
 test_that("all medications for one patient are processed", {
-  test_results <- compute_event_durations(disp.data = test_disp[ID == 3],
-                                          presc.data = test_presc[ID == 3],
-                                          hosp.data = test_hosp,
+  test_results <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                          presc.data = durcomp.prescribing[ID == 3],
+                                          hosp.data = durcomp.hospitalisation,
                                           ID.colname = "ID",
                                           presc.date.colname = "DATE.PRESC",
                                           disp.date.colname = "DATE.DISP",
@@ -160,7 +158,7 @@ test_that("all medications for one patient are processed", {
     expect_equal(max(test_results$HOSP.DURATION, na.rm = T), 63) #maximal hospital duration
 
 
-    test_presc_2 <- data.table(ID = rep(10, 8),
+    durcomp.prescribing_2 <- data.table(ID = rep(10, 8),
                             DATE.PRESC = as.Date(c("2057-01-01",
                                                    "2057-02-01",
                                                    "2057-03-01",
@@ -176,7 +174,7 @@ test_that("all medications for one patient are processed", {
                             DAILY.DOSE = c(1,1,1,2,1,1,1,1),
                             PRESC.DURATION = c(30,30,NA,NA,30,NA,90,NA))
 
-    test_disp_2 <- data.table(ID = rep(10, 13),
+    durcomp.dispensing_2 <- data.table(ID = rep(10, 13),
                               DATE.DISP = as.Date(c("2057-01-01",
                                                      "2057-02-01",
                                                      "2057-03-01",
@@ -196,8 +194,8 @@ test_that("all medications for one patient are processed", {
                               Form = rep("oral", 13),
                               TOTAL.DOSE = rep(30,13))
 
-    test_results <- compute_event_durations(disp.data = test_disp_2,
-                                            presc.data = test_presc_2,
+    test_results <- compute_event_durations(disp.data = durcomp.dispensing_2,
+                                            presc.data = durcomp.prescribing_2,
                                             hosp.data = NULL,
                                             ID.colname = "ID",
                                             presc.date.colname = "DATE.PRESC",
@@ -222,9 +220,9 @@ test_that("all medications for one patient are processed", {
 
 # Test process_dispensing events function
 test_that("all dispensing events for one patient are processed", {
-  test_results <- compute_event_durations(disp.data = test_disp[ID == 3],
-                                          presc.data = test_presc[ID == 3],
-                                          hosp.data = test_hosp,
+  test_results <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                          presc.data = durcomp.prescribing[ID == 3],
+                                          hosp.data = durcomp.hospitalisation,
                                           ID.colname = "ID",
                                           presc.date.colname = "DATE.PRESC",
                                           disp.date.colname = "DATE.DISP",
@@ -250,8 +248,8 @@ test_that("all dispensing events for one patient are processed", {
 
 # Test process without hospitalizations
 test_that("events are processed without hospitalizations", {
-  test_results <- compute_event_durations(disp.data = test_disp[ID == 3],
-                                          presc.data = test_presc[ID == 3],
+  test_results <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                          presc.data = durcomp.prescribing[ID == 3],
                                           hosp.data = NULL,
                                           ID.colname = "ID",
                                           presc.date.colname = "DATE.PRESC",
@@ -274,8 +272,8 @@ test_that("events are processed without hospitalizations", {
 
 # Test with force.init.presc = FALSE
 test_that("enforcement of initial prescription can be turned off", {
-  test_results_1 <- compute_event_durations(disp.data = test_disp[ID == 3],
-                                            presc.data = test_presc[ID == 3],
+  test_results_1 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                            presc.data = durcomp.prescribing[ID == 3],
                                             hosp.data = NULL,
                                             ID.colname = "ID",
                                             presc.date.colname = "DATE.PRESC",
@@ -300,8 +298,8 @@ test_that("enforcement of initial prescription can be turned off", {
 
 # Test with force.presc.renew = FALSE
 test_that("enforcing of prescription reneval can be turned off", {
-  test_results_2 <- compute_event_durations(disp.data = test_disp[ID == 3],
-                                            presc.data = test_presc[ID == 3],
+  test_results_2 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                            presc.data = durcomp.prescribing[ID == 3],
                                             hosp.data = NULL,
                                             ID.colname = "ID",
                                             presc.date.colname = "DATE.PRESC",
@@ -325,8 +323,8 @@ test_that("enforcing of prescription reneval can be turned off", {
 
 # Test with split.on.dosage.change = FALSE
 test_that("consideration of dosage changes can be turned off", {
-  test_results1 <- compute_event_durations(disp.data = test_disp[ID == 3],
-                                           presc.data = test_presc[ID == 3],
+  test_results1 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                           presc.data = durcomp.prescribing[ID == 3],
                                            hosp.data = NULL,
                                            ID.colname = "ID",
                                            presc.date.colname = "DATE.PRESC",
@@ -349,8 +347,8 @@ test_that("consideration of dosage changes can be turned off", {
 
 # Test with trt.interruption = discard
 test_that("consideration of dosage changes can be turned off", {
-  test_results1 <- compute_event_durations(disp.data = test_disp[ID == 3],
-                                           presc.data = test_presc[ID == 3],
+  test_results1 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                           presc.data = durcomp.prescribing[ID == 3],
                                            hosp.data = NULL,
                                            ID.colname = "ID",
                                            presc.date.colname = "DATE.PRESC",
@@ -373,8 +371,8 @@ test_that("consideration of dosage changes can be turned off", {
 
 # Test with trt.interruption = carryover
 test_that("consideration of dosage changes can be turned off", {
-  test_results1 <- compute_event_durations(disp.data = test_disp[ID == 3],
-                                           presc.data = test_presc[ID == 3],
+  test_results1 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                           presc.data = durcomp.prescribing[ID == 3],
                                            hosp.data = NULL,
                                            ID.colname = "ID",
                                            presc.date.colname = "DATE.PRESC",

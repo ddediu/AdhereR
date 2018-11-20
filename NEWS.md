@@ -1,10 +1,12 @@
-# AdhereR 0.2.2
+# AdhereR 0.3
 
 ## Small features and bug fixes
 
   - removed margins when plotting CMA0 (they could become too large when plotting many patients);
   
-  - now allow custom placement of legend when plotting CMA0; 
+  - now allows the custom placement of legend when plotting CMA0; 
+  
+  - the plots for CMA0-9 can now also show the daily dose as text and/or line thickness.
   
 ## Allow `AdhereR` to use databases
 
@@ -17,11 +19,18 @@ A new vignette (*Using AdhereR with various database technologies for processing
 
 ## New function to compute event durations from prescription, dispensing, and hospitalization data
 
-Computation of CMAs requires a supply duration for medications dispensed to patients. If medications are not supplied for fixed durations but as a quantity that may last for various durations based on the prescribed dose, the supply duration has to be calculated based on dispensed and prescribed doses. Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be taken into account. Patients may be hospitalized or incarcerated, and may not use their own supplies during these periods. The new function `compute_event_durations` allows to calculate supply durations, taking into account the aforementioned situations and offering parameters for flexible adjustments.
+Computation of CMAs requires a supply duration for medications dispensed to patients. 
+If medications are not supplied for fixed durations but as a quantity that may last for various durations based on the prescribed dose, the supply duration has to be calculated based on dispensed and prescribed doses.
+Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be taken into account. 
+Patients may be hospitalized or incarcerated, and may not use their own supplies during these periods. 
+The new function `compute_event_durations` calculates the supply durations, taking into account the aforementioned situations and offering parameters for flexible adjustments.
 
 ## New function to compute time to initiation
 
-The period between the first prescription event and the first dose administration may impact health outcomes differently than omitting doses once on treatment or interrupting medication for longer periods of time. Primary non-adherence (not acquiring the first prescription) or delayed initiation may have a negative impact on health outcomes. The new function `time_to_initiation` allows to calculate the time between the first prescription and the first dispensing event, taking into account multiple variables to differentiate between treatments.
+The period between the first prescription event and the first dose administration may impact health outcomes differently than omitting doses once on treatment or interrupting medication for longer periods of time. 
+Primary non-adherence (not acquiring the first prescription) or delayed initiation may have a negative impact on health outcomes. 
+The new function `time_to_initiation` calculates the time between the first prescription and the first dispensing event, taking into account multiple variables to differentiate between treatments.
+
 
 # AdhereR 0.2.1
 

@@ -6,20 +6,19 @@
 \usage{
 plot_interactive_cma(data = NULL, ID = NULL, cma.class = c("simple",
   "per episode", "sliding window")[1], print.full.params = FALSE,
-  ID.colname = NA, event.date.colname = NA,
-  event.duration.colname = NA, event.daily.dose.colname = NA,
-  medication.class.colname = NA, date.format = "\%m/\%d/\%Y",
-  followup.window.start.max = 5 * 365, followup.window.duration.max = 5
-  * 365, observation.window.start.max = followup.window.start.max,
+  ID.colname = NA, event.date.colname = NA, event.duration.colname = NA,
+  event.daily.dose.colname = NA, medication.class.colname = NA,
+  date.format = "\%m/\%d/\%Y", followup.window.start.max = 5 * 365,
+  followup.window.duration.max = 5 * 365,
+  observation.window.start.max = followup.window.start.max,
   observation.window.duration.max = followup.window.duration.max,
   align.all.patients = FALSE, align.first.event.at.zero = TRUE,
   maximum.permissible.gap.max = 2 * 365,
   sliding.window.start.max = followup.window.start.max,
   sliding.window.duration.max = 2 * 365,
   sliding.window.step.duration.max = 2 * 365, backend = c("shiny",
-  "rstudio"), use.system.browser = FALSE,
-  get.colnames.fnc = function(d) names(d),
-  get.patients.fnc = function(d, idcol) unique(d[[idcol]]),
+  "rstudio"), use.system.browser = FALSE, get.colnames.fnc = function(d)
+  names(d), get.patients.fnc = function(d, idcol) unique(d[[idcol]]),
   get.data.for.patients.fnc = function(patientid, d, idcol) d[d[[idcol]]
   \%in\% patientid, ], ...)
 }

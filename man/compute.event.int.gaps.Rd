@@ -6,26 +6,22 @@
 \usage{
 compute.event.int.gaps(data, ID.colname = NA, event.date.colname = NA,
   event.duration.colname = NA, event.daily.dose.colname = NA,
-  medication.class.colname = NA,
-  event.interval.colname = "event.interval",
+  medication.class.colname = NA, event.interval.colname = "event.interval",
   gap.days.colname = "gap.days", carryover.within.obs.window = FALSE,
-  carryover.into.obs.window = FALSE,
-  carry.only.for.same.medication = FALSE,
+  carryover.into.obs.window = FALSE, carry.only.for.same.medication = FALSE,
   consider.dosage.change = FALSE, followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
   followup.window.duration = 365 * 2,
-  followup.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.start = 0,
-  observation.window.start.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.duration = 365 * 2,
-  observation.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], date.format = "\%m/\%d/\%Y",
-  keep.window.start.end.dates = FALSE,
+  followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.start = 0, observation.window.start.unit = c("days",
+  "weeks", "months", "years")[1], observation.window.duration = 365 * 2,
+  observation.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  date.format = "\%m/\%d/\%Y", keep.window.start.end.dates = FALSE,
   remove.events.outside.followup.window = TRUE,
-  keep.event.interval.for.all.events = FALSE,
-  parallel.backend = c("none", "multicore", "snow", "snow(SOCK)",
-  "snow(MPI)", "snow(NWS)")[1], parallel.threads = "auto",
-  suppress.warnings = FALSE, return.data.table = FALSE, ...)
+  keep.event.interval.for.all.events = FALSE, parallel.backend = c("none",
+  "multicore", "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)")[1],
+  parallel.threads = "auto", suppress.warnings = FALSE,
+  return.data.table = FALSE, ...)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the events used to
