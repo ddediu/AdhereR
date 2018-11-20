@@ -11,7 +11,7 @@
 #' based on the prescribed dose, the supply duration has to be calculated based on dispensed and prescribed doses.
 #' Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be
 #' taken into account. Patients may be hospitalized or incarcerated, and may not use their own supplies during these
-#' periods. This function allows to calculate supply durations, taking into account the aforementiont situations and
+#' periods. This function allows to calculate supply durations, taking into account the aforementioned situations and
 #' offering parameters for flexible adjustments.
 #'
 #' @param disp.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
