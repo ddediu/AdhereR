@@ -801,12 +801,12 @@ compute_event_durations <- function(disp.data = NULL,
 #' Computes the time between the first prescription event and the first dispensing event for each medication
 #' class.
 #'
-#' The period between the first prescription event and the first dose administration may impact health outcomes
-#' differently than the omitting doses once on treatment or interrupting medication for longer periods of time.
-#' Primary non-adherence (not acquiring the first prescription) or delayed initiation may have a negative impact
-#' on health outcomes.
-#' This function allows to calculate the time between the firs prescription and a first dispensing event,
-#' taking into account multiple arguments to differentiate between treatments.
+#' The period between the first prescription event and the first dose administration may impact health outcomes 
+#' differently than omitting doses once on treatment or interrupting medication for longer periods of time. 
+#' Primary non-adherence (not acquiring the first prescription) or delayed initiation may have a negative 
+#' impact on health outcomes. The new function `time_to_initiation` allows to calculate the time 
+#' between the first prescription and the first dispensing event, taking into account multiple variables to 
+#' differentiate between treatments.
 #'
 #' @param presc.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
 #' the prescription events. Must contain, at a minimum, the patient unique ID, one medication identifier,
