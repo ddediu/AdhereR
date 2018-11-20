@@ -15,7 +15,13 @@ Even interactive plotting is now capable of accessing data stored using various 
 A new vignette (*Using AdhereR with various database technologies for processing very large datasets*) gives all the needed details, including actual code, for running `AdhereR` on *relational databases* (using either explicit `SQL` or implicitely through `dbplyr`) and on *Apache `Hadoop`* (using `RHadoop` for access to HDFS and MapReduce).
 (Please note that this vignette is pre-compiled due to its requirements in terms of thrid-party software such as `MySQL` and Apache `Hadoop`.)
 
+## New function to compute event durations from prescription, dispensing, and hospitalization data
 
+Computation of CMAs requires a supply duration for medications dispensed to patients. If medications are not supplied for fixed durations but as a quantity that may last for various durations based on the prescribed dose, the supply duration has to be calculated based on dispensed and prescribed doses. Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be taken into account. Patients may be hospitalized or incarcerated, and may not use their own supplies during these periods. The new function `compute_event_durations` allows to calculate supply durations, taking into account the aforementioned situations and offering parameters for flexible adjustments.
+
+## New function to compute time to initiation
+
+The period between the first prescription event and the first dose administration may impact health outcomes differently than omitting doses once on treatment or interrupting medication for longer periods of time. Primary non-adherence (not acquiring the first prescription) or delayed initiation may have a negative impact on health outcomes. The new function `time_to_initiation` allows to calculate the time between the first prescription and the first dispensing event, taking into account multiple variables to differentiate between treatments.
 
 # AdhereR 0.2.1
 
