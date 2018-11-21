@@ -17,7 +17,7 @@ test_that("output format is correct", {
                                             presc.date.colname = "DATE.PRESC",
                                             disp.date.colname = "DATE.DISP",
                                             date.format = "%Y-%m-%d",
-                                            medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                             total.dose.colname = "TOTAL.DOSE",
                                             presc.daily.dose.colname = "DAILY.DOSE",
                                             presc.duration.colname = "PRESC.DURATION",
@@ -28,11 +28,12 @@ test_that("output format is correct", {
                                             trt.interruption = "continue",
                                             suppress.warnings = FALSE,
                                             return.data.table = TRUE)
+
   expect_is(test_results, "data.table") # is a data.table
   expect_equal(names(test_results), c("ID",
                                       "ATC.CODE",
-                                      "Unit",
-                                      "Form",
+                                      "UNIT",
+                                      "FORM",
                                       "TOTAL.DOSE",
                                       "DATE.DISP",
                                       "DISP.START",
@@ -45,8 +46,8 @@ test_that("output format is correct", {
                                       "tot.dosage.changes"))
   expect_is(test_results$ID, "numeric") # ID's are integers
   expect_is(test_results$ATC.CODE, "character") # DCIs are characters
-  expect_is(test_results$Unit, "character") # Units are characters
-  expect_is(test_results$Form, "character") # Forms are character
+  expect_is(test_results$UNIT, "character") # Units are characters
+  expect_is(test_results$FORM, "character") # Forms are character
   expect_is(test_results$TOTAL.DOSE, "numeric") # TOTAL.DOSE is numeric
   expect_is(test_results$DATE.DISP, "Date") # DATE.DISP is a date
   expect_is(test_results$DISP.START, "Date") # DATE.DISP is a date
@@ -68,7 +69,7 @@ test_that("all patients are processed", {
                                           presc.date.colname = "DATE.PRESC",
                                           disp.date.colname = "DATE.DISP",
                                           date.format = "%Y-%m-%d",
-                                          medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                          medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                           total.dose.colname = "TOTAL.DOSE",
                                           presc.daily.dose.colname = "DAILY.DOSE",
                                           presc.duration.colname = "PRESC.DURATION",
@@ -92,7 +93,7 @@ test_that("all medications for one patient are processed", {
                                           presc.date.colname = "DATE.PRESC",
                                           disp.date.colname = "DATE.DISP",
                                           date.format = "%Y-%m-%d",
-                                          medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                          medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                           total.dose.colname = "TOTAL.DOSE",
                                           presc.daily.dose.colname = "DAILY.DOSE",
                                           presc.duration.colname = "PRESC.DURATION",
@@ -139,7 +140,7 @@ test_that("all medications for one patient are processed", {
                                                                 "R03AK08",
                                                                 "R05CB13")) #identity of medications prescribed
   expect_equal(nrow(unique(test_results[,.(START.PRESC, END.PRESC)])), 23) #number of prescription instances + NA
-  expect_equal(as.character(unique(test_results$START.PRESC)), c("2056-07-01",
+  expect_equal(as.character(sort(unique(test_results$START.PRESC))), sort(c("2056-07-01",
                                                                  "2057-09-02",
                                                                  "2057-01-27",
                                                                  "2056-09-09",
@@ -154,7 +155,7 @@ test_that("all medications for one patient are processed", {
                                                                  "2057-03-03",
                                                                  "2057-08-04",
                                                                  "2056-09-16",
-                                                                 "2057-01-28")) #prescription instances + NA
+                                                                 "2057-01-28"))) #prescription instances + NA
     expect_equal(max(test_results$HOSP.DURATION, na.rm = T), 63) #maximal hospital duration
 
 
@@ -169,8 +170,8 @@ test_that("all medications for one patient are processed", {
                                                    "2058-01-01")),
                             VISIT = c(0,1,2,4,5,6,7,8),
                             ATC.CODE = rep("A", 8),
-                            Unit = rep("mg", 8),
-                            Form = rep("oral", 8),
+                            UNIT = rep("mg", 8),
+                            FORM = rep("oral", 8),
                             DAILY.DOSE = c(1,1,1,2,1,1,1,1),
                             PRESC.DURATION = c(30,30,NA,NA,30,NA,90,NA))
 
@@ -190,8 +191,8 @@ test_that("all medications for one patient are processed", {
                                                      "2058-01-01")),
                               VISIT = c(0,1,2,3,4,5,6,7,8,9,10,11,12),
                               ATC.CODE = rep("A", 13),
-                              Unit = rep("mg", 13),
-                              Form = rep("oral", 13),
+                              UNIT = rep("mg", 13),
+                              FORM = rep("oral", 13),
                               TOTAL.DOSE = rep(30,13))
 
     test_results <- compute_event_durations(disp.data = durcomp.dispensing_2,
@@ -201,7 +202,7 @@ test_that("all medications for one patient are processed", {
                                             presc.date.colname = "DATE.PRESC",
                                             disp.date.colname = "DATE.DISP",
                                             date.format = "%Y-%m-%d",
-                                            medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                             total.dose.colname = "TOTAL.DOSE",
                                             presc.daily.dose.colname = "DAILY.DOSE",
                                             presc.duration.colname = "PRESC.DURATION",
@@ -227,7 +228,7 @@ test_that("all dispensing events for one patient are processed", {
                                           presc.date.colname = "DATE.PRESC",
                                           disp.date.colname = "DATE.DISP",
                                           date.format = "%Y-%m-%d",
-                                          medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                          medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                           total.dose.colname = "TOTAL.DOSE",
                                           presc.daily.dose.colname = "DAILY.DOSE",
                                           presc.duration.colname = "PRESC.DURATION",
@@ -255,7 +256,7 @@ test_that("events are processed without hospitalizations", {
                                           presc.date.colname = "DATE.PRESC",
                                           disp.date.colname = "DATE.DISP",
                                           date.format = "%Y-%m-%d",
-                                          medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                          medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                           total.dose.colname = "TOTAL.DOSE",
                                           presc.daily.dose.colname = "DAILY.DOSE",
                                           presc.duration.colname = "PRESC.DURATION",
@@ -279,7 +280,7 @@ test_that("enforcement of initial prescription can be turned off", {
                                             presc.date.colname = "DATE.PRESC",
                                             disp.date.colname = "DATE.DISP",
                                             date.format = "%Y-%m-%d",
-                                            medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                             total.dose.colname = "TOTAL.DOSE",
                                             presc.daily.dose.colname = "DAILY.DOSE",
                                             presc.duration.colname = "PRESC.DURATION",
@@ -305,7 +306,7 @@ test_that("enforcing of prescription reneval can be turned off", {
                                             presc.date.colname = "DATE.PRESC",
                                             disp.date.colname = "DATE.DISP",
                                             date.format = "%Y-%m-%d",
-                                            medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                             total.dose.colname = "TOTAL.DOSE",
                                             presc.daily.dose.colname = "DAILY.DOSE",
                                             presc.duration.colname = "PRESC.DURATION",
@@ -330,7 +331,7 @@ test_that("consideration of dosage changes can be turned off", {
                                            presc.date.colname = "DATE.PRESC",
                                            disp.date.colname = "DATE.DISP",
                                            date.format = "%Y-%m-%d",
-                                           medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                           medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                            total.dose.colname = "TOTAL.DOSE",
                                            presc.daily.dose.colname = "DAILY.DOSE",
                                            presc.duration.colname = "PRESC.DURATION",
@@ -354,7 +355,7 @@ test_that("consideration of dosage changes can be turned off", {
                                            presc.date.colname = "DATE.PRESC",
                                            disp.date.colname = "DATE.DISP",
                                            date.format = "%Y-%m-%d",
-                                           medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                           medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                            total.dose.colname = "TOTAL.DOSE",
                                            presc.daily.dose.colname = "DAILY.DOSE",
                                            presc.duration.colname = "PRESC.DURATION",
@@ -378,7 +379,7 @@ test_that("consideration of dosage changes can be turned off", {
                                            presc.date.colname = "DATE.PRESC",
                                            disp.date.colname = "DATE.DISP",
                                            date.format = "%Y-%m-%d",
-                                           medication.class.colnames = c("ATC.CODE", "Unit", "Form"),
+                                           medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
                                            total.dose.colname = "TOTAL.DOSE",
                                            presc.daily.dose.colname = "DAILY.DOSE",
                                            presc.duration.colname = "PRESC.DURATION",
