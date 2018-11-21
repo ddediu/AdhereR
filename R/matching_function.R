@@ -28,93 +28,93 @@ globalVariables(c("DATE.IN", "DATE.OUT",
                   "cum.duration", ".episode", ".out", ".hosp", "time.to.initialization", "first.disp", "first.presc",
                   "debug.mode"));
 
-
-#' Example dispensation dataset.
+#' Example prescription events for 16 patients..
 #'
-#' An artificial dataset containing XXX.
+#' A sample dataset containing prescription events (one per row) for 16 patients
+#' over a period of roughly 15 months (1502 events in total).
+#' This is the appropriate format to compute event durations with the
+#' \code{compute_event_durations} function. Each row represent an individual prescription
+#' record for a specific dose of a specific medication for a patient at a given date.
+#' Visit number and Duration are optional, and more than one column to group medications
+#' can be supplied (such as Form or Unit).
 #'
-#' @format A data frame with 1080 rows and 5 variables:
+#' @format A data table with 1502 rows and 8 variables:
 #' \describe{
-#'   \item{PATIENT_ID}{\emph{integer} here; patient unique identifier. Can also
-#'   be \emph{string}}.
-#'   \item{DATE}{\emph{character};the medication event date, by default in the
-#'   mm/dd/yyyy format. It may represent a prescribing or dispensing date.}
-#'   \item{PERDAY}{\emph{integer}; the daily dosage prescribed for the
-#'   medication supplied at this medication event (i.e. how many doses should
-#'   be taken daily according to the prescription). This column is optional,
-#'   as it is not considered in all functions but may be relevant for specific
-#'   research or clinical contexts. All values should be > 0.}
-#'   \item{CATEGORY}{\emph{character}; the medication type, here two placeholder
-#'   labels, 'medA' and 'medB'. This is a researcher-defined classification
+#'   \item{ID}{\emph{integer} here; patient unique identifier. Can also
+#'   be \emph{string}.}
+#'   \item{DATE.PRESC}{\emph{Date} here;the prescription event date, by default in the
+#'   yyyy-mm-dd format. Can also be \emph{string}.}
+#'   \item{VISIT}{\emph{integer}; the consecutive number of the prescription instances.
+#'   This column is optional and will be generated internally when not supplied. It is
+#'   used to identify treatment interruptions.
+#'   \item{ATC.CODE}{\emph{character}; the medication type, according to the WHO ATC
+#'   classification system. This can be a researcher-defined classification
 #'   depending on study aims (e.g., based on therapeutic use, mechanism of
-#'   action, chemical molecule, or pharmaceutical formulation). This column is
-#'   optional, as it is not considered in all functions but may be relevant for
-#'   specific research or clinical contexts.}
-#'   \item{DURATION}{\emph{integer}; the medication event duration in days (i.e.
-#'   how many days the mediation supplied would last if used as prescribed);
-#'   may be available in the extraction or computed based on quantity supplied
-#'   (the number of doses prescribed or dispensed on that occasion) and daily
-#'   dosage. All values should be > 0.}
+#'   action, chemical molecule, or pharmaceutical formulation). The \code{compute_event_durations}
+#'   function will match prescribed medication to dispensed medications based on this variable.}
+#'   \item{FORM}{\emph{character}; the galenic form of the prescribed preparation.
+#'   This is optional and can be used as a separate variable to match between prescription and
+#'   dispensing events.}
+#'   \item{UNIT}{\emph{integer}; the unit of the prescribed dose. This is optional and can be used
+#'   as a separate variable to match between prescription and dispensing events.}
+#'   \item{PRESC.DURATION}{\emph{numeric}; the duration (in days) for which the prescription
+#'   is intended. Can be \code{NA} if the prescription is continuous without a fixed end date.
+#'   \item{DAILY.DOSE}{\emph{numeric}; the daily dose prescribed during this event (e.g., \code{50} for 1 tablet
+#'   of 50 mg per day or \code{25} for 1 tablet of 50 mg every two days).}
+#' }
+"durcomp.prescribing"
+
+#' Example dispensing events for 16 patients..
+#'
+#' A sample dataset containing dispensing events (one per row) for 16 patients
+#' over a period of roughly 24 months (1794 events in total).
+#' This is the appropriate format to compute event durations with the
+#' \code{compute_event_durations} function. Each row represent an individual dispensing
+#' record for a specific dose of a specific medication for a patient at a given date.
+#' Visit number and Duration are optional, and more than one column to group medications
+#' can be supplied (such as Form or Unit).
+#'
+#' @format A data frame with 1794 rows and 6 variables:
+#' \describe{
+#'   \item{ID}{\emph{integer} here; patient unique identifier. Can also
+#'   be \emph{string}.}
+#'   \item{DATE.DISP}{\emph{Date} here;the dispensing event date, by default in the
+#'   yyyy-mm-dd format. Can also be \emph{string}.}
+#'   \item{ATC.CODE}{\emph{character}; the medication type, according to the WHO ATC
+#'   classification system. This can be a researcher-defined classification
+#'   depending on study aims (e.g., based on therapeutic use, mechanism of
+#'   action, chemical molecule, or pharmaceutical formulation). The \code{compute_event_durations}
+#'   function will match prescribed medication to dispensed medications based on this variable.}
+#'   \item{UNIT}{\emph{integer}; the unit of the dispensed dose. This is optional and can be used
+#'   as a separate variable to match between prescription and dispensing events.}
+#'   \item{FORM}{\emph{character}; the galenic form of the dispensed preparation.
+#'   This is optional and can be used as a separate variable to match between prescription and
+#'   dispensing events.}
+#'   \item{TOTAL.DOSE}{\emph{numeric}; the total dispensed dose supplied at this
+#'   medication event (e.g., \code{5000} for 10 tables of 500 mg).}
 #' }
 "durcomp.dispensing"
 
-#' Example hospitalisation dataset.
+#' Example hospitalization events for 10 patients.
 #'
-#' An artificial dataset containing XXX.
+#' A sample dataset containing hospitalization periods (one per row) for 10 patients
+#' over a period of roughly 18 months (28 events in total).
+#' This is the appropriate format to compute event durations with the
+#' \code{compute_event_durations} function. Each row represent an individual hospitalization period
+#' of a patient for whom event durations should be calculated. Besides hospitalizations, this could
+#' cover other situations where patients may not use their own supply, e.g. during incarcerations.
+#' All column names must match the format provided in this example.
 #'
-#' @format A data frame with 1080 rows and 5 variables:
+#' @format A data frame with 28 rows and 3 variables:
 #' \describe{
-#'   \item{PATIENT_ID}{\emph{integer} here; patient unique identifier. Can also
+#'   \item{ID}{\emph{integer} here; patient unique identifier. Can also
 #'   be \emph{string}}.
-#'   \item{DATE}{\emph{character};the medication event date, by default in the
-#'   mm/dd/yyyy format. It may represent a prescribing or dispensing date.}
-#'   \item{PERDAY}{\emph{integer}; the daily dosage prescribed for the
-#'   medication supplied at this medication event (i.e. how many doses should
-#'   be taken daily according to the prescription). This column is optional,
-#'   as it is not considered in all functions but may be relevant for specific
-#'   research or clinical contexts. All values should be > 0.}
-#'   \item{CATEGORY}{\emph{character}; the medication type, here two placeholder
-#'   labels, 'medA' and 'medB'. This is a researcher-defined classification
-#'   depending on study aims (e.g., based on therapeutic use, mechanism of
-#'   action, chemical molecule, or pharmaceutical formulation). This column is
-#'   optional, as it is not considered in all functions but may be relevant for
-#'   specific research or clinical contexts.}
-#'   \item{DURATION}{\emph{integer}; the medication event duration in days (i.e.
-#'   how many days the mediation supplied would last if used as prescribed);
-#'   may be available in the extraction or computed based on quantity supplied
-#'   (the number of doses prescribed or dispensed on that occasion) and daily
-#'   dosage. All values should be > 0.}
+#'   \item{DATE.IN}{\emph{Date} here;the start of the hospitalization period, by default in the
+#'   yyyy-mm-dd format.Can also be \emph{string}.}
+#'   \item{DATE.OUT}{\emph{Date};the end of the hospitalization period, by default in the
+#'   yyyy-mm-dd format. Can also be \emph{string}.}
 #' }
 "durcomp.hospitalisation"
-
-#' Example prescription dataset.
-#'
-#' An artificial dataset containing XXX.
-#'
-#' @format A data frame with 1080 rows and 5 variables:
-#' \describe{
-#'   \item{PATIENT_ID}{\emph{integer} here; patient unique identifier. Can also
-#'   be \emph{string}}.
-#'   \item{DATE}{\emph{character};the medication event date, by default in the
-#'   mm/dd/yyyy format. It may represent a prescribing or dispensing date.}
-#'   \item{PERDAY}{\emph{integer}; the daily dosage prescribed for the
-#'   medication supplied at this medication event (i.e. how many doses should
-#'   be taken daily according to the prescription). This column is optional,
-#'   as it is not considered in all functions but may be relevant for specific
-#'   research or clinical contexts. All values should be > 0.}
-#'   \item{CATEGORY}{\emph{character}; the medication type, here two placeholder
-#'   labels, 'medA' and 'medB'. This is a researcher-defined classification
-#'   depending on study aims (e.g., based on therapeutic use, mechanism of
-#'   action, chemical molecule, or pharmaceutical formulation). This column is
-#'   optional, as it is not considered in all functions but may be relevant for
-#'   specific research or clinical contexts.}
-#'   \item{DURATION}{\emph{integer}; the medication event duration in days (i.e.
-#'   how many days the mediation supplied would last if used as prescribed);
-#'   may be available in the extraction or computed based on quantity supplied
-#'   (the number of doses prescribed or dispensed on that occasion) and daily
-#'   dosage. All values should be > 0.}
-#' }
-"durcomp.prescribing"
 
 #' Example events dataset.
 #'
@@ -264,6 +264,25 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'  \item \code{tot.dosage.changes} the total number of dosage changes per patient
 #'  for a specific medication.
 #'  }
+#'  @examples
+#'    event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+#'                                               presc.data = durcomp.prescribing,
+#'                                               hosp.data = durcomp.hospitalisation,
+#'                                               ID.colname = "ID",
+#'                                               presc.date.colname = "DATE.PRESC",
+#'                                               disp.date.colname = "DATE.DISP",
+#'                                               date.format = "%Y-%m-%d",
+#'                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+#'                                               total.dose.colname = "TOTAL.DOSE",
+#'                                               presc.daily.dose.colname = "DAILY.DOSE",
+#'                                               presc.duration.colname = "PRESC.DURATION",
+#'                                               visit.colname = "VISIT",
+#'                                               force.init.presc = TRUE,
+#'                                               force.presc.renew = TRUE,
+#'                                               split.on.dosage.change = TRUE,
+#'                                               trt.interruption = "continue",
+#'                                               suppress.warnings = FALSE,
+#'                                               return.data.table = TRUE)
 #' @export
 compute_event_durations <- function(disp.data = NULL,
                                     presc.data = NULL,
@@ -961,6 +980,12 @@ compute_event_durations <- function(disp.data = NULL,
   # extract IDs of all patients present in dispensing and prescription database
   disp_presc_IDs <- intersect(disp.data[[ID.colname]], presc.data[[ID.colname]]);
 
+  # add duration of hospitalization
+  if( !is.null(hosp.data) )
+  {
+    hosp.data[,HOSP.DURATION := as.numeric(DATE.OUT-DATE.IN)];
+  }
+
   # progress bar
   pb <- txtProgressBar(min = 0, max = length(disp_presc_IDs), style = 3);
 
@@ -1039,6 +1064,16 @@ compute_event_durations <- function(disp.data = NULL,
 #'  \item \code{time.to.initialization} the difference in days between the first
 #'  dispensing date and the  first prescription date.
 #'  }
+#'  @examples
+#'  time_init <- time_to_initiation(presc.data = durcomp.prescribing,
+#'                                  disp.data = durcomp.dispensing,
+#'                                  ID.colname = "ID",
+#'                                  presc.start.colname = "DATE.PRESC",
+#'                                  disp.date.colname = "DATE.DISP",
+#'                                  medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
+#'                                  date.format = "%Y-%m-%d",
+#'                                  suppress.warnings = FALSE,
+#'                                  return.data.table = TRUE)
 #'  @export
 time_to_initiation <- function(presc.data = NULL,
                                disp.data = NULL,
