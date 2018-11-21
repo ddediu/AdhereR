@@ -1,12 +1,18 @@
+## ---- echo=FALSE, message=FALSE, warning=FALSE, results='hide'-----------
+# Various Rmarkdown output options:
+# center figures and reduce their file size:
+knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg"); 
+
 ## ---- echo=TRUE, results='asis'------------------------------------------
 # Load the AdhereR library:
 library(AdhereR);
+
 # Select the two patients with IDs 37 and 76 from the built-in dataset "med.events":
 ExamplePats <- med.events[med.events$PATIENT_ID %in% c(37, 76), ];
 # Display them as pretty markdown table:
 knitr::kable(ExamplePats, caption = "<a name=\"Table-1\"></a>**Table 1.** Medication events for two example patients");
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1\"></a>**Figure 1.** Medication histories - two example patients", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1\"></a>**Figure 1.** Medication histories - two example patients", fig.height=6, fig.width=8, out.width="100%"----
 # Create an object "cma0" of the most basic CMA type, "CMA0":
 cma0 <- CMA0(data=ExamplePats, # use the two selected patients
              ID.colname="PATIENT_ID", # the name of the column containing the IDs
@@ -20,6 +26,12 @@ cma0 <- CMA0(data=ExamplePats, # use the two selected patients
              date.format="%m/%d/%Y"); # date format (mm/dd/yyyy)
 # Plot the object (CMA0 shows the actual event data only):
 plot(cma0, # the object to plot
+     align.all.patients=TRUE); # align all patients for easier comparison
+
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1a\"></a>**Figure 1 (a).** Same plot as in **Figure 1**, but also showing the daily doses as numbers and as line thickness", fig.height=6, fig.width=8, out.width="100%"----
+# Same plot as above but also showing the daily doses:
+plot(cma0, # the object to plot
+     print.dose=TRUE, plot.dose=TRUE,
      align.all.patients=TRUE); # align all patients for easier comparison
 
 ## ---- echo=TRUE, results='asis'------------------------------------------
@@ -68,7 +80,7 @@ TEs4<- compute.treatment.episodes(ExamplePats,
 knitr::kable(TEs4, 
              caption = "<a name=\"Table-3\"></a>**Table 3.** Alternative scenario output `compute.treatment.episodes()` function");
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-2\"></a>**Figure 2.** Simple CMA 1", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-2\"></a>**Figure 2.** Simple CMA 1", fig.height=5, fig.width=7, out.width="100%"----
 # Create the CMA1 object with the given parameters:
 cma1 <- CMA1(data=ExamplePats,
              ID.colname="PATIENT_ID",
@@ -92,7 +104,7 @@ plot(cma1,
      patients.to.plot=c("76"), # plot only patient 76 
      legend.x=520); # place the legend in a nice way
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-3\"></a>**Figure 3.** Simple CMA 2", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-3\"></a>**Figure 3.** Simple CMA 2", fig.height=5, fig.width=7, out.width="100%"----
 cma2 <- CMA2(data=ExamplePats, # we're estimating CMA2 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -104,7 +116,7 @@ plot(cma2,
      patients.to.plot=c("76"),  
      show.legend=FALSE); # don't show legend to avoid clutter (see above)
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-4\"></a>**Figure 4.** Simple CMA 3", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-4\"></a>**Figure 4.** Simple CMA 3", fig.height=5, fig.width=7, out.width="100%"----
 cma3 <- CMA3(data=ExamplePats, # we're estimating CMA3 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -114,7 +126,7 @@ cma3 <- CMA3(data=ExamplePats, # we're estimating CMA3 now!
              date.format="%m/%d/%Y");
 plot(cma3, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5.** Simple CMA 4", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5.** Simple CMA 4", fig.height=5, fig.width=7, out.width="100%"----
 cma4 <- CMA4(data=ExamplePats, # we're estimating CMA4 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -124,7 +136,7 @@ cma4 <- CMA4(data=ExamplePats, # we're estimating CMA4 now!
              date.format="%m/%d/%Y");
 plot(cma4,patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6.** Simple CMA 5", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6.** Simple CMA 5", fig.height=5, fig.width=7, out.width="100%"----
 cma5 <- CMA5(data=ExamplePats, # we're estimating CMA5 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -138,7 +150,7 @@ cma5 <- CMA5(data=ExamplePats, # we're estimating CMA5 now!
              date.format="%m/%d/%Y");
 plot(cma5,patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-7\"></a>**Figure 7.** Simple CMA 6", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-7\"></a>**Figure 7.** Simple CMA 6", fig.height=5, fig.width=7, out.width="100%"----
 cma6 <- CMA6(data=ExamplePats, # we're estimating CMA6 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -152,7 +164,14 @@ cma6 <- CMA6(data=ExamplePats, # we're estimating CMA6 now!
              date.format="%m/%d/%Y");
 plot(cma6,patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-8\"></a>**Figure 8.** Simple CMA 7", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1a\"></a>**Figure 7 (a).** Same plot as in **Figure 7**, but also showing the daily doses as numbers and as line thickness", fig.height=6, fig.width=8, out.width="100%"----
+# Same plot as above but also showing the daily doses:
+plot(cma6, # the object to plot
+     patients.to.plot=c("76"), # plot only patient 76 
+     print.dose=TRUE, plot.dose=TRUE,
+     legend.x=520); # place the legend in a nice way
+
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-8\"></a>**Figure 8.** Simple CMA 7", fig.height=5, fig.width=7, out.width="100%"----
 cma7 <- CMA7(data=ExamplePats, # we're estimating CMA7 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -166,7 +185,7 @@ cma7 <- CMA7(data=ExamplePats, # we're estimating CMA7 now!
              date.format="%m/%d/%Y");
 plot(cma7, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-9\"></a>**Figure 9.** Simple CMA 8", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-9\"></a>**Figure 9.** Simple CMA 8", fig.height=5, fig.width=7, out.width="100%"----
 cma8 <- CMA8(data=ExamplePats, # we're estimating CMA8 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -182,7 +201,7 @@ plot(cma8, patients.to.plot=c("76"), show.legend=FALSE);
 # The value for patient 76, rounded at 2 digits
 round(cma8$CMA[cma8$CMA$PATIENT_ID== 76, 2]*100, 2);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-10\"></a>**Figure 10.** Simple CMA 9", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-10\"></a>**Figure 10.** Simple CMA 9", fig.height=5, fig.width=7, out.width="100%"----
 cma9 <- CMA9(data=ExamplePats, # we're estimating CMA9 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -196,7 +215,7 @@ cma9 <- CMA9(data=ExamplePats, # we're estimating CMA9 now!
              date.format="%m/%d/%Y");
 plot(cma9, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%"----
 cmaE <- CMA_per_episode(CMA="CMA9", # apply the simple CMA9 to each treatment episode
                         data=ExamplePats,
                         ID.colname="PATIENT_ID",
@@ -231,7 +250,7 @@ round(cmaE$CMA[cmaE$CMA$PATIENT_ID== 76, 7]*100, 2);
 # Plot:
 plot(cmaE, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-12\"></a>**Figure 12.** Sliding window CMA 9", fig.height=5, fig.width=7----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-12\"></a>**Figure 12.** Sliding window CMA 9", fig.height=5, fig.width=7, out.width="100%"----
 cmaW <- CMA_sliding_window(CMA.to.apply="CMA9", # apply the simple CMA9 to each sliding window
                            data=ExamplePats,
                            ID.colname="PATIENT_ID",
@@ -263,7 +282,7 @@ round(cmaW$CMA[cmaW$CMA$PATIENT_ID== 76, 5]*100, 2);
 # Plot:
 plot(cmaW, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-13\"></a>**Figure 13.** Sliding window CMA 9", fig.height=5, fig.width=7----
+## ---- echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-13\"></a>**Figure 13.** Sliding window CMA 9", fig.height=5, fig.width=7, out.width="100%"----
 cmaW1 <- CMA_sliding_window(CMA.to.apply="CMA9",
                            data=ExamplePats,
                            ID.colname="PATIENT_ID",
