@@ -450,7 +450,10 @@ server <- function(input, output, session) {
                                                                 !input$plot_CMA_as_histogram_episodes),
                                    align.all.patients=input$plot_align_all_patients,
                                    align.first.event.at.zero=input$plot_align_first_event_at_zero,
-                                   show.legend=input$show_legend # show the legend?
+                                   show.legend=input$show_legend, # show the legend?
+                                   get.colnames.fnc=.plotting.params$get.colnames.fnc,
+                                   get.patients.fnc=.plotting.params$get.patients.fnc,
+                                   get.data.for.patients.fnc=.plotting.params$get.data.for.patients.fnc
     )
   }
 

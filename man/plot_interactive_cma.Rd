@@ -6,25 +6,34 @@
 \usage{
 plot_interactive_cma(data = NULL, ID = NULL, cma.class = c("simple",
   "per episode", "sliding window")[1], print.full.params = FALSE,
-  ID.colname = NA, event.date.colname = NA, event.duration.colname = NA,
-  event.daily.dose.colname = NA, medication.class.colname = NA,
-  date.format = "\%m/\%d/\%Y", followup.window.start.max = 5 * 365,
-  followup.window.duration.max = 5 * 365,
-  observation.window.start.max = followup.window.start.max,
+  ID.colname = NA, event.date.colname = NA,
+  event.duration.colname = NA, event.daily.dose.colname = NA,
+  medication.class.colname = NA, date.format = "\%m/\%d/\%Y",
+  followup.window.start.max = 5 * 365, followup.window.duration.max = 5
+  * 365, observation.window.start.max = followup.window.start.max,
   observation.window.duration.max = followup.window.duration.max,
   align.all.patients = FALSE, align.first.event.at.zero = TRUE,
   maximum.permissible.gap.max = 2 * 365,
   sliding.window.start.max = followup.window.start.max,
   sliding.window.duration.max = 2 * 365,
   sliding.window.step.duration.max = 2 * 365, backend = c("shiny",
-  "rstudio"), use.system.browser = FALSE, ...)
+  "rstudio"), use.system.browser = FALSE,
+  get.colnames.fnc = function(d) names(d),
+  get.patients.fnc = function(d, idcol) unique(d[[idcol]]),
+  get.data.for.patients.fnc = function(patientid, d, idcol) d[d[[idcol]]
+  \%in\% patientid, ], ...)
 }
 \arguments{
-\item{data}{A \emph{\code{data.frame}} containing the events (prescribing or
-dispensing) used to compute the CMA. Must contain, at a minimum, the patient
+\item{data}{Usually a \emph{\code{data.frame}} containing the events (prescribing
+or dispensing) used to compute the CMA. Must contain, at a minimum, the patient
 unique ID, the event date and duration, and might also contain the daily
 dosage and medication type (the actual column names are defined in the
-following four parameters).}
+following four parameters). Alternatively, this can be any other data source
+(for example, a connection to a database), in which case the user must redefine
+the arguments \code{get.colnames.fnc}, \code{get.patients.fnc} and
+\code{get.data.for.patients.fnc} appropriately. Currently, this works only when
+using Shiny for interactive rendering. For a working example, please see
+the vignette describing the interfacing with databases.}
 
 \item{ID}{The ID (as given in the \code{ID.colname} column) of the patient
 whose data to interactively plot (if absent, pick the first one); please not
@@ -93,6 +102,19 @@ capability.}
 
 \item{use.system.browser}{For shiny, use the system browser?}
 
+\item{get.colnames.fnc}{A \emph{function} taking as parameter the data source
+and returning the column names. Must be overridden when the data source is
+not derived from a \code{data.frame}.}
+
+\item{get.patients.fnc}{A \emph{function} taking as parameter the data source
+and the patient ID column name, and returns the list of all patient IDs.
+Must be overridden when the data source is not derived from a \code{data.frame}.}
+
+\item{get.data.for.patients.fnc}{A \emph{function} taking as parameter a (set
+of) patient ID(s), the data source, and the patient ID column name, and returns
+the list of all patient IDs. Must be overridden when the data source is not
+derived from a \code{data.frame}.}
+
 \item{...}{Extra arguments.}
 }
 \value{
@@ -101,27 +123,21 @@ Nothing
 \description{
 Interactively plot a given patient's data, allowing the real-time exploration
 of the various CMAs and their parameters.
-It is not intended for heavy use but simply for the exploration of various
-parameters and ways of computing the CMA. The interface is constrained by the
-current limitations of the \code{manipulate} library.
+It can use \code{Rstudio}'s \code{manipulate} library or \code{Shiny}.
 }
 \details{
-This function must be run within \code{RStudio} (as it uses the
-\code{manipulate} library), and it allows the interactive manipulation of
-various parameters and ways of computing the CMA for a participant's event
-data.
-Please note that:
-\itemize{
-  \item the graphical interface may allow the user to change certain
-  parameters (such as considering carry over) even in the case of simple CMAs
-  that do not consider these parameters (such as CMA1 for carry over) -- in
-  this case changing these parameters has no effect;
-  \item for CMA-per-episode only, additional parameters can be accessed in
-  the interface regarding permissible gap length (days or percent) and
-  whether medication changes indicate new episodes
-  \item for sliding-window-CMA only, additional parameters can be accessed
-  in the interface regarding the sliding window start, duration and step.
-}
+The \code{manipulate} is kept for backward compatibility only, as it is much
+more limited than \code{Shiny} and will receive no new development in the
+future.
+\code{Shiny} currently allows the use of any other data source besides a
+default (and usual) \code{data.frame} (or derived), such a connection to an
+\code{SQL} database. In this case, the user \emph{must} redefine the three
+argument functions \code{get.colnames.fnc}, \code{get.patients.fnc} and
+\code{get.data.for.patients.fnc} which collectively define an interface for
+listing the column names, all the patient IDs, and for retreiving the actual
+data for a (set of) patient ID(s). A fully worked example is described in
+the vignette detailing the access to standard databases storaging the
+patient information.
 }
 \examples{
 \dontrun{

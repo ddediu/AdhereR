@@ -6,12 +6,16 @@
 \usage{
 \method{plot}{CMA0}(x, ..., patients.to.plot = NULL, duration = NA,
   align.all.patients = FALSE, show.period = c("dates", "days")[2],
-  period.in.days = 90, show.legend = TRUE, cex = 1, cex.axis = 0.75,
-  cex.lab = 1, col.cats = cm.colors, lty.event = "solid", lwd.event = 2,
-  pch.start.event = 15, pch.end.event = 16, col.continuation = "black",
-  lty.continuation = "dotted", lwd.continuation = 1, col.na = "lightgray",
-  bw.plot = FALSE, print.CMA = TRUE, plot.CMA = TRUE,
-  CMA.plot.ratio = 0.1)
+  period.in.days = 90, show.legend = TRUE, legend.x = "bottomright",
+  legend.y = NULL, legend.bkg.opacity = 0.5, cex = 1,
+  cex.axis = 0.75, cex.lab = 1, col.cats = rainbow,
+  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
+  pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
+  print.dose.outline.col = "white", print.dose.centered = FALSE,
+  plot.dose = FALSE, lwd.event.max.dose = 8,
+  col.continuation = "black", lty.continuation = "dotted",
+  lwd.continuation = 1, col.na = "lightgray", bw.plot = FALSE,
+  print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1)
 }
 \arguments{
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
@@ -41,15 +45,39 @@ drawn.}
 
 \item{show.legend}{\emph{Logical}, should the legend be drawn?}
 
+\item{legend.x, legend.y}{where should the legend be drawn (please see
+\code{legend} for details).}
+
+\item{legend.bkg.opacity}{\emph{numerc} value specifying the opacity of the
+legend's background.}
+
 \item{cex, cex.axis, cex.lab}{\emph{numeric} values specifying the cex of the
 various types of text.}
 
 \item{col.cats}{A \emph{color} or a \emph{function} that specifies the single
 colour or the colour palette used to plot the different medication; by
-default \code{cm.colors}.}
+default \code{rainbow}, but we recommend, whenever possible, a
+colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
+
+\item{print.dose}{\emph{Logical}, should the daily dose be printed as text?}
+
+\item{cex.dose}{\emph{Numeric}, if daily dose is printed, what text size
+to use?}
+
+\item{print.dose.outline.col}{If \emph{\code{NA}}, don't print dose text with
+outline, otherwise a color name/code for the outline.}
+
+\item{print.dose.centered}{\emph{Logical}, print the daily dose centered on
+the segment or slightly below it?}
+
+\item{plot.dose}{\emph{Logical}, should the daily dose be indicated through
+segment width?}
+
+\item{lwd.event.max.dose}{\emph{Numeric}, the segment width corresponding to
+the maximum daily dose (must be >= lwd.event but not too big either).}
 
 \item{col.continuation, lty.continuation, lwd.continuation}{The style of the
 "continuation" lines connecting consecutive events (colour, line style and
