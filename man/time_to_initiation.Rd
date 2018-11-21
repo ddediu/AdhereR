@@ -62,6 +62,16 @@ A \code{data.frame} or \code{data.table} with the following columns:
  \item \code{time.to.initialization} the difference in days between the first
  dispensing date and the  first prescription date.
  }
+ @examples
+ time_init <- time_to_initiation(presc.data = durcomp.prescribing,
+                                 disp.data = durcomp.dispensing,
+                                 ID.colname = "ID",
+                                 presc.start.colname = "DATE.PRESC",
+                                 disp.date.colname = "DATE.DISP",
+                                 medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
+                                 date.format = "%Y-%m-%d",
+                                 suppress.warnings = FALSE,
+                                 return.data.table = TRUE)
  @export
 }
 \description{

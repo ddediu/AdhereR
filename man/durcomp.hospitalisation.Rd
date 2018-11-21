@@ -3,34 +3,26 @@
 \docType{data}
 \name{durcomp.hospitalisation}
 \alias{durcomp.hospitalisation}
-\title{Example hospitalisation dataset.}
-\format{A data frame with 1080 rows and 5 variables:
+\title{Example hospitalization events for 10 patients.}
+\format{A data frame with 28 rows and 3 variables:
 \describe{
-  \item{PATIENT_ID}{\emph{integer} here; patient unique identifier. Can also
+  \item{ID}{\emph{integer} here; patient unique identifier. Can also
   be \emph{string}}.
-  \item{DATE}{\emph{character};the medication event date, by default in the
-  mm/dd/yyyy format. It may represent a prescribing or dispensing date.}
-  \item{PERDAY}{\emph{integer}; the daily dosage prescribed for the
-  medication supplied at this medication event (i.e. how many doses should
-  be taken daily according to the prescription). This column is optional,
-  as it is not considered in all functions but may be relevant for specific
-  research or clinical contexts. All values should be > 0.}
-  \item{CATEGORY}{\emph{character}; the medication type, here two placeholder
-  labels, 'medA' and 'medB'. This is a researcher-defined classification
-  depending on study aims (e.g., based on therapeutic use, mechanism of
-  action, chemical molecule, or pharmaceutical formulation). This column is
-  optional, as it is not considered in all functions but may be relevant for
-  specific research or clinical contexts.}
-  \item{DURATION}{\emph{integer}; the medication event duration in days (i.e.
-  how many days the mediation supplied would last if used as prescribed);
-  may be available in the extraction or computed based on quantity supplied
-  (the number of doses prescribed or dispensed on that occasion) and daily
-  dosage. All values should be > 0.}
+  \item{DATE.IN}{\emph{Date} here;the start of the hospitalization period, by default in the
+  yyyy-mm-dd format.Can also be \emph{string}.}
+  \item{DATE.OUT}{\emph{Date};the end of the hospitalization period, by default in the
+  yyyy-mm-dd format. Can also be \emph{string}.}
 }}
 \usage{
 durcomp.hospitalisation
 }
 \description{
-An artificial dataset containing XXX.
+A sample dataset containing hospitalization periods (one per row) for 10 patients
+over a period of roughly 18 months (28 events in total).
+This is the appropriate format to compute event durations with the
+\code{compute_event_durations} function. Each row represent an individual hospitalization period
+of a patient for whom event durations should be calculated. Besides hospitalizations, this could
+cover other situations where patients may not use their own supply, e.g. during incarcerations.
+All column names must match the format provided in this example.
 }
 \keyword{datasets}

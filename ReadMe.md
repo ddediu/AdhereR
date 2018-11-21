@@ -16,6 +16,11 @@ Feedback is welcome either directly by e-mailing us or by using GitHub's system 
 
 For what is new in each release, please see the `NEWS.md` file.
 
+Copyright (by period, in alphabetical order by family name; please see individual files for details) (C):
+
+  - 2015-2018: Alexandra Dima, Dan Dediu
+  - 2018: Samuel Allemann, Alexandra Dima, Dan Dediu
+
 -----
 
 <sup>1</sup> There might be a delay between the release of new versions here and their availability on CRAN; in this case, we would recommend, if possible, to wait for the version to appear on CRAN.

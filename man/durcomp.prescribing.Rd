@@ -3,34 +3,41 @@
 \docType{data}
 \name{durcomp.prescribing}
 \alias{durcomp.prescribing}
-\title{Example prescription dataset.}
-\format{A data frame with 1080 rows and 5 variables:
+\title{Example prescription events for 16 patients.}
+\format{A data table with 1502 rows and 8 variables:
 \describe{
-  \item{PATIENT_ID}{\emph{integer} here; patient unique identifier. Can also
-  be \emph{string}}.
-  \item{DATE}{\emph{character};the medication event date, by default in the
-  mm/dd/yyyy format. It may represent a prescribing or dispensing date.}
-  \item{PERDAY}{\emph{integer}; the daily dosage prescribed for the
-  medication supplied at this medication event (i.e. how many doses should
-  be taken daily according to the prescription). This column is optional,
-  as it is not considered in all functions but may be relevant for specific
-  research or clinical contexts. All values should be > 0.}
-  \item{CATEGORY}{\emph{character}; the medication type, here two placeholder
-  labels, 'medA' and 'medB'. This is a researcher-defined classification
+  \item{ID}{\emph{integer} here; patient unique identifier. Can also
+  be \emph{string}.}
+  \item{DATE.PRESC}{\emph{Date} here;the prescription event date, by default in the
+  yyyy-mm-dd format. Can also be \emph{string}.}
+  \item{VISIT}{\emph{integer}; the consecutive number of the prescription instances.
+  This column is optional and will be generated internally when not supplied. It is
+  used to identify treatment interruptions.}
+  \item{ATC.CODE}{\emph{character}; the medication type, according to the WHO ATC
+  classification system. This can be a researcher-defined classification
   depending on study aims (e.g., based on therapeutic use, mechanism of
-  action, chemical molecule, or pharmaceutical formulation). This column is
-  optional, as it is not considered in all functions but may be relevant for
-  specific research or clinical contexts.}
-  \item{DURATION}{\emph{integer}; the medication event duration in days (i.e.
-  how many days the mediation supplied would last if used as prescribed);
-  may be available in the extraction or computed based on quantity supplied
-  (the number of doses prescribed or dispensed on that occasion) and daily
-  dosage. All values should be > 0.}
+  action, chemical molecule, or pharmaceutical formulation). The \code{compute_event_durations}
+  function will match prescribed medication to dispensed medications based on this variable.}
+  \item{FORM}{\emph{character}; the galenic form of the prescribed preparation.
+  This is optional and can be used as a separate variable to match between prescription and
+  dispensing events.}
+  \item{UNIT}{\emph{integer}; the unit of the prescribed dose. This is optional and can be used
+  as a separate variable to match between prescription and dispensing events.}
+  \item{PRESC.DURATION}{\emph{numeric}; the duration (in days) for which the prescription
+  is intended. Can be \code{NA} if the prescription is continuous without a fixed end date.}
+  \item{DAILY.DOSE}{\emph{numeric}; the daily dose prescribed during this event (e.g., \code{50} for 1 tablet
+  of 50 mg per day or \code{25} for 1 tablet of 50 mg every two days).}
 }}
 \usage{
 durcomp.prescribing
 }
 \description{
-An artificial dataset containing XXX.
+A sample dataset containing prescription events (one per row) for 16 patients
+over a period of roughly 15 months (1502 events in total).
+This is the appropriate format to compute event durations with the
+\code{compute_event_durations} function. Each row represent an individual prescription
+record for a specific dose of a specific medication for a patient at a given date.
+Visit number and Duration are optional, and more than one column to group medications
+can be supplied (such as Form or Unit).
 }
 \keyword{datasets}

@@ -133,6 +133,25 @@ A \code{data.frame} or \code{data.table} with the following columns:
  \item \code{tot.dosage.changes} the total number of dosage changes per patient
  for a specific medication.
  }
+ @examples
+   event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+                                              presc.data = durcomp.prescribing,
+                                              hosp.data = durcomp.hospitalisation,
+                                              ID.colname = "ID",
+                                              presc.date.colname = "DATE.PRESC",
+                                              disp.date.colname = "DATE.DISP",
+                                              date.format = "%Y-%m-%d",
+                                              medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                              total.dose.colname = "TOTAL.DOSE",
+                                              presc.daily.dose.colname = "DAILY.DOSE",
+                                              presc.duration.colname = "PRESC.DURATION",
+                                              visit.colname = "VISIT",
+                                              force.init.presc = TRUE,
+                                              force.presc.renew = TRUE,
+                                              split.on.dosage.change = TRUE,
+                                              trt.interruption = "continue",
+                                              suppress.warnings = FALSE,
+                                              return.data.table = TRUE)
 }
 \description{
 Computes event durations based on dispensing, prescription, and hospitalization
