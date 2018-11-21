@@ -2,6 +2,7 @@
 #
 #    AdhereR: an R package for computing various estimates of medication adherence.
 #    Copyright (C) 2015-2018  Dan Dediu & Alexandra Dima
+#    Copyright (C) 2018  Dan Dediu, Alexandra Dima & Samuel Allemann
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -533,6 +534,17 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
   }
 }
 
+# Draws shadowed/outlined text (taken directly from TeachingDemos to reduced the dependencies on other packages):
+.shadow.text <- function(x, y=NULL, labels, col='white', bg='black', theta= seq(pi/4, 2*pi, length.out=8), r=0.1, ... )
+{
+
+	xy <- xy.coords(x,y);
+	xo <- r*strwidth('A');
+	yo <- r*strheight('A');
+
+	for (i in theta) text( xy$x + cos(i)*xo, xy$y + sin(i)*yo, labels, col=bg, ... );
+	text(xy$x, xy$y, labels, col=col, ... );
+}
 
 #' Plot CMA0 objects.
 #'
@@ -586,9 +598,21 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' various types of text.
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{cm.colors}.
+#' default \code{rainbow}, but we recommend, whenever possible, a
+#' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
+#' @param print.dose \emph{Logical}, should the daily dose be printed as text?
+#' @param cex.dose \emph{Numeric}, if daily dose is printed, what text size
+#' to use?
+#' @param print.dose.outline.col If \emph{\code{NA}}, don't print dose text with
+#' outline, otherwise a color name/code for the outline.
+#' @param print.dose.centered \emph{Logical}, print the daily dose centered on
+#' the segment or slightly below it?
+#' @param plot.dose \emph{Logical}, should the daily dose be indicated through
+#' segment width?
+#' @param lwd.event.max.dose \emph{Numeric}, the segment width corresponding to
+#' the maximum daily dose (must be >= lwd.event but not too big either).
 #' @param col.continuation,lty.continuation,lwd.continuation The style of the
 #' "continuation" lines connecting consecutive events (colour, line style and
 #' width).
@@ -629,8 +653,9 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                       show.legend=TRUE, legend.x="bottomright", legend.y=NULL, legend.bkg.opacity=0.5, # legend params and position (see ?legend for details)
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
-                      col.cats=cm.colors,                    # single color or a function mapping the categories to colors
+                      col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
+                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8, # show daily dose
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                       col.na="lightgray",                    # color for mising data
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
@@ -640,13 +665,15 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
 )
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
-  if( is.null(cma) || !inherits(cma, "CMA0") || is.null(cma$data) || nrow(cma$data) < 1 ||
+  if( is.null(cma) || !inherits(cma, "CMA0") || is.null(cma$data) || !inherits(cma$data, "data.frame") || nrow(cma$data) < 1 ||
       is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) ||
       is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) )
   {
     warning(paste0("Can only plot a correctly specified CMA0 object (i.e., with valid data and column names): cannot continue plotting!\n"));
     return (invisible(NULL));
   }
+
+  if( inherits(cma$data, "data.table") ) cma$data <- as.data.frame(cma$data); # guard against inconsistencies between data.table and data.frame in how they handle d[,i]
 
   # Check compatibility between subtypes of plots:
   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
@@ -685,7 +712,8 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   }
 
   # Make sure the patients are ordered by ID and date:
-  cma$data <- cma$data[ order( cma$data[,cma$ID.colname], Date.converted.to.DATE), ];
+  new.order <- order( cma$data[,cma$ID.colname], Date.converted.to.DATE);
+  cma$data <- cma$data[ new.order, ]; Date.converted.to.DATE <- Date.converted.to.DATE[ new.order ]; # make sure both the data and the cached dates are ordered in the same way
 
   # Grayscale plotting:
   if( bw.plot )
@@ -710,6 +738,17 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   }
   names(cols) <- categories;
   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
+
+  # Daily dose:
+  if( is.na(cma$event.daily.dose.colname) || !(cma$event.daily.dose.colname %in% names(cma$data)) )
+  {
+    print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
+  }
+  if( plot.dose )
+  {
+    dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
+  }
 
   # Find the earliest date:
   earliest.date <- min(Date.converted.to.DATE);
@@ -745,14 +784,38 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   plot( 0, 1, xlim=c(0,duration.total), ylim=c(0,nrow(cma$data)+1), type="n", xaxs="i", yaxs="i",
         main=ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
         axes=FALSE, xlab=ifelse(show.period=="dates","","days"), ylab=ifelse(print.CMA && !is.null(getCMA(cma)),"patient (& CMA)","patient"), cex.lab=cex.lab ); box();
+  if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
   curpat <- TRUE;
   for( i in 1:nrow(cma$data) )
   {
     start <- as.numeric(difftime(Date.converted.to.DATE[i], earliest.date, "days" ) );
     end <- start + cma$data[i,cma$event.duration.colname];
-    col <- .map.category.to.color(ifelse(is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)),"unspec. type",cma$data[i,cma$medication.class.colname]));
+    if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
+    {
+      col <- .map.category.to.color("unspec. type");
+    } else
+    {
+      col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
+    }
     points( adh.plot.space[2]+start, i, pch=pch.start.event, col=col, cex=cex); points(adh.plot.space[2]+end, i, pch=pch.end.event, col=col, cex=cex);
-    segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
+    if( plot.dose )
+    {
+      segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+    } else
+    {
+      segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
+    }
+    if( print.dose ) # print daily dose
+    {
+      dose.text.y <- i - ifelse(print.dose.centered,0 , dose.text.height*2/3); # print it on or below the dose segment?
+      if( is.na(print.dose.outline.col) ) # simple or outlined?
+      {
+        text(adh.plot.space[2]+(start + end)/2, dose.text.y, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
+      } else
+      {
+        .shadow.text(adh.plot.space[2]+(start + end)/2, dose.text.y, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
+      }
+    }
 
     if( i < nrow(cma$data) )
     {
@@ -2399,7 +2462,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
                            cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                            show.cma=TRUE,                         # show the CMA type
-                           col.cats=cm.colors,         # single color or a function mapping the categories to colors
+                           col.cats=rainbow,                      # single color or a function mapping the categories to colors
                            unspecified.category.label="drug",     # the label of the unspecified category of medication
                            lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                            show.event.intervals=TRUE,             # show the actual rpescription intervals
@@ -2412,8 +2475,9 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            highlight.followup.window=TRUE, followup.window.col="green",
                            highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                            show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
+                           print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8,
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                           min.plot.size.in.characters.horiz=20, min.plot.size.in.characters.vert=15,  # the minimum plot size (in character)
+                           min.plot.size.in.characters.horiz=15, min.plot.size.in.characters.vert=10,  # the minimum plot size (in character)
                            max.patients.to.plot=100,        # maximum number of patients to plot
                            ...
 )
@@ -2483,6 +2547,17 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   names(cols) <- categories;
   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
 
+  # Daily dose:
+  if( is.na(cma$event.daily.dose.colname) || !(cma$event.daily.dose.colname %in% names(cma$data)) )
+  {
+    print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
+  }
+  if( plot.dose )
+  {
+    dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
+  }
+
   # Find the earliest date:
   earliest.date <- min(cma$event.info$.DATE.as.Date, cma$event.info$.OBS.START.DATE, cma$event.info$.FU.START.DATE);
 
@@ -2531,6 +2606,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     cat(msg);
     return (invisible(NULL));
   }
+
+  if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
 
   # Character height and width in the current plotting system:
   char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
@@ -2677,10 +2754,22 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   {
     start <- as.numeric(cma$event.info$.DATE.as.Date[i] - earliest.date);
     end <- start + cma$event.info[i,cma$event.duration.colname];
-    col <- .map.category.to.color(ifelse(is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)),unspecified.category.label,cma$event.info[i,cma$medication.class.colname]));
+    if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
+    {
+      col <- .map.category.to.color(unspecified.category.label);
+    } else
+    {
+      col <- .map.category.to.color(cma$event.info[i,cma$medication.class.colname]);
+    }
     points( adh.plot.space[2]+start+correct.earliest.followup.window, i, pch=pch.start.event, col=col, cex=cex);
     points(adh.plot.space[2]+end+correct.earliest.followup.window, i, pch=pch.end.event, col=col, cex=cex);
-    segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
+    if( plot.dose )
+    {
+      segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+    } else
+    {
+      segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
+    }
 
     if( show.event.intervals && !is.na(cma$event.info$event.interval[i]) )
     {
@@ -2692,6 +2781,29 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         rect(adh.plot.space[2]+end.pi+correct.earliest.followup.window, i-char.height/2,
              adh.plot.space[2]+end.pi+cma$event.info$gap.days[i]+correct.earliest.followup.window, i+char.height/2,
              density=25, col=adjustcolor(col,alpha.f=0.5), border=col);
+    }
+
+    if( print.dose ) # print daily dose
+    {
+      if( !print.dose.centered ) # print it on or to the left of the dose segment?
+      {
+        if( is.na(print.dose.outline.col) ) # simple or outlined?
+        {
+          text(adh.plot.space[2]+start+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, pos=2, offset=0.25);
+        } else
+        {
+          .shadow.text(adh.plot.space[2]+start+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col, pos=2, offset=0.25);
+        }
+      } else
+      {
+        if( is.na(print.dose.outline.col) ) # simple or outlined?
+        {
+          text(adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
+        } else
+        {
+          .shadow.text(adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
+        }
+      }
     }
 
     if( i < nrow(cma$event.info) )
@@ -3280,7 +3392,8 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{cm.colors}.
+#' default \code{rainbow}, but we recommend, whenever possible, a
+#' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -3306,6 +3419,17 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' (colour, shading density and angle).
 #' @param show.real.obs.window.start,real.obs.window.density,real.obs.window.angle For some CMAs, the observation window might
 #' be adjusted, in which case should it be plotted and with that attributes?
+#' @param print.dose \emph{Logical}, should the daily dose be printed as text?
+#' @param cex.dose \emph{Numeric}, if daily dose is printed, what text size
+#' to use?
+#' @param print.dose.outline.col If \emph{\code{NA}}, don't print dose text with
+#' outline, otherwise a color name/code for the outline.
+#' @param print.dose.centered \emph{Logical}, print the daily dose centered on
+#' the segment or slightly below it?
+#' @param plot.dose \emph{Logical}, should the daily dose be indicated through
+#' segment width?
+#' @param lwd.event.max.dose \emph{Numeric}, the segment width corresponding to
+#' the maximum daily dose (must be >= lwd.event but not too big either).
 #' @param ... other possible parameters
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -3329,7 +3453,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       show.cma=TRUE,                         # show the CMA type
-                      col.cats=cm.colors,         # single color or a function mapping the categories to colors
+                      col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       show.event.intervals=TRUE,             # show the actual rpescription intervals
@@ -3341,6 +3465,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       highlight.followup.window=TRUE, followup.window.col="green",
                       highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                       show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
+                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8,
                       bw.plot=FALSE                          # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                      )
 .plot.CMA1plus(cma=x,
@@ -3375,6 +3500,8 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                observation.window.angle=observation.window.angle,
                show.real.obs.window.start=show.real.obs.window.start,
                real.obs.window.density=real.obs.window.density, real.obs.window.angle=real.obs.window.angle,
+               print.dose=print.dose, cex.dose=cex.dose, print.dose.outline.col=print.dose.outline.col, print.dose.centered=print.dose.centered,
+               plot.dose=plot.dose, lwd.event.max.dose,
                bw.plot=bw.plot,
                ...)
 
@@ -6595,7 +6722,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                                show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
                                cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                                show.cma=TRUE,                         # show the CMA type
-                               col.cats=cm.colors,         # single color or a function mapping the categories to colors
+                               col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                unspecified.category.label="drug",     # the label of the unspecified category of medication
                                lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                                show.event.intervals=TRUE,             # show the actual rpescription intervals
@@ -6959,7 +7086,13 @@ print.CMA_per_episode <- function(x,                                     # the C
   {
     start <- as.numeric(cma$data$.DATE.as.Date[i] - earliest.date);
     end <- start + cma$data[i,cma$event.duration.colname];
-    col <- .map.category.to.color(ifelse(is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)),unspecified.category.label,cma$data[i,cma$medication.class.colname]));
+    if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
+    {
+      col <- .map.category.to.color(unspecified.category.label);
+    } else
+    {
+      col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
+    }
     points( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur, pch=pch.start.event, col=col, cex=cex);
     points(adh.plot.space[2]+end+correct.earliest.followup.window, y.cur, pch=pch.end.event, col=col, cex=cex);
     segments( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur, col=col, lty=lty.event, lwd=lwd.event);
@@ -7228,7 +7361,8 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
-#' default \code{cm.colors}.
+#' default \code{rainbow}, but we recommend, whenever possible, a
+#' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -7313,7 +7447,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
                                  cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                                  show.cma=TRUE,                         # show the CMA type
-                                 col.cats=cm.colors,         # single color or a function mapping the categories to colors
+                                 col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                  unspecified.category.label="drug",     # the label of the unspecified category of medication
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                                  show.event.intervals=TRUE,             # show the actual rpescription intervals
@@ -7948,32 +8082,31 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #'
 #' Interactively plot a given patient's data, allowing the real-time exploration
 #' of the various CMAs and their parameters.
-#' It is not intended for heavy use but simply for the exploration of various
-#' parameters and ways of computing the CMA. The interface is constrained by the
-#' current limitations of the \code{manipulate} library.
+#' It can use \code{Rstudio}'s \code{manipulate} library or \code{Shiny}.
 #'
-#' This function must be run within \code{RStudio} (as it uses the
-#' \code{manipulate} library), and it allows the interactive manipulation of
-#' various parameters and ways of computing the CMA for a participant's event
-#' data.
-#' Please note that:
-#' \itemize{
-#'   \item the graphical interface may allow the user to change certain
-#'   parameters (such as considering carry over) even in the case of simple CMAs
-#'   that do not consider these parameters (such as CMA1 for carry over) -- in
-#'   this case changing these parameters has no effect;
-#'   \item for CMA-per-episode only, additional parameters can be accessed in
-#'   the interface regarding permissible gap length (days or percent) and
-#'   whether medication changes indicate new episodes
-#'   \item for sliding-window-CMA only, additional parameters can be accessed
-#'   in the interface regarding the sliding window start, duration and step.
-#' }
+#' The \code{manipulate} is kept for backward compatibility only, as it is much
+#' more limited than \code{Shiny} and will receive no new development in the
+#' future.
+#' \code{Shiny} currently allows the use of any other data source besides a
+#' default (and usual) \code{data.frame} (or derived), such a connection to an
+#' \code{SQL} database. In this case, the user \emph{must} redefine the three
+#' argument functions \code{get.colnames.fnc}, \code{get.patients.fnc} and
+#' \code{get.data.for.patients.fnc} which collectively define an interface for
+#' listing the column names, all the patient IDs, and for retreiving the actual
+#' data for a (set of) patient ID(s). A fully worked example is described in
+#' the vignette detailing the access to standard databases storaging the
+#' patient information.
 #'
-#' @param data A \emph{\code{data.frame}} containing the events (prescribing or
-#' dispensing) used to compute the CMA. Must contain, at a minimum, the patient
+#' @param data Usually a \emph{\code{data.frame}} containing the events (prescribing
+#' or dispensing) used to compute the CMA. Must contain, at a minimum, the patient
 #' unique ID, the event date and duration, and might also contain the daily
 #' dosage and medication type (the actual column names are defined in the
-#' following four parameters).
+#' following four parameters). Alternatively, this can be any other data source
+#' (for example, a connection to a database), in which case the user must redefine
+#' the arguments \code{get.colnames.fnc}, \code{get.patients.fnc} and
+#' \code{get.data.for.patients.fnc} appropriately. Currently, this works only when
+#' using Shiny for interactive rendering. For a working example, please see
+#' the vignette describing the interfacing with databases.
 #' @param ID The ID (as given in the \code{ID.colname} column) of the patient
 #' whose data to interactively plot (if absent, pick the first one); please not
 #' that this an be interactively selected during plotting.
@@ -8020,6 +8153,16 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #' use the Shiny framework, while "rstudio" uses the manipulate RStudio
 #' capability.
 #' @param use.system.browser For shiny, use the system browser?
+#' @param get.colnames.fnc A \emph{function} taking as parameter the data source
+#' and returning the column names. Must be overridden when the data source is
+#' not derived from a \code{data.frame}.
+#' @param get.patients.fnc A \emph{function} taking as parameter the data source
+#' and the patient ID column name, and returns the list of all patient IDs.
+#' Must be overridden when the data source is not derived from a \code{data.frame}.
+#' @param get.data.for.patients.fnc A \emph{function} taking as parameter a (set
+#' of) patient ID(s), the data source, and the patient ID column name, and returns
+#' the list of all patient IDs. Must be overridden when the data source is not
+#' derived from a \code{data.frame}.
 #' @param ... Extra arguments.
 #' @return Nothing
 #' @examples
@@ -8050,6 +8193,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   sliding.window.step.duration.max=2*365, # in days
                                   backend=c("shiny","rstudio"), # the interactive backend to use
                                   use.system.browser=FALSE, # if shiny backend, use the system browser?
+                                  get.colnames.fnc=function(d) names(d),
+                                  get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
+                                  get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
                                   ...
 )
 {
@@ -8076,6 +8222,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 sliding.window.duration.max=sliding.window.duration.max,
                                 sliding.window.step.duration.max=sliding.window.step.duration.max,
                                 use.system.browser=use.system.browser,
+                                get.colnames.fnc=get.colnames.fnc,
+                                get.patients.fnc=get.patients.fnc,
+                                get.data.for.patients.fnc=get.data.for.patients.fnc,
                                 ...
     );
   } else if( backend == "rstudio" )
@@ -8546,6 +8695,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                         sliding.window.duration.max=2*365, # in days
                                         sliding.window.step.duration.max=2*365, # in days
                                         use.system.browser=FALSE, # by default, don't necessarily use the system browser
+                                        get.colnames.fnc=function(d) names(d),
+                                        get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
+                                        get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
                                         ...
 )
 {
@@ -8563,38 +8715,46 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   {
     # data's class and dimensions:
     if( class(data) == "matrix" ) data <- as.data.frame(data); #make it a data.frame
-    if( !inherits(data, "data.frame") )
-    {
-      stop("The 'data' must be of type 'data.frame'!\n");
-      return (NULL);
-    }
-    if( nrow(data) < 1 )
-    {
-      stop("The 'data' must have at least one row!\n");
-      return (NULL);
-    }
+    #if( !inherits(data, "data.frame") )
+    #{
+    #  stop("The 'data' must be of type 'data.frame'!\n");
+    #  return (NULL);
+    #}
+    #if( nrow(data) < 1 )
+    #{
+    #  stop("The 'data' must have at least one row!\n");
+    #  return (NULL);
+    #}
     # the column names must exist in data:
-    if( !is.na(ID.colname) && !(ID.colname %in% names(data)) )
+    column.names <- get.colnames.fnc(data);
+    if( !is.na(ID.colname) && !(ID.colname %in% column.names) )
     {
       stop(paste0("Column ID.colname='",ID.colname,"' must appear in the 'data'!\n"));
       return (NULL);
     }
-    if( !is.na(event.date.colname) && !(event.date.colname %in% names(data)) )
+    # get the patients:
+    all.IDs <- sort(get.patients.fnc(data, ID.colname));
+    if( length(all.IDs) < 1 )
+    {
+      stop("The 'data' must contain at least one patient!\n");
+      return (NULL);
+    }
+    if( !is.na(event.date.colname) && !(event.date.colname %in% column.names) )
     {
       stop(paste0("Column event.date.colname='",event.date.colname,"' must appear in the 'data'!\n"));
       return (NULL);
     }
-    if( !is.na(event.duration.colname) && !(event.duration.colname %in% names(data)) )
+    if( !is.na(event.duration.colname) && !(event.duration.colname %in% column.names) )
     {
       stop(paste0("Column event.duration.colname='",event.duration.colname,"' must appear in the 'data'!\n"));
       return (NULL);
     }
-    if( !is.na(event.daily.dose.colname) && !(event.daily.dose.colname %in% names(data)) )
+    if( !is.na(event.daily.dose.colname) && !(event.daily.dose.colname %in% column.names) )
     {
       stop(paste0("Column event.daily.dose.colname='",event.daily.dose.colname,"' must appear in the 'data'!\n"));
       return (NULL);
     }
-    if( !is.na(medication.class.colname) && !(medication.class.colname %in% names(data)) )
+    if( !is.na(medication.class.colname) && !(medication.class.colname %in% column.names) )
     {
       stop(paste0("Column medication.class.colname='",medication.class.colname,"' must appear in the 'data'!\n"));
       return (NULL);
@@ -8605,8 +8765,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     return (NULL);
   }
 
-  # All patient IDs:
-  all.IDs <- sort(unique(data[,ID.colname]));
+  # Check the requested ID (if any):
   if( is.null(ID) || is.na(ID) || !(ID %in% all.IDs) ) ID <- all.IDs[1];
 
   # The function encapsulating the plotting:
@@ -8644,9 +8803,12 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             sliding.window.no.steps=NA, # the number of steps to jump; if both sliding.win.no.steps & sliding.win.duration are NA, fill the whole observation window
                             plot.CMA.as.histogram=TRUE, # plot the CMA as historgram or density plot?
                             align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
-
                             # Legend:
-                            show.legend=TRUE # show the legend?
+                            show.legend=TRUE, # show the legend?
+                            # Data accessor functions:
+                            get.colnames.fnc=function(d) names(d),
+                            get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
+                            get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ]
   )
   {
     # Progress messages:
@@ -8684,7 +8846,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     cat("\n");
 
     # Preconditions:
-    if( is.null(ID) || is.null(data <- data[data[,ID.colname] %in% ID,]) || nrow(data)==0 )
+    if( is.null(ID) || is.null(data <- get.data.for.patients.fnc(ID, data, ID.colname)) || nrow(data)==0 )
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
       return (invisible(NULL));
@@ -8780,6 +8942,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       "sliding.window.step.duration.max"=sliding.window.step.duration.max,
                                       "align.all.patients"=align.all.patients,
                                       "align.first.event.at.zero"=align.first.event.at.zero,
+                                      "get.colnames.fnc"=get.colnames.fnc,
+                                      "get.patients.fnc"=get.patients.fnc,
+                                      "get.data.for.patients.fnc"=get.data.for.patients.fnc,
                                       ".plotting.fnc"=.plotting.fnc
                                      );
   # make sure they are deleted on exit from shiny:

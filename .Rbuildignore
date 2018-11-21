@@ -1,5 +1,9 @@
+^Meta$
+^doc$
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^ReadMe\.md$
 ^NEWS\.md$
+^Tricks\.md$
 ^tests$
+

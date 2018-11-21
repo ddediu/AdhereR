@@ -12,7 +12,7 @@
 
 <meta name="author" content="Dan Dediu" />
 
-<meta name="date" content="2018-06-08" />
+<meta name="date" content="2018-11-21" />
 
 <title>Calling AdhereR from Python 3</title>
 
@@ -70,7 +70,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">Calling <code>AdhereR</code> from <code>Python 3</code></h1>
 <h4 class="author"><em>Dan Dediu</em></h4>
-<h4 class="date"><em>2018-06-08</em></h4>
+<h4 class="date"><em>2018-11-21</em></h4>
 
 
 
@@ -663,7 +663,7 @@ Out[<span class="dv">18</span>]:
 </div>
 <div id="parallel-on-remote-machines-over-a-network" class="section level5">
 <h5>Parallel on remote machines over a network</h5>
-<p>Sometimes it is better to use one or more powerful machines over a network to do very expensive computations, usually, a <code>Linux</code> cluster from a <code>Windows</code>/<code>macos</code> laptop. <code>AdhereR</code> leverages the power of <code>R</code>’s <a href="https://cran.r-project.org/web/packages/snow/index.html"><code>snow</code></a> package (as exposed through the <code>parallel</code> package) to distribute workloads across a network of computing nodes. There are several types of “Simple Network of Workstations” (<code>snow</code>), described in the package’s manual. For example, one may use an already existing <code>MPI</code> (<a href="https://en.wikipedia.org/wiki/Message_Passing_Interface">Message Passing Interface</a>) cluster, but an even simpler setup (and the one that we will illustrate here) involves a <em>collection of machines</em> running <code>Linux</code> and connected to a network (local or even over the Internet).</p>
+<p>Sometimes it is better to use one or more powerful machines over a network to do very expensive computations, usually, a <code>Linux</code> cluster from a <code>Windows</code>/<code>macos</code> laptop. <code>AdhereR</code> leverages the power of <code>R</code>’s <a href="https://CRAN.R-project.org/package=snow"><code>snow</code></a> package (as exposed through the <code>parallel</code> package) to distribute workloads across a network of computing nodes. There are several types of “Simple Network of Workstations” (<code>snow</code>), described in the package’s manual. For example, one may use an already existing <code>MPI</code> (<a href="https://en.wikipedia.org/wiki/Message_Passing_Interface">Message Passing Interface</a>) cluster, but an even simpler setup (and the one that we will illustrate here) involves a <em>collection of machines</em> running <code>Linux</code> and connected to a network (local or even over the Internet).</p>
 <p>The machines are called <code>workhorse1</code> and <code>workhorse2</code>, have differen hardware configurations (both sport quad-core i7 CPUs of different generations with 16Gb RAM) but run the same version of <code>Ubuntu 16.04</code> and <code>R 3.4.2</code> (not a requirement, as the architecture can be seriously heterogeneous, combining different OS’s and versions of <code>R</code>). These two machines are connected to the same WiFi router (but they could be on different networks or even across the Internet). The “master” is the same <code>macOS</code> laptop used before, connected to the same WiFi router (not a requirement).</p>
 <p>As pre-requisites, the worker machines should allow <a href="https://help.ubuntu.com/community/SSH/OpenSSH/Configuring"><code>SSH</code></a> access (for easiness, we use here <em>passwordless SSH access</em> from the “master”; see for example <a href="http://www.linuxproblem.org/art_9.html">here</a> for this setup) and should have the <code>snow</code> package installed in <code>R</code>. Let’s assume that the username allowing <code>ssh</code> into the workers is <code>user</code>, so that</p>
 <div class="sourceCode"><pre class="sourceCode bash"><code class="sourceCode bash"><span class="ex">laptop</span>:~<span class="op">&gt;</span> ssh user@workhorse1</code></pre></div>

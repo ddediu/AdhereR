@@ -7,19 +7,21 @@
 \usage{
 \method{plot}{CMA_per_episode}(x, ..., patients.to.plot = NULL,
   duration = NA, align.all.patients = FALSE,
-  align.first.event.at.zero = TRUE, show.period = c("dates", "days")[2],
-  period.in.days = 90, show.legend = TRUE, legend.x = "right",
-  legend.y = "bottom", legend.bkg.opacity = 0.5, cex = 1,
-  cex.axis = 0.75, cex.lab = 1, show.cma = TRUE, col.cats = cm.colors,
-  unspecified.category.label = "drug", lty.event = "solid", lwd.event = 2,
-  pch.start.event = 15, pch.end.event = 16, show.event.intervals = TRUE,
+  align.first.event.at.zero = TRUE, show.period = c("dates",
+  "days")[2], period.in.days = 90, show.legend = TRUE,
+  legend.x = "right", legend.y = "bottom", legend.bkg.opacity = 0.5,
+  cex = 1, cex.axis = 0.75, cex.lab = 1, show.cma = TRUE,
+  col.cats = rainbow, unspecified.category.label = "drug",
+  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
+  pch.end.event = 16, show.event.intervals = TRUE,
   col.na = "lightgray", col.continuation = "black",
-  lty.continuation = "dotted", lwd.continuation = 1, print.CMA = TRUE,
-  CMA.cex = 0.5, plot.CMA = TRUE, plot.CMA.as.histogram = TRUE,
-  CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
-  CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
-  CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
-  followup.window.col = "green", highlight.observation.window = TRUE,
+  lty.continuation = "dotted", lwd.continuation = 1,
+  print.CMA = TRUE, CMA.cex = 0.5, plot.CMA = TRUE,
+  plot.CMA.as.histogram = TRUE, CMA.plot.ratio = 0.1,
+  CMA.plot.col = "lightgreen", CMA.plot.border = "darkgreen",
+  CMA.plot.bkg = "aquamarine", CMA.plot.text = CMA.plot.border,
+  highlight.followup.window = TRUE, followup.window.col = "green",
+  highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
   observation.window.angle = -30, show.real.obs.window.start = TRUE,
   real.obs.window.density = 35, real.obs.window.angle = 30,
@@ -74,7 +76,8 @@ various types of text.}
 
 \item{col.cats}{A \emph{color} or a \emph{function} that specifies the single
 colour or the colour palette used to plot the different medication; by
-default \code{cm.colors}.}
+default \code{rainbow}, but we recommend, whenever possible, a
+colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.}
 
 \item{unspecified.category.label}{A \emph{string} giving the name of the
 unspecified (generic) medication category.}

@@ -8,10 +8,18 @@ output:
     toc_depth: 4
 fig_caption: yes
 vignette: >
+  %\VignetteEncoding{UTF-8}
   %\VignetteIndexEntry{AdhereR: Adherence to Medications}
   %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+editor_options: 
+  chunk_output_type: console
 ---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+# Various Rmarkdown output options:
+# center figures and reduce their file size:
+knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg"); 
+```
 
 Estimating the *adherence to medications* from *electronic healthcare data* (EHD) has been central to research and clinical practice across clinical conditions. 
 For example, large retrospective database studies may estimate the prevalence of non-adherence in specific patient groups and model its potential predictors and impact on health outcomes, while clinicians may have access to individual patient records that flag up possible non-adherence for further clinical investigation and intervention. 
@@ -109,6 +117,7 @@ Patient `76` had a more variable pattern, including medication, daily dosage and
 ```{r, echo=TRUE, results='asis'}
 # Load the AdhereR library:
 library(AdhereR);
+
 # Select the two patients with IDs 37 and 76 from the built-in dataset "med.events":
 ExamplePats <- med.events[med.events$PATIENT_ID %in% c(37, 76), ];
 # Display them as pretty markdown table:
@@ -121,7 +130,7 @@ A first step towards deciding which algorithm is appropriate for these data is t
 We do this by creating an object of type `CMA0` for the two example patients, and plotting it. 
 This type of plots can of course be created for a much bigger subsample of patients and saved as as a `JPEG`, `PNG`, `TIFF`, `EPS` or `PDF` file using `R`'s plotting system for data exploration.
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1\"></a>**Figure 1.** Medication histories - two example patients", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1\"></a>**Figure 1.** Medication histories - two example patients", fig.height=6, fig.width=8, out.width="100%"}
 # Create an object "cma0" of the most basic CMA type, "CMA0":
 cma0 <- CMA0(data=ExamplePats, # use the two selected patients
              ID.colname="PATIENT_ID", # the name of the column containing the IDs
@@ -142,6 +151,14 @@ We can see that patient `76` had an interruption of more than 100 days between t
 Patient `37` had shorter gaps between consecutive events, but very little overlap in supplies. 
 For patient `76`, the switch to `medB` happened while the `medA` supply was still available, then a switch back to `medA` happened later, at the end of the second year. 
 For patient `37`, there was a single medication switch (to `medB`) without an overlap at that point.
+
+Sometimes it is useful to also see the daily dose:
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1a\"></a>**Figure 1 (a).** Same plot as in **Figure 1**, but also showing the daily doses as numbers and as line thickness", fig.height=6, fig.width=8, out.width="100%"}
+# Same plot as above but also showing the daily doses:
+plot(cma0, # the object to plot
+     print.dose=TRUE, plot.dose=TRUE,
+     align.all.patients=TRUE); # align all patients for easier comparison
+```
 
 These observations highlight several decision points in calculating persistence and adherence, which need to be informed by the clinical context of the study:
 
@@ -294,7 +311,7 @@ The object includes all the parameter values with which it was created, as well 
 The CMA estimates appear as ratios, but can be trivially transformed into percentages and rounded, as we did for patient `76` below (rounded to 2 decimals). 
 The plots show the CMA as percentage rounded to 1 decimal.
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-2\"></a>**Figure 2.** Simple CMA 1", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-2\"></a>**Figure 2.** Simple CMA 1", fig.height=5, fig.width=7, out.width="100%"}
 # Create the CMA1 object with the given parameters:
 cma1 <- CMA1(data=ExamplePats,
              ID.colname="PATIENT_ID",
@@ -327,7 +344,7 @@ One limitation is not considering the last event -- which represents almost a ha
 To address this limitation, *CMA2* includes the duration of the last event in the numerator and the period from the last event to the end of the OW in the denominator. 
 Thus, the estimate [Figure 3](#Figure-3) is 77.9%, more in line with the medication history of this patient in the year after the intervention.
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-3\"></a>**Figure 3.** Simple CMA 2", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-3\"></a>**Figure 3.** Simple CMA 2", fig.height=5, fig.width=7, out.width="100%"}
 cma2 <- CMA2(data=ExamplePats, # we're estimating CMA2 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -349,7 +366,7 @@ Again, this is a matter of inquiry to the advisory committee or investigation in
 If it is likely that implementation does not exceed 100% (or does not make a difference if it does), *CMA3* and *CMA4* below adjust for this by capping CMA1 and CMA2 respectively to 100%. 
 As shown in [Figures 4](#Figure-4) and [5](#Figure-5), CMA3 is now capped at 100%, and CMA4 remains the same as CMA2 (because it was already lower than 100%). 
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-4\"></a>**Figure 4.** Simple CMA 3", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-4\"></a>**Figure 4.** Simple CMA 3", fig.height=5, fig.width=7, out.width="100%"}
 cma3 <- CMA3(data=ExamplePats, # we're estimating CMA3 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -361,7 +378,7 @@ plot(cma3, patients.to.plot=c("76"), show.legend=FALSE);
 ```
 
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5.** Simple CMA 4", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5.** Simple CMA 4", fig.height=5, fig.width=7, out.width="100%"}
 cma4 <- CMA4(data=ExamplePats, # we're estimating CMA4 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -385,7 +402,7 @@ Both are set here as `FALSE`, to specify the fact that carry over should always 
 As shown in [Figures 6](#Figure-6) and [7](#Figure-7), these alternative calculations do not make any difference for patient `76`, because there are no gaps between the 5 events in the OW highighted. 
 There could be, however, situations in which large gaps between some events in the OW result in lower CMA estimates when considering timing of events.
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6.** Simple CMA 5", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6.** Simple CMA 5", fig.height=5, fig.width=7, out.width="100%"}
 cma5 <- CMA5(data=ExamplePats, # we're estimating CMA5 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -400,7 +417,7 @@ cma5 <- CMA5(data=ExamplePats, # we're estimating CMA5 now!
 plot(cma5,patients.to.plot=c("76"), show.legend=FALSE);
 ```
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-7\"></a>**Figure 7.** Simple CMA 6", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-7\"></a>**Figure 7.** Simple CMA 6", fig.height=5, fig.width=7, out.width="100%"}
 cma6 <- CMA6(data=ExamplePats, # we're estimating CMA6 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -415,6 +432,15 @@ cma6 <- CMA6(data=ExamplePats, # we're estimating CMA6 now!
 plot(cma6,patients.to.plot=c("76"), show.legend=FALSE);
 ```
 
+Sometimes it is useful to also see the daily dose:
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1a\"></a>**Figure 7 (a).** Same plot as in **Figure 7**, but also showing the daily doses as numbers and as line thickness", fig.height=6, fig.width=8, out.width="100%"}
+# Same plot as above but also showing the daily doses:
+plot(cma6, # the object to plot
+     patients.to.plot=c("76"), # plot only patient 76 
+     print.dose=TRUE, plot.dose=TRUE,
+     legend.x=520); # place the legend in a nice way
+```
+
 #### CMA7
 All CMAs so far have another limitation: they do not consider the interval between the start of the OW and the first event within the OW. 
 For situations in which the OW start coincides with the treatment episode start, this limitation has no consequences. 
@@ -426,7 +452,7 @@ And second, if there is any medication supply left from before the OW start, thi
 The same paremeters are available to specify whether this depends on the type of medication and considers dosage changes (applied now to both types of carry over). 
 [Figure 8](#Figure-8) shows how considering the period at the OW start and the prior supply reduces CMA7 to 69%, due to the gap visible in the medication history plot between the event before the OW and the first event within the OW.
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-8\"></a>**Figure 8.** Simple CMA 7", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-8\"></a>**Figure 8.** Simple CMA 7", fig.height=5, fig.width=7, out.width="100%"}
 cma7 <- CMA7(data=ExamplePats, # we're estimating CMA7 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -449,7 +475,7 @@ But there is still some `medA` left, so it is likely that the patient finished t
 [Figure 9](#Figure-9) shows how the OW is shortened with the number of days it would have taken to finish the remaining `medA` (assuming use as prescribed); *CMA8* is quite low 36.1%, given the long gaps between medB events.
 In a future version, it might be interesting to implement the possibility to also move the end of OW so that its length is preserved.
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-9\"></a>**Figure 9.** Simple CMA 8", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-9\"></a>**Figure 9.** Simple CMA 8", fig.height=5, fig.width=7, out.width="100%"}
 cma8 <- CMA8(data=ExamplePats, # we're estimating CMA8 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -476,7 +502,7 @@ For the same scenario as in CMA1 to CMA7, [Figure 10](#Figure-10) shows the esti
 This value would be the same no matter if the OW starts slightly earlier or later, because CMA9 considers the same intervals between events (the one starting before and the one ending after the OW). 
 Thus, it depends less on the actual date when the OW starts.
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-10\"></a>**Figure 10.** Simple CMA 9", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-10\"></a>**Figure 10.** Simple CMA 9", fig.height=5, fig.width=7, out.width="100%"}
 cma9 <- CMA9(data=ExamplePats, # we're estimating CMA9 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -509,7 +535,7 @@ The `CMA_per_episode` values can also be transformed into percentages and rounde
 Plots now include an extra section at the top, where each episode is shown as a horizontal bar of length equal to the episode duration, and the corresponding CMA estimates are given both as percentage (rounded to 1 decimal) and as a grey area. 
 An extra area on the right of the plot displays the distribution of all CMA values for the whole FUW as a histogram or as smoothed kernel density (see [Figure 11](#Figure-11)).
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%"}
 cmaE <- CMA_per_episode(CMA="CMA9", # apply the simple CMA9 to each treatment episode
                         data=ExamplePats,
                         ID.colname="PATIENT_ID",
@@ -554,7 +580,7 @@ In such cases, we might want to compare successive intervals, for example 4-mont
 A similar output is produced as for `CMA_per_episode`, including a CMA table (with patient ID, window ID, window start and end dates, and the CMA estimate). 
 [Figure 12](#Figure-12) shows the results of CMA9 for patient `76`: 6 sliding windows of 4 months, among which 2 have a CMA higher than 80%, two have values around 60% and two around 40%, suggesting a variable quality of implementation. 
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-12\"></a>**Figure 12.** Sliding window CMA 9", fig.height=5, fig.width=7}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-12\"></a>**Figure 12.** Sliding window CMA 9", fig.height=5, fig.width=7, out.width="100%"}
 cmaW <- CMA_sliding_window(CMA.to.apply="CMA9", # apply the simple CMA9 to each sliding window
                            data=ExamplePats,
                            ID.colname="PATIENT_ID",
@@ -593,7 +619,7 @@ This can for example be used to estimate the variation of adherence (implementat
 The patient's quality of implementation oscillated between 37% and 100% during the 2 years of follow-up. 
 This output can be further analyzed in relation to patterns of health status if such data are available for the same time period. 
 
-```{r, echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-13\"></a>**Figure 13.** Sliding window CMA 9", fig.height=5, fig.width=7}
+```{r, echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-13\"></a>**Figure 13.** Sliding window CMA 9", fig.height=5, fig.width=7, out.width="100%"}
 cmaW1 <- CMA_sliding_window(CMA.to.apply="CMA9",
                            data=ExamplePats,
                            ID.colname="PATIENT_ID",
