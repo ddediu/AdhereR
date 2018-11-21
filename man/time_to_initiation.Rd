@@ -4,8 +4,8 @@
 \alias{time_to_initiation}
 \title{Computation of initiation times.}
 \usage{
-time_to_initiation(presc.data = NULL, disp.data = NULL, ID.colname = NA,
-  presc.start.colname = NA, disp.date.colname = NA,
+time_to_initiation(presc.data = NULL, disp.data = NULL,
+  ID.colname = NA, presc.start.colname = NA, disp.date.colname = NA,
   medication.class.colnames = NA, date.format = "\%d.\%m.\%Y",
   suppress.warnings = FALSE, return.data.table = FALSE, ...)
 }

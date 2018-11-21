@@ -17,20 +17,21 @@
   show.period = c("dates", "days")[2], period.in.days = 90,
   show.legend = TRUE, legend.x = "right", legend.y = "bottom",
   legend.bkg.opacity = 0.5, cex = 1, cex.axis = 0.75, cex.lab = 1,
-  show.cma = TRUE, col.cats = cm.colors,
-  unspecified.category.label = "drug", lty.event = "solid", lwd.event = 2,
-  pch.start.event = 15, pch.end.event = 16, show.event.intervals = TRUE,
-  col.na = "lightgray", print.CMA = TRUE, plot.CMA = TRUE,
-  CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
-  CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
-  CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
-  followup.window.col = "green", highlight.observation.window = TRUE,
+  show.cma = TRUE, col.cats = rainbow,
+  unspecified.category.label = "drug", lty.event = "solid",
+  lwd.event = 2, pch.start.event = 15, pch.end.event = 16,
+  show.event.intervals = TRUE, col.na = "lightgray",
+  print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1,
+  CMA.plot.col = "lightgreen", CMA.plot.border = "darkgreen",
+  CMA.plot.bkg = "aquamarine", CMA.plot.text = CMA.plot.border,
+  highlight.followup.window = TRUE, followup.window.col = "green",
+  highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
   observation.window.angle = -30, show.real.obs.window.start = TRUE,
   real.obs.window.density = 35, real.obs.window.angle = 30,
-  print.dose = FALSE, cex.dose = 0.75, print.dose.outline.col = "white",
-  print.dose.centered = FALSE, plot.dose = FALSE, lwd.event.max.dose = 8,
-  bw.plot = FALSE)
+  print.dose = FALSE, cex.dose = 0.75,
+  print.dose.outline.col = "white", print.dose.centered = FALSE,
+  plot.dose = FALSE, lwd.event.max.dose = 8, bw.plot = FALSE)
 
 \method{plot}{CMA2}(...)
 

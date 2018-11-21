@@ -740,7 +740,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
 
   # Daily dose:
-  if( is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) )
+  if( is.na(cma$event.daily.dose.colname) || !(cma$event.daily.dose.colname %in% names(cma$data)) )
   {
     print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
   }
@@ -2548,7 +2548,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
 
   # Daily dose:
-  if( is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) )
+  if( is.na(cma$event.daily.dose.colname) || !(cma$event.daily.dose.colname %in% names(cma$data)) )
   {
     print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
   }
@@ -3453,7 +3453,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       show.cma=TRUE,                         # show the CMA type
-                      col.cats=cm.colors,         # single color or a function mapping the categories to colors
+                      col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       show.event.intervals=TRUE,             # show the actual rpescription intervals

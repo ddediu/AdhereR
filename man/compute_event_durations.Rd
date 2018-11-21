@@ -9,10 +9,10 @@ compute_event_durations(disp.data = NULL, presc.data = NULL,
   disp.date.colname = NA, date.format = "\%d.\%m.\%Y",
   medication.class.colnames = NA, total.dose.colname = NA,
   presc.daily.dose.colname = NA, presc.duration.colname = NA,
-  visit.colname = NA, force.init.presc = FALSE, force.presc.renew = FALSE,
-  split.on.dosage.change = TRUE, trt.interruption = c("continue", "discard",
-  "carryover")[1], suppress.warnings = FALSE, return.data.table = FALSE,
-  ...)
+  visit.colname = NA, force.init.presc = FALSE,
+  force.presc.renew = FALSE, split.on.dosage.change = TRUE,
+  trt.interruption = c("continue", "discard", "carryover")[1],
+  suppress.warnings = FALSE, return.data.table = FALSE, ...)
 }
 \arguments{
 \item{disp.data}{A \emph{\code{data.frame}} or \emph{\code{data.table}} containing

@@ -15,8 +15,8 @@
 \alias{print.CMA_sliding_window}
 \title{Print CMA0 (and derived) objects.}
 \usage{
-\method{print}{CMA0}(x, ..., inline = FALSE, format = c("text", "latex",
-  "markdown"), print.params = TRUE, print.data = TRUE,
+\method{print}{CMA0}(x, ..., inline = FALSE, format = c("text",
+  "latex", "markdown"), print.params = TRUE, print.data = TRUE,
   exclude.params = c("event.info"), skip.header = FALSE,
   cma.type = class(cma)[1])
 
@@ -38,10 +38,10 @@
 
 \method{print}{CMA9}(...)
 
-\method{print}{CMA_per_episode}(x, ..., inline = FALSE, format = c("text",
-  "latex", "markdown"), print.params = TRUE, print.data = TRUE,
-  exclude.params = c("event.info"), skip.header = FALSE,
-  cma.type = class(cma)[1])
+\method{print}{CMA_per_episode}(x, ..., inline = FALSE,
+  format = c("text", "latex", "markdown"), print.params = TRUE,
+  print.data = TRUE, exclude.params = c("event.info"),
+  skip.header = FALSE, cma.type = class(cma)[1])
 
 \method{print}{CMA_sliding_window}(...)
 }
