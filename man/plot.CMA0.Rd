@@ -14,7 +14,10 @@
   print.dose.outline.col = "white", print.dose.centered = FALSE,
   plot.dose = FALSE, lwd.event.max.dose = 8,
   col.continuation = "black", lty.continuation = "dotted",
-  lwd.continuation = 1, col.na = "lightgray", bw.plot = FALSE,
+  lwd.continuation = 1, col.na = "lightgray", events = NULL,
+  events.ID.colname = NA, events.start.colname = NA,
+  events.end.colname = NA, events.date.format = NA,
+  col.events = adjustcolor("gray20", alpha.f = 0.5), bw.plot = FALSE,
   print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1)
 }
 \arguments{
