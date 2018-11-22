@@ -151,7 +151,7 @@ supply durations, taking into account the aforementioned situations and providin
 various parameters for flexible adjustments.
 }
 \examples{
-event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
                                            presc.data = durcomp.prescribing,
                                            hosp.data = durcomp.hospitalisation,
                                            ID.colname = "ID",
