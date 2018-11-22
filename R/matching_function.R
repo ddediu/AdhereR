@@ -264,25 +264,25 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'  \item \code{tot.dosage.changes} the total number of dosage changes per patient
 #'  for a specific medication.
 #'  }
-#'  @examples
-#'    event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
-#'                                               presc.data = durcomp.prescribing,
-#'                                               hosp.data = durcomp.hospitalisation,
-#'                                               ID.colname = "ID",
-#'                                               presc.date.colname = "DATE.PRESC",
-#'                                               disp.date.colname = "DATE.DISP",
-#'                                               date.format = "%Y-%m-%d",
-#'                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-#'                                               total.dose.colname = "TOTAL.DOSE",
-#'                                               presc.daily.dose.colname = "DAILY.DOSE",
-#'                                               presc.duration.colname = "PRESC.DURATION",
-#'                                               visit.colname = "VISIT",
-#'                                               force.init.presc = TRUE,
-#'                                               force.presc.renew = TRUE,
-#'                                               split.on.dosage.change = TRUE,
-#'                                               trt.interruption = "continue",
-#'                                               suppress.warnings = FALSE,
-#'                                               return.data.table = TRUE)
+#' @examples
+#' event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+#'                                            presc.data = durcomp.prescribing,
+#'                                            hosp.data = durcomp.hospitalisation,
+#'                                            ID.colname = "ID",
+#'                                            presc.date.colname = "DATE.PRESC",
+#'                                            disp.date.colname = "DATE.DISP",
+#'                                            date.format = "%Y-%m-%d",
+#'                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+#'                                            total.dose.colname = "TOTAL.DOSE",
+#'                                            presc.daily.dose.colname = "DAILY.DOSE",
+#'                                            presc.duration.colname = "PRESC.DURATION",
+#'                                            visit.colname = "VISIT",
+#'                                            force.init.presc = TRUE,
+#'                                            force.presc.renew = TRUE,
+#'                                            split.on.dosage.change = TRUE,
+#'                                            trt.interruption = "continue",
+#'                                            suppress.warnings = FALSE,
+#'                                            return.data.table = TRUE)
 #' @export
 compute_event_durations <- function(disp.data = NULL,
                                     presc.data = NULL,
@@ -1064,17 +1064,17 @@ compute_event_durations <- function(disp.data = NULL,
 #'  \item \code{time.to.initialization} the difference in days between the first
 #'  dispensing date and the  first prescription date.
 #'  }
-#'  @examples
-#'  time_init <- time_to_initiation(presc.data = durcomp.prescribing,
-#'                                  disp.data = durcomp.dispensing,
-#'                                  ID.colname = "ID",
-#'                                  presc.start.colname = "DATE.PRESC",
-#'                                  disp.date.colname = "DATE.DISP",
-#'                                  medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
-#'                                  date.format = "%Y-%m-%d",
-#'                                  suppress.warnings = FALSE,
-#'                                  return.data.table = TRUE)
-#'  @export
+#' @examples
+#' time_init <- time_to_initiation(presc.data = durcomp.prescribing,
+#'                                 disp.data = durcomp.dispensing,
+#'                                 ID.colname = "ID",
+#'                                 presc.start.colname = "DATE.PRESC",
+#'                                 disp.date.colname = "DATE.DISP",
+#'                                 medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
+#'                                 date.format = "%Y-%m-%d",
+#'                                 suppress.warnings = FALSE,
+#'                                 return.data.table = TRUE)
+#' @export
 time_to_initiation <- function(presc.data = NULL,
                                disp.data = NULL,
                                ID.colname = NA,
