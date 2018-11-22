@@ -1,5 +1,7 @@
 # `AdhereR`: an `R` package for computing adherence to medications and for visualising medication histories
 
+[![Build Status](https://travis-ci.org/ddediu/AdhereR.svg?branch=master)](https://travis-ci.org/ddediu/AdhereR)
+
 This is a package for the [`R`](https://www.r-project.org) open-source statistical environment implementing various ways of computing adherence to medications and visualisations of medication histories, both interactive (intended for data exploration) and high quality (intended for publication).
 
 More information is given in the package's various vignettes and in the accompanying paper:
