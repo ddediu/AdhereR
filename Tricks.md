@@ -2,7 +2,7 @@
 
 ## Create source package and copy it to the shared Google Drive for testing
 
-For testing before release on CRAN we decided to use a shared Google Drive folder (`./AdhereR/lates-package-for-testing`) which contains a *source* version of the package for testing.
+For testing before release on CRAN we decided to use a shared Google Drive folder (`./AdhereR/lates-package-for-testing`) which contains a *source* version of the package for testing; this should be done also for pre-pre-release versions (i.e., late "devel" versions) as well.
 So, to automatize this, I use (on my macOS laptop, from the Project Root Path):
 ```
 devtools::document(roclets=c('rd', 'collate', 'namespace', 'vignette'));

@@ -8302,7 +8302,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   if( !is.null(data) )
   {
     # data's class and dimensions:
-    if( class(data) == "matrix" ) data <- as.data.frame(data); #make it a data.frame
+    if( inherits(data, "matrix") || inherits(data, "data.table") ) data <- as.data.frame(data); # make it a data.frame
     if( !inherits(data, "data.frame") )
     {
       stop("The 'data' must be of type 'data.frame'!\n");
@@ -8714,18 +8714,19 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   # Preconditions:
   if( !is.null(data) )
   {
-    # data's class and dimensions:
-    if( class(data) == "matrix" ) data <- as.data.frame(data); #make it a data.frame
-    #if( !inherits(data, "data.frame") )
-    #{
-    #  stop("The 'data' must be of type 'data.frame'!\n");
-    #  return (NULL);
-    #}
-    #if( nrow(data) < 1 )
-    #{
-    #  stop("The 'data' must have at least one row!\n");
-    #  return (NULL);
-    #}
+    # certain types of data must be coerced to data.frame:
+    if( inherits(data, "matrix") || inherits(data, "data.table") ) data <- as.data.frame(data); # make it a data.frame
+    ## Note: the following checks do not apply anymore as we could pass, for example, a database connection!!!
+    # if( !inherits(data, "data.frame") )
+    # {
+    #   stop("The 'data' must be of type 'data.frame', 'matrix', or something derived from them!\n");
+    #   return (NULL);
+    # }
+    # if( nrow(data) < 1 )
+    # {
+    #   stop("The 'data' must have at least one row!\n");
+    #   return (NULL);
+    # }
     # the column names must exist in data:
     column.names <- get.colnames.fnc(data);
     if( !is.na(ID.colname) && !(ID.colname %in% column.names) )
