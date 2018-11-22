@@ -1,3 +1,9 @@
+# AdhereR 0.3.1
+
+## Bug fixes
+
+  - 
+
 # AdhereR 0.3
 
 ## Small features and bug fixes
