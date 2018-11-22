@@ -764,7 +764,8 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     for( i in 1:nrow(cma$data) )
     {
       if( i == 1 || cma$data[i,cma$ID.colname] != cma$data[i-1,cma$ID.colname] ) align.to <- Date.converted.to.DATE[i];
-      cma$data[i,cma$event.date.colname] <- as.character(earliest.date + (Date.converted.to.DATE[i] - align.to), format=cma$date.format);
+      #cma$data[i,cma$event.date.colname] <- as.character(earliest.date + (Date.converted.to.DATE[i] - align.to), format=cma$date.format);
+      Date.converted.to.DATE[i] <- (earliest.date + (Date.converted.to.DATE[i] - align.to));
     }
   }
 
