@@ -1,5 +1,15 @@
 # This document contains various tricks, including for building the package for `CRAN`
 
+## Create source package and copy it to the shared Google Drive for testing
+
+For testing before release on CRAN we decided to use a shared Google Drive folder (`./AdhereR/lates-package-for-testing`) which contains a *source* version of the package for testing.
+So, to automatize this, I use (on my macOS laptop, from the Project Root Path):
+```
+devtools::document(roclets=c('rd', 'collate', 'namespace', 'vignette'));
+devtools::build(path="~/Google Drive/AdhereR/latest-package-for-testing/", binary=FALSE, vignettes=TRUE, manual=TRUE);
+```
+
+
 ## Compress PDF vignettes while keeping (hyper)links
 
 When using PDF vignettes, the check system may complain that those PDFs are too bg and that one should use `tools::compactPDF(gs_quality = "ebook")` to compress them, but when doing so, the (hyper)links in the document are lost.
