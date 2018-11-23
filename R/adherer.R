@@ -6748,6 +6748,10 @@ print.CMA_per_episode <- function(x,                                     # the C
       is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) ||
       !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (plot.CMA0(cma,...));
 
+  # Convert all data.table to data.frame:
+  if( inherits(cma$CMA, "data.table") ) cma$CMA <- as.data.frame(cma$CMA);
+  if( inherits(cma$data, "data.table") ) cma$data <- as.data.frame(cma$data);
+
   # Check compatibility between subtypes of plots:
   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
 
@@ -6769,7 +6773,7 @@ print.CMA_per_episode <- function(x,                                     # the C
     cma$event.info[s,c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
   })));
 
-  # Make sure the dates are strings of the right fomat:
+  # Make sure the dates are strings of the right format:
   if( inherits(cma$data[,cma$event.date.colname], "Date") )
   {
     cma$date.format <- "%m/%d/%Y"; # use the default format
