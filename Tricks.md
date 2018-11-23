@@ -6,7 +6,7 @@ For testing before release on CRAN we decided to use a shared Google Drive folde
 So, to automatize this, I use (on my macOS laptop, from the Project Root Path):
 ```
 devtools::document(roclets=c('rd', 'collate', 'namespace', 'vignette'));
-devtools::build(path="~/Google Drive/AdhereR/latest-package-for-testing/", binary=FALSE, vignettes=TRUE, manual=TRUE);
+devtools::build(path="~/Google Drive/AdhereR/latest-package-for-testing/", binary=FALSE, vignettes=TRUE, manual=FALSE);
 ```
 
 
