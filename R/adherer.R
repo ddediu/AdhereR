@@ -744,6 +744,10 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   {
     print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
   }
+  if( plot.dose || print.dose ) # consistency checks:
+  {
+    if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
+  }
   if( plot.dose )
   {
     if( length(categories) == 1 && categories == "unspec. type" )
@@ -756,6 +760,9 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
       tmp <- aggregate(cma$data[,cma$event.daily.dose.colname], by=list("category"=cma$data[,cma$medication.class.colname]), FUN=function(x) range(x,na.rm=TRUE));
       dose.range <- data.frame("category"=tmp$category, "min"=tmp$x[,1], "max"=tmp$x[,2]);
     }
+    # Make sure we avoid divison by 0 when dose.range$max == dose.range$min:
+    dose.range$max[ dose.range$max == dose.range$min ] <- (dose.range$max[ dose.range$max == dose.range$min ] + 1.0);
+
     # Function for the linear interpolation of dose between lwd.min and lwd.max:
     adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])  (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / (dose.max - dose.min));
   }
@@ -2599,10 +2606,27 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   {
     print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
   }
+  if( plot.dose || print.dose ) # consistency checks:
+  {
+    if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
+  }
   if( plot.dose )
   {
-    dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
-    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
+    if( length(categories) == 1 && categories == "unspec. type" )
+    {
+      # Really, no category:
+      dose.range <- data.frame("category"=categories, "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
+    } else
+    {
+      # Range per category:
+      tmp <- aggregate(cma$data[,cma$event.daily.dose.colname], by=list("category"=cma$data[,cma$medication.class.colname]), FUN=function(x) range(x,na.rm=TRUE));
+      dose.range <- data.frame("category"=tmp$category, "min"=tmp$x[,1], "max"=tmp$x[,2]);
+    }
+    # Make sure we avoid divison by 0 when dose.range$max == dose.range$min:
+    dose.range$max[ dose.range$max == dose.range$min ] <- (dose.range$max[ dose.range$max == dose.range$min ] + 1.0);
+
+    # Function for the linear interpolation of dose between lwd.min and lwd.max:
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])  (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / (dose.max - dose.min));
   }
 
   # Find the earliest date:
@@ -2812,7 +2836,22 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     points(adh.plot.space[2]+end+correct.earliest.followup.window, i, pch=pch.end.event, col=col, cex=cex);
     if( plot.dose )
     {
-      segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+      if( nrow(dose.range) == 1 )
+      {
+        segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i,
+                  col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+      } else
+      {
+        dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
+        if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+        {
+          segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i,
+                    col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
+        } else
+        {
+          segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
+        }
+      }
     } else
     {
       segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
@@ -2923,8 +2962,20 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     if( do.plot ) segments(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y, lty=lty.event, lwd=lwd.event, col="black");
     if( do.plot ) points(x + 1.0*char.width, cur.y, pch=pch.start.event, cex=1.0, col="black");
     if( do.plot ) points(x + 4.0*char.width, cur.y, pch=pch.end.event, cex=1.0, col="black");
-    if( do.plot ) text(x + 5.0*char.width, cur.y, "duration", col="black", cex=0.75, pos=4);
-    cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("duration", cex=0.75));
+    if( !plot.dose )
+    {
+      if( do.plot ) text(x + 5.0*char.width, cur.y, "duration", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("duration", cex=0.75));
+    } else
+    {
+      if( do.plot ) text(x + 5.0*char.width, cur.y, "duration (min. dose)", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("duration (min. dose)", cex=0.75));
+      if( do.plot ) segments(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y, lty=lty.event, lwd=lwd.event.max.dose, col="black");
+      if( do.plot ) points(x + 1.0*char.width, cur.y, pch=pch.start.event, cex=1.0, col="black");
+      if( do.plot ) points(x + 4.0*char.width, cur.y, pch=pch.end.event, cex=1.0, col="black");
+      if( do.plot ) text(x + 5.0*char.width, cur.y, "duration (max. dose)", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("duration (max. dose)", cex=0.75));
+    }
 
     # Event intervals:
     if( show.event.intervals )
@@ -2941,7 +2992,19 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     for( i in 1:length(cols) )
     {
       if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border="black", col=adjustcolor(cols[i],alpha.f=0.5));
-      if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, names(cols)[i], col="black", cex=0.75, pos=4);
+      if( do.plot )
+      {
+        med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+        if( print.dose || plot.dose )
+        {
+          dose.for.cat <- (dose.range$category == med.class.name);
+          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+          {
+            med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+          }
+        }
+        text(x + 5.0*char.width, cur.y - 0.5*char.height, med.class.name, col="black", cex=0.75, pos=4);
+      }
       cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth(names(cols)[i], cex=0.75));
     }
     cur.y <- cur.y - 0.5*char.height;
