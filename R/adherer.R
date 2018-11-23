@@ -2546,7 +2546,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            highlight.followup.window=TRUE, followup.window.col="green",
                            highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                            show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
-                           print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8,
+                           print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
+                           plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                            min.plot.size.in.characters.horiz=15, min.plot.size.in.characters.vert=10,  # the minimum plot size (in character)
                            max.patients.to.plot=100,        # maximum number of patients to plot
@@ -2627,6 +2628,10 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   {
     if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
   }
+  if( plot.dose || print.dose ) # consistency checks:
+  {
+    if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
+  }
   if( plot.dose )
   {
     if( length(categories) == 1 && categories == "unspec. type" )
@@ -2638,6 +2643,12 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       # Range per category:
       tmp <- aggregate(cma$data[,cma$event.daily.dose.colname], by=list("category"=cma$data[,cma$medication.class.colname]), FUN=function(x) range(x,na.rm=TRUE));
       dose.range <- data.frame("category"=tmp$category, "min"=tmp$x[,1], "max"=tmp$x[,2]);
+      if( plot.dose.lwd.across.medication.classes )
+      {
+        dose.range.global <- data.frame("category"="ALL", "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
+        # Make sure we avoid divison by 0 when dose.range.global$max == dose.range.global$min:
+        if( dose.range.global$max == dose.range.global$min ) dose.range.global$max <- (dose.range.global$min + 1.0);
+      }
     }
     # Make sure we avoid divison by 0 when dose.range$max == dose.range$min:
     dose.range$max[ dose.range$max == dose.range$min ] <- (dose.range$max[ dose.range$max == dose.range$min ] + 1.0);
@@ -2859,14 +2870,21 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                   col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
       } else
       {
-        dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
-        if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+        if( plot.dose.lwd.across.medication.classes )
         {
           segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i,
-                    col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
+                    col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max));
         } else
         {
-          segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
+          dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
+          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+          {
+            segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i,
+                      col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
+          } else
+          {
+            segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
+          }
         }
       }
     } else
@@ -3557,6 +3575,10 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' segment width?
 #' @param lwd.event.max.dose \emph{Numeric}, the segment width corresponding to
 #' the maximum daily dose (must be >= lwd.event but not too big either).
+#' @param plot.dose.lwd.across.medication.classes \emph{Logical}, if \code{TRUE},
+#' the line width of the even is scaled relative to all medication classes (i.e.,
+#' relative to the global minimum and maximum doses), otherwise it is scale
+#' relative only to its medication class.
 #' @param ... other possible parameters
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -3592,7 +3614,8 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       highlight.followup.window=TRUE, followup.window.col="green",
                       highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                       show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
-                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8,
+                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
+                      plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                       bw.plot=FALSE                          # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                      )
 .plot.CMA1plus(cma=x,
