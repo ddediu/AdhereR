@@ -613,6 +613,10 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' segment width?
 #' @param lwd.event.max.dose \emph{Numeric}, the segment width corresponding to
 #' the maximum daily dose (must be >= lwd.event but not too big either).
+#' @param plot.dose.lwd.across.medication.classes \emph{Logical}, if \code{TRUE},
+#' the line width of the even is scaled relative to all medication classes (i.e.,
+#' relative to the global minimum and maximum doses), otherwise it is scale
+#' relative only to its medication class.
 #' @param col.continuation,lty.continuation,lwd.continuation The style of the
 #' "continuation" lines connecting consecutive events (colour, line style and
 #' width).
@@ -655,7 +659,8 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
-                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8, # show daily dose
+                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
+                      plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                       col.na="lightgray",                    # color for mising data
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
@@ -759,6 +764,12 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
       # Range per category:
       tmp <- aggregate(cma$data[,cma$event.daily.dose.colname], by=list("category"=cma$data[,cma$medication.class.colname]), FUN=function(x) range(x,na.rm=TRUE));
       dose.range <- data.frame("category"=tmp$category, "min"=tmp$x[,1], "max"=tmp$x[,2]);
+      if( plot.dose.lwd.across.medication.classes )
+      {
+        dose.range.global <- data.frame("category"="ALL", "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
+        # Make sure we avoid divison by 0 when dose.range.global$max == dose.range.global$min:
+        if( dose.range.global$max == dose.range.global$min ) dose.range.global$max <- (dose.range.global$min + 1.0);
+      }
     }
     # Make sure we avoid divison by 0 when dose.range$max == dose.range$min:
     dose.range$max[ dose.range$max == dose.range$min ] <- (dose.range$max[ dose.range$max == dose.range$min ] + 1.0);
@@ -823,13 +834,19 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
         segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
       } else
       {
-        dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
-        if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+        if( plot.dose.lwd.across.medication.classes )
         {
-          segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
+          segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max));
         } else
         {
-          segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
+          dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
+          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+          {
+            segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
+          } else
+          {
+            segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
+          }
         }
       }
     } else
