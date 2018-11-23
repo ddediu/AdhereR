@@ -245,7 +245,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  observation.window.duration=NA, # the duration of the observation window in time units, or a column name in data (NA = undefined)
                  observation.window.duration.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
                  # Date format:
-                 date.format=NA, # the format of the dates used in this function (NA = undefined)
+                 date.format="%m/%d/%Y", # the format of the dates used in this function (NA = undefined)
                  # Comments and metadata:
                  summary="Base CMA object",
                  # Misc:
@@ -746,8 +746,18 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   }
   if( plot.dose )
   {
-    dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
-    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
+    if( length(categories) == 1 && categories == "unspec. type" )
+    {
+      # Really, no category:
+      dose.range <- data.frame("category"=categories, "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
+    } else
+    {
+      # Range per category:
+      tmp <- aggregate(cma$data[,cma$event.daily.dose.colname], by=list("category"=cma$data[,cma$medication.class.colname]), FUN=function(x) range(x,na.rm=TRUE));
+      dose.range <- data.frame("category"=tmp$category, "min"=tmp$x[,1], "max"=tmp$x[,2]);
+    }
+    # Function for the linear interpolation of dose between lwd.min and lwd.max:
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])  (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / (dose.max - dose.min));
   }
 
   # Find the earliest date:
@@ -801,7 +811,20 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     points( adh.plot.space[2]+start, i, pch=pch.start.event, col=col, cex=cex); points(adh.plot.space[2]+end, i, pch=pch.end.event, col=col, cex=cex);
     if( plot.dose )
     {
-      segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+      if( nrow(dose.range) == 1 )
+      {
+        segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+      } else
+      {
+        dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
+        if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+        {
+          segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
+        } else
+        {
+          segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
+        }
+      }
     } else
     {
       segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
@@ -886,11 +909,34 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   # The legend:
   if( show.legend )
   {
-    legend(x=legend.x, y=legend.y, bty="o", bg=rgb(0.9,0.9,0.9,legend.bkg.opacity),
-           legend=c("event","no event",vapply(names(cols), function(s) ifelse(is.na(s),"<missing>",s), character(1))),
-           col=c("black","black",cols),
-           lty=c("solid","dotted",rep("solid",length(cols))),
-           lwd=c(2,1,rep(2,length(cols))));
+    med.class.names <- vapply(names(cols), function(s)
+      {
+        x <- ifelse(is.na(s),"<missing>",s);
+        if( print.dose || plot.dose )
+        {
+          dose.for.cat <- (dose.range$category == s);
+          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+          {
+            x <- paste0(x," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+          }
+        }
+        return (x);
+      }, character(1));
+    if( !plot.dose )
+    {
+      legend(x=legend.x, y=legend.y, bty="o", bg=rgb(0.9,0.9,0.9,legend.bkg.opacity),
+             legend=c("event","no event",med.class.names),
+             col=c("black","black",cols),
+             lty=c("solid","dotted",rep("solid",length(cols))),
+             lwd=c(lwd.event,1,rep(lwd.event,length(cols))));
+    } else
+    {
+      legend(x=legend.x, y=legend.y, bty="o", bg=rgb(0.9,0.9,0.9,legend.bkg.opacity),
+             legend=c("event (min. dose)", "event (max. dose)","no event",med.class.names),
+             col=c("black","black","black",cols),
+             lty=c("solid","solid","dotted",rep("solid",length(cols))),
+             lwd=c(lwd.event,lwd.event.max.dose,1,rep(lwd.event,length(cols))));
+    }
   }
 }
 
