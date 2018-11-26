@@ -13,6 +13,7 @@
   pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
   print.dose.outline.col = "white", print.dose.centered = FALSE,
   plot.dose = FALSE, lwd.event.max.dose = 8,
+  plot.dose.lwd.across.medication.classes = FALSE,
   col.continuation = "black", lty.continuation = "dotted",
   lwd.continuation = 1, col.na = "lightgray", bw.plot = FALSE,
   print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1)
@@ -78,6 +79,11 @@ segment width?}
 
 \item{lwd.event.max.dose}{\emph{Numeric}, the segment width corresponding to
 the maximum daily dose (must be >= lwd.event but not too big either).}
+
+\item{plot.dose.lwd.across.medication.classes}{\emph{Logical}, if \code{TRUE},
+the line width of the even is scaled relative to all medication classes (i.e.,
+relative to the global minimum and maximum doses), otherwise it is scale
+relative only to its medication class.}
 
 \item{col.continuation, lty.continuation, lwd.continuation}{The style of the
 "continuation" lines connecting consecutive events (colour, line style and
