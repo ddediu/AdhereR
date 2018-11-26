@@ -335,9 +335,9 @@ compute_event_durations <- function(disp.data = NULL,
       if( !suppress.warnings ) warning(paste0("Column disp.date.colname='",disp.date.colname,"' must appear in the dispensing data!\n"));
       return (NULL);
     }
-    if( !is.na(medication.class.colnames) && !(medication.class.colnames %in% names(disp.data))  && !(medication.class.colnames %in% names(presc.data)) )
+    if( any(!is.na(medication.class.colnames) & !(medication.class.colnames %in% names(disp.data)) & !(medication.class.colnames %in% names(presc.data))) ) # deal with the possibility of multiple column names
     {
-      if( !suppress.warnings ) warning(paste0("Column medication.class.colnames='",medication.class.colnames,"' must appear in the dispensing and prescribing data!\n"));
+      if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames=",paste0("'",medication.class.colnames,"'",collapse=",")," must appear in the dispensing and prescribing data!\n"));
       return (NULL);
     }
     if( !is.na(total.dose.colname) && !(total.dose.colname %in% names(disp.data)) )
@@ -1082,9 +1082,9 @@ time_to_initiation <- function(presc.data = NULL,
       return (NULL);
     }
 
-    if( !is.na(medication.class.colnames) && !(medication.class.colnames %in% names(disp.data)) && !(medication.class.colnames %in% names(presc.data)))
+    if( any(!is.na(medication.class.colnames) & !(medication.class.colnames %in% names(disp.data)) & !(medication.class.colnames %in% names(presc.data))) ) # deal with the possibility of multiple column names
     {
-      if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames='",medication.class.colnames,"' must appear in the data!\n"));
+      if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames=",paste0("'",medication.class.colnames,"'",collapse=",")," must appear in the dispensing and prescribing data!\n"));
       return (NULL);
     }
 

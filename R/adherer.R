@@ -493,15 +493,12 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
           cat("  [\n");
           for( p in params )
           {
-            if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
+            if( p == "CMA" )
             {
-              if( p != "CMA" )
-              {
-                cat(paste0("    ",p," = ",cma[[p]],"\n"));
-              } else
-              {
-                cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
-              }
+              cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
+            } else if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
+            {
+              cat(paste0("    ",p," = ",cma[[p]],"\n"));
             }
           }
           cat("  ]\n");
@@ -6822,15 +6819,12 @@ print.CMA_per_episode <- function(x,                                     # the C
           cat("  [\n");
           for( p in params )
           {
-            if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
+            if( p == "CMA" )
             {
-              if( p != "CMA" )
-              {
-                cat(paste0("    ",p," = ",cma[[p]],"\n"));
-              } else
-              {
-                cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
-              }
+              cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
+            } else if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
+            {
+              cat(paste0("    ",p," = ",cma[[p]],"\n"));
             }
           }
           cat("  ]\n");
