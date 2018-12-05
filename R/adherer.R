@@ -245,7 +245,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  observation.window.duration=NA, # the duration of the observation window in time units, or a column name in data (NA = undefined)
                  observation.window.duration.unit=NA, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
                  # Date format:
-                 date.format=NA, # the format of the dates used in this function (NA = undefined)
+                 date.format="%m/%d/%Y", # the format of the dates used in this function (NA = undefined)
                  # Comments and metadata:
                  summary="Base CMA object",
                  # Misc:
@@ -493,15 +493,12 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
           cat("  [\n");
           for( p in params )
           {
-            if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
+            if( p == "CMA" )
             {
-              if( p != "CMA" )
-              {
-                cat(paste0("    ",p," = ",cma[[p]],"\n"));
-              } else
-              {
-                cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
-              }
+              cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
+            } else if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
+            {
+              cat(paste0("    ",p," = ",cma[[p]],"\n"));
             }
           }
           cat("  ]\n");
@@ -613,6 +610,10 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' segment width?
 #' @param lwd.event.max.dose \emph{Numeric}, the segment width corresponding to
 #' the maximum daily dose (must be >= lwd.event but not too big either).
+#' @param plot.dose.lwd.across.medication.classes \emph{Logical}, if \code{TRUE},
+#' the line width of the even is scaled relative to all medication classes (i.e.,
+#' relative to the global minimum and maximum doses), otherwise it is scale
+#' relative only to its medication class.
 #' @param col.continuation,lty.continuation,lwd.continuation The style of the
 #' "continuation" lines connecting consecutive events (colour, line style and
 #' width).
@@ -655,7 +656,8 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
-                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8, # show daily dose
+                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
+                      plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                       col.na="lightgray",                    # color for mising data
                       events=NULL,                           # if given, must be a data.frame with events per patient
@@ -802,10 +804,33 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   {
     print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
   }
+  if( plot.dose || print.dose ) # consistency checks:
+  {
+    if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
+  }
   if( plot.dose )
   {
-    dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
-    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
+    if( length(categories) == 1 && categories == "unspec. type" )
+    {
+      # Really, no category:
+      dose.range <- data.frame("category"=categories, "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
+    } else
+    {
+      # Range per category:
+      tmp <- aggregate(cma$data[,cma$event.daily.dose.colname], by=list("category"=cma$data[,cma$medication.class.colname]), FUN=function(x) range(x,na.rm=TRUE));
+      dose.range <- data.frame("category"=tmp$category, "min"=tmp$x[,1], "max"=tmp$x[,2]);
+      if( plot.dose.lwd.across.medication.classes )
+      {
+        dose.range.global <- data.frame("category"="ALL", "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
+        # Make sure we avoid divison by 0 when dose.range.global$max == dose.range.global$min:
+        if( dose.range.global$max == dose.range.global$min ) dose.range.global$max <- (dose.range.global$min + 1.0);
+      }
+    }
+    # Make sure we avoid divison by 0 when dose.range$max == dose.range$min:
+    dose.range$max[ dose.range$max == dose.range$min ] <- (dose.range$max[ dose.range$max == dose.range$min ] + 1.0);
+
+    # Function for the linear interpolation of dose between lwd.min and lwd.max:
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])  (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / (dose.max - dose.min));
   }
 
   # Find the earliest date:
@@ -822,7 +847,8 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     for( i in 1:nrow(cma$data) )
     {
       if( i == 1 || cma$data[i,cma$ID.colname] != cma$data[i-1,cma$ID.colname] ) align.to <- Date.converted.to.DATE[i];
-      cma$data[i,cma$event.date.colname] <- as.character(earliest.date + (Date.converted.to.DATE[i] - align.to), format=cma$date.format);
+      #cma$data[i,cma$event.date.colname] <- as.character(earliest.date + (Date.converted.to.DATE[i] - align.to), format=cma$date.format);
+      Date.converted.to.DATE[i] <- (earliest.date + (Date.converted.to.DATE[i] - align.to));
     }
   }
 
@@ -858,7 +884,26 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     points( adh.plot.space[2]+start, i, pch=pch.start.event, col=col, cex=cex); points(adh.plot.space[2]+end, i, pch=pch.end.event, col=col, cex=cex);
     if( plot.dose )
     {
-      segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+      if( nrow(dose.range) == 1 )
+      {
+        segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+      } else
+      {
+        if( plot.dose.lwd.across.medication.classes )
+        {
+          segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max));
+        } else
+        {
+          dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
+          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+          {
+            segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
+          } else
+          {
+            segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
+          }
+        }
+      }
     } else
     {
       segments( adh.plot.space[2]+start, i, adh.plot.space[2]+end, i, col=col, lty=lty.event, lwd=lwd.event);
@@ -953,11 +998,34 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   # The legend:
   if( show.legend )
   {
-    legend(x=legend.x, y=legend.y, bty="o", bg=rgb(0.9,0.9,0.9,legend.bkg.opacity),
-           legend=c("event","no event",vapply(names(cols), function(s) ifelse(is.na(s),"<missing>",s), character(1))),
-           col=c("black","black",cols),
-           lty=c("solid","dotted",rep("solid",length(cols))),
-           lwd=c(2,1,rep(2,length(cols))));
+    med.class.names <- vapply(names(cols), function(s)
+      {
+        x <- ifelse(is.na(s),"<missing>",s);
+        if( print.dose || plot.dose )
+        {
+          dose.for.cat <- (dose.range$category == s);
+          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+          {
+            x <- paste0(x," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+          }
+        }
+        return (x);
+      }, character(1));
+    if( !plot.dose )
+    {
+      legend(x=legend.x, y=legend.y, bty="o", bg=rgb(0.9,0.9,0.9,legend.bkg.opacity),
+             legend=c("event","no event",med.class.names),
+             col=c("black","black",cols),
+             lty=c("solid","dotted",rep("solid",length(cols))),
+             lwd=c(lwd.event,1,rep(lwd.event,length(cols))));
+    } else
+    {
+      legend(x=legend.x, y=legend.y, bty="o", bg=rgb(0.9,0.9,0.9,legend.bkg.opacity),
+             legend=c("event (min. dose)", "event (max. dose)","no event",med.class.names),
+             col=c("black","black","black",cols),
+             lty=c("solid","solid","dotted",rep("solid",length(cols))),
+             lwd=c(lwd.event,lwd.event.max.dose,1,rep(lwd.event,length(cols))));
+    }
   }
 }
 
@@ -2336,6 +2404,47 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         ... # other stuff
 )
 {
+  # Consistency checks:
+  if( is.null(CMA0(data=data,
+                   ID.colname=ID.colname,
+                   event.date.colname=event.date.colname,
+                   event.duration.colname=event.duration.colname,
+                   event.daily.dose.colname=event.daily.dose.colname,
+                   medication.class.colname=medication.class.colname,
+                   carryover.within.obs.window=carryover.within.obs.window,
+                   carry.only.for.same.medication=carry.only.for.same.medication,
+                   consider.dosage.change=consider.dosage.change,
+                   medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                   dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
+                   maximum.permissible.gap=maximum.permissible.gap,
+                   maximum.permissible.gap.unit=maximum.permissible.gap.unit,
+                   followup.window.start=followup.window.start,
+                   followup.window.start.unit=followup.window.start.unit,
+                   followup.window.duration=followup.window.duration,
+                   followup.window.duration.unit=followup.window.duration.unit,
+                   event.interval.colname=event.interval.colname,
+                   gap.days.colname=gap.days.colname,
+                   date.format=date.format,
+                   parallel.backend=parallel.backend,
+                   parallel.threads=parallel.threads,
+                   suppress.warnings=suppress.warnings,
+                   return.data.table=return.data.table,
+                   ...)) ) # delegate default checks to CMA0!
+  {
+    return (NULL);
+  }
+  # Episode-specific stuff:
+  if( is.na(medication.class.colname) && medication.change.means.new.treatment.episode )
+  {
+    if( !suppress.warnings ) warning("When 'medication.class.colname' is NA, 'medication.change.means.new.treatment.episode' must be FALSE!\n");
+    return (NULL);
+  }
+  if( is.na(event.daily.dose.colname) && dosage.change.means.new.treatment.episode )
+  {
+    if( !suppress.warnings ) warning("When 'event.daily.dose.colname' is NA, 'dosage.change.means.new.treatment.episode' must be FALSE!\n");
+    return (NULL);
+  }
+
   # Convert maximum permissible gap units into days or proprtion:
   maximum.permissible.gap.as.percent <- FALSE; # is the maximum permissible gap a percent of the current duration?
   maximum.permissible.gap <- switch(maximum.permissible.gap.unit,
@@ -2381,7 +2490,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       last.event              <- max(which(data4ID$.EVENT.WITHIN.FU.WINDOW), na.rm=TRUE); # the last event in the follow-up window
       event.duration.column   <- data4ID[,get(event.duration.colname)];
       gap.days.column         <- data4ID[,get(gap.days.colname)];
-      medication.class.column <- data4ID[,get(medication.class.colname)];
+      if( !is.na(medication.class.colname) ) medication.class.column <- data4ID[,get(medication.class.colname)];
       MAX.PERMISSIBLE.GAP     <- switch(as.numeric(maximum.permissible.gap.as.percent)+1,
                                         rep(maximum.permissible.gap,n.events), # FALSE: maximum.permissible.gap is fixed in days
                                         maximum.permissible.gap * event.duration.column); # TRUE: maximum.permissible.gap is a percent of the duration
@@ -2543,7 +2652,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            highlight.followup.window=TRUE, followup.window.col="green",
                            highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                            show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
-                           print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8,
+                           print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
+                           plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                            min.plot.size.in.characters.horiz=15, min.plot.size.in.characters.vert=10,  # the minimum plot size (in character)
                            max.patients.to.plot=100,        # maximum number of patients to plot
@@ -2620,10 +2730,37 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   {
     print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
   }
+  if( plot.dose || print.dose ) # consistency checks:
+  {
+    if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
+  }
+  if( plot.dose || print.dose ) # consistency checks:
+  {
+    if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
+  }
   if( plot.dose )
   {
-    dose.range <- range(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE); # the dosage range
-    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose)  (lwd.min + (lwd.max - lwd.min)*(dose - dose.range[1]) / (dose.range[2] - dose.range[1])); # linear interpolation of dose between lwd.min and lwd.max
+    if( length(categories) == 1 && categories == "unspec. type" )
+    {
+      # Really, no category:
+      dose.range <- data.frame("category"=categories, "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
+    } else
+    {
+      # Range per category:
+      tmp <- aggregate(cma$data[,cma$event.daily.dose.colname], by=list("category"=cma$data[,cma$medication.class.colname]), FUN=function(x) range(x,na.rm=TRUE));
+      dose.range <- data.frame("category"=tmp$category, "min"=tmp$x[,1], "max"=tmp$x[,2]);
+      if( plot.dose.lwd.across.medication.classes )
+      {
+        dose.range.global <- data.frame("category"="ALL", "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
+        # Make sure we avoid divison by 0 when dose.range.global$max == dose.range.global$min:
+        if( dose.range.global$max == dose.range.global$min ) dose.range.global$max <- (dose.range.global$min + 1.0);
+      }
+    }
+    # Make sure we avoid divison by 0 when dose.range$max == dose.range$min:
+    dose.range$max[ dose.range$max == dose.range$min ] <- (dose.range$max[ dose.range$max == dose.range$min ] + 1.0);
+
+    # Function for the linear interpolation of dose between lwd.min and lwd.max:
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])  (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / (dose.max - dose.min));
   }
 
   # Find the earliest date:
@@ -2833,7 +2970,29 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     points(adh.plot.space[2]+end+correct.earliest.followup.window, i, pch=pch.end.event, col=col, cex=cex);
     if( plot.dose )
     {
-      segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+      if( nrow(dose.range) == 1 )
+      {
+        segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i,
+                  col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+      } else
+      {
+        if( plot.dose.lwd.across.medication.classes )
+        {
+          segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i,
+                    col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max));
+        } else
+        {
+          dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
+          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+          {
+            segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i,
+                      col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
+          } else
+          {
+            segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
+          }
+        }
+      }
     } else
     {
       segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
@@ -2944,8 +3103,20 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     if( do.plot ) segments(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y, lty=lty.event, lwd=lwd.event, col="black");
     if( do.plot ) points(x + 1.0*char.width, cur.y, pch=pch.start.event, cex=1.0, col="black");
     if( do.plot ) points(x + 4.0*char.width, cur.y, pch=pch.end.event, cex=1.0, col="black");
-    if( do.plot ) text(x + 5.0*char.width, cur.y, "duration", col="black", cex=0.75, pos=4);
-    cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("duration", cex=0.75));
+    if( !plot.dose )
+    {
+      if( do.plot ) text(x + 5.0*char.width, cur.y, "duration", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("duration", cex=0.75));
+    } else
+    {
+      if( do.plot ) text(x + 5.0*char.width, cur.y, "duration (min. dose)", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("duration (min. dose)", cex=0.75));
+      if( do.plot ) segments(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y, lty=lty.event, lwd=lwd.event.max.dose, col="black");
+      if( do.plot ) points(x + 1.0*char.width, cur.y, pch=pch.start.event, cex=1.0, col="black");
+      if( do.plot ) points(x + 4.0*char.width, cur.y, pch=pch.end.event, cex=1.0, col="black");
+      if( do.plot ) text(x + 5.0*char.width, cur.y, "duration (max. dose)", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("duration (max. dose)", cex=0.75));
+    }
 
     # Event intervals:
     if( show.event.intervals )
@@ -2962,7 +3133,19 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     for( i in 1:length(cols) )
     {
       if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border="black", col=adjustcolor(cols[i],alpha.f=0.5));
-      if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, names(cols)[i], col="black", cex=0.75, pos=4);
+      if( do.plot )
+      {
+        med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+        if( print.dose || plot.dose )
+        {
+          dose.for.cat <- (dose.range$category == med.class.name);
+          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+          {
+            med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+          }
+        }
+        text(x + 5.0*char.width, cur.y - 0.5*char.height, med.class.name, col="black", cex=0.75, pos=4);
+      }
       cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth(names(cols)[i], cex=0.75));
     }
     cur.y <- cur.y - 0.5*char.height;
@@ -3498,6 +3681,10 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' segment width?
 #' @param lwd.event.max.dose \emph{Numeric}, the segment width corresponding to
 #' the maximum daily dose (must be >= lwd.event but not too big either).
+#' @param plot.dose.lwd.across.medication.classes \emph{Logical}, if \code{TRUE},
+#' the line width of the even is scaled relative to all medication classes (i.e.,
+#' relative to the global minimum and maximum doses), otherwise it is scale
+#' relative only to its medication class.
 #' @param ... other possible parameters
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -3533,7 +3720,8 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       highlight.followup.window=TRUE, followup.window.col="green",
                       highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                       show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
-                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, plot.dose=FALSE, lwd.event.max.dose=8,
+                      print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
+                      plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                       bw.plot=FALSE                          # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                      )
 .plot.CMA1plus(cma=x,
@@ -6740,15 +6928,12 @@ print.CMA_per_episode <- function(x,                                     # the C
           cat("  [\n");
           for( p in params )
           {
-            if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
+            if( p == "CMA" )
             {
-              if( p != "CMA" )
-              {
-                cat(paste0("    ",p," = ",cma[[p]],"\n"));
-              } else
-              {
-                cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
-              }
+              cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
+            } else if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
+            {
+              cat(paste0("    ",p," = ",cma[[p]],"\n"));
             }
           }
           cat("  ]\n");
@@ -6815,6 +7000,10 @@ print.CMA_per_episode <- function(x,                                     # the C
       is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) ||
       !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (plot.CMA0(cma,...));
 
+  # Convert all data.table to data.frame:
+  if( inherits(cma$CMA, "data.table") ) cma$CMA <- as.data.frame(cma$CMA);
+  if( inherits(cma$data, "data.table") ) cma$data <- as.data.frame(cma$data);
+
   # Check compatibility between subtypes of plots:
   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
 
@@ -6836,7 +7025,7 @@ print.CMA_per_episode <- function(x,                                     # the C
     cma$event.info[s,c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
   })));
 
-  # Make sure the dates are strings of the right fomat:
+  # Make sure the dates are strings of the right format:
   if( inherits(cma$data[,cma$event.date.colname], "Date") )
   {
     cma$date.format <- "%m/%d/%Y"; # use the default format
@@ -8369,7 +8558,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   if( !is.null(data) )
   {
     # data's class and dimensions:
-    if( class(data) == "matrix" ) data <- as.data.frame(data); #make it a data.frame
+    if( inherits(data, "matrix") || inherits(data, "data.table") ) data <- as.data.frame(data); # make it a data.frame
     if( !inherits(data, "data.frame") )
     {
       stop("The 'data' must be of type 'data.frame'!\n");
@@ -8781,18 +8970,19 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   # Preconditions:
   if( !is.null(data) )
   {
-    # data's class and dimensions:
-    if( class(data) == "matrix" ) data <- as.data.frame(data); #make it a data.frame
-    #if( !inherits(data, "data.frame") )
-    #{
-    #  stop("The 'data' must be of type 'data.frame'!\n");
-    #  return (NULL);
-    #}
-    #if( nrow(data) < 1 )
-    #{
-    #  stop("The 'data' must have at least one row!\n");
-    #  return (NULL);
-    #}
+    # certain types of data must be coerced to data.frame:
+    if( inherits(data, "matrix") || inherits(data, "data.table") ) data <- as.data.frame(data); # make it a data.frame
+    ## Note: the following checks do not apply anymore as we could pass, for example, a database connection!!!
+    # if( !inherits(data, "data.frame") )
+    # {
+    #   stop("The 'data' must be of type 'data.frame', 'matrix', or something derived from them!\n");
+    #   return (NULL);
+    # }
+    # if( nrow(data) < 1 )
+    # {
+    #   stop("The 'data' must have at least one row!\n");
+    #   return (NULL);
+    # }
     # the column names must exist in data:
     column.names <- get.colnames.fnc(data);
     if( !is.na(ID.colname) && !(ID.colname %in% column.names) )

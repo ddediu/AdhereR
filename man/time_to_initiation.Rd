@@ -61,18 +61,7 @@ A \code{data.frame} or \code{data.table} with the following columns:
  \item \code{first.disp} the date of the first dispensing event.
  \item \code{time.to.initialization} the difference in days between the first
  dispensing date and the  first prescription date.
- }
- @examples
- time_init <- time_to_initiation(presc.data = durcomp.prescribing,
-                                 disp.data = durcomp.dispensing,
-                                 ID.colname = "ID",
-                                 presc.start.colname = "DATE.PRESC",
-                                 disp.date.colname = "DATE.DISP",
-                                 medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
-                                 date.format = "%Y-%m-%d",
-                                 suppress.warnings = FALSE,
-                                 return.data.table = TRUE)
- @export
+}
 }
 \description{
 Computes the time between the first prescription event and the first dispensing
@@ -86,4 +75,15 @@ acquiring the first prescription) or delayed initiation may have a negative
 impact on health outcomes. The function \code{time_to_initiation} calculates
 the time between the first prescription and the first dispensing event, taking
 into account multiple variables to differentiate between treatments.
+}
+\examples{
+time_init <- time_to_initiation(presc.data = durcomp.prescribing,
+                                disp.data = durcomp.dispensing,
+                                ID.colname = "ID",
+                                presc.start.colname = "DATE.PRESC",
+                                disp.date.colname = "DATE.DISP",
+                                medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
+                                date.format = "\%Y-\%m-\%d",
+                                suppress.warnings = FALSE,
+                                return.data.table = TRUE);
 }

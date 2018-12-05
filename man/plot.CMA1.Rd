@@ -31,7 +31,8 @@
   real.obs.window.density = 35, real.obs.window.angle = 30,
   print.dose = FALSE, cex.dose = 0.75,
   print.dose.outline.col = "white", print.dose.centered = FALSE,
-  plot.dose = FALSE, lwd.event.max.dose = 8, bw.plot = FALSE)
+  plot.dose = FALSE, lwd.event.max.dose = 8,
+  plot.dose.lwd.across.medication.classes = FALSE, bw.plot = FALSE)
 
 \method{plot}{CMA2}(...)
 
@@ -151,6 +152,11 @@ segment width?}
 
 \item{lwd.event.max.dose}{\emph{Numeric}, the segment width corresponding to
 the maximum daily dose (must be >= lwd.event but not too big either).}
+
+\item{plot.dose.lwd.across.medication.classes}{\emph{Logical}, if \code{TRUE},
+the line width of the even is scaled relative to all medication classes (i.e.,
+relative to the global minimum and maximum doses), otherwise it is scale
+relative only to its medication class.}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
