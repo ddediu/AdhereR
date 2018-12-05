@@ -2336,6 +2336,47 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         ... # other stuff
 )
 {
+  # Consistency checks:
+  if( is.null(CMA0(data=data,
+                   ID.colname=ID.colname,
+                   event.date.colname=event.date.colname,
+                   event.duration.colname=event.duration.colname,
+                   event.daily.dose.colname=event.daily.dose.colname,
+                   medication.class.colname=medication.class.colname,
+                   carryover.within.obs.window=carryover.within.obs.window,
+                   carry.only.for.same.medication=carry.only.for.same.medication,
+                   consider.dosage.change=consider.dosage.change,
+                   medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                   dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
+                   maximum.permissible.gap=maximum.permissible.gap,
+                   maximum.permissible.gap.unit=maximum.permissible.gap.unit,
+                   followup.window.start=followup.window.start,
+                   followup.window.start.unit=followup.window.start.unit,
+                   followup.window.duration=followup.window.duration,
+                   followup.window.duration.unit=followup.window.duration.unit,
+                   event.interval.colname=event.interval.colname,
+                   gap.days.colname=gap.days.colname,
+                   date.format=date.format,
+                   parallel.backend=parallel.backend,
+                   parallel.threads=parallel.threads,
+                   suppress.warnings=suppress.warnings,
+                   return.data.table=return.data.table,
+                   ...)) ) # delegate default checks to CMA0!
+  {
+    return (NULL);
+  }
+  # Episode-specific stuff:
+  if( is.na(medication.class.colname) && medication.change.means.new.treatment.episode )
+  {
+    if( !suppress.warnings ) warning("When 'medication.class.colname' is NA, 'medication.change.means.new.treatment.episode' must be FALSE!\n");
+    return (NULL);
+  }
+  if( is.na(event.daily.dose.colname) && dosage.change.means.new.treatment.episode )
+  {
+    if( !suppress.warnings ) warning("When 'event.daily.dose.colname' is NA, 'dosage.change.means.new.treatment.episode' must be FALSE!\n");
+    return (NULL);
+  }
+
   # Convert maximum permissible gap units into days or proprtion:
   maximum.permissible.gap.as.percent <- FALSE; # is the maximum permissible gap a percent of the current duration?
   maximum.permissible.gap <- switch(maximum.permissible.gap.unit,
@@ -2381,7 +2422,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       last.event              <- max(which(data4ID$.EVENT.WITHIN.FU.WINDOW), na.rm=TRUE); # the last event in the follow-up window
       event.duration.column   <- data4ID[,get(event.duration.colname)];
       gap.days.column         <- data4ID[,get(gap.days.colname)];
-      medication.class.column <- data4ID[,get(medication.class.colname)];
+      if( !is.na(medication.class.colname) ) medication.class.column <- data4ID[,get(medication.class.colname)];
       MAX.PERMISSIBLE.GAP     <- switch(as.numeric(maximum.permissible.gap.as.percent)+1,
                                         rep(maximum.permissible.gap,n.events), # FALSE: maximum.permissible.gap is fixed in days
                                         maximum.permissible.gap * event.duration.column); # TRUE: maximum.permissible.gap is a percent of the duration
