@@ -8424,7 +8424,12 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #' @return Nothing
 #' @examples
 #' \dontrun{
-#' plot.interactive.cma(med.events);}
+#' plot_interactive_cma(med.events,
+#'                      ID.colname="PATIENT_ID",
+#'                      event.date.colname="DATE",
+#'                      event.duration.colname="DURATION",
+#'                      event.daily.dose.colname="PERDAY",
+#'                      medication.class.colname="CATEGORY");}
 #' @export
 plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA on
                                   ID=NULL, # the ID of the patient to be plotted (automatically taken to be the first)
@@ -8448,7 +8453,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   sliding.window.start.max=followup.window.start.max, # in days
                                   sliding.window.duration.max=2*365, # in days
                                   sliding.window.step.duration.max=2*365, # in days
-                                  backend=c("shiny","rstudio"), # the interactive backend to use
+                                  backend=c("shiny","rstudio")[1], # the interactive backend to use
                                   use.system.browser=FALSE, # if shiny backend, use the system browser?
                                   get.colnames.fnc=function(d) names(d),
                                   get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
@@ -8985,6 +8990,11 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     # }
     # the column names must exist in data:
     column.names <- get.colnames.fnc(data);
+    if( is.na(ID.colname) )
+    {
+      stop(paste0("Column ID.colname cannot be NA!\n"));
+      return (NULL);
+    }
     if( !is.na(ID.colname) && !(ID.colname %in% column.names) )
     {
       stop(paste0("Column ID.colname='",ID.colname,"' must appear in the 'data'!\n"));
