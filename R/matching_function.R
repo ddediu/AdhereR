@@ -1118,9 +1118,9 @@ time_to_initiation <- function(presc.data = NULL,
 
   dt_t2i <- merge(first_presc, first_disp, by = c(ID.colname, medication.class.colnames), all = TRUE);
 
-  dt_t2i[,time.to.initialization := as.numeric(first.disp-first.presc)];
+  dt_t2i[,time.to.initiation := as.numeric(first.disp-first.presc)];
 
-  # key by ID, medication class, and dispensing daste
+  # key by ID, medication class, and dispensing date
   setkeyv(dt_t2i, cols = c(ID.colname, medication.class.colnames, "first.disp"));
 
   if( !return.data.table )
