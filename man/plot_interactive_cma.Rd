@@ -17,7 +17,7 @@ plot_interactive_cma(data = NULL, ID = NULL, cma.class = c("simple",
   sliding.window.start.max = followup.window.start.max,
   sliding.window.duration.max = 2 * 365,
   sliding.window.step.duration.max = 2 * 365, backend = c("shiny",
-  "rstudio"), use.system.browser = FALSE,
+  "rstudio")[1], use.system.browser = FALSE,
   get.colnames.fnc = function(d) names(d),
   get.patients.fnc = function(d, idcol) unique(d[[idcol]]),
   get.data.for.patients.fnc = function(patientid, d, idcol) d[d[[idcol]]
@@ -141,5 +141,5 @@ patient information.
 }
 \examples{
 \dontrun{
-plot.interactive.cma(med.events);}
+plot_interactive_cma(med.events);}
 }

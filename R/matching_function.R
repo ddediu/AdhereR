@@ -28,7 +28,8 @@ globalVariables(c("DATE.IN", "DATE.OUT",
                   "cum.duration", ".episode", ".out", ".hosp", "time.to.initialization", "first.disp", "first.presc",
                   "debug.mode"));
 
-#' Example prescription events for 16 patients..
+
+#' Example prescription events for 16 patients.
 #'
 #' A sample dataset containing prescription events (one per row) for 16 patients
 #' over a period of roughly 15 months (1502 events in total).
@@ -46,7 +47,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'   yyyy-mm-dd format. Can also be \emph{string}.}
 #'   \item{VISIT}{\emph{integer}; the consecutive number of the prescription instances.
 #'   This column is optional and will be generated internally when not supplied. It is
-#'   used to identify treatment interruptions.
+#'   used to identify treatment interruptions.}
 #'   \item{ATC.CODE}{\emph{character}; the medication type, according to the WHO ATC
 #'   classification system. This can be a researcher-defined classification
 #'   depending on study aims (e.g., based on therapeutic use, mechanism of
@@ -58,13 +59,13 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'   \item{UNIT}{\emph{integer}; the unit of the prescribed dose. This is optional and can be used
 #'   as a separate variable to match between prescription and dispensing events.}
 #'   \item{PRESC.DURATION}{\emph{numeric}; the duration (in days) for which the prescription
-#'   is intended. Can be \code{NA} if the prescription is continuous without a fixed end date.
+#'   is intended. Can be \code{NA} if the prescription is continuous without a fixed end date.}
 #'   \item{DAILY.DOSE}{\emph{numeric}; the daily dose prescribed during this event (e.g., \code{50} for 1 tablet
 #'   of 50 mg per day or \code{25} for 1 tablet of 50 mg every two days).}
 #' }
 "durcomp.prescribing"
 
-#' Example dispensing events for 16 patients..
+#' Example dispensing events for 16 patients.
 #'
 #' A sample dataset containing dispensing events (one per row) for 16 patients
 #' over a period of roughly 24 months (1794 events in total).
@@ -115,35 +116,6 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'   yyyy-mm-dd format. Can also be \emph{string}.}
 #' }
 "durcomp.hospitalisation"
-
-#' Example events dataset.
-#'
-#' An artificial dataset containing XXX.
-#'
-#' @format A data frame with 1080 rows and 5 variables:
-#' \describe{
-#'   \item{PATIENT_ID}{\emph{integer} here; patient unique identifier. Can also
-#'   be \emph{string}}.
-#'   \item{DATE}{\emph{character};the medication event date, by default in the
-#'   mm/dd/yyyy format. It may represent a prescribing or dispensing date.}
-#'   \item{PERDAY}{\emph{integer}; the daily dosage prescribed for the
-#'   medication supplied at this medication event (i.e. how many doses should
-#'   be taken daily according to the prescription). This column is optional,
-#'   as it is not considered in all functions but may be relevant for specific
-#'   research or clinical contexts. All values should be > 0.}
-#'   \item{CATEGORY}{\emph{character}; the medication type, here two placeholder
-#'   labels, 'medA' and 'medB'. This is a researcher-defined classification
-#'   depending on study aims (e.g., based on therapeutic use, mechanism of
-#'   action, chemical molecule, or pharmaceutical formulation). This column is
-#'   optional, as it is not considered in all functions but may be relevant for
-#'   specific research or clinical contexts.}
-#'   \item{DURATION}{\emph{integer}; the medication event duration in days (i.e.
-#'   how many days the mediation supplied would last if used as prescribed);
-#'   may be available in the extraction or computed based on quantity supplied
-#'   (the number of doses prescribed or dispensed on that occasion) and daily
-#'   dosage. All values should be > 0.}
-#' }
-"durcomp.events"
 
 
 
@@ -263,16 +235,17 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'  per patient for a specific medication.
 #'  \item \code{tot.dosage.changes} the total number of dosage changes per patient
 #'  for a specific medication.
-#'  }
+#' }
 #' @examples
-#' event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+#' event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
 #'                                            presc.data = durcomp.prescribing,
 #'                                            hosp.data = durcomp.hospitalisation,
 #'                                            ID.colname = "ID",
 #'                                            presc.date.colname = "DATE.PRESC",
 #'                                            disp.date.colname = "DATE.DISP",
 #'                                            date.format = "%Y-%m-%d",
-#'                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+#'                                            medication.class.colnames = c("ATC.CODE",
+#'                                            "UNIT", "FORM"),
 #'                                            total.dose.colname = "TOTAL.DOSE",
 #'                                            presc.daily.dose.colname = "DAILY.DOSE",
 #'                                            presc.duration.colname = "PRESC.DURATION",
@@ -282,7 +255,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'                                            split.on.dosage.change = TRUE,
 #'                                            trt.interruption = "continue",
 #'                                            suppress.warnings = FALSE,
-#'                                            return.data.table = TRUE)
+#'                                            return.data.table = TRUE);
 #' @export
 compute_event_durations <- function(disp.data = NULL,
                                     presc.data = NULL,
@@ -362,9 +335,9 @@ compute_event_durations <- function(disp.data = NULL,
       if( !suppress.warnings ) warning(paste0("Column disp.date.colname='",disp.date.colname,"' must appear in the dispensing data!\n"));
       return (NULL);
     }
-    if( !is.na(medication.class.colnames) && !(medication.class.colnames %in% names(disp.data))  && !(medication.class.colnames %in% names(presc.data)) )
+    if( any(!is.na(medication.class.colnames) & !(medication.class.colnames %in% names(disp.data)) & !(medication.class.colnames %in% names(presc.data))) ) # deal with the possibility of multiple column names
     {
-      if( !suppress.warnings ) warning(paste0("Column medication.class.colnames='",medication.class.colnames,"' must appear in the dispensing and prescribing data!\n"));
+      if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames=",paste0("'",medication.class.colnames,"'",collapse=",")," must appear in the dispensing and prescribing data!\n"));
       return (NULL);
     }
     if( !is.na(total.dose.colname) && !(total.dose.colname %in% names(disp.data)) )
@@ -1063,7 +1036,7 @@ compute_event_durations <- function(disp.data = NULL,
 #'  \item \code{first.disp} the date of the first dispensing event.
 #'  \item \code{time.to.initialization} the difference in days between the first
 #'  dispensing date and the  first prescription date.
-#'  }
+#' }
 #' @examples
 #' time_init <- time_to_initiation(presc.data = durcomp.prescribing,
 #'                                 disp.data = durcomp.dispensing,
@@ -1073,7 +1046,7 @@ compute_event_durations <- function(disp.data = NULL,
 #'                                 medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
 #'                                 date.format = "%Y-%m-%d",
 #'                                 suppress.warnings = FALSE,
-#'                                 return.data.table = TRUE)
+#'                                 return.data.table = TRUE);
 #' @export
 time_to_initiation <- function(presc.data = NULL,
                                disp.data = NULL,
@@ -1109,9 +1082,9 @@ time_to_initiation <- function(presc.data = NULL,
       return (NULL);
     }
 
-    if( !is.na(medication.class.colnames) && !(medication.class.colnames %in% names(disp.data)) && !(medication.class.colnames %in% names(presc.data)))
+    if( any(!is.na(medication.class.colnames) & !(medication.class.colnames %in% names(disp.data)) & !(medication.class.colnames %in% names(presc.data))) ) # deal with the possibility of multiple column names
     {
-      if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames='",medication.class.colnames,"' must appear in the data!\n"));
+      if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames=",paste0("'",medication.class.colnames,"'",collapse=",")," must appear in the dispensing and prescribing data!\n"));
       return (NULL);
     }
 

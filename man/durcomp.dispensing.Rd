@@ -3,34 +3,36 @@
 \docType{data}
 \name{durcomp.dispensing}
 \alias{durcomp.dispensing}
-\title{Example dispensation dataset.}
-\format{A data frame with 1080 rows and 5 variables:
+\title{Example dispensing events for 16 patients.}
+\format{A data frame with 1794 rows and 6 variables:
 \describe{
-  \item{PATIENT_ID}{\emph{integer} here; patient unique identifier. Can also
-  be \emph{string}}.
-  \item{DATE}{\emph{character};the medication event date, by default in the
-  mm/dd/yyyy format. It may represent a prescribing or dispensing date.}
-  \item{PERDAY}{\emph{integer}; the daily dosage prescribed for the
-  medication supplied at this medication event (i.e. how many doses should
-  be taken daily according to the prescription). This column is optional,
-  as it is not considered in all functions but may be relevant for specific
-  research or clinical contexts. All values should be > 0.}
-  \item{CATEGORY}{\emph{character}; the medication type, here two placeholder
-  labels, 'medA' and 'medB'. This is a researcher-defined classification
+  \item{ID}{\emph{integer} here; patient unique identifier. Can also
+  be \emph{string}.}
+  \item{DATE.DISP}{\emph{Date} here;the dispensing event date, by default in the
+  yyyy-mm-dd format. Can also be \emph{string}.}
+  \item{ATC.CODE}{\emph{character}; the medication type, according to the WHO ATC
+  classification system. This can be a researcher-defined classification
   depending on study aims (e.g., based on therapeutic use, mechanism of
-  action, chemical molecule, or pharmaceutical formulation). This column is
-  optional, as it is not considered in all functions but may be relevant for
-  specific research or clinical contexts.}
-  \item{DURATION}{\emph{integer}; the medication event duration in days (i.e.
-  how many days the mediation supplied would last if used as prescribed);
-  may be available in the extraction or computed based on quantity supplied
-  (the number of doses prescribed or dispensed on that occasion) and daily
-  dosage. All values should be > 0.}
+  action, chemical molecule, or pharmaceutical formulation). The \code{compute_event_durations}
+  function will match prescribed medication to dispensed medications based on this variable.}
+  \item{UNIT}{\emph{integer}; the unit of the dispensed dose. This is optional and can be used
+  as a separate variable to match between prescription and dispensing events.}
+  \item{FORM}{\emph{character}; the galenic form of the dispensed preparation.
+  This is optional and can be used as a separate variable to match between prescription and
+  dispensing events.}
+  \item{TOTAL.DOSE}{\emph{numeric}; the total dispensed dose supplied at this
+  medication event (e.g., \code{5000} for 10 tables of 500 mg).}
 }}
 \usage{
 durcomp.dispensing
 }
 \description{
-An artificial dataset containing XXX.
+A sample dataset containing dispensing events (one per row) for 16 patients
+over a period of roughly 24 months (1794 events in total).
+This is the appropriate format to compute event durations with the
+\code{compute_event_durations} function. Each row represent an individual dispensing
+record for a specific dose of a specific medication for a patient at a given date.
+Visit number and Duration are optional, and more than one column to group medications
+can be supplied (such as Form or Unit).
 }
 \keyword{datasets}

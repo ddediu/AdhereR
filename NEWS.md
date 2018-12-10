@@ -1,3 +1,15 @@
+# AdhereR 0.3.1
+
+## Bug fixes
+
+  - error when passing a `data.table` to interactive plotting;
+  
+  - in `plot.CMA0`, `align.all.patients=TRUE` didn't work anymore (regression);
+  
+  - `time_to_initiation()` was not exported;
+  
+  - the examples for `time_to_initiation()` and `compute_event_durations()` were wrongly formatted.
+
 # AdhereR 0.3
 
 ## Small features and bug fixes

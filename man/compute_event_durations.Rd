@@ -132,7 +132,7 @@ A \code{data.frame} or \code{data.table} with the following columns:
  per patient for a specific medication.
  \item \code{tot.dosage.changes} the total number of dosage changes per patient
  for a specific medication.
- }
+}
 }
 \description{
 Computes event durations based on dispensing, prescription, and hospitalization
@@ -149,4 +149,25 @@ or may not be taken into account. Patients may be hospitalized or incarcerated,
 and may not use their own supplies during these periods. This function calculates
 supply durations, taking into account the aforementioned situations and providing
 various parameters for flexible adjustments.
+}
+\examples{
+event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
+                                           presc.data = durcomp.prescribing,
+                                           hosp.data = durcomp.hospitalisation,
+                                           ID.colname = "ID",
+                                           presc.date.colname = "DATE.PRESC",
+                                           disp.date.colname = "DATE.DISP",
+                                           date.format = "\%Y-\%m-\%d",
+                                           medication.class.colnames = c("ATC.CODE",
+                                           "UNIT", "FORM"),
+                                           total.dose.colname = "TOTAL.DOSE",
+                                           presc.daily.dose.colname = "DAILY.DOSE",
+                                           presc.duration.colname = "PRESC.DURATION",
+                                           visit.colname = "VISIT",
+                                           force.init.presc = TRUE,
+                                           force.presc.renew = TRUE,
+                                           split.on.dosage.change = TRUE,
+                                           trt.interruption = "continue",
+                                           suppress.warnings = FALSE,
+                                           return.data.table = TRUE);
 }
