@@ -529,7 +529,7 @@ server <- function(input, output, session) {
         postscript(file, height=input$save_plot_width, width=input$save_plot_height, horizontal=FALSE, onefile=FALSE, paper="special");
       } else if( input$save_plot_type == "pdf" )
       {
-        pdf(file, height=input$save_plot_width, width=input$save_plot_height, horizontal=FALSE, onefile=FALSE, paper="special");
+        pdf(file, height=input$save_plot_width, width=input$save_plot_height, onefile=FALSE, paper="special");
       } else # default to JPEG
       {
         jpeg(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution);
