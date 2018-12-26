@@ -520,10 +520,10 @@ server <- function(input, output, session) {
       # The type of plot to save:
       if( input$save_plot_type == "png" )
       {
-        png(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution);
+        png(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution, type="cairo");
       } else if( input$save_plot_type == "tiff" )
       {
-        tiff(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution);
+        tiff(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution, compression="zip", type="cairo");
       } else if( input$save_plot_type == "eps" )
       {
         cairo_ps(file, height=input$save_plot_width, width=input$save_plot_height, onefile=FALSE);
