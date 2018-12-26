@@ -141,5 +141,10 @@ patient information.
 }
 \examples{
 \dontrun{
-plot_interactive_cma(med.events);}
+plot_interactive_cma(med.events,
+                     ID.colname="PATIENT_ID",
+                     event.date.colname="DATE",
+                     event.duration.colname="DURATION",
+                     event.daily.dose.colname="PERDAY",
+                     medication.class.colname="CATEGORY");}
 }

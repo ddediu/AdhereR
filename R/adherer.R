@@ -2738,7 +2738,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   {
     if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
   }
-  if( plot.dose )
+  if( plot.dose || print.dose )
   {
     if( length(categories) == 1 && categories == "unspec. type" )
     {
