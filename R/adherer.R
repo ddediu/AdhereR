@@ -900,15 +900,15 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
       if( plot.dose.lwd.across.medication.classes )
       {
         dose.range.global <- data.frame("category"="ALL", "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
-        # Make sure we avoid divison by 0 when dose.range.global$max == dose.range.global$min:
-        if( dose.range.global$max == dose.range.global$min ) dose.range.global$max <- (dose.range.global$min + 1.0);
       }
     }
-    # Make sure we avoid divison by 0 when dose.range$max == dose.range$min:
-    dose.range$max[ dose.range$max == dose.range$min ] <- (dose.range$max[ dose.range$max == dose.range$min ] + 1.0);
 
     # Function for the linear interpolation of dose between lwd.min and lwd.max:
-    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])  (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / (dose.max - dose.min));
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])
+    {
+      delta <- ifelse(dose.max == dose.min, 1.0, (dose.max - dose.min)); # avoid dividing by zero when there's only one dose
+      return (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / delta);
+    }
   }
 
   # Find the earliest date:
@@ -2940,15 +2940,15 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       if( plot.dose.lwd.across.medication.classes )
       {
         dose.range.global <- data.frame("category"="ALL", "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
-        # Make sure we avoid divison by 0 when dose.range.global$max == dose.range.global$min:
-        if( dose.range.global$max == dose.range.global$min ) dose.range.global$max <- (dose.range.global$min + 1.0);
       }
     }
-    # Make sure we avoid divison by 0 when dose.range$max == dose.range$min:
-    dose.range$max[ dose.range$max == dose.range$min ] <- (dose.range$max[ dose.range$max == dose.range$min ] + 1.0);
 
     # Function for the linear interpolation of dose between lwd.min and lwd.max:
-    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])  (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / (dose.max - dose.min));
+    adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])
+    {
+      delta <- ifelse(dose.max == dose.min, 1.0, (dose.max - dose.min)); # avoid dividing by zero when there's only one dose
+      return (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / delta);
+    }
   }
 
   # Find the earliest date:
