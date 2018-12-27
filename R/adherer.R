@@ -587,10 +587,12 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' @param period.in.days The \emph{number} of days at which the regular grid is
 #' drawn.
 #' @param show.legend \emph{Logical}, should the legend be drawn?
-#' @param legend.x,legend.y where should the legend be drawn (please see
-#' \code{legend} for details).
-#' @param legend.bkg.opacity \emph{numerc} value specifying the opacity of the
-#' legend's background.
+#' @param legend.x The position of the legend on the x axis; can be "left",
+#' "right" (default), or a \emph{numeric} value.
+#' @param legend.y The position of the legend on the y axis; can be "bottom"
+#' (default), "top", or a \emph{numeric} value.
+#' @param legend.bkg.opacity A \emph{number} between 0.0 and 1.0 specifying the
+#' opacity of the legend background.
 #' @param cex,cex.axis,cex.lab \emph{numeric} values specifying the cex of the
 #' various types of text.
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
@@ -618,6 +620,13 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' "continuation" lines connecting consecutive events (colour, line style and
 #' width).
 #' @param col.na The colour used for missing event data.
+#' @param highlight.followup.window \emph{Logical}, should the follow-up window
+#' be plotted?
+#' @param followup.window.col The follow-up window's colour.
+#' @param highlight.observation.window \emph{Logical}, should the observation
+#' window be plotted?
+#' @param observation.window.col,observation.window.density,observation.window.angle Attributes of the observation window
+#' (colour, shading density and angle).
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
 #' @param print.CMA \emph{Logical}, should the CMA values be printed?

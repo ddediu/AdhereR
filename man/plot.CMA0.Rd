@@ -53,11 +53,14 @@ drawn.}
 
 \item{show.legend}{\emph{Logical}, should the legend be drawn?}
 
-\item{legend.x, legend.y}{where should the legend be drawn (please see
-\code{legend} for details).}
+\item{legend.x}{The position of the legend on the x axis; can be "left",
+"right" (default), or a \emph{numeric} value.}
 
-\item{legend.bkg.opacity}{\emph{numerc} value specifying the opacity of the
-legend's background.}
+\item{legend.y}{The position of the legend on the y axis; can be "bottom"
+(default), "top", or a \emph{numeric} value.}
+
+\item{legend.bkg.opacity}{A \emph{number} between 0.0 and 1.0 specifying the
+opacity of the legend background.}
 
 \item{cex, cex.axis, cex.lab}{\emph{numeric} values specifying the cex of the
 various types of text.}
@@ -97,6 +100,17 @@ relative only to its medication class.}
 width).}
 
 \item{col.na}{The colour used for missing event data.}
+
+\item{highlight.followup.window}{\emph{Logical}, should the follow-up window
+be plotted?}
+
+\item{followup.window.col}{The follow-up window's colour.}
+
+\item{highlight.observation.window}{\emph{Logical}, should the observation
+window be plotted?}
+
+\item{observation.window.col, observation.window.density, observation.window.angle}{Attributes of the observation window
+(colour, shading density and angle).}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
