@@ -6,8 +6,8 @@
 \usage{
 \method{plot}{CMA0}(x, ..., patients.to.plot = NULL, duration = NA,
   align.all.patients = FALSE, show.period = c("dates", "days")[2],
-  period.in.days = 90, show.legend = TRUE, legend.x = "bottomright",
-  legend.y = NULL, legend.bkg.opacity = 0.5, cex = 1,
+  period.in.days = 90, show.legend = TRUE, legend.x = "right",
+  legend.y = "bottom", legend.bkg.opacity = 0.5, cex = 1,
   cex.axis = 0.75, cex.lab = 1, col.cats = rainbow,
   lty.event = "solid", lwd.event = 2, pch.start.event = 15,
   pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,

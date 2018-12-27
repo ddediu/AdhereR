@@ -652,7 +652,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       align.all.patients=FALSE,              # should all patients be aligned?
                       show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                       period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
-                      show.legend=TRUE, legend.x="bottomright", legend.y=NULL, legend.bkg.opacity=0.5, # legend params and position (see ?legend for details)
+                      show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
@@ -958,6 +958,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
         main=ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
         axes=FALSE, xlab=ifelse(show.period=="dates","","days"), ylab=ifelse(print.CMA && !is.null(getCMA(cma)),"patient (& CMA)","patient"), cex.lab=cex.lab ); box();
   if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
+  char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex); # character height and width in the current plotting system
   curpat <- TRUE;
   for( i in 1:nrow(cma$data) )
   {
@@ -1101,51 +1102,118 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
         las=3, cex.axis=cex.axis);
 
   # The legend:
-  if( show.legend )
+  .legend <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
   {
-    med.class.names <- vapply(names(cols), function(s)
-      {
-        x <- ifelse(is.na(s),"<missing>",s);
-        if( print.dose || plot.dose )
-        {
-          dose.for.cat <- (dose.range$category == s);
-          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
-          {
-            x <- paste0(x," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
-          }
-        }
-        return (x);
-      }, character(1));
-    windows.legend <- c(); windows.col <- c(); windows.lty <- c(); windows.lwd <- c();
-    if( !is.null(event.info) && highlight.followup.window )
-    {
-      windows.legend <- c(windows.legend, "follow-up wnd.");
-      windows.col <- c(windows.col, followup.window.col);
-      windows.lty <- c(windows.lty, "dashed");
-      windows.lwd <- c(windows.lwd, 2);
-    }
-    if( !is.null(event.info) && highlight.observation.window )
-    {
-      windows.legend <- c(windows.legend, "observation wnd.");
-      windows.col <- c(windows.col, observation.window.col);
-      windows.lty <- c(windows.lty, "solid");
-      windows.lwd <- c(windows.lwd, 6);
-    }
+    # Legend rectangle:
+    if( do.plot ) rect(x, y, x + width, y + height, border=gray(0.6), lwd=2, col=rgb(0.99,0.99,0.99,legend.bkg.opacity));
+
+    cur.y <- y + height; # current y
+    max.width <- width; # maximum width
+
+    # Legend title:
+    if( do.plot ) text(x + width/2, cur.y, "Legend", pos=1, col=gray(0.3), cex=1.0);
+    cur.y <- cur.y - 4*char.height; max.width <- max(max.width, strwidth("Legend", cex=1.0));
+
+    # Event:
+    if( do.plot ) segments(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y, lty=lty.event, lwd=lwd.event, col="black");
+    if( do.plot ) points(x + 1.0*char.width, cur.y, pch=pch.start.event, cex=1.0, col="black");
+    if( do.plot ) points(x + 4.0*char.width, cur.y, pch=pch.end.event, cex=1.0, col="black");
     if( !plot.dose )
     {
-      legend(x=legend.x, y=legend.y, bty="o", bg=rgb(0.9,0.9,0.9,legend.bkg.opacity),
-             legend=c("event","no event",med.class.names,windows.legend),
-             col=c("black","black",cols,windows.col),
-             lty=c("solid","dotted",rep("solid",length(cols)),windows.lty),
-             lwd=c(lwd.event,1,rep(lwd.event,length(cols)),windows.lwd));
+      if( do.plot ) text(x + 5.0*char.width, cur.y, "event", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("event", cex=0.75));
     } else
     {
-      legend(x=legend.x, y=legend.y, bty="o", bg=rgb(0.9,0.9,0.9,legend.bkg.opacity),
-             legend=c("event (min. dose)", "event (max. dose)","no event",med.class.names,windows.legend),
-             col=c("black","black","black",cols,windows.col),
-             lty=c("solid","solid","dotted",rep("solid",length(cols)),windows.lty),
-             lwd=c(lwd.event,lwd.event.max.dose,1,rep(lwd.event,length(cols)),windows.lwd));
+      if( do.plot ) text(x + 5.0*char.width, cur.y, "event (min. dose)", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("event (min. dose)", cex=0.75));
+      if( do.plot ) segments(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y, lty=lty.event, lwd=lwd.event.max.dose, col="black");
+      if( do.plot ) points(x + 1.0*char.width, cur.y, pch=pch.start.event, cex=1.0, col="black");
+      if( do.plot ) points(x + 4.0*char.width, cur.y, pch=pch.end.event, cex=1.0, col="black");
+      if( do.plot ) text(x + 5.0*char.width, cur.y, "event (max. dose)", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("event (max. dose)", cex=0.75));
     }
+
+    # No event:
+    if( do.plot ) segments(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y, lty=lty.continuation, lwd=lwd.continuation, col=col.continuation);
+    if( do.plot ) text(x + 5.0*char.width, cur.y, "no event", col="black", cex=0.75, pos=4);
+    cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("no event", cex=0.75));
+
+    # Events with names:
+    for( i in 1:length(cols) )
+    {
+      if( do.plot ) segments(x + 1.0*char.width, cur.y - 0.5*char.height, x + 4.0*char.width, cur.y - 0.5*char.height, col=adjustcolor(cols[i],alpha.f=0.5), lwd=2, lty="solid");
+      if( do.plot )
+      {
+        med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+        if( print.dose || plot.dose )
+        {
+          dose.for.cat <- (dose.range$category == med.class.name);
+          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+          {
+            med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+          }
+        }
+        text(x + 5.0*char.width, cur.y - 0.5*char.height, med.class.name, col="black", cex=0.75, pos=4);
+      }
+      cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth(names(cols)[i], cex=0.75));
+    }
+    cur.y <- cur.y - 0.5*char.height;
+
+    # Follow-up window:
+    if( !is.null(event.info) && highlight.followup.window )
+    {
+      if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=followup.window.col, lty="dotted", lwd=2, col=rgb(1,1,1,0.0));
+      if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "follow-up wnd.", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("follow-up wnd.", cex=0.75));
+    }
+
+    # Observation window:
+    if( !is.null(event.info) && highlight.observation.window )
+    {
+      if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
+      {
+        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
+        if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "theor. obs. wnd.", col="black", cex=0.75, pos=4);
+        cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("theor. obs. wnd.", cex=0.75));
+        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=real.obs.window.density, angle=real.obs.window.angle);
+        if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "real obs.wnd.", col="black", cex=0.75, pos=4);
+        cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("real obs.wnd.", cex=0.75));
+      } else
+      {
+        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
+        if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "observation wnd.", col="black", cex=0.75, pos=4);
+        cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("observation wnd.", cex=0.75));
+      }
+    }
+
+    # Required size:
+    return (c("width" =max.width + 5.0*char.width,
+              "height"=(y + height - cur.y) + 1.0*char.height));
+  }
+  if( show.legend )
+  {
+    legend.size <- .legend(do.plot=FALSE);
+    if( is.na(legend.x) || legend.x == "right" )
+    {
+      legend.x <- par("usr")[2] - legend.size["width"] - char.width;
+    } else if( legend.x == "left" )
+    {
+      legend.x <- par("usr")[1] + char.width;
+    } else if( !is.numeric(legend.x) && length(legend.x) != 1 )
+    {
+      legend.x <- par("usr")[2] - legend.size["width"] - char.width;
+    }
+    if( is.na(legend.y) || legend.y == "bottom" )
+    {
+      legend.y <- par("usr")[3] + char.height;
+    } else if( legend.y == "top" )
+    {
+      legend.y <- par("usr")[4] - legend.size["height"] - char.height;
+    } else if( !is.numeric(legend.y) && length(legend.y) != 1 )
+    {
+      legend.y <- par("usr")[3] + char.height;
+    }
+    invisible(.legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"])));
   }
 }
 
