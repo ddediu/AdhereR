@@ -36,7 +36,7 @@ ui <- fluidPage(
 
     # Sidebar panel for inputs ----
     #sidebarPanel(
-    column(3, wellPanel(id = "tPanel", style = "overflow-y:scroll; max-height: 600px;",
+    column(3, wellPanel(id = "tPanel", style = "overflow:scroll; max-height: 90vh;",
 
 
       span(h4("General settings..."), style="color:DarkBlue"),
@@ -375,12 +375,15 @@ ui <- fluidPage(
       # Messages:
       column(12,
         tags$head(tags$style("#container * { display: inline; }")),
-        div(id="container", span(" Messages:", style="color:DarkBlue"), span(textOutput(outputId = "messages"), style="color:Blue"))
+        div(id="container",
+            span(" Messages:", style="color:DarkBlue"),
+            span(htmlOutput(outputId = "messages")),
+            style="height: 2em; resize: none; overflow:auto")
       ),
 
       # Output: the actual plot ----
       column(12, wellPanel(id = "tPlot",
-                           style="resize: both; overflow-y:scroll; overflow-x:scroll; max-height: 800px;",
+                           style="resize: none; overflow:scroll; max-height: 75vh; max-width: 80vw",
                            plotOutput(outputId = "distPlot", inline=TRUE)))
 
     )
@@ -462,19 +465,30 @@ server <- function(input, output, session) {
 
       # Depeding on the CMA class we might do things differently:
       msgs <- ""; # the output messages
+      res <- NULL; # the result of plotting
       if( input$cma_class %in% c("simple", "per episode", "sliding window") )
       {
         # Call the workhorse plotting function with the appropriate argumens:
-        msgs <- capture.output(.renderPlot());
+        msgs <- capture.output(res <- .renderPlot());
       } else
       {
         # Quitting....
         showModal(modalDialog(title="AdhereR interactive plotting...", paste0("Unknwon CMA class '",input$cma_class,"'."), easyClose=TRUE));
       }
 
-      output$messages <- renderText({
-        msgs;
-      })
+      if( is.null(res) || length(grep("error", msgs, ignore.case=TRUE)) > 0 )
+      {
+        # Errors:
+        output$messages <- renderText({ paste0("<font color=\"red\"><b>",msgs,"</b></font>"); })
+      } else if( length(grep("warning", msgs, ignore.case=TRUE)) > 0 )
+      {
+        # Warnings:
+        output$messages <- renderText({ paste0("<font color=\"green\"><i>",msgs,"</i></font>"); })
+      } else
+      {
+        # Normal output:
+        output$messages <- renderText({ paste0("<font color=\"blue\">",msgs,"</font>"); })
+      }
 
     },
     width=function() # plot width
