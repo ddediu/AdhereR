@@ -28,56 +28,85 @@ NULL
 ui <- fluidPage(
 
   # App title ----
-  titlePanel("AdhereR: Interactive plotting using Shiny..."),
+  #titlePanel(windowTitle="AdhereR: Interactive plotting using Shiny..."),
+  list(tags$head(HTML('<link rel="icon", href="adherer-logo.png", type="image/png" />'))),
+  div(style="padding: 1px 0px; width: '100%'", titlePanel(title="", windowTitle="AdhereR: Shiny plot...")),
 
   # Sidebar layout with input and output definitions ----
   #sidebarLayout(
   fluidRow(
+
+    # Title & help
+    column(12, div(
+      img(src='adherer-logo.png', align = "left", style="font-size: x-large; font-weight: bold; height: 2em; vertical-align: baseline;"),
+      div(style="width: 3em; display: inline-block; "),
+      #h1("interactive plots with Shiny...", style="color:DarkBlue; font-size: x-large; font-weight: bold; margin: 0; display: inline-block;"),
+      actionButton(inputId="help_button",  label=strong("Help"),  icon=icon("question-sign", lib="glyphicon"), style="border: none; background: none; float: right;"),
+      actionButton(inputId="about_button", label=strong("About"), icon=icon("info-sign",     lib="glyphicon"), style="color: #3498db; border: none; background: none; float: right;")),
+      hr()),
 
     # Sidebar panel for inputs ----
     #sidebarPanel(
     column(3, wellPanel(id = "tPanel", style = "overflow:scroll; max-height: 90vh;",
 
 
-      span(h4("General settings..."), style="color:DarkBlue"),
+      tags$div(title='General setting that apply to all kinds of plots',
+               span(id = "general_settings", h4("General settings..."), style="color:DarkBlue")),
 
       # Select the CMA class ----
-      selectInput(inputId="cma_class",
+      tags$div(title='Select the type of CMA to plot: "simple", "per eipsode" or "sliding window"',
+               selectInput(inputId="cma_class",
                   label="Select CMA type",
                   choices=c("simple", "per episode", "sliding window"),
-                  selected=.plotting.params$cma.class),
+                  selected=.plotting.params$cma.class)),
 
       hr(),
 
       # Select the simple CMA to compute ----
-      selectInput(inputId="cma_to_compute",
-                  label="Select CMA to compute",
-                  choices=paste0("CMA",0:9),
-                  selected="CMA1"),
+      conditionalPanel(
+        condition = "(input.cma_class == 'simple')",
+        tags$div(title='The "simple" CMA to compute by itself',
+                 selectInput(inputId="cma_to_compute",
+                    label="Select CMA to compute",
+                    choices=paste0("CMA",0:9),
+                    selected="CMA0"))
+      ),
+      conditionalPanel(
+        condition = "(input.cma_class != 'simple')",
+        tags$div(title='The "simple" CMA to compute for each episode/sliding window',
+                 selectInput(inputId="cma_to_compute_within_complex",
+                    label="Select CMA to compute",
+                    choices=paste0("CMA",1:9),
+                    selected="CMA1"))
+      ),
 
       # Select the patient to plot ----
-      selectInput(inputId="patient",
-                  label="Select patient to plot",
+      tags$div(title='Select one (or more, by repeatedly selecting) patient(s) to plot',
+               selectInput(inputId="patient",
+                  label="Select patient(s) to plot",
                   choices=.plotting.params$all.IDs,
                   selected=.plotting.params$ID,
-                  multiple=TRUE),
+                  multiple=TRUE)),
 
       hr(),
-      span(h4("Follow-up window..."), style="color:DarkBlue"),
+      tags$div(title='Define the follow-up window',
+               span(id="followup_window", h4("Follow-up window..."), style="color:DarkBlue")),
 
       # Follow-up window start ----
-      selectInput(inputId="followup_window_start_unit",
+      tags$div(title='The unit of the start of the follow-up window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
+               selectInput(inputId="followup_window_start_unit",
                   label="Follow-up wnd. start unit",
                   choices=c("days", "weeks", "months", "years", "calendar date"), # "column in dataset"),
-                  selected="days"),
+                  selected="days")),
 
       # If follow-up window unit is "calendar date" ----
       conditionalPanel(
         condition = "(input.followup_window_start_unit == 'calendar date')",
                     # Select an actual date ----
-                    dateInput(inputId="followup_window_start_date",
+                    tags$div(title='Select the actual start date of the follow-up window (possibly using a calendar widget)',
+                             dateInput(inputId="followup_window_start_date",
                               label="Follow-up wnd. start",
-                              value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1)
+                              value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
       ),
 
       ## If follow-up window unit is "column in dataset" ----
@@ -94,80 +123,103 @@ ui <- fluidPage(
       conditionalPanel(
         condition = "(input.followup_window_start_unit != 'calendar date')",  # && input.followup_window_start_unit != 'column in dataset')",
                     # Select the number of units ----
-                    sliderInput(inputId="followup_window_start_no_units",
+                    tags$div(title='Select the number of units defining the start of the follow-up window',
+                             sliderInput(inputId="followup_window_start_no_units",
                                 label="Follow-up wnd. start",
-                                min=0, max=.plotting.params$followup.window.start.max, value=0, step=1, round=TRUE)
+                                min=0, max=.plotting.params$followup.window.start.max, value=0, step=1, round=TRUE))
       ),
 
 
       # Follow-up window duration ----
-      selectInput(inputId="followup_window_duration_unit",
+      tags$div(title='The unit of the duration of the follow-up window (can be "days", "weeks", "months" or "years")',
+               selectInput(inputId="followup_window_duration_unit",
                   label="Follow-up wnd. duration unit",
                   choices=c("days", "weeks", "months", "years"),
-                  selected="days"),
+                  selected="days")),
 
       # Select the number of units ----
-      sliderInput(inputId="followup_window_duration",
+      tags$div(title='Select the number of units defining the duration of the follow-up window',
+               sliderInput(inputId="followup_window_duration",
                   label="Follow-up wnd. duration",
-                  min=0, max=.plotting.params$followup.window.duration.max, value=2*365, step=1, round=TRUE),
+                  min=0, max=.plotting.params$followup.window.duration.max, value=2*365, step=1, round=TRUE)),
 
       hr(),
-      span(h4("Observation window..."), style="color:DarkBlue"),
+      tags$div(title='Define the observation window',
+               span(id="observation_window", h4("Observation window..."), style="color:DarkBlue")),
 
       # Observation window start ----
-      selectInput(inputId="observation_window_start_unit",
+      tags$div(title='The unit of the start of the observation window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
+               selectInput(inputId="observation_window_start_unit",
                   label="Observation wnd. start unit",
                   choices=c("days", "weeks", "months", "years", "calendar date"),
-                  selected="days"),
+                  selected="days")),
 
       # If observation window unit is "calendar date" ----
       conditionalPanel(
         condition = "(input.observation_window_start_unit == 'calendar date')",
                     # Select an actual date ----
-                    dateInput(inputId="observation_window_start_date",
+                    tags$div(title='Select the actual start date of the observation window (possibly using a calendar widget)',
+                             dateInput(inputId="observation_window_start_date",
                               label="Observation wnd. start",
-                              value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1)
+                              value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
       ),
 
       # If observation window unit is not "calendar date" ----
       conditionalPanel(
         condition = "(input.observation_window_start_unit != 'calendar date')",
                     # Select the number of units ----
-                    sliderInput(inputId="observation_window_start_no_units",
+                    tags$div(title='Select the number of units defining the start of the observation window',
+                             sliderInput(inputId="observation_window_start_no_units",
                                 label="Observation wnd. start",
-                                min=0, max=.plotting.params$observation.window.start.max, value=0, step=1, round=TRUE)
+                                min=0, max=.plotting.params$observation.window.start.max, value=0, step=1, round=TRUE))
       ),
 
 
       # Observation window duration ----
-      selectInput(inputId="observation_window_duration_unit",
+      tags$div(title='The unit of the duration of the observation window (can be "days", "weeks", "months" or "years")',
+               selectInput(inputId="observation_window_duration_unit",
                   label="Observation wnd. duration unit",
                   choices=c("days", "weeks", "months", "years"),
-                  selected="days"),
+                  selected="days")),
 
       # Select the number of units ----
-      sliderInput(inputId="observation_window_duration",
+      tags$div(title='Select the number of units defining the duration of the observation window',
+               sliderInput(inputId="observation_window_duration",
                   label="Observation wnd. duration",
-                  min=0, max=.plotting.params$observation.window.duration.max, value=2*365, step=1, round=TRUE),
+                  min=0, max=.plotting.params$observation.window.duration.max, value=2*365, step=1, round=TRUE)),
 
       hr(),
 
 
       # For CMA5 to CMA9: carry_only_for_same_medication, consider_dosage_change ----
       conditionalPanel(
-        condition = "(input.cma_to_compute == 'CMA5' || input.cma_to_compute == 'CMA6' || input.cma_to_compute == 'CMA7' || input.cma_to_compute == 'CMA8' || input.cma_to_compute == 'CMA9')",
+        condition = "((input.cma_class == 'simple' &&
+                       (input.cma_to_compute == 'CMA5' ||
+                        input.cma_to_compute == 'CMA6' ||
+                        input.cma_to_compute == 'CMA7' ||
+                        input.cma_to_compute == 'CMA8' ||
+                        input.cma_to_compute == 'CMA9')) ||
+                      (input.cma_class != 'simple' &&
+                       (input.cma_to_compute_within_complex == 'CMA5' ||
+                        input.cma_to_compute_within_complex == 'CMA6' ||
+                        input.cma_to_compute_within_complex == 'CMA7' ||
+                        input.cma_to_compute_within_complex == 'CMA8' ||
+                        input.cma_to_compute_within_complex == 'CMA9')))",
 
-                    span(h4("Carry over..."), style="color:DarkBlue"),
+                    tags$div(title='What type of carry over to consider?',
+                             span(h4("Carry over..."), style="color:DarkBlue")),
 
                     # Carry-over for same treat only? ----
-                    checkboxInput(inputId="carry_only_for_same_medication",
-                                  label="Carry-over for same treat only?",
-                                  value=FALSE),
+                    tags$div(title='Carry over only across treatments of the same type?',
+                             checkboxInput(inputId="carry_only_for_same_medication",
+                                  label="Carry over for same treat only?",
+                                  value=FALSE)),
 
                     # Consider dosage changes? ----
-                    checkboxInput(inputId="consider_dosage_change",
+                    tags$div(title='Consider dosage change when computing the carry over?',
+                             checkboxInput(inputId="consider_dosage_change",
                                   label="Consider dosage changes?",
-                                  value=FALSE),
+                                  value=FALSE)),
 
                     hr()
       ),
@@ -177,33 +229,39 @@ ui <- fluidPage(
       conditionalPanel(
         condition = "(input.cma_class == 'per episode')",
 
-                    span(h4("Define the episodes..."), style="color:DarkBlue"),
+                    tags$div(title='Parameters defining treatment episodes',
+                             span(h4("Define the episodes..."), style="color:DarkBlue")),
 
                     # Does treat. change start new episode? ----
-                    checkboxInput(inputId="medication_change_means_new_treatment_episode",
+                    tags$div(title='Does changing the treatment type trigger a new episode?',
+                             checkboxInput(inputId="medication_change_means_new_treatment_episode",
                                   label="Treat. change start new episode?",
-                                  value=FALSE),
+                                  value=FALSE)),
 
                     # Does dosage change start new episode? ----
-                    checkboxInput(inputId="dosage_change_means_new_treatment_episode",
+                    tags$div(title='Does changing the dose trigger a new episode?',
+                             checkboxInput(inputId="dosage_change_means_new_treatment_episode",
                                   label="Dosage change start new episode?",
-                                  value=FALSE),
+                                  value=FALSE)),
 
                     # Max. permis. gap duration unit ----
-                    selectInput(inputId="maximum_permissible_gap_unit",
+                    tags$div(title='The unit of the maximum permissible gap after which a new episode is triggered: either absolute ("days", "weeks", "months" or "years") or relative ("percent")',
+                             selectInput(inputId="maximum_permissible_gap_unit",
                                 label="Max. permis. gap duration unit",
                                 choices=c("days", "weeks", "months", "years", "percent"),
-                                selected="days"),
+                                selected="days")),
 
                     # Max. permissible gap ----
-                    sliderInput(inputId="maximum_permissible_gap",
+                    tags$div(title='The maximum permissible gap after which a new episode is triggered (in the above-selected units)',
+                             sliderInput(inputId="maximum_permissible_gap",
                                 label="Max. permissible gap",
-                                min=0, max=.plotting.params$followup.window.duration.max, value=0, step=1, round=TRUE),
+                                min=0, max=.plotting.params$followup.window.duration.max, value=0, step=1, round=TRUE)),
 
                     # Plot CMA as histogram ----
-                    checkboxInput(inputId="plot_CMA_as_histogram_episodes",
+                    tags$div(title='Show the distribution of estimated CMAs across episodes as a histogram or barplot?',
+                             checkboxInput(inputId="plot_CMA_as_histogram_episodes",
                                   label="Plot CMA as histogram?",
-                                  value=FALSE),
+                                  value=FALSE)),
 
                     hr()
       ),
@@ -213,87 +271,101 @@ ui <- fluidPage(
       conditionalPanel(
         condition = "(input.cma_class == 'sliding window')",
 
-                    span(h4("Define the sliding windows..."), style="color:DarkBlue"),
+                    tags$div(title='Parameters defining the sliding windows',
+                             span(h4("Define the sliding windows..."), style="color:DarkBlue")),
 
                     # Sliding window start ----
-                    selectInput(inputId="sliding_window_start_unit",
+                    tags$div(title='The unit of the start of the sliding windows ("days", "weeks", "months" or "years")',
+                             selectInput(inputId="sliding_window_start_unit",
                                 label="Sliding wnd. start unit",
                                 choices=c("days", "weeks", "months", "years"),
-                                selected="days"),
+                                selected="days")),
 
                     # Select the number of units ----
-                    sliderInput(inputId="sliding_window_start",
+                    tags$div(title='Select the number of units defining the start of the sliding windows',
+                             sliderInput(inputId="sliding_window_start",
                                 label="Sliding wnd. start",
-                                min=0, max=.plotting.params$sliding.window.start.max, value=0, step=1, round=TRUE),
+                                min=0, max=.plotting.params$sliding.window.start.max, value=0, step=1, round=TRUE)),
 
                     # Sliding window duration ----
-                    selectInput(inputId="sliding_window_duration_unit",
+                    tags$div(title='The unit of the duration of the sliding windows ("days", "weeks", "months" or "years")',
+                             selectInput(inputId="sliding_window_duration_unit",
                                 label="Sliding wnd. duration unit",
                                 choices=c("days", "weeks", "months", "years"),
-                                selected="days"),
+                                selected="days")),
 
                     # Select the number of units ----
-                    sliderInput(inputId="sliding_window_duration",
+                    tags$div(title='Select the number of units defining the duration of the sliding windows',
+                             sliderInput(inputId="sliding_window_duration",
                                 label="Sliding wnd. duration",
-                                min=0, max=.plotting.params$sliding.window.duration.max, value=90, step=1, round=TRUE),
+                                min=0, max=.plotting.params$sliding.window.duration.max, value=90, step=1, round=TRUE)),
 
                     # Steps choice ----
-                    selectInput(inputId="sliding_window_step_choice",
+                    tags$div(title='How is the step of the sliding windows defined: by giving their number or their duration?',
+                             selectInput(inputId="sliding_window_step_choice",
                                 label="Define the sliding wnd. steps by",
                                 choices=c("the number of steps", "the duration of a step"),
-                                selected="the duration of a step"),
+                                selected="the duration of a step")),
 
                     # Sliding window steps
                     conditionalPanel(
                       condition = "(input.sliding_window_step_choice == 'the duration of a step')",
-                                  selectInput(inputId="sliding_window_step_unit",
+                                  tags$div(title='The unit of the sliding windows step duration ("days", "weeks", "months" or "years")',
+                                           selectInput(inputId="sliding_window_step_unit",
                                               label="Sliding wnd. step unit",
                                               choices=c("days", "weeks", "months", "years"),
-                                              selected="days"),
-                                  sliderInput(inputId="sliding_window_step_duration",
+                                              selected="days")),
+                                  tags$div(title='The sliding windows duration (in the units selected above)',
+                                           sliderInput(inputId="sliding_window_step_duration",
                                               label="Sliding wnd. step duration",
-                                              min=0, max=.plotting.params$sliding.window.duration.max, value=7, step=1, round=TRUE)
+                                              min=0, max=.plotting.params$sliding.window.duration.max, value=7, step=1, round=TRUE))
                     ),
                     conditionalPanel(
                       condition = "(input.sliding_window_step_choice == 'the number of steps')",
-                                  sliderInput(inputId="sliding_window_no_steps",
+                                  tags$div(title='The number of sliding windows steps',
+                                           sliderInput(inputId="sliding_window_no_steps",
                                               label="Sliding wnd. number of steps",
-                                              min=0, max=1000, value=10, step=1, round=TRUE)
+                                              min=0, max=1000, value=10, step=1, round=TRUE))
                     ),
 
                     # Plot CMA as histogram ----
-                    checkboxInput(inputId="plot_CMA_as_histogram_sliding_window",
+                    tags$div(title='Show the distribution of estimated CMAs across sliding windows as a histogram or barplot?',
+                             checkboxInput(inputId="plot_CMA_as_histogram_sliding_window",
                                   label="Plot CMA as histogram?",
-                                  value=TRUE),
+                                  value=TRUE)),
 
                     hr()
 
       ),
 
 
-      span(h4("Other..."), style="color:DarkBlue"),
+      tags$div(title='Misc. parameters',
+               span(h4("Other..."), style="color:DarkBlue")),
 
       # Align al patients ----
       conditionalPanel(
         condition="(input.patient.length > 1)",
 
-        checkboxInput(inputId="plot_align_all_patients",
+        tags$div(title='Should all the patients be vertically aligned relative to their first event?',
+                 checkboxInput(inputId="plot_align_all_patients",
                       label="Align patients?",
-                      value=FALSE),
+                      value=FALSE)),
 
         # Align al patients ----
         conditionalPanel(
           condition="input.plot_align_all_patients",
-          checkboxInput(inputId="plot_align_first_event_at_zero",
+          tags$div(title='Should the first event (across patients) be considered as the origin of time?',
+                   checkboxInput(inputId="plot_align_first_event_at_zero",
                         label="Align 1st event at 0?",
-                        value=FALSE)
+                        value=FALSE))
         )
       ),
 
       # Show legend? ----
-      checkboxInput(inputId="show_legend",
+      tags$div(title='Display the plot legend?',
+               checkboxInput(inputId="show_legend",
                   label="Show the legend?",
-                  value=TRUE)
+                  value=TRUE))
 
     )),
 
@@ -304,17 +376,19 @@ ui <- fluidPage(
 
       # Control the plot dimensions ----
       column(3,
-        sliderInput(inputId="plot_width",
+        tags$div(title='The width of the plotting area (in pixles)',
+                 sliderInput(inputId="plot_width",
                     label="Plot width",
-                    min=0, max=5000, value=500, step=20, round=TRUE, )
+                    min=0, max=5000, value=500, step=20, round=TRUE))
       ),
 
       conditionalPanel(
         condition = "(!input.plot_keep_ratio)",
         column(3,
-          sliderInput(inputId="plot_height",
+          tags$div(title='The height of the plotting area (in pixels)',
+                   sliderInput(inputId="plot_height",
                       label="height",
-                      min=0, max=5000, value=300, step=20, round=TRUE)
+                      min=0, max=5000, value=300, step=20, round=TRUE))
         )
       ),
       conditionalPanel(
@@ -325,9 +399,10 @@ ui <- fluidPage(
       ),
 
       column(2,
-        checkboxInput(inputId="plot_keep_ratio",
-                    label="keep ratio",
-                    value=TRUE)#,
+        tags$div(title='Freeze the width/height ratio of the plotting area (or make the width and height independent of each other)?',
+                 checkboxInput(inputId="plot_keep_ratio",
+                    label="Keep ratio",
+                    value=TRUE))#,
 
         #checkboxInput(inputId="plot_auto_size",
         #            label="auto size",
@@ -336,14 +411,16 @@ ui <- fluidPage(
 
       column(2,
         # Save image to file:
-        checkboxInput(inputId="save_to_file_info",
+        tags$div(title='Explort this plot to an image file?',
+                 checkboxInput(inputId="save_to_file_info",
                     label="Save plot!",
-                    value=FALSE)
+                    value=FALSE))
       ),
 
       column(2,
         # Close shop:
-        actionButton(inputId="close_shop", label=strong("Exit..."), icon=icon("remove-circle", lib="glyphicon"), style="color: #C70039 ; border-color: #C70039")
+        tags$div(title='Exit this Shiny plotting app? (The plot will NOT be automatically saved!)',
+                 actionButton(inputId="close_shop", label=strong("Exit..."), icon=icon("remove-circle", lib="glyphicon"), style="color: #C70039 ; border-color: #C70039"))
       ),
 
       # Save to file info:
@@ -351,31 +428,45 @@ ui <- fluidPage(
         conditionalPanel(
           condition="(input.save_to_file_info)",
 
-          column(2,numericInput(inputId="save_plot_width", label="width", value=5)),
-          column(2,numericInput(inputId="save_plot_height", label="height", value=5)),
+          column(2,
+                 tags$div(title='The width of the exported plot (in the selected units)',
+                          numericInput(inputId="save_plot_width", label="width", value=5))),
+          column(2,
+                 tags$div(title='The height of the exported plot (in the selected units)',
+                          numericInput(inputId="save_plot_height", label="height", value=5))),
 
           conditionalPanel( # EPS + PDF
             condition="(input.save_plot_type == 'eps' || save_plot_type == 'pdf')",
-            column(2,selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in")) # only inches
+            column(2,
+                   tags$div(title='For EPS and PDF, only inches are available',
+                            selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in"))) # only inches
           ),
           conditionalPanel( # JPEG + PNG + TIFF
             condition="(input.save_plot_type != 'eps' && save_plot_type != 'pdf')",
-            column(2,selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","mm","px"), selected="in"))
+            column(2,
+                   tags$div(title='The unit of exported plot',
+                            selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","mm","px"), selected="in")))
           ),
 
-          column(2,selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpeg")),
+          column(2,
+                 tags$div(title='The type of the exported image',
+                          selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpeg"))),
 
           #column(2,numericInput(inputId="save_plot_quality", label="quality", value=75, min=0, max=100, step=1)),
-          column(2,numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0)),
+          column(2,
+                 tags$div(title='The resolution of the exported image (not useful for EPS and PDF)',
+                          numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0))),
 
-          column(2, style="margin-top: 25px;", downloadButton(outputId="save_to_file", label="Save plot"))
+          column(2, style="margin-top: 25px;",
+                 tags$div(title='Export the plot now!',
+                          downloadButton(outputId="save_to_file", label="Save plot")))
         )
       ),
 
       # Messages:
       column(12,
         tags$head(tags$style("#container * { display: inline; }")),
-        div(id="container",
+        div(id="container", title="Various messages (in blue), warnings (in green) and errors (in red) generated during plotting...",
             span(" Messages:", style="color:DarkBlue; font-weight: bold;"),
             span(htmlOutput(outputId = "messages")),
             style="height: 2em; resize: none; overflow:auto")
@@ -387,19 +478,7 @@ ui <- fluidPage(
                            plotOutput(outputId = "distPlot", inline=TRUE)))
 
     )
-  )#,
-  #
-  #
-  #fluidRow(
-  #
-  #  # Messages:
-  #  column(12,
-  #    span(h4(" Messages:"), style="color:DarkBlue")
-  #    span(textOutput(outputId = "messages"), style="color:Blue")
-  #  )
-  #
-  #)
-
+  )
 )
 
 
@@ -416,7 +495,7 @@ server <- function(input, output, session) {
                                               input$cma_class),
                                    cma.to.apply=ifelse(input$cma_class == "simple",
                                                        "none",
-                                                       input$cma_to_compute),
+                                                       ifelse(input$cma_to_compute_within_complex == "CMA0", "CMA1", input$cma_to_compute_within_complex)), # don't use CMA0 for complex CMAs
                                    #carryover.within.obs.window=FALSE,
                                    #carryover.into.obs.window=FALSE,
                                    carry.only.for.same.medication=input$carry_only_for_same_medication,
@@ -528,7 +607,16 @@ server <- function(input, output, session) {
 
   # Export plot to file:
   output$save_to_file <- downloadHandler(
-    filename = function(){ paste0("adherer-plot-", input$cma_class,"-", input$cma_to_compute,"-", "ID-",input$patient, ".", input$save_plot_type) },
+    filename = function()
+      {
+        paste0("adherer-plot-",
+               input$cma_class,"-",
+               ifelse(input$cma_class=="simple", input$cma_to_compute, cma_to_compute_within_complex),
+               "-",
+               "ID-",input$patient,
+               ".",
+               input$save_plot_type)
+      },
     content = function(file)
     {
       # The type of plot to save:
@@ -557,6 +645,14 @@ server <- function(input, output, session) {
     }
   )
 
+
+  # About and Help:
+  observeEvent(input$about_button,
+  {
+    showModal(modalDialog(p("AdhereR about text here"),
+                          title="About AdhereR...",
+                          footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))))
+  })
 
 
   # Close shop nicely:
