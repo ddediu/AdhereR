@@ -376,7 +376,7 @@ ui <- fluidPage(
       column(12,
         tags$head(tags$style("#container * { display: inline; }")),
         div(id="container",
-            span(" Messages:", style="color:DarkBlue"),
+            span(" Messages:", style="color:DarkBlue; font-weight: bold;"),
             span(htmlOutput(outputId = "messages")),
             style="height: 2em; resize: none; overflow:auto")
       ),
