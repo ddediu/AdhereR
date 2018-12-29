@@ -634,6 +634,12 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' graphically?
 #' @param CMA.plot.ratio A \emph{number}, the proportion of the total horizontal
 #' plot space to be allocated to the CMA plot.
+#' \emph{Numeric}, the minimum size of the plotting surface in characters;
+#' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+#' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+#' referes to a single event.
+#' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
+#' to plot.
 #' @param ... other possible parameters
 #' @examples
 #' cma0 <- CMA0(data=med.events,
@@ -678,7 +684,9 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       print.CMA=TRUE,                        # print CMA next to the participant's ID?
                       plot.CMA=TRUE,                         # plot the CMA next to the participant ID?
-                      CMA.plot.ratio=0.10                    # the proportion of the total horizontal plot to be taken by the CMA plot
+                      CMA.plot.ratio=0.10,                   # the proportion of the total horizontal plot to be taken by the CMA plot
+                      min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
+                      max.patients.to.plot=100               # maximum number of patients to plot
 )
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
@@ -961,13 +969,50 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   duration.total <- duration + adh.plot.space[2];
 
   # The actual plotting:
-  plot( 0, 1,
-        xlim=c(0-5,duration.total+5), # padding with 5 days on both sides to better see the follow-up window, etc.
-        ylim=c(0,nrow(cma$data)+1), type="n", xaxs="i", yaxs="i",
-        main=ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
-        axes=FALSE, xlab=ifelse(show.period=="dates","","days"), ylab=ifelse(print.CMA && !is.null(getCMA(cma)),"patient (& CMA)","patient"), cex.lab=cex.lab ); box();
+  if(inherits(msg <- try(plot( 0, 1,
+                               xlim=c(0-5,duration.total+5), # padding with 5 days on both sides to better see the follow-up window, etc.
+                               ylim=c(0,nrow(cma$data)+1), type="n", xaxs="i", yaxs="i",
+                               axes=FALSE,
+                               xlab="", ylab=""),
+                         silent=TRUE),
+              "try-error"))
+  {
+    # Some error occured when creatig the plot...
+    cat(msg);
+    return (invisible(NULL));
+  }
+
   if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
   char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex); # character height and width in the current plotting system
+
+  # Minimum plot dimensions:
+  if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
+      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * nrow(cma$data))
+  {
+    cat(paste0("Plotting area is too small (it must be at least ",
+               min.plot.size.in.characters.horiz,
+               " x ",
+               min.plot.size.in.characters.vert,
+               " characters per event, but now it is only ",
+               round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
+               " x ",
+               round(abs(par("usr")[4] - par("usr")[3]) / (char.height * nrow(cma$data)),1),
+               ")!\n"));
+    #segments(x0=c(par("usr")[1], par("usr")[1]),
+    #         y0=c(par("usr")[3], par("usr")[4]),
+    #         x1=c(par("usr")[2], par("usr")[2]),
+    #         y1=c(par("usr")[4], par("usr")[3]),
+    #         col="red", lwd=3);
+    return (invisible(NULL));
+  }
+
+  # Continue plotting:
+  box();
+  title(main=ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
+        xlab=ifelse(show.period=="dates","","days"),
+        ylab=ifelse(print.CMA && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
+        cex.lab=cex.lab);
+
   curpat <- TRUE;
   for( i in 1:nrow(cma$data) )
   {
@@ -2852,7 +2897,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                            plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                           min.plot.size.in.characters.horiz=15, min.plot.size.in.characters.vert=10,  # the minimum plot size (in character)
+                           min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                            max.patients.to.plot=100,        # maximum number of patients to plot
                            ...
 )
@@ -3016,16 +3061,16 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 
   # Minimum plot dimensions:
   if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
-      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * length(patids))
+      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * nrow(cma$event.info))
   {
     cat(paste0("Plotting area is too small (it must be at least ",
                min.plot.size.in.characters.horiz,
                " x ",
                min.plot.size.in.characters.vert,
-               " characters per patient, but now it is only ",
+               " characters per event, but now it is only ",
                round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
                " x ",
-               round(abs(par("usr")[4] - par("usr")[3]) / (char.height * length(patids)),1),
+               round(abs(par("usr")[4] - par("usr")[3]) / (char.height * nrow(cma$event.info)),1),
                ")!\n"));
     #segments(x0=c(par("usr")[1], par("usr")[1]),
     #         y0=c(par("usr")[3], par("usr")[4]),
@@ -3882,6 +3927,13 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' the line width of the even is scaled relative to all medication classes (i.e.,
 #' relative to the global minimum and maximum doses), otherwise it is scale
 #' relative only to its medication class.
+#' @param min.plot.size.in.characters.horiz,min.plot.size.in.characters.vert
+#' \emph{Numeric}, the minimum size of the plotting surface in characters;
+#' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+#' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+#' referes to a single event.
+#' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
+#' to plot.
 #' @param ... other possible parameters
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -3919,7 +3971,9 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
                       print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                       plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
-                      bw.plot=FALSE                          # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                      bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                      min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
+                      max.patients.to.plot=100               # maximum number of patients to plot
                      )
 .plot.CMA1plus(cma=x,
                patients.to.plot=patients.to.plot,
@@ -3956,6 +4010,9 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                print.dose=print.dose, cex.dose=cex.dose, print.dose.outline.col=print.dose.outline.col, print.dose.centered=print.dose.centered,
                plot.dose=plot.dose, lwd.event.max.dose,
                bw.plot=bw.plot,
+               min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
+               min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
+               max.patients.to.plot=max.patients.to.plot,
                ...)
 
 

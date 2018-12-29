@@ -23,7 +23,9 @@
   events.ID.colname = NA, events.start.colname = NA,
   events.end.colname = NA, events.date.format = NA,
   col.events = adjustcolor("gray20", alpha.f = 0.5), bw.plot = FALSE,
-  print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1)
+  print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1,
+  min.plot.size.in.characters.horiz = 10,
+  min.plot.size.in.characters.vert = 0.5, max.patients.to.plot = 100)
 }
 \arguments{
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
@@ -121,7 +123,14 @@ window be plotted?}
 graphically?}
 
 \item{CMA.plot.ratio}{A \emph{number}, the proportion of the total horizontal
-plot space to be allocated to the CMA plot.}
+plot space to be allocated to the CMA plot.
+\emph{Numeric}, the minimum size of the plotting surface in characters;
+horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+referes to a single event.}
+
+\item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
+to plot.}
 }
 \description{
 Plots the events (prescribing or dispensing) data encapsulated in a basic

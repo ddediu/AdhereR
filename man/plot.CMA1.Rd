@@ -32,7 +32,9 @@
   print.dose = FALSE, cex.dose = 0.75,
   print.dose.outline.col = "white", print.dose.centered = FALSE,
   plot.dose = FALSE, lwd.event.max.dose = 8,
-  plot.dose.lwd.across.medication.classes = FALSE, bw.plot = FALSE)
+  plot.dose.lwd.across.medication.classes = FALSE, bw.plot = FALSE,
+  min.plot.size.in.characters.horiz = 10,
+  min.plot.size.in.characters.vert = 0.5, max.patients.to.plot = 100)
 
 \method{plot}{CMA2}(...)
 
@@ -160,6 +162,14 @@ relative only to its medication class.}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
+
+\item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
+horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+referes to a single event.}
+
+\item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
+to plot.}
 }
 \description{
 Plots the event data and estimated CMA encapsulated in objects derived from
