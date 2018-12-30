@@ -9327,6 +9327,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                             maximum.permissible.gap=180, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                             maximum.permissible.gap.unit="days", # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days) or "years" (fixed at 365 days)
+
                             # Sliding window:
                             sliding.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                             sliding.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
@@ -9337,8 +9338,18 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             sliding.window.no.steps=NA, # the number of steps to jump; if both sliding.win.no.steps & sliding.win.duration are NA, fill the whole observation window
                             plot.CMA.as.histogram=TRUE, # plot the CMA as historgram or density plot?
                             align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
+
                             # Legend:
                             show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend
+
+                            # Duration and period:
+                            duration=NA, # duration to plot
+                            show.period=c("dates","days")[2], period.in.days=90, # period on the x axis
+
+                            # Colors and fonts:
+                            bw.plot=FALSE,
+                            col.na="lightgray", col.cats=rainbow,
+
                             # Data accessor functions:
                             get.colnames.fnc=function(d) names(d),
                             get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
@@ -9447,6 +9458,10 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
       # Plot the results:
       plot(results,
            show.legend=show.legend, legend.x=legend.x, legend.y=legend.y, legend.bkg.opacity=legend.bkg.opacity,
+           duration=duration,
+           bw.plot=bw.plot,
+           col.na=col.na, col.cats=col.cats,
+           show.period=show.period, period.in.days=period.in.days,
            plot.CMA.as.histogram=plot.CMA.as.histogram,
            align.all.patients=align.all.patients,
            align.first.event.at.zero=align.first.event.at.zero
