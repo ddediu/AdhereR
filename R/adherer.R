@@ -1269,6 +1269,10 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     }
     invisible(.legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"])));
   }
+  else
+  {
+    invisible(c("width"=NA, "height"=NA));
+  }
 }
 
 #' Access the actual CMA estimate from a CMA object.
@@ -3447,6 +3451,10 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       legend.y <- par("usr")[3] + char.height;
     }
     invisible(.legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"])));
+  }
+  else
+  {
+    invisible(c("width"=NA, "height"=NA));
   }
 }
 
@@ -7793,6 +7801,10 @@ print.CMA_per_episode <- function(x,                                     # the C
       legend.y <- par("usr")[3] + char.height;
     }
     invisible(.legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"])));
+  }
+  else
+  {
+    invisible(c("width"=NA, "height"=NA));
   }
 }
 
