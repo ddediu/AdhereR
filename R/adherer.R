@@ -9338,7 +9338,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             plot.CMA.as.histogram=TRUE, # plot the CMA as historgram or density plot?
                             align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
                             # Legend:
-                            show.legend=TRUE, # show the legend?
+                            show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend
                             # Data accessor functions:
                             get.colnames.fnc=function(d) names(d),
                             get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
@@ -9446,7 +9446,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     {
       # Plot the results:
       plot(results,
-           show.legend=show.legend,
+           show.legend=show.legend, legend.x=legend.x, legend.y=legend.y, legend.bkg.opacity=legend.bkg.opacity,
            plot.CMA.as.histogram=plot.CMA.as.histogram,
            align.all.patients=align.all.patients,
            align.first.event.at.zero=align.first.event.at.zero

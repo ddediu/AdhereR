@@ -369,7 +369,29 @@ ui <- fluidPage(
       div(title='Display the plot legend?',
                checkboxInput(inputId="show_legend",
                   label="Show the legend?",
-                  value=TRUE))
+                  value=TRUE)),
+
+      # Legend attributes ----
+      conditionalPanel(
+        condition="input.show_legend",
+
+        div(title='The legend\'s x position',
+            selectInput(inputId="legend_x",
+                        label="Legend x",
+                        choices=c("left", "right"),
+                        selected="right")),
+
+        div(title='The legend\'s y position',
+            selectInput(inputId="legend_y",
+                        label="Legend y",
+                        choices=c("bottom", "top"),
+                        selected="bottom")),
+
+        div(title='The legend\'s bacground opacity (between 0.0=fully transparent and 1.0=fully opaque)',
+            sliderInput(inputId="legend_bkg_opacity",
+                        label="Legend bkg. opacity",
+                        min=0.0, max=1.0, value=0.5, step=0.1, round=TRUE))
+      )
 
     )),
 
@@ -536,7 +558,7 @@ server <- function(input, output, session) {
                                                                 !input$plot_CMA_as_histogram_episodes),
                                    align.all.patients=input$plot_align_all_patients,
                                    align.first.event.at.zero=input$plot_align_first_event_at_zero,
-                                   show.legend=input$show_legend, # show the legend?
+                                   show.legend=input$show_legend, legend.x=input$legend_x, legend.y=input$legend_y, legend.bkg.opacity=input$legend_bkg_opacity, # legend
                                    get.colnames.fnc=.plotting.params$get.colnames.fnc,
                                    get.patients.fnc=.plotting.params$get.patients.fnc,
                                    get.data.for.patients.fnc=.plotting.params$get.data.for.patients.fnc
