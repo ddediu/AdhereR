@@ -128,24 +128,24 @@ ui <- fluidPage(
         condition = "(input.followup_window_start_unit != 'calendar date')",  # && input.followup_window_start_unit != 'column in dataset')",
                     # Select the number of units ----
                     div(title='Select the number of units defining the start of the follow-up window',
-                             sliderInput(inputId="followup_window_start_no_units",
-                                label="Follow-up wnd. start",
-                                min=0, max=.plotting.params$followup.window.start.max, value=0, step=1, round=TRUE))
+                        numericInput(inputId="followup_window_start_no_units",
+                                     label="Follow-up wnd. start",
+                                     value=0, min=0, max=NA, step=30))
       ),
 
 
       # Follow-up window duration ----
       div(title='The unit of the duration of the follow-up window (can be "days", "weeks", "months" or "years")',
-               selectInput(inputId="followup_window_duration_unit",
-                  label="Follow-up wnd. duration unit",
-                  choices=c("days", "weeks", "months", "years"),
-                  selected="days")),
+          selectInput(inputId="followup_window_duration_unit",
+                      label="Follow-up wnd. duration unit",
+                      choices=c("days", "weeks", "months", "years"),
+                      selected="days")),
 
       # Select the number of units ----
       div(title='Select the number of units defining the duration of the follow-up window',
-               sliderInput(inputId="followup_window_duration",
-                  label="Follow-up wnd. duration",
-                  min=0, max=.plotting.params$followup.window.duration.max, value=2*365, step=1, round=TRUE)),
+          numericInput(inputId="followup_window_duration",
+                       label="Follow-up wnd. duration",
+                       value=2*365, min=0, max=NA, step=30)),
 
       hr(),
       div(title='Define the observation window',
@@ -171,11 +171,11 @@ ui <- fluidPage(
       # If observation window unit is not "calendar date" ----
       conditionalPanel(
         condition = "(input.observation_window_start_unit != 'calendar date')",
-                    # Select the number of units ----
-                    div(title='Select the number of units defining the start of the observation window',
-                             sliderInput(inputId="observation_window_start_no_units",
-                                label="Observation wnd. start",
-                                min=0, max=.plotting.params$observation.window.start.max, value=0, step=1, round=TRUE))
+        # Select the number of units ----
+        div(title='Select the number of units defining the start of the observation window',
+            numericInput(inputId="observation_window_start_no_units",
+                         label="Observation wnd. start",
+                         value=0, min=0, max=NA, step=30))
       ),
 
 
@@ -188,9 +188,9 @@ ui <- fluidPage(
 
       # Select the number of units ----
       div(title='Select the number of units defining the duration of the observation window',
-               sliderInput(inputId="observation_window_duration",
-                  label="Observation wnd. duration",
-                  min=0, max=.plotting.params$observation.window.duration.max, value=2*365, step=1, round=TRUE)),
+          numericInput(inputId="observation_window_duration",
+                       label="Observation wnd. duration",
+                       value=2*365, min=0, max=NA, step=30)),
 
       hr(),
 
@@ -257,9 +257,9 @@ ui <- fluidPage(
 
                     # Max. permissible gap ----
                     div(title='The maximum permissible gap after which a new episode is triggered (in the above-selected units)',
-                             sliderInput(inputId="maximum_permissible_gap",
-                                label="Max. permissible gap",
-                                min=0, max=.plotting.params$followup.window.duration.max, value=0, step=1, round=TRUE)),
+                        numericInput(inputId="maximum_permissible_gap",
+                                     label="Max. permissible gap",
+                                     value=0, min=0, max=NA, step=1)),
 
                     # Plot CMA as histogram ----
                     div(title='Show the distribution of estimated CMAs across episodes as a histogram or barplot?',
@@ -287,9 +287,9 @@ ui <- fluidPage(
 
                     # Select the number of units ----
                     div(title='Select the number of units defining the start of the sliding windows',
-                             sliderInput(inputId="sliding_window_start",
-                                label="Sliding wnd. start",
-                                min=0, max=.plotting.params$sliding.window.start.max, value=0, step=1, round=TRUE)),
+                        numericInput(inputId="sliding_window_start",
+                                     label="Sliding wnd. start",
+                                     value=0, min=0, max=NA, step=30)),
 
                     # Sliding window duration ----
                     div(title='The unit of the duration of the sliding windows ("days", "weeks", "months" or "years")',
@@ -300,9 +300,9 @@ ui <- fluidPage(
 
                     # Select the number of units ----
                     div(title='Select the number of units defining the duration of the sliding windows',
-                             sliderInput(inputId="sliding_window_duration",
-                                label="Sliding wnd. duration",
-                                min=0, max=.plotting.params$sliding.window.duration.max, value=90, step=1, round=TRUE)),
+                        numericInput(inputId="sliding_window_duration",
+                                     label="Sliding wnd. duration",
+                                     value=90, min=0, max=NA, step=30)),
 
                     # Steps choice ----
                     div(title='How is the step of the sliding windows defined: by giving their number or their duration?',
@@ -320,16 +320,16 @@ ui <- fluidPage(
                                               choices=c("days", "weeks", "months", "years"),
                                               selected="days")),
                                   div(title='The sliding windows duration (in the units selected above)',
-                                           sliderInput(inputId="sliding_window_step_duration",
-                                              label="Sliding wnd. step duration",
-                                              min=0, max=.plotting.params$sliding.window.duration.max, value=7, step=1, round=TRUE))
+                                      numericInput(inputId="sliding_window_step_duration",
+                                                   label="Sliding wnd. step duration",
+                                                   value=7, min=0, max=NA, step=7))
                     ),
                     conditionalPanel(
                       condition = "(input.sliding_window_step_choice == 'the number of steps')",
                                   div(title='The number of sliding windows steps',
-                                           sliderInput(inputId="sliding_window_no_steps",
-                                              label="Sliding wnd. number of steps",
-                                              min=0, max=1000, value=10, step=1, round=TRUE))
+                                      numericInput(inputId="sliding_window_no_steps",
+                                                   label="Sliding wnd. number of steps",
+                                                   value=10, min=0, max=NA, step=1))
                     ),
 
                     # Plot CMA as histogram ----
@@ -343,12 +343,12 @@ ui <- fluidPage(
       ),
 
 
-      div(title='Misc. parameters',
-               span(h4("Other..."), style="color:DarkBlue")),
-
       # Align al patients ----
       conditionalPanel(
         condition="(input.patient.length > 1)",
+
+        div(title='Align patients for clearer plots?',
+                 span(h4("Align patients..."), style="color:DarkBlue")),
 
         div(title='Should all the patients be vertically aligned relative to their first event?',
                  checkboxInput(inputId="plot_align_all_patients",
@@ -364,6 +364,22 @@ ui <- fluidPage(
                         value=FALSE))
         )
       ),
+
+
+      # Duration and period:
+      div(title='Duration and period',
+               span(h4("Duration & period..."), style="color:DarkBlue")),
+
+      # Duration:
+      div(title='The duration to plot (in days), or 0 to determine it from the data',
+          numericInput(inputId="duration",
+                      label="Duration",
+                      value=0, min=0, max=NA, step=90)),
+
+
+      # Legend:
+      div(title='The legend',
+               span(h4("Legend..."), style="color:DarkBlue")),
 
       # Show legend? ----
       div(title='Display the plot legend?',
@@ -391,7 +407,12 @@ ui <- fluidPage(
             sliderInput(inputId="legend_bkg_opacity",
                         label="Legend bkg. opacity",
                         min=0.0, max=1.0, value=0.5, step=0.1, round=TRUE))
-      )
+      ),
+
+
+      div(title='Colors and fonts',
+               span(h4("Colors & fonts..."), style="color:DarkBlue"))
+
 
     )),
 
