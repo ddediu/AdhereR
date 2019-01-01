@@ -9348,7 +9348,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
 
                             # Colors and fonts:
                             bw.plot=FALSE,
-                            col.na="lightgray", col.cats=rainbow,
+                            show.cma=TRUE,
+                            col.na="lightgray", col.cats=rainbow, unspecified.category.label="drug",
                             lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16,
                             col.continuation="black", lty.continuation="dotted", lwd.continuation=1,
                             cex=1.0, cex.axis=0.75, cex.lab=1.0,
@@ -9356,6 +9357,11 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
                             show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30,
                             show.event.intervals=TRUE,
+                            print.CMA=TRUE, CMA.cex=0.50,
+                            plot.CMA=TRUE, CMA.plot.ratio=0.10, CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text="darkgreen",
+
+                            # Minimum plot size:
+                            min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5,
 
                             # Data accessor functions:
                             get.colnames.fnc=function(d) names(d),
@@ -9467,7 +9473,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            show.legend=show.legend, legend.x=legend.x, legend.y=legend.y, legend.bkg.opacity=legend.bkg.opacity,
            duration=duration,
            bw.plot=bw.plot,
-           col.na=col.na, col.cats=col.cats,
+           show.cma=show.cma,
+           col.na=col.na, col.cats=col.cats, unspecified.category.label=unspecified.category.label,
            lty.event=lty.event, lwd.event=lwd.event, pch.start.event=pch.start.event, pch.end.event=pch.end.event,
            col.continuation=col.continuation, lty.continuation=lty.continuation, lwd.continuation=lwd.continuation,
            cex=cex, cex.axis=cex.axis, cex.lab=cex.lab,
@@ -9476,6 +9483,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            observation.window.density=observation.window.density, observation.window.angle=observation.window.angle,
            show.real.obs.window.start=show.real.obs.window.start, real.obs.window.density=real.obs.window.density, real.obs.window.angle=real.obs.window.angle,
            show.event.intervals=show.event.intervals,
+           print.CMA=print.CMA, CMA.cex=CMA.cex,
+           plot.CMA=plot.CMA, CMA.plot.ratio=CMA.plot.ratio, CMA.plot.col=CMA.plot.col, CMA.plot.border=CMA.plot.border, CMA.plot.bkg=CMA.plot.bkg, CMA.plot.text=CMA.plot.text,
+           min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
            show.period=show.period, period.in.days=period.in.days,
            plot.CMA.as.histogram=plot.CMA.as.histogram,
            align.all.patients=align.all.patients,

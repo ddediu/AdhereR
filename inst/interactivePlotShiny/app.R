@@ -392,6 +392,26 @@ ui <- fluidPage(
                        value=90, min=0, max=NA, step=30)),
 
 
+      # CMA estimate ----
+      conditionalPanel(
+        condition="(input.cma_class == 'per eipsode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
+
+        div(title='How to show the CMA estimates',
+                 span(h4("CMA estimates..."), style="color:DarkBlue")),
+
+        div(title='Print the CMA estimate next to the participant\'s ID?',
+                 checkboxInput(inputId="print_cma",
+                    label="Print CMA?",
+                    value=TRUE)),
+
+        div(title='Plot the CMA estimate next to the participant\'s ID?',
+                 checkboxInput(inputId="plot_cma",
+                    label="Plot CMA?",
+                    value=TRUE))
+
+      ),
+
+
       # Legend ----
       div(title='The legend',
                span(h4("Legend..."), style="color:DarkBlue")),
@@ -429,6 +449,12 @@ ui <- fluidPage(
       div(title='Colors, fonts, line style...',
                span(h4("Esthetics..."), style="color:DarkBlue")),
 
+      ## Show CMA type in the title?
+      #div(title='Show CMA type in the plot title?',
+      #         checkboxInput(inputId="show_cma",
+      #            label="Show CMA in title?",
+      #            value=TRUE)),
+
       # Draw grayscale?
       div(title='Draw grayscale (overrides everything lese)?',
                checkboxInput(inputId="bw_plot",
@@ -440,6 +466,12 @@ ui <- fluidPage(
           colourpicker::colourInput(inputId="col_na",
                                     label="Missing data color",
                                     value="lightgray")),
+
+      # Unspecified category name:
+      div(title='The label of the unspecified (generic) treatment category',
+               textInput(inputId="unspecified_category_label",
+                  label="Unspec. cat. label",
+                  value="drug")),
 
       # The colour palette for treatment types:
       div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on category order.',
@@ -620,6 +652,66 @@ ui <- fluidPage(
         )
       ),
 
+      # CMA estimate esthetics:
+      conditionalPanel(
+        condition="(input.cma_class == 'per eipsode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
+
+        conditionalPanel(
+          condition="input.print_cma",
+
+          div(title='Relative font size of CMA estimate',
+              numericInput(inputId="cma_cex",
+                           label="CMA font size",
+                           value=0.5, min=0.0, max=NA, step=0.25))
+        ),
+
+        conditionalPanel(
+          condition="input.plot_cma",
+
+          div(title='The horizontal percent of the total plotting area to be taken by the CMA plot',
+              sliderInput(inputId="cma_plot_ratio",
+                          label="CMA plot area %",
+                          min=0, max=100, value=10, step=5, round=TRUE)),
+
+          div(title='The color of the CMA plot',
+              colourpicker::colourInput(inputId="cma_plot_col",
+                                        label="CMA plot color",
+                                        value="lightgreen")),
+
+          div(title='The color of the CMA plot border',
+              colourpicker::colourInput(inputId="cma_plot_border",
+                                        label="CMA border color",
+                                        value="darkgreen")),
+
+          div(title='The color of the CMA plot background',
+              colourpicker::colourInput(inputId="cma_plot_bkg",
+                                        label="CMA bkg. color",
+                                        value="aquamarine")),
+
+          div(title='The color of the CMA plot text',
+              colourpicker::colourInput(inputId="cma_plot_text",
+                                        label="CMA text color",
+                                        value="darkgreen"))
+        )
+
+      ),
+
+
+      # Advanced ----
+      div(title='Advanced stuff...',
+               span(h4("Advanced..."), style="color:DarkBlue")),
+
+      div(title='The minimum horizontal plot size (in characters, for the whole duration to plot)',
+          numericInput(inputId="min_plot_size_in_characters_horiz",
+                       label="Min plot size (horiz.)",
+                       value=10, min=0, max=NA, step=1.0)),
+
+      div(title='The minimum vertical plot size (in characters, per event)',
+          numericInput(inputId="min_plot_size_in_characters_vert",
+                       label="Min plot size (vert.)",
+                       value=0.5, min=0.0, max=NA, step=0.25)),
+
+
       # Allow last comma:
       NULL
 
@@ -792,7 +884,9 @@ server <- function(input, output, session) {
                                    duration=ifelse(input$duration==0, NA, input$duration), # duration to plot
                                    show.period=input$show_period, period.in.days=input$period_in_days, # period
                                    bw.plot=input$bw_plot, # grayscale plotting
+                                   #show.cma=input$show_cma,
                                    col.na=input$col_na,
+                                   unspecified.category.label=input$unspecified_category_label,
                                    col.cats=list("rainbow"       =grDevices::rainbow,
                                                  "heat.colors"   =grDevices::heat.colors,
                                                  "terrain.colors"=grDevices::terrain.colors,
@@ -811,7 +905,12 @@ server <- function(input, output, session) {
                                    observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
                                    show.real.obs.window.start=input$show_real_obs_window_start,
                                    real.obs.window.density=input$real_obs_window_density, real.obs.window.angle=input$real_obs_window_angle,
+                                   print.CMA=input$print_cma, CMA.cex=input$cma_cex,
+                                   plot.CMA=input$plot_cma, CMA.plot.ratio=input$cma_plot_ratio / 100.0,
+                                   CMA.plot.col=input$cma_plot_col, CMA.plot.border=input$cma_plot_border, CMA.plot.bkg=input$cma_plot_bkg, CMA.plot.text=input$cma_plot_text,
                                    show.event.intervals=input$show_event_intervals,
+                                   min.plot.size.in.characters.horiz=input$min_plot_size_in_characters_horiz,
+                                   min.plot.size.in.characters.vert=input$min_plot_size_in_characters_vert,
                                    get.colnames.fnc=.plotting.params$get.colnames.fnc,
                                    get.patients.fnc=.plotting.params$get.patients.fnc,
                                    get.data.for.patients.fnc=.plotting.params$get.data.for.patients.fnc
