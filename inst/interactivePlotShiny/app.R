@@ -54,23 +54,21 @@ ui <- fluidPage(
 
 
       div(title='General setting that apply to all kinds of plots', # trick for adding tooltips: create a container div with the title the desired tootltip text...
-               span(id = "general_settings", h4("General settings..."), style="color:DarkBlue")),
+               span(id = "general_settings", h4("General settings"), style="color:DarkBlue")),
 
       # Select the CMA class ----
       div(title='Select the type of CMA to plot: "simple", "per eipsode" or "sliding window"',
                selectInput(inputId="cma_class",
-                  label="Select CMA type",
+                  label="CMA type",
                   choices=c("simple", "per episode", "sliding window"),
                   selected=.plotting.params$cma.class)),
-
-      hr(),
 
       # Select the simple CMA to compute
       conditionalPanel(
         condition = "(input.cma_class == 'simple')",
         div(title='The "simple" CMA to compute by itself',
                  selectInput(inputId="cma_to_compute",
-                    label="Select CMA to compute",
+                    label="CMA to compute",
                     choices=paste0("CMA",0:9),
                     selected="CMA0"))
       ),
@@ -78,7 +76,7 @@ ui <- fluidPage(
         condition = "(input.cma_class != 'simple')",
         div(title='The "simple" CMA to compute for each episode/sliding window',
                  selectInput(inputId="cma_to_compute_within_complex",
-                    label="Select CMA to compute",
+                    label="CMA to compute",
                     choices=paste0("CMA",1:9),
                     selected="CMA1"))
       ),
@@ -86,7 +84,7 @@ ui <- fluidPage(
       # Select the patients to plot ----
       div(title='Select one (or more, by repeatedly selecting) patient(s) to plot',
                selectInput(inputId="patient",
-                  label="Select patient(s) to plot",
+                  label="Patient(s) to plot",
                   choices=.plotting.params$all.IDs,
                   selected=.plotting.params$ID,
                   multiple=TRUE)),
@@ -94,13 +92,13 @@ ui <- fluidPage(
       hr(),
 
       # Follow-up window ----
-      div(title='Define the follow-up window',
-               span(id="followup_window", h4("Follow-up window..."), style="color:DarkBlue")),
+      div(title='Define the follow-up window (shortened to FUW)',
+               span(id="followup_window", h4("Follow-up window (FUW)"), style="color:DarkBlue")),
 
       # Follow-up window start
       div(title='The unit of the start of the follow-up window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
                selectInput(inputId="followup_window_start_unit",
-                  label="Follow-up wnd. start unit",
+                  label="FUW start unit",
                   choices=c("days", "weeks", "months", "years", "calendar date"), # "column in dataset"),
                   selected="days")),
 
@@ -110,7 +108,7 @@ ui <- fluidPage(
                     # Select an actual date
                     div(title='Select the actual start date of the follow-up window (possibly using a calendar widget)',
                              dateInput(inputId="followup_window_start_date",
-                              label="Follow-up wnd. start",
+                              label="FUW start",
                               value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
       ),
 
@@ -130,33 +128,33 @@ ui <- fluidPage(
                     # Select the number of units
                     div(title='Select the number of units defining the start of the follow-up window',
                         numericInput(inputId="followup_window_start_no_units",
-                                     label="Follow-up wnd. start",
+                                     label="FUW start",
                                      value=0, min=0, max=NA, step=30))
       ),
 
       # Follow-up window duration
       div(title='The unit of the duration of the follow-up window (can be "days", "weeks", "months" or "years")',
           selectInput(inputId="followup_window_duration_unit",
-                      label="Follow-up wnd. duration unit",
+                      label="FUW duration unit",
                       choices=c("days", "weeks", "months", "years"),
                       selected="days")),
 
       # Select the number of units
       div(title='Select the number of units defining the duration of the follow-up window',
           numericInput(inputId="followup_window_duration",
-                       label="Follow-up wnd. duration",
+                       label="FUW duration",
                        value=2*365, min=0, max=NA, step=30)),
 
       hr(),
 
       # Observation window ----
-      div(title='Define the observation window',
-               span(id="observation_window", h4("Observation window..."), style="color:DarkBlue")),
+      div(title='Define the observation window (shortened to OW)',
+               span(id="observation_window", h4("Observation window (OW)"), style="color:DarkBlue")),
 
       # Observation window start
       div(title='The unit of the start of the observation window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
                selectInput(inputId="observation_window_start_unit",
-                  label="Observation wnd. start unit",
+                  label="OW start unit",
                   choices=c("days", "weeks", "months", "years", "calendar date"),
                   selected="days")),
 
@@ -166,7 +164,7 @@ ui <- fluidPage(
                     # Select an actual date
                     div(title='Select the actual start date of the observation window (possibly using a calendar widget)',
                              dateInput(inputId="observation_window_start_date",
-                              label="Observation wnd. start",
+                              label="OW start",
                               value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
       ),
 
@@ -176,7 +174,7 @@ ui <- fluidPage(
         # Select the number of units
         div(title='Select the number of units defining the start of the observation window',
             numericInput(inputId="observation_window_start_no_units",
-                         label="Observation wnd. start",
+                         label="OW start",
                          value=0, min=0, max=NA, step=30))
       ),
 
@@ -184,14 +182,14 @@ ui <- fluidPage(
       # Observation window duration
       div(title='The unit of the duration of the observation window (can be "days", "weeks", "months" or "years")',
                selectInput(inputId="observation_window_duration_unit",
-                  label="Observation wnd. duration unit",
+                  label="OW duration unit",
                   choices=c("days", "weeks", "months", "years"),
                   selected="days")),
 
       # Select the number of units
       div(title='Select the number of units defining the duration of the observation window',
           numericInput(inputId="observation_window_duration",
-                       label="Observation wnd. duration",
+                       label="OW duration",
                        value=2*365, min=0, max=NA, step=30)),
 
       hr(),
@@ -214,18 +212,18 @@ ui <- fluidPage(
                         input.cma_to_compute_within_complex == 'CMA9')))",
 
                     div(title='What type of carry over to consider?',
-                             span(h4("Carry over..."), style="color:DarkBlue")),
+                             span(h4("Carry over"), style="color:DarkBlue")),
 
                     # Carry-over for same treat only?
                     div(title='Carry over only across treatments of the same type?',
                              checkboxInput(inputId="carry_only_for_same_medication",
-                                  label="Carry over for same treat only?",
+                                  label="For same treat. only?",
                                   value=FALSE)),
 
                     # Consider dosage changes?
                     div(title='Consider dosage change when computing the carry over?',
                              checkboxInput(inputId="consider_dosage_change",
-                                  label="Consider dosage changes?",
+                                  label="Consider dose changes?",
                                   value=FALSE)),
 
                     hr()
@@ -237,31 +235,31 @@ ui <- fluidPage(
         condition = "(input.cma_class == 'per episode')",
 
                     div(title='Parameters defining treatment episodes',
-                             span(h4("Define the episodes..."), style="color:DarkBlue")),
+                             span(h4("Define episodes"), style="color:DarkBlue")),
 
                     # Does treat. change start new episode?
                     div(title='Does changing the treatment type trigger a new episode?',
                              checkboxInput(inputId="medication_change_means_new_treatment_episode",
-                                  label="Treat. change start new episode?",
+                                  label="Treat. change starts new episode?",
                                   value=FALSE)),
 
                     # Does dosage change start new episode?
                     div(title='Does changing the dose trigger a new episode?',
                              checkboxInput(inputId="dosage_change_means_new_treatment_episode",
-                                  label="Dosage change start new episode?",
+                                  label="Dose change starts new episode?",
                                   value=FALSE)),
 
                     # Max. permis. gap duration unit
                     div(title='The unit of the maximum permissible gap after which a new episode is triggered: either absolute ("days", "weeks", "months" or "years") or relative ("percent")',
                              selectInput(inputId="maximum_permissible_gap_unit",
-                                label="Max. permis. gap duration unit",
+                                label="Max. gap duration unit",
                                 choices=c("days", "weeks", "months", "years", "percent"),
                                 selected="days")),
 
                     # Max. permissible gap
                     div(title='The maximum permissible gap after which a new episode is triggered (in the above-selected units)',
                         numericInput(inputId="maximum_permissible_gap",
-                                     label="Max. permissible gap",
+                                     label="Max. gap duration",
                                      value=0, min=0, max=NA, step=1)),
 
                     # Plot CMA as histogram
@@ -278,39 +276,39 @@ ui <- fluidPage(
       conditionalPanel(
         condition = "(input.cma_class == 'sliding window')",
 
-                    div(title='Parameters defining the sliding windows',
-                             span(h4("Define the sliding windows..."), style="color:DarkBlue")),
+                    div(title='Parameters defining the sliding windows (shortened to SW))',
+                             span(h4("Define sliding windows (SW)"), style="color:DarkBlue")),
 
                     # Sliding window start
                     div(title='The unit of the start of the sliding windows ("days", "weeks", "months" or "years")',
                              selectInput(inputId="sliding_window_start_unit",
-                                label="Sliding wnd. start unit",
+                                label="SW start unit",
                                 choices=c("days", "weeks", "months", "years"),
                                 selected="days")),
 
                     # Select the number of units
                     div(title='Select the number of units defining the start of the sliding windows',
                         numericInput(inputId="sliding_window_start",
-                                     label="Sliding wnd. start",
+                                     label="SW start",
                                      value=0, min=0, max=NA, step=30)),
 
                     # Sliding window duration
                     div(title='The unit of the duration of the sliding windows ("days", "weeks", "months" or "years")',
                              selectInput(inputId="sliding_window_duration_unit",
-                                label="Sliding wnd. duration unit",
+                                label="SW duration unit",
                                 choices=c("days", "weeks", "months", "years"),
                                 selected="days")),
 
                     # Select the number of units
                     div(title='Select the number of units defining the duration of the sliding windows',
                         numericInput(inputId="sliding_window_duration",
-                                     label="Sliding wnd. duration",
+                                     label="SW duration",
                                      value=90, min=0, max=NA, step=30)),
 
                     # Steps choice
                     div(title='How is the step of the sliding windows defined: by giving their number or their duration?',
                              selectInput(inputId="sliding_window_step_choice",
-                                label="Define the sliding wnd. steps by",
+                                label="Define SW steps by",
                                 choices=c("the number of steps", "the duration of a step"),
                                 selected="the duration of a step")),
 
@@ -319,19 +317,19 @@ ui <- fluidPage(
                       condition = "(input.sliding_window_step_choice == 'the duration of a step')",
                                   div(title='The unit of the sliding windows step duration ("days", "weeks", "months" or "years")',
                                            selectInput(inputId="sliding_window_step_unit",
-                                              label="Sliding wnd. step unit",
+                                              label="SW step unit",
                                               choices=c("days", "weeks", "months", "years"),
                                               selected="days")),
                                   div(title='The sliding windows duration (in the units selected above)',
                                       numericInput(inputId="sliding_window_step_duration",
-                                                   label="Sliding wnd. step duration",
+                                                   label="SW step duration",
                                                    value=7, min=0, max=NA, step=7))
                     ),
                     conditionalPanel(
                       condition = "(input.sliding_window_step_choice == 'the number of steps')",
                                   div(title='The number of sliding windows steps',
                                       numericInput(inputId="sliding_window_no_steps",
-                                                   label="Sliding wnd. number of steps",
+                                                   label="SW number of steps",
                                                    value=10, min=0, max=NA, step=1))
                     ),
 
@@ -351,7 +349,7 @@ ui <- fluidPage(
         condition="(input.patient.length > 1)",
 
         div(title='Align patients for clearer plots?',
-                 span(h4("Align patients..."), style="color:DarkBlue")),
+                 span(h4("Align patients"), style="color:DarkBlue")),
 
         div(title='Should all the patients be vertically aligned relative to their first event?',
                  checkboxInput(inputId="plot_align_all_patients",
@@ -365,13 +363,16 @@ ui <- fluidPage(
                    checkboxInput(inputId="plot_align_first_event_at_zero",
                         label="Align 1st event at 0?",
                         value=FALSE))
-        )
+        ),
+
+        hr()
+
       ),
 
 
       # Duration and period ----
       div(title='Duration and period',
-               span(h4("Duration & period..."), style="color:DarkBlue")),
+               span(h4("Duration & period"), style="color:DarkBlue")),
 
       # Duration:
       div(title='The duration to plot (in days), or 0 to determine it from the data',
@@ -391,13 +392,15 @@ ui <- fluidPage(
                        label="Period (in days)",
                        value=90, min=0, max=NA, step=30)),
 
+      hr(),
+
 
       # CMA estimate ----
       conditionalPanel(
         condition="(input.cma_class == 'per eipsode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
 
         div(title='How to show the CMA estimates',
-                 span(h4("CMA estimates..."), style="color:DarkBlue")),
+                 span(h4("CMA estimates"), style="color:DarkBlue")),
 
         div(title='Print the CMA estimate next to the participant\'s ID?',
                  checkboxInput(inputId="print_cma",
@@ -407,14 +410,16 @@ ui <- fluidPage(
         div(title='Plot the CMA estimate next to the participant\'s ID?',
                  checkboxInput(inputId="plot_cma",
                     label="Plot CMA?",
-                    value=TRUE))
+                    value=TRUE)),
+
+        hr()
 
       ),
 
 
       # Legend ----
       div(title='The legend',
-               span(h4("Legend..."), style="color:DarkBlue")),
+               span(h4("Legend"), style="color:DarkBlue")),
 
       # Show legend?
       div(title='Display the plot legend?',
@@ -444,10 +449,12 @@ ui <- fluidPage(
                         min=0.0, max=1.0, value=0.5, step=0.1, round=TRUE))
       ),
 
+      hr(),
 
-      # Esthetics ----
+
+      # Aesthetics ----
       div(title='Colors, fonts, line style...',
-               span(h4("Esthetics..."), style="color:DarkBlue")),
+               span(h4("Aesthetics"), style="color:DarkBlue")),
 
       ## Show CMA type in the title?
       #div(title='Show CMA type in the plot title?',
@@ -455,11 +462,19 @@ ui <- fluidPage(
       #            label="Show CMA in title?",
       #            value=TRUE)),
 
+      div(title='Colors or grayscale?',
+               span(p("Color or grayscale"), style="color:RoyalBlue; font-weight: bold;")),
+
       # Draw grayscale?
       div(title='Draw grayscale (overrides everything lese)?',
                checkboxInput(inputId="bw_plot",
                   label="Draw grayscale?",
                   value=FALSE)),
+
+      hr(),
+
+      div(title='Colors for catgories of treatment',
+               span(p("Treatment colors"), style="color:RoyalBlue; font-weight: bold;")),
 
       # Colors for categories:
       div(title='The color for missing data',
@@ -479,6 +494,11 @@ ui <- fluidPage(
                       label="Treatment palette",
                       choices=c("rainbow", "heat.colors", "terrain.colors", "topo.colors", "cm.colors", "magma", "inferno", "plasma", "viridis", "cividis"),
                       selected="rainbow")),
+
+      hr(),
+
+      div(title='Event visual attributes',
+               span(p("Events"), style="color:RoyalBlue; font-weight: bold;")),
 
       # Event style:
       div(title='Event line style',
@@ -545,17 +565,22 @@ ui <- fluidPage(
                                 "\U2721 David star"=11),
                       selected=16)),
 
+      hr(),
+
       # Continuation (CMA0 and complex only):
       conditionalPanel(
         condition="(input.cma_class == 'per eipsode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute == 'CMA0')",
 
+        div(title='Continuation visual attributes',
+                 span(p("Continuation"), style="color:RoyalBlue; font-weight: bold;")),
+
         div(title='The color of continuation lines connecting consecutive events',
             colourpicker::colourInput(inputId="col_continuation",
-                                      label="Cont. lines color",
+                                      label="Cont. line color",
                                       value="black")),
         div(title='The line style of continuation lines connecting consecutive events',
             selectInput(inputId="lty_continuation",
-                        label="Cont. lines style",
+                        label="Cont. line style",
                         choices=c("\U00A0\U00A0\U00A0\U00A0\U00A0 blank"="blank",
                                   "\U2E3B solid"="solid",
                                   "\U2012\U2009\U2012\U2009\U2012\U2009\U2012 dashed"="dashed",
@@ -566,21 +591,30 @@ ui <- fluidPage(
                         selected="dotted")),
         div(title='The line width of continuation lines connecting consecutive events',
             numericInput(inputId="lwd_continuation",
-                         label="Cont. lines width",
-                         value=1, min=0, max=NA, step=1))
+                         label="Cont. line width",
+                         value=1, min=0, max=NA, step=1)),
+
+        hr()
       ),
 
       # Show event intervals:
       conditionalPanel(
         condition="(input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
 
+        div(title='Event intervals',
+                 span(p("Event intervals"), style="color:RoyalBlue; font-weight: bold;")),
+
         div(title='Show the event intervals?',
                  checkboxInput(inputId="show_event_intervals",
                     label="Show event interv.?",
-                    value=TRUE))
+                    value=TRUE)),
+
+        hr()
       ),
 
       # Font sizes:
+      div(title='Font sizes',
+               span(p("Font sizes"), style="color:RoyalBlue; font-weight: bold;")),
       div(title='Relative font size of general plotting text',
           numericInput(inputId="cex",
                        label="General font size",
@@ -594,67 +628,84 @@ ui <- fluidPage(
                        label="Axis labels font size",
                        value=1.0, min=0.0, max=NA, step=0.25)),
 
+      hr(),
+
       # Follow-up window:
+      div(title='Follow-up window visual attributes',
+               span(p("FUW visuals"), style="color:RoyalBlue; font-weight: bold;")),
       div(title='Show the follow-up window?',
                checkboxInput(inputId="highlight_followup_window",
-                  label="Show follow-up wnd.?",
+                  label="Show FUW?",
                   value=TRUE)),
       conditionalPanel(
         condition="input.highlight_followup_window",
 
         div(title='The color of the follow-up window',
             colourpicker::colourInput(inputId="followup_window_col",
-                                      label="Follow-up wnd. color",
+                                      label="FUW color",
                                       value="green"))
       ),
 
+      hr(),
+
       # Observation window:
+      div(title='Observation window visual attributes',
+               span(p("OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
       div(title='Show the observation window?',
                checkboxInput(inputId="highlight_observation_window",
-                  label="Show observation wnd.?",
+                  label="Show OW?",
                   value=TRUE)),
       conditionalPanel(
         condition="input.highlight_observation_window",
 
         div(title='The color of the observation window',
             colourpicker::colourInput(inputId="observation_window_col",
-                                      label="Obs. wnd. color",
+                                      label="OW color",
                                       value="yellow")),
         div(title='The density of the hashing lines (number of lines per inch) used to draw the observation window',
             numericInput(inputId="observation_window_density",
-                         label="Obs wnd. hash dens.",
+                         label="OW hash dens.",
                          value=35, min=0, max=NA, step=5)),
         div(title='The orientation of the hashing lines (in degrees) used to draw the observation window',
             sliderInput(inputId="observation_window_angle",
-                        label="Obs wnd. hash angle",
+                        label="OW hash angle",
                         min=-90.0, max=90.0, value=-30, step=15, round=TRUE))
       ),
+
+      hr(),
 
       # Real observation window:
       conditionalPanel(
         condition="(input.cma_class == 'simple' && input.cma_to_compute == 'CMA8')",
 
+        div(title='Real observation window visual attributes',
+                 span(p("Real OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
         div(title='Show the real observation window (the color is the same as for the theoretial observation window but the hasing pattern can be different)?',
                  checkboxInput(inputId="show_real_obs_window_start",
-                    label="Show real obs. wnd.?",
+                    label="Show real OW?",
                     value=TRUE)),
         conditionalPanel(
           condition="input.show_real_obs_window_start",
 
           div(title='The density of the hashing lines (number of lines per inch) used to draw the real observation window',
               numericInput(inputId="real_obs_window_density",
-                           label="Real obs wnd. hash dens.",
+                           label="Real OW hash dens.",
                            value=35, min=0, max=NA, step=5)),
           div(title='The orientation of the hashing lines (in degrees) used to draw the real observation window',
               sliderInput(inputId="real_obs_window_angle",
-                          label="Real obs wnd. hash angle",
+                          label="Real OW hash angle",
                           min=-90.0, max=90.0, value=30, step=15, round=TRUE))
-        )
+        ),
+
+        hr()
       ),
 
-      # CMA estimate esthetics:
+      # CMA estimate aesthetics:
       conditionalPanel(
         condition="(input.cma_class == 'per eipsode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
+
+        div(title='CMA estimate visual attributes',
+                 span(p("CMA estimate"), style="color:RoyalBlue; font-weight: bold;")),
 
         conditionalPanel(
           condition="input.print_cma",
@@ -662,7 +713,9 @@ ui <- fluidPage(
           div(title='Relative font size of CMA estimate',
               numericInput(inputId="cma_cex",
                            label="CMA font size",
-                           value=0.5, min=0.0, max=NA, step=0.25))
+                           value=0.5, min=0.0, max=NA, step=0.25)),
+
+          hr()
         ),
 
         conditionalPanel(
@@ -691,7 +744,9 @@ ui <- fluidPage(
           div(title='The color of the CMA plot text',
               colourpicker::colourInput(inputId="cma_plot_text",
                                         label="CMA text color",
-                                        value="darkgreen"))
+                                        value="darkgreen")),
+
+          hr()
         )
 
       ),
@@ -699,7 +754,7 @@ ui <- fluidPage(
 
       # Advanced ----
       div(title='Advanced stuff...',
-               span(h4("Advanced..."), style="color:DarkBlue")),
+               span(h4("Advanced"), style="color:DarkBlue")),
 
       div(title='The minimum horizontal plot size (in characters, for the whole duration to plot)',
           numericInput(inputId="min_plot_size_in_characters_horiz",
