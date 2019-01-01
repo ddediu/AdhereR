@@ -676,7 +676,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                       col.na="lightgray",                    # color for mising data
                       highlight.followup.window=TRUE, followup.window.col="green",
-                      highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
+                      highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                       events=NULL,                           # if given, must be a data.frame with events per patient
                       events.ID.colname=NA, events.start.colname=NA, events.end.colname=NA, # if events is given, these columns must be in there
                       events.date.format=NA,                 # if NA, use the same date.format as the CMA object x
@@ -1146,7 +1146,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     {
       rect(adh.plot.space[2] + as.numeric(cma$data$.OBS.START.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[1]-0.25,
            adh.plot.space[2] + as.numeric(cma$data$.OBS.END.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[length(s)]+0.25,
-           col=adjustcolor(observation.window.col,alpha.f=0.3), border=NA, density=observation.window.density, angle=observation.window.angle);
+           col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
     }
   }
 
@@ -1224,7 +1224,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     # Observation window:
     if( !is.null(event.info) && highlight.observation.window )
     {
-      if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
+      if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=observation.window.density, angle=observation.window.angle);
       if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "observation wnd.", col="black", cex=0.75, pos=4);
       cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("observation wnd.", cex=0.75));
     }
@@ -2885,7 +2885,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
                            CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                            highlight.followup.window=TRUE, followup.window.col="green",
-                           highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
+                           highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                            show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
                            print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                            plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
@@ -3136,7 +3136,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         # The given observation window:
         rect(adh.plot.space[2] + as.numeric(cma$event.info$.OBS.START.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[1]-0.25,
              adh.plot.space[2] + as.numeric(cma$event.info$.OBS.END.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[length(s)]+0.25,
-             col=adjustcolor(observation.window.col,alpha.f=0.3), border=NA, density=observation.window.density, angle=observation.window.angle);
+             col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
         # For some CMAs, also show the real observation window:
         ss <- which(cma$real.obs.window[,cma$ID.colname]==p);
         if( length(ss) == 1)
@@ -3157,14 +3157,14 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
           }
           rect(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window, s[1]-0.25,
                adh.plot.space[2] + as.numeric(real.obs.window.end - earliest.date) + correct.earliest.followup.window, s[length(s)]+0.25,
-               col=adjustcolor(observation.window.col,alpha.f=0.3), border=NA, density=real.obs.window.density, angle=real.obs.window.angle);
+               col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=real.obs.window.density, angle=real.obs.window.angle);
         }
       } else
       {
         # The given observation window:
         rect(adh.plot.space[2] + as.numeric(cma$event.info$.OBS.START.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[1]-0.25,
              adh.plot.space[2] + as.numeric(cma$event.info$.OBS.END.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[length(s)]+0.25,
-             col=adjustcolor(observation.window.col,alpha.f=0.3), border=NA, density=observation.window.density, angle=observation.window.angle);
+             col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
       }
     }
   }
@@ -3398,15 +3398,15 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     {
       if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
       {
-        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
+        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=observation.window.density, angle=observation.window.angle);
         if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "theor. obs. wnd.", col="black", cex=0.75, pos=4);
         cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("theor. obs. wnd.", cex=0.75));
-        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=real.obs.window.density, angle=real.obs.window.angle);
+        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=real.obs.window.density, angle=real.obs.window.angle);
         if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "real obs.wnd.", col="black", cex=0.75, pos=4);
         cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("real obs.wnd.", cex=0.75));
       } else
       {
-        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
+        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=observation.window.density, angle=observation.window.angle);
         if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "observation wnd.", col="black", cex=0.75, pos=4);
         cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("observation wnd.", cex=0.75));
       }
@@ -7229,7 +7229,6 @@ print.CMA_per_episode <- function(x,                                     # the C
                                col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                unspecified.category.label="drug",     # the label of the unspecified category of medication
                                lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
-                               show.event.intervals=TRUE,             # show the actual rpescription intervals
                                col.na="lightgray",                    # color for mising data
                                col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                                print.CMA=TRUE, CMA.cex=0.50, # print CMA next to the participant's ID?
@@ -7238,7 +7237,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                                CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
                                CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                                highlight.followup.window=TRUE, followup.window.col="green",
-                               highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
+                               highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                                bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                                min.plot.size.in.characters.horiz=20, min.plot.size.in.characters.vert=15,  # the minimum plot size (in character)
                                max.patients.to.plot=100,        # maximum number of patients to plot
@@ -7573,7 +7572,7 @@ print.CMA_per_episode <- function(x,                                     # the C
       # The given observation window:
       rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.25,
            adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)+0.25,
-           col=adjustcolor(observation.window.col,alpha.f=0.3), border=NA, density=observation.window.density, angle=observation.window.angle);
+           col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
     }
 
     y.cur <- y.cur + length(s) + ifelse(plot.CMA && !is.null(getCMA(cma)),length(x),0);
@@ -7745,7 +7744,7 @@ print.CMA_per_episode <- function(x,                                     # the C
     # Observation window:
     if( highlight.observation.window )
     {
-      if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
+      if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=observation.window.density, angle=observation.window.angle);
       if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "observation wnd.", col="black", cex=0.75, pos=4);
       cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("observation wnd.", cex=0.75));
     }
@@ -7867,8 +7866,6 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
-#' @param show.event.intervals \emph{Logical}, should the actual event intervals
-#' be shown?
 #' @param col.na The colour used for missing event data.
 #' @param col.continuation,lty.continuation,lwd.continuation The color, style
 #' and width of the contuniation lines connecting consecutive events.
@@ -7950,7 +7947,6 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                  unspecified.category.label="drug",     # the label of the unspecified category of medication
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
-                                 show.event.intervals=TRUE,             # show the actual rpescription intervals
                                  col.na="lightgray",                    # color for mising data
                                  col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                                  print.CMA=TRUE, CMA.cex=0.50,    # print CMA next to the participant's ID?
@@ -7975,7 +7971,6 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                    col.cats=col.cats,
                    unspecified.category.label=unspecified.category.label,
                    lty.event=lty.event, lwd.event=lwd.event, pch.start.event=pch.start.event, pch.end.event=pch.end.event,
-                   show.event.intervals=show.event.intervals,
                    col.na=col.na,
                    col.continuation=col.continuation, lty.continuation=lty.continuation, lwd.continuation=lwd.continuation,
                    print.CMA=print.CMA, CMA.cex=CMA.cex,
@@ -9331,7 +9326,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             col.continuation="black", lty.continuation="dotted", lwd.continuation=1,
                             cex=1.0, cex.axis=0.75, cex.lab=1.0,
                             highlight.followup.window=TRUE, followup.window.col="green",
-                            highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
+                            highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                             show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30,
                             show.event.intervals=TRUE,
                             print.CMA=TRUE, CMA.cex=0.50,
@@ -9457,7 +9452,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            cex=cex, cex.axis=cex.axis, cex.lab=cex.lab,
            highlight.followup.window=highlight.followup.window, followup.window.col=followup.window.col,
            highlight.observation.window=highlight.observation.window, observation.window.col=observation.window.col,
-           observation.window.density=observation.window.density, observation.window.angle=observation.window.angle,
+           observation.window.density=observation.window.density, observation.window.angle=observation.window.angle, observation.window.opacity=observation.window.opacity,
            show.real.obs.window.start=show.real.obs.window.start, real.obs.window.density=real.obs.window.density, real.obs.window.angle=real.obs.window.angle,
            show.event.intervals=show.event.intervals,
            print.CMA=print.CMA, CMA.cex=CMA.cex,

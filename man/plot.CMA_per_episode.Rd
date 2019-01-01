@@ -13,15 +13,14 @@
   cex = 1, cex.axis = 0.75, cex.lab = 1, show.cma = TRUE,
   col.cats = rainbow, unspecified.category.label = "drug",
   lty.event = "solid", lwd.event = 2, pch.start.event = 15,
-  pch.end.event = 16, show.event.intervals = TRUE,
-  col.na = "lightgray", col.continuation = "black",
-  lty.continuation = "dotted", lwd.continuation = 1,
-  print.CMA = TRUE, CMA.cex = 0.5, plot.CMA = TRUE,
-  plot.CMA.as.histogram = TRUE, CMA.plot.ratio = 0.1,
-  CMA.plot.col = "lightgreen", CMA.plot.border = "darkgreen",
-  CMA.plot.bkg = "aquamarine", CMA.plot.text = CMA.plot.border,
-  highlight.followup.window = TRUE, followup.window.col = "green",
-  highlight.observation.window = TRUE,
+  pch.end.event = 16, col.na = "lightgray",
+  col.continuation = "black", lty.continuation = "dotted",
+  lwd.continuation = 1, print.CMA = TRUE, CMA.cex = 0.5,
+  plot.CMA = TRUE, plot.CMA.as.histogram = TRUE,
+  CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
+  CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
+  CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
+  followup.window.col = "green", highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
   observation.window.angle = -30, show.real.obs.window.start = TRUE,
   real.obs.window.density = 35, real.obs.window.angle = 30,
@@ -84,9 +83,6 @@ unspecified (generic) medication category.}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
-
-\item{show.event.intervals}{\emph{Logical}, should the actual event intervals
-be shown?}
 
 \item{col.na}{The colour used for missing event data.}
 

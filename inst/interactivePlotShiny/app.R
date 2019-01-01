@@ -673,7 +673,11 @@ ui <- fluidPage(
         div(title='The orientation of the hashing lines (in degrees) used to draw the observation window',
             sliderInput(inputId="observation_window_angle",
                         label="OW hash angle",
-                        min=-90.0, max=90.0, value=-30, step=15, round=TRUE))
+                        min=-90.0, max=90.0, value=-30, step=15, round=TRUE)),
+        div(title='The observation window\'s bacground opacity (between 0.0=fully transparent and 1.0=fully opaque)',
+            sliderInput(inputId="observation_window_opacity",
+                        label="OW opacity",
+                        min=0.0, max=1.0, value=0.3, step=0.1, round=TRUE))
       ),
 
       hr(),
@@ -684,7 +688,7 @@ ui <- fluidPage(
 
         div(title='Real observation window visual attributes',
                  span(p("Real OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
-        div(title='Show the real observation window (the color is the same as for the theoretial observation window but the hasing pattern can be different)?',
+        div(title='Show the real observation window (the color and transparency are the same as for the theoretial observation window but the hasing pattern can be different)?',
                  checkboxInput(inputId="show_real_obs_window_start",
                     label="Show real OW?",
                     value=TRUE)),
@@ -962,6 +966,7 @@ server <- function(input, output, session) {
                                    highlight.followup.window=input$highlight_followup_window, followup.window.col=input$followup_window_col,
                                    highlight.observation.window=input$highlight_observation_window, observation.window.col=input$observation_window_col,
                                    observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
+                                   observation.window.opacity=input$observation_window_opacity,
                                    show.real.obs.window.start=input$show_real_obs_window_start,
                                    real.obs.window.density=input$real_obs_window_density, real.obs.window.angle=input$real_obs_window_angle,
                                    print.CMA=input$print_cma, CMA.cex=input$cma_cex,
