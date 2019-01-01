@@ -9349,6 +9349,13 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             # Colors and fonts:
                             bw.plot=FALSE,
                             col.na="lightgray", col.cats=rainbow,
+                            lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16,
+                            col.continuation="black", lty.continuation="dotted", lwd.continuation=1,
+                            cex=1.0, cex.axis=0.75, cex.lab=1.0,
+                            highlight.followup.window=TRUE, followup.window.col="green",
+                            highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
+                            show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30,
+                            show.event.intervals=TRUE,
 
                             # Data accessor functions:
                             get.colnames.fnc=function(d) names(d),
@@ -9461,6 +9468,14 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            duration=duration,
            bw.plot=bw.plot,
            col.na=col.na, col.cats=col.cats,
+           lty.event=lty.event, lwd.event=lwd.event, pch.start.event=pch.start.event, pch.end.event=pch.end.event,
+           col.continuation=col.continuation, lty.continuation=lty.continuation, lwd.continuation=lwd.continuation,
+           cex=cex, cex.axis=cex.axis, cex.lab=cex.lab,
+           highlight.followup.window=highlight.followup.window, followup.window.col=followup.window.col,
+           highlight.observation.window=highlight.observation.window, observation.window.col=observation.window.col,
+           observation.window.density=observation.window.density, observation.window.angle=observation.window.angle,
+           show.real.obs.window.start=show.real.obs.window.start, real.obs.window.density=real.obs.window.density, real.obs.window.angle=real.obs.window.angle,
+           show.event.intervals=show.event.intervals,
            show.period=show.period, period.in.days=period.in.days,
            plot.CMA.as.histogram=plot.CMA.as.histogram,
            align.all.patients=align.all.patients,
