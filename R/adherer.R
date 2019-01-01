@@ -1224,20 +1224,9 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     # Observation window:
     if( !is.null(event.info) && highlight.observation.window )
     {
-      if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
-      {
-        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
-        if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "theor. obs. wnd.", col="black", cex=0.75, pos=4);
-        cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("theor. obs. wnd.", cex=0.75));
-        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=real.obs.window.density, angle=real.obs.window.angle);
-        if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "real obs.wnd.", col="black", cex=0.75, pos=4);
-        cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("real obs.wnd.", cex=0.75));
-      } else
-      {
-        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
-        if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "observation wnd.", col="black", cex=0.75, pos=4);
-        cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("observation wnd.", cex=0.75));
-      }
+      if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
+      if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "observation wnd.", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("observation wnd.", cex=0.75));
     }
 
     # Required size:
@@ -7250,7 +7239,6 @@ print.CMA_per_episode <- function(x,                                     # the C
                                CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                                highlight.followup.window=TRUE, followup.window.col="green",
                                highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
-                               show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
                                bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                                min.plot.size.in.characters.horiz=20, min.plot.size.in.characters.vert=15,  # the minimum plot size (in character)
                                max.patients.to.plot=100,        # maximum number of patients to plot
@@ -7757,20 +7745,9 @@ print.CMA_per_episode <- function(x,                                     # the C
     # Observation window:
     if( highlight.observation.window )
     {
-      if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
-      {
-        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
-        if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "theor. obs. wnd.", col="black", cex=0.75, pos=4);
-        cur.y <- cur.y - 1.5*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("theor. obs. wnd.", cex=0.75));
-        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=real.obs.window.density, angle=real.obs.window.angle);
-        if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "real obs.wnd.", col="black", cex=0.75, pos=4);
-        cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("real obs.wnd.", cex=0.75));
-      } else
-      {
-        if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
-        if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "observation wnd.", col="black", cex=0.75, pos=4);
-        cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("observation wnd.", cex=0.75));
-      }
+      if( do.plot ) rect(x + 1.0*char.width, cur.y, x + 4.0*char.width, cur.y - 1.0*char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=0.3), density=observation.window.density, angle=observation.window.angle);
+      if( do.plot ) text(x + 5.0*char.width, cur.y - 0.5*char.height, "observation wnd.", col="black", cex=0.75, pos=4);
+      cur.y <- cur.y - 2.0*char.height; max.width <- max(max.width, 5.0*char.width + strwidth("observation wnd.", cex=0.75));
     }
 
     # Required size:
