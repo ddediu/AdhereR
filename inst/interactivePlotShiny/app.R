@@ -447,7 +447,17 @@ ui <- fluidPage(
                         choices=c("bottom", "top"),
                         selected="bottom")),
 
-        div(title='The legend\'s bacground opacity (between 0.0=fully transparent and 1.0=fully opaque)',
+        div(title='Relative font size of legend title',
+            numericInput(inputId="legend_cex_title",
+                         label="Title font size",
+                         value=1.0, min=0.0, max=NA, step=0.25)),
+
+        div(title='Relative font size of legend text and symbols',
+            numericInput(inputId="legend_cex",
+                         label="Text font size",
+                         value=0.75, min=0.0, max=NA, step=0.25)),
+
+        div(title='The legend\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
             sliderInput(inputId="legend_bkg_opacity",
                         label="Legend bkg. opacity",
                         min=0.0, max=1.0, value=0.5, step=0.1, round=TRUE))
@@ -674,7 +684,7 @@ ui <- fluidPage(
             sliderInput(inputId="observation_window_angle",
                         label="OW hash angle",
                         min=-90.0, max=90.0, value=-30, step=15, round=TRUE)),
-        div(title='The observation window\'s bacground opacity (between 0.0=fully transparent and 1.0=fully opaque)',
+        div(title='The observation window\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
             sliderInput(inputId="observation_window_opacity",
                         label="OW opacity",
                         min=0.0, max=1.0, value=0.3, step=0.1, round=TRUE))
@@ -943,7 +953,8 @@ server <- function(input, output, session) {
                                                                 !input$plot_CMA_as_histogram_episodes),
                                    align.all.patients=input$plot_align_all_patients,
                                    align.first.event.at.zero=input$plot_align_first_event_at_zero,
-                                   show.legend=input$show_legend, legend.x=input$legend_x, legend.y=input$legend_y, legend.bkg.opacity=input$legend_bkg_opacity, # legend
+                                   show.legend=input$show_legend, legend.x=input$legend_x, legend.y=input$legend_y, legend.bkg.opacity=input$legend_bkg_opacity,
+                                   legend.cex=input$legend_cex, legend.cex.title=input$legend_cex_title,
                                    duration=ifelse(input$duration==0, NA, input$duration), # duration to plot
                                    show.period=input$show_period, period.in.days=input$period_in_days, # period
                                    bw.plot=input$bw_plot, # grayscale plotting
