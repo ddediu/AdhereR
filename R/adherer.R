@@ -2891,7 +2891,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            show.event.intervals=TRUE,             # show the actual rpescription intervals
                            col.na="lightgray",                    # color for mising data
                            #col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
-                           print.CMA=TRUE,                  # print CMA next to the participant's ID?
+                           print.CMA=TRUE, CMA.cex=0.50,           # print CMA next to the participant's ID?
                            plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
                            CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
                            CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
@@ -3123,14 +3123,14 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       if( !is.na(adh) )
       {
         cma.string <- sprintf("%.1f%%",adh*100); available.x.space <- abs(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0));
-        if( strwidth(cma.string, cex=cex.axis) <= available.x.space )
+        if( strwidth(cma.string, cex=CMA.cex) <= available.x.space )
         { # horizontal writing of the CMA:
           text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s),
-               labels=cma.string, col=CMA.plot.text, cex=cex.axis);
-        } else if( strheight(cma.string, cex=cex.axis) <= available.x.space )
+               labels=cma.string, col=CMA.plot.text, cex=CMA.cex);
+        } else if( strheight(cma.string, cex=CMA.cex) <= available.x.space )
         { # vertical writing of the CMA:
           text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s),
-               labels=cma.string, col=CMA.plot.text, cex=cex.axis, srt=90);
+               labels=cma.string, col=CMA.plot.text, cex=CMA.cex, srt=90);
         } # otherwise, theres' no space for showing the CMA here
       }
     }

@@ -397,15 +397,19 @@ ui <- fluidPage(
 
       # CMA estimate ----
       conditionalPanel(
-        condition="(input.cma_class == 'per eipsode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
+        condition="(input.cma_class == 'per episode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
 
         div(title='How to show the CMA estimates',
                  span(h4("CMA estimates"), style="color:DarkBlue")),
 
-        div(title='Print the CMA estimate next to the participant\'s ID?',
-                 checkboxInput(inputId="print_cma",
-                    label="Print CMA?",
-                    value=TRUE)),
+        conditionalPanel(
+          condition="input.cma_class == 'simple'",
+
+          div(title='Print the CMA estimate next to the participant\'s ID?',
+                   checkboxInput(inputId="print_cma",
+                      label="Print CMA?",
+                      value=TRUE))
+        ),
 
         div(title='Plot the CMA estimate next to the participant\'s ID?',
                  checkboxInput(inputId="plot_cma",
@@ -702,15 +706,15 @@ ui <- fluidPage(
 
       # CMA estimate aesthetics:
       conditionalPanel(
-        condition="(input.cma_class == 'per eipsode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
+        condition="(input.cma_class == 'per episode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
 
         div(title='CMA estimate visual attributes',
                  span(p("CMA estimate"), style="color:RoyalBlue; font-weight: bold;")),
 
         conditionalPanel(
-          condition="input.print_cma",
+          condition="input.plot_cma",
 
-          div(title='Relative font size of CMA estimate',
+          div(title='Relative font size of CMA estimate for per episode and sliding windows',
               numericInput(inputId="cma_cex",
                            label="CMA font size",
                            value=0.5, min=0.0, max=NA, step=0.25)),
