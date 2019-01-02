@@ -7239,7 +7239,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                                highlight.followup.window=TRUE, followup.window.col="green",
                                highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                                bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                               min.plot.size.in.characters.horiz=20, min.plot.size.in.characters.vert=15,  # the minimum plot size (in character)
+                               min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                                max.patients.to.plot=100,        # maximum number of patients to plot
                                ...
 )
@@ -7401,7 +7401,7 @@ print.CMA_per_episode <- function(x,                                     # the C
 
   # Minimum plot dimensions:
   if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
-      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * length(patids))
+      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * (nrow(cma$data)+ifelse(plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0)))
   {
     cat(paste0("Plotting area is too small (it must be at least ",
                min.plot.size.in.characters.horiz,
@@ -7410,7 +7410,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                " characters per patient, but now it is only ",
                round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
                " x ",
-               round(abs(par("usr")[4] - par("usr")[3]) / (char.height * length(patids)),1),
+               round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (nrow(cma$data)+ifelse(plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0))),1),
                ")!\n"));
     #segments(x0=c(par("usr")[1], par("usr")[1]),
     #         y0=c(par("usr")[3], par("usr")[4]),
