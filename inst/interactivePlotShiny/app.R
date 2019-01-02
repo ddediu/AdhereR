@@ -24,6 +24,7 @@
 #' @import shiny
 #' @import colourpicker
 #' @import viridisLite
+#' @import highlight
 NULL
 
 # Define UI for app that draws a histogram ----
@@ -845,7 +846,7 @@ ui <- fluidPage(
 
       column(2,
         # Save image to file:
-        div(title='Explort this plot to an image file?',
+        div(title='Export this plot to an image file?',
                  checkboxInput(inputId="save_to_file_info",
                     label="Save plot!",
                     value=FALSE))
@@ -909,7 +910,14 @@ ui <- fluidPage(
       # The actual plot ----
       column(12, wellPanel(id = "tPlot",
                            style="resize: none; overflow:scroll; max-height: 75vh; max-width: 80vw",
-                           plotOutput(outputId = "distPlot", inline=TRUE)))
+                           plotOutput(outputId = "distPlot", inline=TRUE))),
+
+      # The R code for the plot ----
+      column(12,
+        # Show the R code:
+        div(title='Show the R code that would generate the current plot',
+                 actionButton(inputId="show_r_code", label=strong("Show R code..."), icon=icon("eye-open", lib="glyphicon")))
+      )
 
     )
   )
@@ -1150,6 +1158,23 @@ server <- function(input, output, session) {
                                    footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
              error = function(e) showModal(modalDialog(title="AdhereR error!",
                                                        "Cannot display the About message!",
+                                                       footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))))
+    );
+  })
+
+
+  # Show r code:
+  observeEvent(input$show_r_code,
+  {
+    # R code:
+    msg <- paste0("x <- rnorm(1000);\n",
+                  "print(x);");
+
+    tryCatch(showModal(modalDialog(HTML(highlight::highlight(parse.output=parse(text=msg), renderer=highlight::renderer_html(document=TRUE), output=NULL)),
+                                   title="R code for the current plot",
+                                   footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
+             error = function(e) showModal(modalDialog(title="AdhereR error!",
+                                                       "Cannot display the R code for plot!",
                                                        footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))))
     );
   })
