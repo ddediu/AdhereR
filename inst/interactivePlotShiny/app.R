@@ -400,7 +400,7 @@ ui <- fluidPage(
                         selected="days"))
       ),
 
-      div(title='The interval (in days) at which to draw the vertical grid',
+      div(title='The interval (in days) at which to draw the vertical grid (or 0 for no grid)',
           numericInput(inputId="period_in_days",
                        label="Period (in days)",
                        value=90, min=0, max=NA, step=30)),

@@ -52,7 +52,7 @@ the beginning; if \code{align.all.patients == TRUE}, \code{show.period} is
 taken as "days".}
 
 \item{period.in.days}{The \emph{number} of days at which the regular grid is
-drawn.}
+drawn (or 0 for no grid).}
 
 \item{show.legend}{\emph{Logical}, should the legend be drawn?}
 

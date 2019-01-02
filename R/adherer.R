@@ -585,7 +585,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' the beginning; if \code{align.all.patients == TRUE}, \code{show.period} is
 #' taken as "days".
 #' @param period.in.days The \emph{number} of days at which the regular grid is
-#' drawn.
+#' drawn (or 0 for no grid).
 #' @param show.legend \emph{Logical}, should the legend be drawn?
 #' @param legend.x The position of the legend on the x axis; can be "left",
 #' "right" (default), or a \emph{numeric} value.
@@ -1085,7 +1085,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     }
   }
   # The grid at regular dates:
-  abline( v=adh.plot.space[2]+seq(0,endperiod,by=period.in.days), lty="dotted", col=gray(0.5) );
+  if( period.in.days > 0 ) abline( v=adh.plot.space[2]+seq(0,endperiod,by=period.in.days), lty="dotted", col=gray(0.5) );
   abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
 
   # The patient axis and CMA plots:
@@ -1154,17 +1154,20 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   #axis( 1, at=adh.plot.space[2]+seq(0,endperiod,by=period.in.days),
   #      labels=if(show.period=="dates"){as.character(earliest.date + round(seq(0,endperiod,by=period.in.days),1), format=cma$date.format)} else {as.character(round(seq(0,endperiod,by=period.in.days),1))},
   #      las=ifelse(show.period=="dates",1,3), srt=ifelse(show.period=="dates",45,0), cex.axis=cex.axis);
-  axis( 1, at=adh.plot.space[2]+seq(0,endperiod,by=period.in.days), labels=FALSE);
-  if( show.period=="dates" )
+  if( period.in.days > 0 )
   {
-    axis.labels <- as.character(earliest.date + round(seq(0,endperiod,by=period.in.days),1), format=cma$date.format);
-  } else
-  {
-    axis.labels <- as.character(round(seq(0,endperiod,by=period.in.days),1));
+    axis( 1, at=adh.plot.space[2]+seq(0,endperiod,by=period.in.days), labels=FALSE);
+    if( show.period=="dates" )
+    {
+      axis.labels <- as.character(earliest.date + round(seq(0,endperiod,by=period.in.days),1), format=cma$date.format);
+    } else
+    {
+      axis.labels <- as.character(round(seq(0,endperiod,by=period.in.days),1));
+    }
+    text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+         labels=axis.labels,
+         cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
   }
-  text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
-       labels=axis.labels,
-       cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
 
   # The legend:
   .legend <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
@@ -3303,48 +3306,51 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   }
 
   # The days/dates axis and the grid at those important days/dates:
-  if( show.period=="dates" )
+  if( period.in.days > 0 )
   {
-      #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-      #      labels=as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format),
-      #      las=3, cex.axis=cex.axis);
-      axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
-      axis.labels <- as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format);
-      text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
-           labels=axis.labels,
-           cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
-      abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
-      abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
-  } else
-  {
-      if( align.first.event.at.zero )
-      {
-          xpos <- c(correct.earliest.followup.window-seq(0,as.numeric(correct.earliest.followup.window),by=period.in.days),
-                    seq(0,as.numeric(endperiod),by=period.in.days)+correct.earliest.followup.window);
-          xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
-          #axis( 1, at=adh.plot.space[2]+xpos,
-          #      labels=as.character(round(xpos-correct.earliest.followup.window,1)),
-          #      las=3, cex.axis=cex.axis);
-          axis( 1, at=adh.plot.space[2]+xpos, labels=FALSE);
-          axis.labels <- as.character(round(xpos-correct.earliest.followup.window,1));
-          text(adh.plot.space[2]+xpos, par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
-               labels=axis.labels,
-               cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
-          abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
-          abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
-      } else
-      {
-          #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-          #      labels=as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1)),
-          #      las=3, cex.axis=cex.axis);
-          axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
-          axis.labels <- as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1));
-          text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
-               labels=axis.labels,
-               cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
-          abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
-          abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
-      }
+    if( show.period=="dates" )
+    {
+        #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
+        #      labels=as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format),
+        #      las=3, cex.axis=cex.axis);
+        axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
+        axis.labels <- as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format);
+        text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+             labels=axis.labels,
+             cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
+        abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
+        abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
+    } else
+    {
+        if( align.first.event.at.zero )
+        {
+            xpos <- c(correct.earliest.followup.window-seq(0,as.numeric(correct.earliest.followup.window),by=period.in.days),
+                      seq(0,as.numeric(endperiod),by=period.in.days)+correct.earliest.followup.window);
+            xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
+            #axis( 1, at=adh.plot.space[2]+xpos,
+            #      labels=as.character(round(xpos-correct.earliest.followup.window,1)),
+            #      las=3, cex.axis=cex.axis);
+            axis( 1, at=adh.plot.space[2]+xpos, labels=FALSE);
+            axis.labels <- as.character(round(xpos-correct.earliest.followup.window,1));
+            text(adh.plot.space[2]+xpos, par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+                 labels=axis.labels,
+                 cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
+            abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
+            abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
+        } else
+        {
+            #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
+            #      labels=as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1)),
+            #      las=3, cex.axis=cex.axis);
+            axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
+            axis.labels <- as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1));
+            text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+                 labels=axis.labels,
+                 cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
+            abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
+            abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
+        }
+    }
   }
 
   # The legend:
@@ -3895,7 +3901,7 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' the beginning; if \code{align.all.patients == TRUE}, \code{show.period} is
 #' taken as "days".
 #' @param period.in.days The \emph{number} of days at which the regular grid is
-#' drawn.
+#' drawn (or 0 for no grid).
 #' @param show.legend \emph{Logical}, should the legend be drawn?
 #' @param legend.x The position of the legend on the x axis; can be "left",
 #' "right" (default), or a \emph{numeric} value.
@@ -7698,48 +7704,51 @@ print.CMA_per_episode <- function(x,                                     # the C
   }
 
   # The days/dates axis and the grid at those important days/dates:
-  if( show.period=="dates" )
+  if( period.in.days > 0 )
   {
-      #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-      #      labels=as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format),
-      #      las=3, cex.axis=cex.axis);
-      axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
-      axis.labels <- as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format);
-      text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
-           labels=axis.labels,
-           cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
-      abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
-      abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
-  } else
-  {
-      if( align.first.event.at.zero )
-      {
-          xpos <- c(correct.earliest.followup.window-seq(0,as.numeric(correct.earliest.followup.window),by=period.in.days),
-                    seq(0,as.numeric(endperiod),by=period.in.days)+correct.earliest.followup.window);
-          xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
-          #axis( 1, at=adh.plot.space[2]+xpos,
-          #      labels=as.character(round(xpos-correct.earliest.followup.window,1)),
-          #      las=3, cex.axis=cex.axis);
-          axis( 1, at=adh.plot.space[2]+xpos, labels=FALSE);
-          axis.labels <- as.character(round(xpos-correct.earliest.followup.window,1));
-          text(adh.plot.space[2]+xpos, par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
-               labels=axis.labels,
-               cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
-          abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
-          abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
-      } else
-      {
-          #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-          #      labels=as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1)),
-          #      las=3, cex.axis=cex.axis);
-          axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
-          axis.labels <- as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1));
-          text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
-               labels=axis.labels,
-               cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
-          abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
-          abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
-      }
+    if( show.period=="dates" )
+    {
+        #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
+        #      labels=as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format),
+        #      las=3, cex.axis=cex.axis);
+        axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
+        axis.labels <- as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format);
+        text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+             labels=axis.labels,
+             cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
+        abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
+        abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
+    } else
+    {
+        if( align.first.event.at.zero )
+        {
+            xpos <- c(correct.earliest.followup.window-seq(0,as.numeric(correct.earliest.followup.window),by=period.in.days),
+                      seq(0,as.numeric(endperiod),by=period.in.days)+correct.earliest.followup.window);
+            xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
+            #axis( 1, at=adh.plot.space[2]+xpos,
+            #      labels=as.character(round(xpos-correct.earliest.followup.window,1)),
+            #      las=3, cex.axis=cex.axis);
+            axis( 1, at=adh.plot.space[2]+xpos, labels=FALSE);
+            axis.labels <- as.character(round(xpos-correct.earliest.followup.window,1));
+            text(adh.plot.space[2]+xpos, par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+                 labels=axis.labels,
+                 cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
+            abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
+            abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
+        } else
+        {
+            #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
+            #      labels=as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1)),
+            #      las=3, cex.axis=cex.axis);
+            axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
+            axis.labels <- as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1));
+            text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+                 labels=axis.labels,
+                 cex.axis=cex.axis, srt=30, pos=1, xpd=TRUE);
+            abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
+            abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
+        }
+    }
   }
 
   # The legend:
@@ -7888,7 +7897,7 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' the beginning; if \code{align.all.patients == TRUE}, \code{show.period} is
 #' taken as "days".
 #' @param period.in.days The \emph{number} of days at which the regular grid is
-#' drawn.
+#' drawn (or 0 for no grid).
 #' @param show.legend \emph{Logical}, should the legend be drawn?
 #' @param legend.x The position of the legend on the x axis; can be "left",
 #' "right" (default), or a \emph{numeric} value.
