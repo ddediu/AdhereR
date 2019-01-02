@@ -835,6 +835,10 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
 
       # Replace the original data by this enhanced one!
       cma$data <- event.info;
+    } else
+    {
+      cat("Error concerning the follow-up and observation windows: please see console for details!");
+      return (invisible(NULL));
     }
   } else
   {
@@ -2430,6 +2434,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   if( any(!ret.val$.OBS.WITHIN.FU) )
   {
     if( !suppress.warnings ) warning("The observation window is not within the follow-up window for participant(s) ",paste0(unique(ret.val[!ret.val$.OBS.WITHIN.FU,get(ID.colname)]),collpase=", ")," !\n");
+    return (NULL);
   }
 
   # Make sure events outside the observation window are NA'ed:
