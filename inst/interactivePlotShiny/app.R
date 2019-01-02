@@ -381,11 +381,24 @@ ui <- fluidPage(
                       value=0, min=0, max=NA, step=90)),
 
       # Period:
-      div(title='Draw vertical grid at regular interval as days since the earliest date or as actual dates?',
-          selectInput(inputId="show_period",
-                      label="Show period as",
-                      choices=c("days", "dates"),
-                      selected="days")),
+      conditionalPanel(
+        condition="(input.patient.length > 1) && input.plot_align_all_patients",
+
+        div(title='Draw vertical grid at regular interval as days since the earliest date',
+            selectInput(inputId="show_period_align_patients",
+                        label="Show period as",
+                        choices=c("days"), # only days are possible when aligning the patients
+                        selected="days"))
+      ),
+      conditionalPanel(
+        condition="!((input.patient.length > 1) && input.plot_align_all_patients)", # ELSE
+
+        div(title='Draw vertical grid at regular interval as days since the earliest date or as actual dates?',
+            selectInput(inputId="show_period",
+                        label="Show period as",
+                        choices=c("days", "dates"),
+                        selected="days"))
+      ),
 
       div(title='The interval (in days) at which to draw the vertical grid',
           numericInput(inputId="period_in_days",
@@ -956,7 +969,7 @@ server <- function(input, output, session) {
                                    show.legend=input$show_legend, legend.x=input$legend_x, legend.y=input$legend_y, legend.bkg.opacity=input$legend_bkg_opacity,
                                    legend.cex=input$legend_cex, legend.cex.title=input$legend_cex_title,
                                    duration=ifelse(input$duration==0, NA, input$duration), # duration to plot
-                                   show.period=input$show_period, period.in.days=input$period_in_days, # period
+                                   show.period=ifelse(length(input$patient) > 1 && input$plot_align_all_patients, "days", input$show_period), period.in.days=input$period_in_days, # period
                                    bw.plot=input$bw_plot, # grayscale plotting
                                    #show.cma=input$show_cma,
                                    col.na=input$col_na,
