@@ -25,7 +25,9 @@
 #' @import colourpicker
 #' @import viridisLite
 #' @import highlight
+#' @import clipr
 NULL
+
 
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
@@ -1166,17 +1168,141 @@ server <- function(input, output, session) {
   # Show r code:
   observeEvent(input$show_r_code,
   {
-    # R code:
-    msg <- paste0("x <- rnorm(1000);\n",
-                  "print(x);");
+    # Create the R code:
+    # Initial comments:
+    r_code <<- "# The R code corresponding to the currently displayed Shiny plot:\n";
+    r_code <<- paste0(r_code, "# First, we compute the appropriate CMA:\n");
 
-    tryCatch(showModal(modalDialog(HTML(highlight::highlight(parse.output=parse(text=msg), renderer=highlight::renderer_html(document=TRUE), output=NULL)),
-                                   title="R code for the current plot",
-                                   footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
+    # The CMA function name:
+    cma_fnc_name <- switch(input$cma_class,
+                           "simple"=input$cma_to_compute,
+                           "per episode"="CMA_per_episode",
+                           "sliding window"="CMA_sliding_window");
+    r_code <<- paste0(r_code, "cma <- ",cma_fnc_name,"("); # the CMA function call
+    cma_fnc_body_indent <- paste0(rep(" ",nchar(cma_fnc_name) + nchar("cma <- ")),collapse=""); # the CMA function body indent
+
+    # The parameters:
+    r_code <<- paste0(r_code, "data=DATA, # <-- this is the data you passed to the interactive plotting function!!!\n");
+    if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", "CMA=",input$cma_to_compute_within_complex,",\n");
+    r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are not relevant for a particular CMA type, we nevertheless pass them as they will be simply ignored)\n");
+    params.cma <- list("all"=c("ID.colname"=paste0('"',.plotting.params$ID.colname,'"'),
+                               "event.date.colname"=paste0('"',.plotting.params$event.date.colname,'"'),
+                               "event.duration.colname"=paste0('"',.plotting.params$event.duration.colname,'"'),
+                               "event.daily.dose.colname"=paste0('"',.plotting.params$event.daily.dose.colname,'"'),
+                               "medication.class.colname"=paste0('"',.plotting.params$medication.class.colname,'"'),
+                               #"carryover.within.obs.window"=NA,
+                               #"carryover.into.obs.window"=NA,
+                               "carry.only.for.same.medication"=input$carry_only_for_same_medication,
+                               "consider.dosage.change"=input$consider_dosage_change,
+                               "followup.window.start"=ifelse(input$followup_window_start_unit=="calendar date",
+                                                              paste0('"',as.character(as.Date(input$followup_window_start_date, format="%Y-%m-%d"), format=.plotting.params$date.format),'"'),
+                                                              input$followup_window_start_no_units),
+                               "followup.window.start.unit"=ifelse(input$followup_window_start_unit=="calendar date", '"days"', paste0('"',input$followup_window_start_unit,'"')),
+                               "followup.window.duration"=input$followup_window_duration,
+                               "followup.window.duration.unit"=paste0('"',input$followup_window_duration_unit,'"'),
+                               "observation.window.start"=ifelse(input$observation_window_start_unit=="calendar date",
+                                                                 paste0('"',as.character(as.Date(input$observation_window_start_date, format="%Y-%m-%d"), format=.plotting.params$date.format),'"'),
+                                                                 input$observation_window_start_no_units),
+                               "observation.window.start.unit"=ifelse(input$observation_window_start_unit=="calendar date", '"days"', paste0('"',input$observation_window_start_unit,'"')),
+                               "observation.window.duration"=input$observation_window_duration,
+                               "observation.window.duration.unit"=paste0('"',input$observation_window_duration_unit,'"')),
+                       "per.episode"=c("medication.change.means.new.treatment.episode"=input$medication_change_means_new_treatment_episode,
+                                       "dosage.change.means.new.treatment.episode"=input$dosage_change_means_new_treatment_episode,
+                                       "maximum.permissible.gap"=input$maximum_permissible_gap,
+                                       "maximum.permissible.gap.unit"=paste0('"',input$maximum_permissible_gap_unit,'"')),
+                       "sliding.window"=c("sliding.window.start"=as.numeric(input$sliding_window_start),
+                                          "sliding.window.start.unit"=paste0('"',input$sliding_window_start_unit,'"'),
+                                          "sliding.window.duration"=input$sliding_window_duration,
+                                          "sliding.window.duration.unit"=paste0('"',input$sliding_window_duration_unit,'"'),
+                                          "sliding.window.step.duration"=input$sliding_window_step_duration,
+                                          "sliding.window.step.unit"=paste0('"',input$sliding_window_step_unit,'"'),
+                                          "sliding.window.no.steps"=ifelse(input$sliding_window_step_choice=="the number of steps", input$sliding_window_no_steps, NA)),
+                       "date.format"=paste0('"',.plotting.params$date.format,'"') # keep date.format as last to avoid issues with dangling commas
+    );
+    r_code <<- paste0(r_code, paste0(cma_fnc_body_indent, " ", names(params.cma$all), "=", params.cma$all, collapse=",\n"), ",\n");
+    if( input$cma_class == "per episode" ) r_code <<- paste0(r_code, paste0(cma_fnc_body_indent, " ", names(params.cma$per.episode), "=", params.cma$per.episode, collapse=",\n"), ",\n");
+    if( input$cma_class == "sliding window" ) r_code <<- paste0(r_code, paste0(cma_fnc_body_indent, " ", names(params.cma$sliding.window), "=", params.cma$sliding.window, collapse=",\n"), ",\n");
+    r_code <<- paste0(r_code, cma_fnc_body_indent, " date.format=", params.cma$date.format, "\n");
+
+    # End end of CMA function call:
+    r_code <<- paste0(r_code, cma_fnc_body_indent,");\n\n");
+
+    # The plotting:
+    r_code <<- paste0(r_code, "if( !is.null(cma) ) # if the CMA was computed ok\n");
+    r_code <<- paste0(r_code, "{\n");
+    r_code <<- paste0(r_code, "    # Try to plot it:\n");
+    r_code <<- paste0(r_code, "    plot(cma,\n");
+    r_code <<- paste0(r_code, "         # (same idea as for CMA: we send arguments even if they aren't used in a particular case)\n");
+
+    params.plot <- c("align.all.patients"=input$plot_align_all_patients,
+                     "align.first.event.at.zero"=input$plot_align_first_event_at_zero,
+                     "show.legend"=input$show_legend,
+                     "legend.x"=ifelse( is.numeric(input$legend_x), input$legend_x, paste0('"',input$legend_x,'"')),
+                     "legend.y"=ifelse( is.numeric(input$legend_y), input$legend_y, paste0('"',input$legend_y,'"')),
+                     "legend.bkg.opacity"=input$legend_bkg_opacity,
+                     "legend.cex"=input$legend_cex,
+                     "legend.cex.title"=input$legend_cex_title,
+                     "duration"=ifelse(input$duration==0, NA, input$duration),
+                     "show.period"=ifelse(length(input$patient) > 1 && input$plot_align_all_patients, '"days"', paste0('"',input$show_period,'"')),
+                     "period.in.days"=input$period_in_days,
+                     "bw.plot"=input$bw_plot,
+                     #show.cma=input$show_cma,
+                     "col.na"=paste0('"',input$col_na,'"'),
+                     "unspecified.category.label"=paste0('"',input$unspecified_category_label,'"'),
+                     "col.cats"=paste0('"',input$col_cats,'"'),
+                     "lty.event"=paste0('"',input$lty_event,'"'),
+                     "lwd.event"=input$lwd_event,
+                     "pch.start.event"=input$pch_start_event,
+                     "pch.end.event"=input$pch_end_event,
+                     "col.continuation"=paste0('"',input$col_continuation,'"'),
+                     "lty.continuation"=paste0('"',input$lty_continuation,'"'),
+                     "lwd.continuation"=input$lwd_continuation,
+                     "cex"=input$cex,
+                     "cex.axis"=input$cex_axis,
+                     "cex.lab"=input$cex_lab,
+                     "highlight.followup.window"=input$highlight_followup_window,
+                     "followup.window.col"=paste0('"',input$followup_window_col,'"'),
+                     "highlight.observation.window"=input$highlight_observation_window,
+                     "observation.window.col"=paste0('"',input$observation_window_col,'"'),
+                     "observation.window.density"=input$observation_window_density,
+                     "observation.window.angle"=input$observation_window_angle,
+                     "observation.window.opacity"=input$observation_window_opacity,
+                     "show.real.obs.window.start"=input$show_real_obs_window_start,
+                     "real.obs.window.density"=input$real_obs_window_density,
+                     "real.obs.window.angle"=input$real_obs_window_angle,
+                     "print.CMA"=input$print_cma,
+                     "CMA.cex"=input$cma_cex,
+                     "plot.CMA"=input$plot_cma,
+                     "CMA.plot.ratio"=input$cma_plot_ratio / 100.0,
+                     "CMA.plot.col"=paste0('"',input$cma_plot_col,'"'),
+                     "CMA.plot.border"=paste0('"',input$cma_plot_border,'"'),
+                     "CMA.plot.bkg"=paste0('"',input$cma_plot_bkg,'"'),
+                     "CMA.plot.text"=paste0('"',input$cma_plot_text,'"'),
+                     "plot.CMA.as.histogram"=ifelse(input$cma_class=="sliding window", !input$plot_CMA_as_histogram_sliding_window, !input$plot_CMA_as_histogram_episodes),
+                     "show.event.intervals"=input$show_event_intervals,
+                     "min.plot.size.in.characters.horiz"=input$min_plot_size_in_characters_horiz,
+                     "min.plot.size.in.characters.vert"=input$min_plot_size_in_characters_vert);
+    r_code <<- paste0(r_code, paste0("         ", names(params.plot), "=", params.plot, collapse=",\n"), "\n");
+    r_code <<- paste0(r_code, "    );\n");
+    r_code <<- paste0(r_code, "}\n");
+
+    #cat(r_code);
+
+    tryCatch(showModal(modalDialog(div(div(HTML("<p>This is the <code>R</code> that would generate the plot currently seen. You can copy it to the clipboard using the <i>Copy to clipboard</i> button.</p>
+                                                <p>Please note that the parameter value <b><code>DATA</code></b> <i>must be replaced</i> by the actual data you passed to the Shiny interactive plot function!</p>")),
+                                       div(HTML(highlight::highlight(parse.output=parse(text=r_code), renderer=highlight::renderer_html(document=TRUE), output=NULL)),
+                                       style="max-height: 50vh; overflow: auto;")),
+                                   title=HTML("<code>R</code> code for the current plot"),
+                                   footer = tagList(actionButton("copy_code", "Copy to clipboard", icon=icon("copy", lib="glyphicon")),
+                                                    modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
              error = function(e) showModal(modalDialog(title="AdhereR error!",
                                                        "Cannot display the R code for plot!",
                                                        footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))))
     );
+  })
+  observeEvent(input$copy_code,
+  {
+    if( clipr::clipr_available() ) clipr::write_clip(r_code, object_type="character");
   })
 
 
