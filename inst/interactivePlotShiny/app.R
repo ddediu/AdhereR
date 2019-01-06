@@ -1169,10 +1169,57 @@ server <- function(input, output, session) {
   observeEvent(input$show_r_code,
   {
     # Create the R code:
-    # Initial comments:
-    r_code <<- "# The R code corresponding to the currently displayed Shiny plot:\n";
-    r_code <<- paste0(r_code, "# First, we compute the appropriate CMA:\n");
+    r_code <<- "";
 
+    # Initial comments:
+    r_code <<- paste0(r_code, "# The R code corresponding to the currently displayed Shiny plot:\n\n");
+
+    # The data and selected patients:
+    r_code <<- paste0(r_code, "# Extract the data for the selected ", length(input$patient), " patient(s) with ID(s):\n");
+    r_code <<- paste0(r_code, "# ",paste0('"',input$patient,'"',collapse=", "),"\n\n");
+
+    r_code <<- paste0(r_code, "# We denote here by DATA the data you are using in the Shiny plot.\n");
+    r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
+    r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
+    r_code <<- paste0(r_code, "# \"", class(.plotting.params$data), "\", and it has the structure:\n");
+    r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n\n");
+
+    r_code <<- paste0(r_code, "# To allow using data from other sources than a \"data.frame\"\n");
+    r_code <<- paste0(r_code, "# and other similar structures (for example, from a remote SQL\n");
+    r_code <<- paste0(r_code, "# database), we use a metchanism to request the data for the\n");
+    r_code <<- paste0(r_code, "# selected patients that uses a function called\n");
+    r_code <<- paste0(r_code, "# \"get.data.for.patients.fnc()\" which you may have redefined\n");
+    r_code <<- paste0(r_code, "# to better suit your case (chances are, however, that you are using\n");
+    r_code <<- paste0(r_code, "# its default version); in any case, the following is its definition:\n");
+    #fnc.code <- capture.output(print(.plotting.params$get.data.for.patients.fnc));
+    fnc.code <- capture.output(print(AdhereR.devel::plot_interactive_cma));
+    if( is.null(fnc.code) || length(fnc.code) == 0 )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            "Cannot display the R code for plot!",
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+    if( length(grep("<environment", fnc.code[length(fnc.code)], fixed=TRUE)) == 1 ){ fnc.code <- fnc.code[-length(fnc.code)]; }
+    if( length(grep("<bytecode", fnc.code[length(fnc.code)], fixed=TRUE)) == 1 ){ fnc.code <- fnc.code[-length(fnc.code)]; }
+    cat(fnc.code,"\n");
+    if( is.null(fnc.code) || length(fnc.code) == 0 )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            "Cannot display the R code for plot!",
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+    if( length(fnc.code) == 1 )
+    {
+      r_code <<- paste0(r_code, "get.data.for.patients.fnc <- ",fnc.code,"\n");
+    } else
+    {
+      r_code <<- paste0(r_code, "get.data.for.patients.fnc <- ",fnc.code[1],"\n");
+      r_code <<- paste0(r_code, paste0(fnc.code,collapse=""));
+    }
+
+    r_code <<- paste0(r_code, "# Compute the appropriate CMA:\n");
     # The CMA function name:
     cma_fnc_name <- switch(input$cma_class,
                            "simple"=input$cma_to_compute,
@@ -1182,7 +1229,7 @@ server <- function(input, output, session) {
     cma_fnc_body_indent <- paste0(rep(" ",nchar(cma_fnc_name) + nchar("cma <- ")),collapse=""); # the CMA function body indent
 
     # The parameters:
-    r_code <<- paste0(r_code, "data=DATA, # <-- this is the data you passed to the interactive plotting function!!!\n");
+    r_code <<- paste0(r_code, "data=.data.for.selected.patients., # <-- this is the data you passed to the interactive plotting function!!!\n");
     if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", "CMA=",input$cma_to_compute_within_complex,",\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are not relevant for a particular CMA type, we nevertheless pass them as they will be simply ignored)\n");
     params.cma <- list("all"=c("ID.colname"=paste0('"',.plotting.params$ID.colname,'"'),
@@ -1286,7 +1333,8 @@ server <- function(input, output, session) {
     r_code <<- paste0(r_code, "    );\n");
     r_code <<- paste0(r_code, "}\n");
 
-    #cat(r_code);
+    # DEBUG:
+    cat(r_code);
 
     tryCatch(showModal(modalDialog(div(div(HTML("<p>This is the <code>R</code> that would generate the plot currently seen. You can copy it to the clipboard using the <i>Copy to clipboard</i> button.</p>
                                                 <p>Please note that the parameter value <b><code>DATA</code></b> <i>must be replaced</i> by the actual data you passed to the Shiny interactive plot function!</p>")),

@@ -9430,8 +9430,10 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     }
     cat("\n");
 
-    # Preconditions:
-    if( is.null(ID) || is.null(data <- get.data.for.patients.fnc(ID, data, ID.colname)) || nrow(data)==0 )
+    # Preconditions (and data extraction):
+    if( is.null(ID) ||
+        is.null(data <- get.data.for.patients.fnc(ID, data, ID.colname)) || # extract the data for these IDs
+        nrow(data)==0 )
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
       return (invisible(NULL));
