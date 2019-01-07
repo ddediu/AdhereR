@@ -9553,13 +9553,15 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   # make sure they are deleted on exit from shiny:
   on.exit(rm(list=c(".plotting.params"), envir=.GlobalEnv));
 
+  shiny.app.launcher <- system.file('interactivePlotShiny', package='AdhereR.devel');
+
   # call shiny:
   if( use.system.browser )
   {
-    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'), launch.browser=TRUE);
+    shiny::runApp(shiny.app.launcher, launch.browser=TRUE);
   } else
   {
-    shiny::runApp(system.file('interactivePlotShiny', package='AdhereR.devel'));
+    shiny::runApp(shiny.app.launcher);
   }
 }
 

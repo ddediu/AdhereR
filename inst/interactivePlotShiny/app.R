@@ -52,6 +52,8 @@ ui <- fluidPage(
            hr()
     ),
 
+    #shinythemes::themeSelector(),
+
     # Sidebar panel for inputs ----
     column(3, wellPanel(id = "tPanel", style = "overflow:scroll; max-height: 90vh;",
 
@@ -1168,6 +1170,14 @@ server <- function(input, output, session) {
   # Show r code:
   observeEvent(input$show_r_code,
   {
+    if( is.null(input$patient) || length(input$patient) < 1 )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            "No patients selected, so nothing to do!",
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
     # Create the R code:
     r_code <<- "";
 
@@ -1189,10 +1199,10 @@ server <- function(input, output, session) {
     r_code <<- paste0(r_code, "# database), we use a metchanism to request the data for the\n");
     r_code <<- paste0(r_code, "# selected patients that uses a function called\n");
     r_code <<- paste0(r_code, "# \"get.data.for.patients.fnc()\" which you may have redefined\n");
-    r_code <<- paste0(r_code, "# to better suit your case (chances are, however, that you are using\n");
-    r_code <<- paste0(r_code, "# its default version); in any case, the following is its definition:\n");
-    #fnc.code <- capture.output(print(.plotting.params$get.data.for.patients.fnc));
-    fnc.code <- capture.output(print(AdhereR.devel::plot_interactive_cma));
+    r_code <<- paste0(r_code, "# to better suit your case (chances are, however, that you are\n");
+    r_code <<- paste0(r_code, "# using its default version); in any case, the following is its\n");
+    r_code <<- paste0(r_code, "# definition:\n");
+    fnc.code <- capture.output(print(.plotting.params$get.data.for.patients.fnc));
     if( is.null(fnc.code) || length(fnc.code) == 0 )
     {
       showModal(modalDialog(title="AdhereR error!",
@@ -1202,7 +1212,6 @@ server <- function(input, output, session) {
     }
     if( length(grep("<environment", fnc.code[length(fnc.code)], fixed=TRUE)) == 1 ){ fnc.code <- fnc.code[-length(fnc.code)]; }
     if( length(grep("<bytecode", fnc.code[length(fnc.code)], fixed=TRUE)) == 1 ){ fnc.code <- fnc.code[-length(fnc.code)]; }
-    cat(fnc.code,"\n");
     if( is.null(fnc.code) || length(fnc.code) == 0 )
     {
       showModal(modalDialog(title="AdhereR error!",
@@ -1216,8 +1225,15 @@ server <- function(input, output, session) {
     } else
     {
       r_code <<- paste0(r_code, "get.data.for.patients.fnc <- ",fnc.code[1],"\n");
-      r_code <<- paste0(r_code, paste0(fnc.code,collapse=""));
+      r_code <<- paste0(r_code, paste0(fnc.code[-1],collapse="\n"), "\n\n");
     }
+
+    r_code <<- paste0(r_code, "# Try to extract the data only for the selected patient ID(s):\n");
+    r_code <<- paste0(r_code, ".data.for.selected.patients. <- get.data.for.patients.fnc(\n");
+    r_code <<- paste0(r_code, "    c(", paste0('"',input$patient,'"',collapse=", "),"),\n");
+    r_code <<- paste0(r_code, "    DATA, ### don't forget to put here your REAL DATA! ###\n");
+    r_code <<- paste0(r_code, "    \"",.plotting.params$ID.colname,"\"\n");
+    r_code <<- paste0(r_code, ");\n");
 
     r_code <<- paste0(r_code, "# Compute the appropriate CMA:\n");
     # The CMA function name:
@@ -1229,9 +1245,11 @@ server <- function(input, output, session) {
     cma_fnc_body_indent <- paste0(rep(" ",nchar(cma_fnc_name) + nchar("cma <- ")),collapse=""); # the CMA function body indent
 
     # The parameters:
-    r_code <<- paste0(r_code, "data=.data.for.selected.patients., # <-- this is the data you passed to the interactive plotting function!!!\n");
+    r_code <<- paste0(r_code, "data=.data.for.selected.patients.,\n");
     if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", "CMA=",input$cma_to_compute_within_complex,",\n");
-    r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are not relevant for a particular CMA type, we nevertheless pass them as they will be simply ignored)\n");
+    r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are\n");
+    r_code <<- paste0(r_code, cma_fnc_body_indent, " # not relevant for a particular CMA type, we\n");
+    r_code <<- paste0(r_code, cma_fnc_body_indent, " # nevertheless pass them as they will be ignored)\n");
     params.cma <- list("all"=c("ID.colname"=paste0('"',.plotting.params$ID.colname,'"'),
                                "event.date.colname"=paste0('"',.plotting.params$event.date.colname,'"'),
                                "event.duration.colname"=paste0('"',.plotting.params$event.duration.colname,'"'),
@@ -1279,7 +1297,8 @@ server <- function(input, output, session) {
     r_code <<- paste0(r_code, "{\n");
     r_code <<- paste0(r_code, "    # Try to plot it:\n");
     r_code <<- paste0(r_code, "    plot(cma,\n");
-    r_code <<- paste0(r_code, "         # (same idea as for CMA: we send arguments even if they aren't used in a particular case)\n");
+    r_code <<- paste0(r_code, "         # (same idea as for CMA: we send arguments even if\n");
+    r_code <<- paste0(r_code, "         # they aren't used in a particular case)\n");
 
     params.plot <- c("align.all.patients"=input$plot_align_all_patients,
                      "align.first.event.at.zero"=input$plot_align_first_event_at_zero,
@@ -1333,13 +1352,22 @@ server <- function(input, output, session) {
     r_code <<- paste0(r_code, "    );\n");
     r_code <<- paste0(r_code, "}\n");
 
-    # DEBUG:
-    cat(r_code);
+    ## DEBUG:
+    #cat(r_code);
 
     tryCatch(showModal(modalDialog(div(div(HTML("<p>This is the <code>R</code> that would generate the plot currently seen. You can copy it to the clipboard using the <i>Copy to clipboard</i> button.</p>
                                                 <p>Please note that the parameter value <b><code>DATA</code></b> <i>must be replaced</i> by the actual data you passed to the Shiny interactive plot function!</p>")),
-                                       div(HTML(highlight::highlight(parse.output=parse(text=r_code), renderer=highlight::renderer_html(document=TRUE), output=NULL)),
-                                       style="max-height: 50vh; overflow: auto;")),
+                                       div(HTML(gsub('<span class="symbol">DATA</span>','<span class="symbol_data">DATA</span>',
+                                                     highlight::highlight(parse.output=parse(text=r_code),
+                                                                          renderer=highlight::renderer_html(document=TRUE,
+                                                                                                            stylesheet=file.path(system.file('interactivePlotShiny',
+                                                                                                                                             package='AdhereR.devel'),
+                                                                                                                                 "r-code-highlight.css")),
+                                                                          show_line_numbers=FALSE,
+                                                                          output=NULL),
+                                                     fixed=TRUE)),
+                                       #div(HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
+                                           style="max-height: 50vh; overflow: auto;")),
                                    title=HTML("<code>R</code> code for the current plot"),
                                    footer = tagList(actionButton("copy_code", "Copy to clipboard", icon=icon("copy", lib="glyphicon")),
                                                     modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
