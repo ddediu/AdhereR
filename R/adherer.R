@@ -907,7 +907,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   {
     if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
   }
-  if( plot.dose )
+  if( plot.dose || print.dose )
   {
     if( length(categories) == 1 && categories == "unspec. type" )
     {
@@ -9387,6 +9387,10 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             print.CMA=TRUE, CMA.cex=0.50,
                             plot.CMA=TRUE, CMA.plot.ratio=0.10, CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text="darkgreen",
 
+                            # Dose:
+                            print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE,
+                            plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE,
+
                             # Minimum plot size:
                             min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5,
 
@@ -9518,7 +9522,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            show.period=show.period, period.in.days=period.in.days,
            plot.CMA.as.histogram=plot.CMA.as.histogram,
            align.all.patients=align.all.patients,
-           align.first.event.at.zero=align.first.event.at.zero
+           align.first.event.at.zero=align.first.event.at.zero,
+           print.dose=print.dose, cex.dose=cex.dose, print.dose.outline.col=print.dose.outline.col, print.dose.centered=print.dose.centered,
+           plot.dose=plot.dose, lwd.event.max.dose=lwd.event.max.dose, plot.dose.lwd.across.medication.classes=plot.dose.lwd.across.medication.classes
           );
     }
   }

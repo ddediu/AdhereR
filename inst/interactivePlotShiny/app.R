@@ -439,6 +439,62 @@ ui <- fluidPage(
       ),
 
 
+      # Dose ----
+      div(title='Show dose',
+               span(h4("Show dose"), style="color:DarkBlue")),
+
+      # Print dose?
+      div(title='Print the dosage (i.e., the actual numeric values)?',
+               checkboxInput(inputId="print_dose",
+                  label="Print dose?",
+                  value=FALSE)),
+
+      # Print dose attributes
+      conditionalPanel(
+        condition="input.print_dose",
+
+        div(title='Relative font size',
+            numericInput(inputId="cex_dose",
+                         label="Font size",
+                         value=0.75, min=0.0, max=NA, step=0.25)),
+
+        div(title='Dose text outline color',
+            colourpicker::colourInput(inputId="print_dose_outline_col",
+                                      label="Outline color",
+                                      value="white")),
+
+        div(title='Print the dose centered on the event?',
+                 checkboxInput(inputId="print_dose_centered",
+                    label="Print centered?",
+                    value=FALSE)),
+
+        hr()
+      ),
+
+      # Plot dose?
+      div(title='Represent the dose as event line width?',
+               checkboxInput(inputId="plot_dose",
+                  label="Dose as line width?",
+                  value=FALSE)),
+
+      # Plot dose attributes
+      conditionalPanel(
+        condition="input.plot_dose",
+
+        div(title='What line width corresponds to the maximum dose?',
+            numericInput(inputId="lwd_event_max_dose",
+                         label="Max dose width",
+                         value=8, min=1, max=NA, step=1)),
+
+        div(title='Consider maximum dose globally or per each medication class separately?',
+                 checkboxInput(inputId="plot_dose_lwd_across_medication_classes",
+                    label="Global max dose?",
+                    value=FALSE))
+      ),
+
+      hr(),
+
+
       # Legend ----
       div(title='The legend',
                span(h4("Legend"), style="color:DarkBlue")),
@@ -1009,6 +1065,13 @@ server <- function(input, output, session) {
                                    plot.CMA=input$plot_cma, CMA.plot.ratio=input$cma_plot_ratio / 100.0,
                                    CMA.plot.col=input$cma_plot_col, CMA.plot.border=input$cma_plot_border, CMA.plot.bkg=input$cma_plot_bkg, CMA.plot.text=input$cma_plot_text,
                                    show.event.intervals=input$show_event_intervals,
+                                   print.dose=input$print_dose,
+                                   cex.dose=input$cex_dose,
+                                   print.dose.outline.col=input$print_dose_outline_col,
+                                   print.dose.centered=input$print_dose_centered,
+                                   plot.dose=input$plot_dose,
+                                   lwd.event.max.dose=input$lwd_event_max_dose,
+                                   plot.dose.lwd.across.medication.classes=input$plot_dose_lwd_across_medication_classes,
                                    min.plot.size.in.characters.horiz=input$min_plot_size_in_characters_horiz,
                                    min.plot.size.in.characters.vert=input$min_plot_size_in_characters_vert,
                                    get.colnames.fnc=.plotting.params$get.colnames.fnc,
@@ -1346,6 +1409,13 @@ server <- function(input, output, session) {
                      "CMA.plot.text"=paste0('"',input$cma_plot_text,'"'),
                      "plot.CMA.as.histogram"=ifelse(input$cma_class=="sliding window", !input$plot_CMA_as_histogram_sliding_window, !input$plot_CMA_as_histogram_episodes),
                      "show.event.intervals"=input$show_event_intervals,
+                     "print.dose"=input$print_dose,
+                     "cex.dose"=input$cex.dose,
+                     "print.dose.outline.col"=paste0('"',input$print_dose_outline_col,'"'),
+                     "print.dose.centered"=input$print_dose_centered,
+                     "plot.dose"=input$plot_dose,
+                     "lwd.event.max.dose"=input$lwd_event_max_dose,
+                     "plot.dose.lwd.across.medication.classes"=input$plot_dose_lwd_across_medication_classes,
                      "min.plot.size.in.characters.horiz"=input$min_plot_size_in_characters_horiz,
                      "min.plot.size.in.characters.vert"=input$min_plot_size_in_characters_vert);
     r_code <<- paste0(r_code, paste0("         ", names(params.plot), "=", params.plot, collapse=",\n"), "\n");
