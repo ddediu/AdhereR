@@ -1315,7 +1315,7 @@ server <- function(input, output, session) {
                      #show.cma=input$show_cma,
                      "col.na"=paste0('"',input$col_na,'"'),
                      "unspecified.category.label"=paste0('"',input$unspecified_category_label,'"'),
-                     "col.cats"=paste0('"',input$col_cats,'"'),
+                     "col.cats"=input$col_cats,
                      "lty.event"=paste0('"',input$lty_event,'"'),
                      "lwd.event"=input$lwd_event,
                      "pch.start.event"=input$pch_start_event,
