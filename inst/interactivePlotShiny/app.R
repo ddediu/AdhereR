@@ -200,7 +200,7 @@ ui <- fluidPage(
       hr(),
 
 
-      # For CMA5+ only ----
+      # CMA5+ only ----
       # carry_only_for_same_medication, consider_dosage_change
       conditionalPanel(
         condition = "((input.cma_class == 'simple' &&
@@ -235,7 +235,7 @@ ui <- fluidPage(
       ),
 
 
-      # For per episode only ----
+      # Per episode only ----
       conditionalPanel(
         condition = "(input.cma_class == 'per episode')",
 
@@ -277,7 +277,7 @@ ui <- fluidPage(
       ),
 
 
-      # For sliding window only ----
+      # Sliding window only ----
       conditionalPanel(
         condition = "(input.cma_class == 'sliding window')",
 
@@ -328,7 +328,7 @@ ui <- fluidPage(
                                   div(title='The sliding windows duration (in the units selected above)',
                                       numericInput(inputId="sliding_window_step_duration",
                                                    label="SW step duration",
-                                                   value=7, min=0, max=NA, step=7))
+                                                   value=30, min=0, max=NA, step=7))
                     ),
                     conditionalPanel(
                       condition = "(input.sliding_window_step_choice == 'the number of steps')",
