@@ -17,7 +17,8 @@ CMA0(data = NULL, ID.colname = NA, event.date.colname = NA,
   "years")[1], observation.window.duration = 365 * 2,
   observation.window.duration.unit = c("days", "weeks", "months",
   "years")[1], date.format = "\%m/\%d/\%Y",
-  summary = "Base CMA object", suppress.warnings = FALSE, ...)
+  summary = "Base CMA object", suppress.warnings = FALSE,
+  arguments.that.should.not.be.defined = NULL, ...)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the medication events
@@ -98,6 +99,9 @@ only the dates given as strings and not as \code{Date} objects).}
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{arguments.that.should.not.be.defined}{a \emph{list} of argument names
+for which a warning should be thrown if passed to the function.}
 
 \item{...}{other possible parameters}
 }
