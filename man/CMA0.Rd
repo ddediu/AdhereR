@@ -101,7 +101,8 @@ only the dates given as strings and not as \code{Date} objects).}
 warnings.}
 
 \item{arguments.that.should.not.be.defined}{a \emph{list} of argument names
-for which a warning should be thrown if passed to the function.}
+and pre-defined valuesfor which a warning should be thrown if passed to the
+function.}
 
 \item{...}{other possible parameters}
 }

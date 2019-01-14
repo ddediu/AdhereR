@@ -149,7 +149,8 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
-#' for which a warning should be thrown if passed to the function.
+#' and pre-defined valuesfor which a warning should be thrown if passed to the
+#' function.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA0} with the following fields:
 #' \itemize{
@@ -252,7 +253,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  summary="Base CMA object",
                  # Misc:
                  suppress.warnings=FALSE,
-                 arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
+                 arguments.that.should.not.be.defined=NULL, # the list of argument names and values for which a warning should be thrown if passed to the function
                  ...
 )
 {
@@ -388,12 +389,12 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
     {
       # Get the actual list of arguments (including in the ...); the first is the function's own name:
       args.list <- as.list(match.call(expand.dots = TRUE));
-      args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
+      args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
       if( any(args.mathing) )
       {
-        for( i in arguments.that.should.not.be.defined[args.mathing] )
+        for( i in which(args.mathing) )
         {
-          warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
+          warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
         }
       }
     }
@@ -3596,7 +3597,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
-#' for which a warning should be thrown if passed to the function.
+#' and pre-defined valuesfor which a warning should be thrown if passed to the
+#' function.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA1} (derived from \code{CMA0})
 #' with the following fields:
@@ -3704,7 +3706,10 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
-                  arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
+                  arguments.that.should.not.be.defined=c("carryover.within.obs.window"=FALSE,
+                                                         "carryover.into.obs.window"=FALSE,
+                                                         "carry.only.for.same.medication"=FALSE,
+                                                         "consider.dosage.change"=FALSE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
                 )
 {
@@ -3716,12 +3721,12 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
   {
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
+    args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
     if( any(args.mathing) )
     {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
+      for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
+        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
       }
     }
   }
@@ -4180,7 +4185,8 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
-#' for which a warning should be thrown if passed to the function.
+#' and pre-defined valuesfor which a warning should be thrown if passed to the
+#' function.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA2} (derived from \code{CMA0})
 #' with the following fields:
@@ -4287,7 +4293,10 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
-                  arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
+                  arguments.that.should.not.be.defined=c("carryover.within.obs.window"=FALSE,
+                                                         "carryover.into.obs.window"=FALSE,
+                                                         "carry.only.for.same.medication"=FALSE,
+                                                         "consider.dosage.change"=FALSE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
                 )
 {
@@ -4299,12 +4308,12 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
   {
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
+    args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
     if( any(args.mathing) )
     {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
+      for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
+        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
       }
     }
   }
@@ -4496,7 +4505,10 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
-                  arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
+                  arguments.that.should.not.be.defined=c("carryover.within.obs.window"=FALSE,
+                                                         "carryover.into.obs.window"=FALSE,
+                                                         "carry.only.for.same.medication"=FALSE,
+                                                         "consider.dosage.change"=FALSE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
                 )
 {
@@ -4508,12 +4520,12 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
   {
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
+    args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
     if( any(args.mathing) )
     {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
+      for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
+        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
       }
     }
   }
@@ -4538,7 +4550,8 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
                   parallel.backend=parallel.backend,
                   parallel.threads=parallel.threads,
-                  suppress.warnings=suppress.warnings);
+                  suppress.warnings=suppress.warnings,
+                  arguments.that.should.not.be.defined=arguments.that.should.not.be.defined);
   if( is.null(ret.val) ) return (NULL); # some error upstream
 
   # Cap CMA at 1.0:
@@ -4592,7 +4605,10 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
-                  arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
+                  arguments.that.should.not.be.defined=c("carryover.within.obs.window"=FALSE,
+                                                         "carryover.into.obs.window"=FALSE,
+                                                         "carry.only.for.same.medication"=FALSE,
+                                                         "consider.dosage.change"=FALSE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
                 )
 {
@@ -4604,12 +4620,12 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
   {
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
+    args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
     if( any(args.mathing) )
     {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
+      for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
+        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
       }
     }
   }
@@ -4634,7 +4650,8 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
                   parallel.backend=parallel.backend,
                   parallel.threads=parallel.threads,
-                  suppress.warnings=suppress.warnings);
+                  suppress.warnings=suppress.warnings,
+                  arguments.that.should.not.be.defined=arguments.that.should.not.be.defined);
   if( is.null(ret.val) ) return (NULL); # some error upstream
 
   # Cap CMA at 1.0:
@@ -4770,7 +4787,8 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
-#' for which a warning should be thrown if passed to the function.
+#' and pre-defined valuesfor which a warning should be thrown if passed to the
+#' function.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA5} (derived from \code{CMA0})
 #' with the following fields:
@@ -4883,7 +4901,8 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
-                  arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
+                  arguments.that.should.not.be.defined=c("carryover.within.obs.window"=TRUE,
+                                                         "carryover.into.obs.window"=FALSE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
                 )
 {
@@ -4895,12 +4914,12 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
   {
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
+    args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
     if( any(args.mathing) )
     {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
+      for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
+        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
       }
     }
   }
@@ -5176,7 +5195,8 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
-#' for which a warning should be thrown if passed to the function.
+#' and pre-defined valuesfor which a warning should be thrown if passed to the
+#' function.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA6} (derived from \code{CMA0})
 #' with the following fields:
@@ -5289,7 +5309,8 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
-                  arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
+                  arguments.that.should.not.be.defined=c("carryover.within.obs.window"=TRUE,
+                                                         "carryover.into.obs.window"=FALSE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
                 )
 {
@@ -5301,12 +5322,12 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
   {
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
+    args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
     if( any(args.mathing) )
     {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
+      for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
+        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
       }
     }
   }
@@ -5587,7 +5608,8 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
-#' for which a warning should be thrown if passed to the function.
+#' and pre-defined valuesfor which a warning should be thrown if passed to the
+#' function.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA7} (derived from \code{CMA0})
 #' with the following fields:
@@ -5693,7 +5715,8 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
-                  arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
+                  arguments.that.should.not.be.defined=c("carryover.within.obs.window"=TRUE,
+                                                         "carryover.into.obs.window"=TRUE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
                 )
 {
@@ -5705,12 +5728,12 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
   {
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
+    args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
     if( any(args.mathing) )
     {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
+      for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
+        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
       }
     }
   }
@@ -6045,7 +6068,8 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
-#' for which a warning should be thrown if passed to the function.
+#' and pre-defined valuesfor which a warning should be thrown if passed to the
+#' function.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA8} (derived from \code{CMA0})
 #' with the following fields:
@@ -6158,7 +6182,8 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
-                  arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
+                  arguments.that.should.not.be.defined=c("carryover.within.obs.window"=TRUE,
+                                                         "carryover.into.obs.window"=TRUE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
                 )
 {
@@ -6170,12 +6195,12 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
   {
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
+    args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
     if( any(args.mathing) )
     {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
+      for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
+        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
       }
     }
   }
@@ -6489,7 +6514,8 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
-#' for which a warning should be thrown if passed to the function.
+#' and pre-defined valuesfor which a warning should be thrown if passed to the
+#' function.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA9} (derived from \code{CMA0})
 #' with the following fields:
@@ -6595,7 +6621,8 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
-                  arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
+                  arguments.that.should.not.be.defined=c("carryover.within.obs.window"=TRUE,
+                                                         "carryover.into.obs.window"=TRUE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
                 )
 {
@@ -6607,12 +6634,12 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
   {
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
+    args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
     if( any(args.mathing) )
     {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
+      for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
+        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
       }
     }
   }
@@ -6970,8 +6997,6 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
-#' @param arguments.that.should.not.be.defined a \emph{list} of argument names
-#' for which a warning should be thrown if passed to the function.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA_per_episode} with the
 #' following fields:
@@ -7109,26 +7134,10 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              parallel.threads="auto", # specification (or number) of parallel threads
                              # Misc:
                              suppress.warnings=FALSE,
-                             arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
                              # extra parameters to be sent to the CMA function:
                              ...
 )
 {
-  # Arguments that should not have been passed:
-  if( !suppress.warnings && !is.null(arguments.that.should.not.be.defined) )
-  {
-    # Get the actual list of arguments (including in the ...); the first is the function's own name:
-    args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
-    if( any(args.mathing) )
-    {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
-      {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
-      }
-    }
-  }
-
   # Get the CMA function corresponding to the name:
   if( !(is.character(CMA.to.apply) || is.factor(CMA.to.apply)) )
   {
@@ -8443,8 +8452,6 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
-#' @param arguments.that.should.not.be.defined a \emph{list} of argument names
-#' for which a warning should be thrown if passed to the function.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA_sliding_window} with the
 #' following fields:
@@ -8586,7 +8593,6 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                 parallel.threads="auto", # specification (or number) of parallel threads
                                 # Misc:
                                 suppress.warnings=FALSE,
-                                arguments.that.should.not.be.defined=NULL, # the list of argument names for which a warning should be thrown if passed to the function
                                 # extra parameters to be sent to the CMA function:
                                 ...
 )
@@ -8631,21 +8637,6 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
   {
     if( !suppress.warnings ) warning("The sliding window must move at least once!\n")
     return (NULL);
-  }
-
-  # Arguments that should not have been passed:
-  if( !suppress.warnings && !is.null(arguments.that.should.not.be.defined) )
-  {
-    # Get the actual list of arguments (including in the ...); the first is the function's own name:
-    args.list <- as.list(match.call(expand.dots = TRUE));
-    args.mathing <- (arguments.that.should.not.be.defined %in% names(args.list)[-1]);
-    if( any(args.mathing) )
-    {
-      for( i in arguments.that.should.not.be.defined[args.mathing] )
-      {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",i,"'!\n"));
-      }
-    }
   }
 
   # Get the CMA function corresponding to the name:
@@ -9796,7 +9787,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                                   sliding.window.duration.unit=sliding.window.duration.unit,
                                                   sliding.window.step.duration=sliding.window.step.duration,
                                                   sliding.window.step.unit=sliding.window.step.unit,
-                                                  sliding.window.no.steps=sliding.window.no.steps),
+                                                  sliding.window.no.steps=sliding.window.no.steps,
+                                                  arguments.that.should.not.be.defined=NULL # avoid spurious warnings about overridden arguments
+                                                  ),
                               error  =function(e) return(list(results=results,error=conditionMessage(e))),
                               warning=function(w) return(list(results=results,warning=conditionMessage(w))));
     if( is.null(results) )

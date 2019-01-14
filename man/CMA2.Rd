@@ -20,7 +20,9 @@ CMA2(data = NULL, ID.colname = NA, event.date.colname = NA,
   force.NA.CMA.for.failed.patients = TRUE, parallel.backend = c("none",
   "multicore", "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)")[1],
   parallel.threads = "auto", suppress.warnings = FALSE,
-  arguments.that.should.not.be.defined = NULL, ...)
+  arguments.that.should.not.be.defined = c(carryover.within.obs.window =
+  FALSE, carryover.into.obs.window = FALSE, carry.only.for.same.medication
+  = FALSE, consider.dosage.change = FALSE), ...)
 
 CMA4(data = NULL, ID.colname = NA, event.date.colname = NA,
   event.duration.colname = NA, followup.window.start = 0,
@@ -37,7 +39,9 @@ CMA4(data = NULL, ID.colname = NA, event.date.colname = NA,
   force.NA.CMA.for.failed.patients = TRUE, parallel.backend = c("none",
   "multicore", "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)")[1],
   parallel.threads = "auto", suppress.warnings = FALSE,
-  arguments.that.should.not.be.defined = NULL, ...)
+  arguments.that.should.not.be.defined = c(carryover.within.obs.window =
+  FALSE, carryover.into.obs.window = FALSE, carry.only.for.same.medication
+  = FALSE, consider.dosage.change = FALSE), ...)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the events used to compute
@@ -131,7 +135,8 @@ threads, or a more complex specification of the SNOW cluster nodes for
 warnings.}
 
 \item{arguments.that.should.not.be.defined}{a \emph{list} of argument names
-for which a warning should be thrown if passed to the function.}
+and pre-defined valuesfor which a warning should be thrown if passed to the
+function.}
 
 \item{...}{other possible parameters}
 }
