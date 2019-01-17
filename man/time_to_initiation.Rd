@@ -59,7 +59,7 @@ A \code{data.frame} or \code{data.table} with the following columns:
  of medication, as given by the  \code{medication.class.colnames} parameter.
  \item \code{first.presc} the date of the first prescription event.
  \item \code{first.disp} the date of the first dispensing event.
- \item \code{time.to.initialization} the difference in days between the first
+ \item \code{time.to.initiation} the difference in days between the first
  dispensing date and the  first prescription date.
 }
 }

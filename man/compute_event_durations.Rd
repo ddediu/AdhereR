@@ -5,14 +5,13 @@
 \title{Computation of event durations.}
 \usage{
 compute_event_durations(disp.data = NULL, presc.data = NULL,
-  hosp.data = NULL, ID.colname = NA, presc.date.colname = NA,
-  disp.date.colname = NA, date.format = "\%d.\%m.\%Y",
-  medication.class.colnames = NA, total.dose.colname = NA,
-  presc.daily.dose.colname = NA, presc.duration.colname = NA,
-  visit.colname = NA, force.init.presc = FALSE,
-  force.presc.renew = FALSE, split.on.dosage.change = TRUE,
-  trt.interruption = c("continue", "discard", "carryover")[1],
-  suppress.warnings = FALSE, return.data.table = FALSE, ...)
+  hosp.data = NULL, ID.colname, presc.date.colname, disp.date.colname,
+  date.format = "\%d.\%m.\%Y", medication.class.colnames,
+  total.dose.colname, presc.daily.dose.colname, presc.duration.colname,
+  visit.colname, force.init.presc = FALSE, force.presc.renew = FALSE,
+  split.on.dosage.change = TRUE, trt.interruption = c("continue",
+  "discard", "carryover")[1], suppress.warnings = FALSE,
+  return.data.table = FALSE, ...)
 }
 \arguments{
 \item{disp.data}{A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
@@ -34,16 +33,15 @@ hospitalizations with the exact column names \emph{\code{DATE.IN}} and
 \emph{\code{DATE.OUT}}.}
 
 \item{ID.colname}{A \emph{string}, the name of the column in \code{disp.data},
-\code{presc.data}, and \code{hosp.data} containing the unique patient ID, or
-\code{NA} if not defined.}
+\code{presc.data}, and \code{hosp.data} containing the unique patient ID.}
 
 \item{presc.date.colname}{A \emph{string}, the name of the column in
 \code{presc.data} containing the prescription date (in the format given in
-the \code{date.format} parameter), or \code{NA} if not defined.}
+the \code{date.format} parameter).}
 
 \item{disp.date.colname}{A \emph{string}, the name of the column in
 \code{disp.data} containing the dispensing date (in the format given in
-the \code{date.format} parameter), or \code{NA} if not defined.}
+the \code{date.format} parameter).}
 
 \item{date.format}{A \emph{string} giving the format of the dates used in
 the \code{data} and the other parameters; see the \code{format} parameters
@@ -52,23 +50,23 @@ only the dates given as strings and not as \code{Date} objects).}
 
 \item{medication.class.colnames}{A \emph{\code{Vector}} of \emph{strings}, the
 name(s) of the column(s) in \code{disp.data} and \code{presc.data} containing
-the classes/types/groups of medication, or \code{NA} if not defined.}
+the classes/types/groups of medication.}
 
 \item{total.dose.colname}{A \emph{string}, the name of the column in
 \code{disp.data} containing the total dispensed dose as \code{numeric} (e.g.
-\code{500} for 10 tablets of 50 mg), or \code{NA} if not defined.}
+\code{500} for 10 tablets of 50 mg).}
 
 \item{presc.daily.dose.colname}{A \emph{string}, the name of the column in
 \code{presc.data} containing the daily prescribed dose as \code{numeric} (e.g.
-\code{50} for 50 mg once per day, or 25 for 50 mg once ever 2 days), or \code{NA}
-if not defined.}
+\code{50} for 50 mg once per day, or 25 for 50 mg once ever 2 days).}
 
 \item{presc.duration.colname}{A \emph{string}, the name of the column in
 \code{presc.data} containing the duration of the prescription as \code{numeric}
 or \code{NA} if duration is unknown.}
 
 \item{visit.colname}{A \emph{string}, the name of the column in
-\code{presc.data} containing the number of the visit, or \code{NA} if not defined.}
+\code{presc.data} containing the number of the visit or a new column name if the
+prescribing data does not contain such a column.}
 
 \item{force.init.presc}{\emph{Logical}. If \code{TRUE} advance the date of the
 first prescription event to the date of the first dispensing event, if the first
