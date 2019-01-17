@@ -25,7 +25,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
                   "DURATION", "HOSP.DURATION",
                   "DAILY.DOSE", "TOTAL.DOSE",
                   "DISP.START", "DISP.END",
-                  "cum.duration", ".episode", ".out", ".hosp", "time.to.initialization", "first.disp", "first.presc",
+                  "cum.duration", ".episode", ".out", ".hosp", "time.to.initiation", "first.disp", "first.presc",
                   "debug.mode"));
 
 
@@ -154,33 +154,32 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' hospitalizations with the exact column names \emph{\code{DATE.IN}} and
 #' \emph{\code{DATE.OUT}}.
 #' @param ID.colname A \emph{string}, the name of the column in \code{disp.data},
-#' \code{presc.data}, and \code{hosp.data} containing the unique patient ID, or
-#' \code{NA} if not defined.
+#' \code{presc.data}, and \code{hosp.data} containing the unique patient ID.
 #' @param presc.date.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the prescription date (in the format given in
-#' the \code{date.format} parameter), or \code{NA} if not defined.
+#' the \code{date.format} parameter).
 #' @param disp.date.colname A \emph{string}, the name of the column in
 #' \code{disp.data} containing the dispensing date (in the format given in
-#' the \code{date.format} parameter), or \code{NA} if not defined.
+#' the \code{date.format} parameter).
 #' @param date.format A \emph{string} giving the format of the dates used in
 #' the \code{data} and the other parameters; see the \code{format} parameters
 #' of the \code{\link[base]{as.Date}} function for details (NB, this concerns
 #' only the dates given as strings and not as \code{Date} objects).
 #' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
 #' name(s) of the column(s) in \code{disp.data} and \code{presc.data} containing
-#' the classes/types/groups of medication, or \code{NA} if not defined.
+#' the classes/types/groups of medication.
 #' @param total.dose.colname A \emph{string}, the name of the column in
 #' \code{disp.data} containing the total dispensed dose as \code{numeric} (e.g.
-#' \code{500} for 10 tablets of 50 mg), or \code{NA} if not defined.
+#' \code{500} for 10 tablets of 50 mg).
 #' @param presc.daily.dose.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the daily prescribed dose as \code{numeric} (e.g.
-#' \code{50} for 50 mg once per day, or 25 for 50 mg once ever 2 days), or \code{NA}
-#' if not defined.
+#' \code{50} for 50 mg once per day, or 25 for 50 mg once ever 2 days).
 #' @param presc.duration.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the duration of the prescription as \code{numeric}
 #' or \code{NA} if duration is unknown.
 #' @param visit.colname A \emph{string}, the name of the column in
-#' \code{presc.data} containing the number of the visit, or \code{NA} if not defined.
+#' \code{presc.data} containing the number of the visit or a new column name if the
+#' prescribing data does not contain such a column.
 #' @param force.init.presc \emph{Logical}. If \code{TRUE} advance the date of the
 #' first prescription event to the date of the first dispensing event, if the first
 #' prescription event is after the first dispensing event for a specific medication.
@@ -260,15 +259,15 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 compute_event_durations <- function(disp.data = NULL,
                                     presc.data = NULL,
                                     hosp.data = NULL,
-                                    ID.colname = NA,
-                                    presc.date.colname = NA,
-                                    disp.date.colname = NA,
+                                    ID.colname,
+                                    presc.date.colname,
+                                    disp.date.colname,
                                     date.format = "%d.%m.%Y",
-                                    medication.class.colnames = NA,
-                                    total.dose.colname = NA,
-                                    presc.daily.dose.colname = NA,
-                                    presc.duration.colname = NA,
-                                    visit.colname = NA,
+                                    medication.class.colnames,
+                                    total.dose.colname,
+                                    presc.daily.dose.colname,
+                                    presc.duration.colname,
+                                    visit.colname,
                                     force.init.presc = FALSE,
                                     force.presc.renew = FALSE,
                                     split.on.dosage.change = TRUE,
@@ -1034,7 +1033,7 @@ compute_event_durations <- function(disp.data = NULL,
 #'  of medication, as given by the  \code{medication.class.colnames} parameter.
 #'  \item \code{first.presc} the date of the first prescription event.
 #'  \item \code{first.disp} the date of the first dispensing event.
-#'  \item \code{time.to.initialization} the difference in days between the first
+#'  \item \code{time.to.initiation} the difference in days between the first
 #'  dispensing date and the  first prescription date.
 #' }
 #' @examples
