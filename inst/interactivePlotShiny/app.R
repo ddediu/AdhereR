@@ -26,11 +26,16 @@
 #' @import viridisLite
 #' @import highlight
 #' @import clipr
+#' @import shinyjs
 NULL
 
 
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
+
+  # JavaScript ----
+  shinyjs::useShinyjs(),
+  #shinyjs::extendShinyjs(text="shinyjs.show_hide_sections = function() {$('#follow_up_folding_bits').toggle();"),
 
   # App title ----
   #titlePanel(windowTitle="AdhereR: Interactive plotting using Shiny..."),
@@ -97,9 +102,10 @@ ui <- fluidPage(
       hr(),
 
       # Follow-up window ----
-      div(title='Define the follow-up window (shortened to FUW)',
-               span(id="followup_window", h4("Follow-up window (FUW)"), style="color:DarkBlue")),
+      div(title='Define the follow-up window (shortened to FUW)', id='follow_up_section',
+          div(h4(id="followup_window", "\U25BC Follow-up window (FUW)"), style="color:DarkBlue; cursor: pointer;", class="collapsable_section")),
 
+      shinyjs::hidden(div(id="follow_up_folding_bits", #style="display: none;",
       # Follow-up window start
       div(title='The unit of the start of the follow-up window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
                selectInput(inputId="followup_window_start_unit",
@@ -150,7 +156,7 @@ ui <- fluidPage(
                        label="FUW duration",
                        value=2*365, min=0, max=NA, step=30)),
 
-      hr(),
+      hr())),
 
       # Observation window ----
       div(title='Define the observation window (shortened to OW)',
@@ -1465,6 +1471,8 @@ server <- function(input, output, session) {
     stopApp();
   })
 
+  shinyjs::onclick("follow_up_section", function(e) {shinyjs::toggle(id="follow_up_folding_bits", anim=TRUE); shinyjs::html("followup_window", "MAKA!!!")})
+                   #shinyjs::toggle(id="follow_up_folding_bits", anim=TRUE))
 }
 
 
