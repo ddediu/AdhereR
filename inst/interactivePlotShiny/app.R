@@ -64,7 +64,7 @@ ui <- fluidPage(
 
            # PARAMS TAB ----
            tabsetPanel(id="sidebar-tabpanel",
-                       tabPanel("Params", value="sidebar-params-tab", icon=icon("picture", lib="glyphicon"), fluid=TRUE,
+                       tabPanel("Params", value="sidebar-params-tab", icon=icon("cog", lib="glyphicon"), fluid=TRUE,
                                 wellPanel(id = "tPanel", style = "overflow:scroll; max-height: 90vh;",
 
 
@@ -914,7 +914,7 @@ ui <- fluidPage(
 
                        # DATA TAB ----
                        tabPanel("Data", value="sidebar-params-data", icon=icon("hdd", lib="glyphicon"), fluid=TRUE,
-                                wellPanel(id = "tPanel2", style = "overflow:scroll; max-height: 90vh;",
+                                wellPanel(id = "tPanel2", style = "overflow:scroll; max-height: 90vh; min-height: 50vh",
 
                                           # Datasource ----
                                           span(title='The data source to use...',
@@ -929,11 +929,38 @@ ui <- fluidPage(
                                           # Use in-memory dataset ----
                                           conditionalPanel(
                                             condition = "(input.datasource_type == 'already in memory')",
-                                            div(title='Select the name of the dataset to use from those available in memory',
+
+                                            # Obligatory stuff:
+                                            div(title='Required: select the name of the dataset to use from those available in memory',
                                                 selectInput(inputId="dataset_from_memory",
                                                             label="In-memory dataset",
                                                             choices=c("none"),
+                                                            selected="none")),
+
+                                            div(title='Required: select the name of the column containing the patient IDs',
+                                                selectInput(inputId="dataset_from_memory_patient_id",
+                                                            label="Patient ID column",
+                                                            choices=c("none"),
+                                                            selected="none")),
+
+                                            div(title='Required: select or type the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nPlease see the help entry for "strptime()".',
+                                                selectInput(inputId="dataset_from_memory_event_format",
+                                                            label="Date format",
+                                                            choices=c("%m/%d/%Y", "%d/%m/%Y", "%Y%m%d"),
+                                                            selected="%m/%d/%Y")),
+
+                                            div(title='Required: select the name of the column containing the event dates (in the format defined above)',
+                                                selectInput(inputId="dataset_from_memory_event_date",
+                                                            label="Event date column",
+                                                            choices=c("none"),
+                                                            selected="none")),
+
+                                            div(title='Required: select the name of the column containing the event duration (in days)',
+                                                selectInput(inputId="dataset_from_memory_event_duration",
+                                                            label="Event duration column",
+                                                            choices=c("none"),
                                                             selected="none"))
+
                                           ),
 
 
@@ -1568,7 +1595,7 @@ server <- function(input, output, session) {
 
   # Dataset stuff:
 
-  .recursively.list.objects.in.memory <- function(..., # inspured from http://adv-r.had.co.nz/Environments.html#env-recursion
+  .recursively.list.objects.in.memory <- function(..., # inspired from http://adv-r.had.co.nz/Environments.html#env-recursion
                                                   env = parent.frame(),
                                                   of.class="data.frame", # if NULL, no type testing (all go)
                                                   consider.derived.classes=TRUE)
@@ -1601,11 +1628,70 @@ server <- function(input, output, session) {
     }
   }
 
-  observe({
-    # List all the data.frame-derived objects currently in memory:
-    x <- sort(.recursively.list.objects.in.memory());
-    updateSelectInput(session, "dataset_from_memory", choices=x, selected=head(x,1));
+  # If selecting an in-memory dataset, update the list of data.frame-derived objects all the way to the base environment:
+  observeEvent(input$datasource_type,
+  {
+    if( input$datasource_type == "already in memory" )
+    {
+      # List all the data.frame-derived objects currently in memory:
+      x <- sort(.recursively.list.objects.in.memory());
+      # If defined, add the data.frame sent to the Shiny plotting function:
+      if( !is.null(.GlobalEnv$.plotting.params) &&
+          !is.null(.GlobalEnv$.plotting.params$data) &&
+          inherits(.GlobalEnv$.plotting.params$data, "data.frame"))
+      {
+        x <- c("<<'data' argument to plot_interactive_cma() call>>", x);
+      }
+      updateSelectInput(session, "dataset_from_memory", choices=x, selected=head(x,1));
+    }
   })
+
+  # For a given dataset from memory, list the columns and upate the selections:
+  observeEvent(input$dataset_from_memory,
+  {
+    # Set the data.frame:
+    .GlobalEnv$.plotting.params$.inmemory.dataset <- NULL;
+    if( input$dataset_from_memory == "none" )
+    {
+      # Initialisation:
+      return;
+    } else if( input$dataset_from_memory == "<<'data' argument to plot_interactive_cma() call>>" )
+    {
+      # The special value pointing to the argument to plot_interactive_cma():
+      .GlobalEnv$.plotting.params$.inmemory.dataset <- .GlobalEnv$.plotting.params$data;
+    } else
+    {
+      # Try to find it memory:
+      try(.GlobalEnv$.plotting.params$.inmemory.dataset <- get(input$dataset_from_memory), silent=TRUE);
+    }
+
+    # Sanity checks:
+    if( (input$dataset_from_memory != "none") &&
+        (is.null(.GlobalEnv$.plotting.params$.inmemory.dataset) ||
+         !inherits(.GlobalEnv$.plotting.params$.inmemory.dataset, "data.frame") ||
+         ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
+         nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ))
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    if( (input$dataset_from_memory != "none") && nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Dataset '",input$dataset_from_memory, "' must have at least three distinct columns (patient ID, event date and duration)!"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    x <- names(.GlobalEnv$.plotting.params$.inmemory.dataset);
+    updateSelectInput(session, "dataset_from_memory_patient_id",     choices=x, selected=head(x,1));
+    updateSelectInput(session, "dataset_from_memory_event_date",     choices=x, selected=head(x,2));
+    updateSelectInput(session, "dataset_from_memory_event_duration", choices=x, selected=head(x,3));
+  })
+
 }
 
 
