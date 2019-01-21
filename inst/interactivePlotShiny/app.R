@@ -64,7 +64,7 @@ ui <- fluidPage(
 
            # PARAMS TAB ----
            tabsetPanel(id="sidebar-tabpanel",
-                       tabPanel("Params", value="sidebar-params-tab", icon=icon("cog", lib="glyphicon"), fluid=TRUE,
+                       tabPanel("Params", value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
                                 wellPanel(id = "tPanel", style = "overflow:scroll; max-height: 90vh;",
 
 
@@ -959,8 +959,28 @@ ui <- fluidPage(
                                                 selectInput(inputId="dataset_from_memory_event_duration",
                                                             label="Event duration column",
                                                             choices=c("none"),
-                                                            selected="none"))
+                                                            selected="none")),
 
+                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
+                                                selectInput(inputId="dataset_from_memory_daily_dose",
+                                                            label="Daily dose column",
+                                                            choices=c("[not defined]"),
+                                                            selected="[not defined]")),
+
+                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
+                                                selectInput(inputId="dataset_from_memory_medication_class",
+                                                            label="Treatment class column",
+                                                            choices=c("[not defined]"),
+                                                            selected="[not defined]")),
+
+                                            hr(),
+
+                                            div(title='Validate choices and use the dataset!',
+                                                actionButton(inputId="dataset_from_memory_button_use",
+                                                             label=strong("Validate & use!"),
+                                                             icon=icon("sunglasses", lib="glyphicon"),
+                                                             style="color:DarkBlue; border-color:DarkBlue;"),
+                                                style="float: center;")
                                           ),
 
 
@@ -1687,9 +1707,150 @@ server <- function(input, output, session) {
     }
 
     x <- names(.GlobalEnv$.plotting.params$.inmemory.dataset);
+
+    # Required columns:
     updateSelectInput(session, "dataset_from_memory_patient_id",     choices=x, selected=head(x,1));
     updateSelectInput(session, "dataset_from_memory_event_date",     choices=x, selected=head(x,2));
     updateSelectInput(session, "dataset_from_memory_event_duration", choices=x, selected=head(x,3));
+
+    # Optional columns (possibly used by CMA5+):
+    updateSelectInput(session, "dataset_from_memory_medication_class", choices=c("[not defined]", x), selected="[not defined]");
+    updateSelectInput(session, "dataset_from_memory_daily_dose",       choices=c("[not defined]", x), selected="[not defined]");
+  })
+
+  # Validate and use in-memory dataset:
+  observeEvent(input$dataset_from_memory_button_use,
+  {
+    # Sanity checks:
+    if( is.null(.GlobalEnv$.plotting.params$.inmemory.dataset) ||
+        !inherits(.GlobalEnv$.plotting.params$.inmemory.dataset, "data.frame") ||
+        ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
+        nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+    # Use shorter name:
+    d <- .GlobalEnv$.plotting.params$.inmemory.dataset;
+
+    # Check if the column names refer to existing columns in the dataset:
+    ID.colname <- input$dataset_from_memory_patient_id;
+    if( is.na(ID.colname) || length(ID.colname) != 1 || ID.colname=="" || !(ID.colname %in% names(d)) )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Patient ID column '",ID.colname, "' must be a string and a valid column name in the selected dataset..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    event.date.colname <- input$dataset_from_memory_event_date;
+    if( is.na(event.date.colname) || length(event.date.colname) != 1 || event.date.colname=="" || !(event.date.colname %in% names(d)) )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Event date column '",event.date.colname, "' must be a string and a valid column name in the selected dataset..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    event.duration.colname <- input$dataset_from_memory_event_duration;
+    if( is.na(event.duration.colname) || length(event.duration.colname) != 1 || event.duration.colname=="" || !(event.duration.colname %in% names(d)) )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Event duration column '",event.duration.colname, "' must be a string and a valid column name in the selected dataset..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    event.daily.dose.colname <- input$dataset_from_memory_medication_class;
+    if( is.na(event.daily.dose.colname) || length(event.daily.dose.colname) != 1 || event.daily.dose.colname=="" )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Event duration column '",event.daily.dose.colname, "' must be a non-empty string..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    } else if( event.daily.dose.colname == "[not defined]" )
+    {
+      event.daily.dose.colname <- NA; # not defined
+    } else if( !(event.daily.dose.colname %in% names(d)) )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Event duration column '",event.daily.dose.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    medication.class.colname <- input$dataset_from_memory_medication_class;
+    if( is.na(medication.class.colname) || length(medication.class.colname) != 1 || medication.class.colname=="" )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Treatment class column '",medication.class.colname, "' must be a non-empty string..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    } else if( medication.class.colname == "[not defined]" )
+    {
+      medication.class.colname <- NA; # not defined
+    } else if( !(medication.class.colname %in% names(d)) )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Treatment class column '",medication.class.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    # Check if the column names are unique (i.e., do not repeat):
+    if( anyDuplicated(na.omit(c(ID.colname, event.date.colname, event.duration.colname, event.daily.dose.colname, medication.class.colname))) )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("The selected column names must be unique!"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    # More advanced checks of the column types:
+    if( inherits(d[,event.date.colname], "Date") )
+    {
+      # It's a column of Dates: perfect!
+    } else if( is.factor(d[,event.date.colname]) || is.character(d[,event.date.colname]) )
+    {
+      # It's a factor or string: check if it conforms to the given date.format:
+      s <- na.omit(as.character(d[,event.date.colname]));
+      if( length(s) == 0 )
+      {
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("There are no non-missing dates in the '",event.date.colname,"' column!"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      }
+      tmp <- as.Date(s, format=input$dataset_from_memory_event_format);
+      if( all(is.na(tmp)) )
+      {
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: all conversions failed!"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else if( any(is.na(tmp)) )
+      {
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: ", length(is.na(tmp))," conversions failed!"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      }
+    } else
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("The event date column '",event.date.colname,"' must contain either objects of class 'Date' or correctly-formatted strings (or factor levels)!"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    ## TODO:
+    ##  - check that event.duration.colname & event.daily.dose.colname are positive numbers
+    ##  - make date.fromat not a selection but a free eding box (maybe with a few pre-defined alternatives, if possible?)
+
+    # Even more complex check: try to compute CMA0 on the first patient:
+    #test.cma <- CMA0(data=
   })
 
 }
