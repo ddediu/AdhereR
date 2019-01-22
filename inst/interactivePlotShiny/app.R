@@ -943,11 +943,11 @@ ui <- fluidPage(
                                                             choices=c("none"),
                                                             selected="none")),
 
-                                            div(title='Required: select or type the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nPlease see the help entry for "strptime()".',
-                                                selectInput(inputId="dataset_from_memory_event_format",
-                                                            label="Date format",
-                                                            choices=c("%m/%d/%Y", "%d/%m/%Y", "%Y%m%d"),
-                                                            selected="%m/%d/%Y")),
+                                            div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
+                                                textInput(inputId="dataset_from_memory_event_format",
+                                                          label="Date format",
+                                                          value="%m/%d/%Y",
+                                                          placeholder="%m/%d/%Y")),
 
                                             div(title='Required: select the name of the column containing the event dates (in the format defined above)',
                                                 selectInput(inputId="dataset_from_memory_event_date",
@@ -1754,6 +1754,8 @@ server <- function(input, output, session) {
       return;
     }
 
+    date.format <- input$dataset_from_memory_event_format;
+
     event.duration.colname <- input$dataset_from_memory_event_duration;
     if( is.na(event.duration.colname) || length(event.duration.colname) != 1 || event.duration.colname=="" || !(event.duration.colname %in% names(d)) )
     {
@@ -1845,12 +1847,70 @@ server <- function(input, output, session) {
       return;
     }
 
-    ## TODO:
-    ##  - check that event.duration.colname & event.daily.dose.colname are positive numbers
-    ##  - make date.fromat not a selection but a free eding box (maybe with a few pre-defined alternatives, if possible?)
+    if( !is.na(event.duration.colname) && (!is.numeric(d[,event.duration.colname]) || any(d[,event.duration.colname] < 0, na.rm=TRUE)) )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("If given, the event duration column '",event.duration.colname,"' must contain non-negative numbers!"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    if( !is.na(event.daily.dose.colname) && (!is.numeric(d[,event.daily.dose.colname]) || any(d[,event.daily.dose.colname] < 0, na.rm=TRUE)) )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("If given, the daily dose column '",event.daily.dose.colname,"' must contain non-negative numbers!"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
 
     # Even more complex check: try to compute CMA0 on the first patient:
-    #test.cma <- CMA0(data=
+    test.cma <- NULL;
+    test.res <- tryCatch(test.cma <- CMA0(data=d,
+                                          ID.colname=ID.colname,
+                                          event.date.colname=event.date.colname,
+                                          event.duration.colname=event.duration.colname,
+                                          event.daily.dose.colname=event.daily.dose.colname,
+                                          medication.class.colname=medication.class.colname,
+                                          date.format=date.format),
+                         error=function(e) e, warning=function(w) w);
+    if( is.null(test.cma) || inherits(test.res, "error") )
+    {
+      # Some error occured!
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("There's something wrong with these data!\nI tried to create a CMA0 object and this is what I got back:\n", as.character(test.res)),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    } else
+    {
+      if( inherits(test.res, "warning") )
+      {
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("These data seem ok, but when I tried to create a CMA0 object I got some warnings:\n", as.character(test.res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      }
+    }
+
+    ### Now, really load the data! ###
+    # Place the data in the .GlobalEnv$.plotting.params list:
+    .GlobalEnv$.plotting.params$data <- d;
+    .GlobalEnv$.plotting.params$ID.colname <- ID.colname;
+    .GlobalEnv$.plotting.params$event.date.colname <- event.date.colname;
+    .GlobalEnv$.plotting.params$event.duration.colname <- event.duration.colname;
+    .GlobalEnv$.plotting.params$event.daily.dose.colname <- event.daily.dose.colname;
+    .GlobalEnv$.plotting.params$medication.class.colname <- medication.class.colname;
+    .GlobalEnv$.plotting.params$date.format <- date.format;
+    # This is a data.frame, so use the appropriate getters:
+    .GlobalEnv$.plotting.params$get.colnames.fnc <- function(d) names(d);
+    .GlobalEnv$.plotting.params$get.patients.fnc <- function(d, idcol) unique(d[[idcol]]);
+    .GlobalEnv$.plotting.params$get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ];
+    # CMA class:
+    .GlobalEnv$.plotting.params$cma.class <- "CMA0";
+    # Patient IDs and selected ID:
+    all.IDs <- sort(.GlobalEnv$.plotting.params$get.patients.fnc(d, ID.colname));
+    .GlobalEnv$.plotting.params$all.IDs <- all.IDs;
+    .GlobalEnv$.plotting.params$ID <- all.IDs[1];
+    # Force UI updating...
+    cat("UPDATE UI NOW!\n");
   })
 
 }
