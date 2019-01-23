@@ -9629,6 +9629,14 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
 
   # The function encapsulating the plotting:
   .plotting.fnc <- function(data=NULL, # the data used to compute the CMA on
+                            # Important columns in the data
+                            ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
+                            event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
+                            event.duration.colname=NA, # the event duration in days (NA = undefined)
+                            event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
+                            medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
+                            # Date format:
+                            date.format=NA, # the format of the dates used in this function (NA = undefined)
                             ID=NULL, # the ID of the patient to plot
                             cma="none", # the CMA to use for plotting
                             cma.to.apply="none", # cma to compute per episode or sliding window
@@ -9832,6 +9840,12 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
 
   # put things in the global environment for shiny:
   .GlobalEnv$.plotting.params <- list("data"=data,
+                                      "ID.colname"=ID.colname,
+                                      "event.date.colname"=event.date.colname,
+                                      "event.duration.colname"=event.duration.colname,
+                                      "event.daily.dose.colname"=event.daily.dose.colname,
+                                      "medication.class.colname"=medication.class.colname,
+                                      "date.format"=date.format,
                                       "ID"=ID, "all.IDs"=all.IDs,
                                       "cma.class"=cma.class,
                                       "print.full.params"=print.full.params,
