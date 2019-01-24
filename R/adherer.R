@@ -9868,7 +9868,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       "get.colnames.fnc"=get.colnames.fnc,
                                       "get.patients.fnc"=get.patients.fnc,
                                       "get.data.for.patients.fnc"=get.data.for.patients.fnc,
-                                      ".plotting.fnc"=.plotting.fnc
+                                      ".plotting.fnc"=.plotting.fnc,
+                                      ".inmemory.dataset"=NULL,
+                                      ".fromfile.dataset"=NULL
                                      );
   # make sure they are deleted on exit from shiny:
   on.exit(rm(list=c(".plotting.params"), envir=.GlobalEnv));

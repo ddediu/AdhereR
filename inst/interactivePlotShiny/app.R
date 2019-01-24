@@ -27,6 +27,8 @@
 #' @import highlight
 #' @import clipr
 #' @import shinyjs
+#' @import knitr
+#' @import readODS
 NULL
 
 
@@ -923,7 +925,9 @@ ui <- fluidPage(
                                           div(title='Select the type of data source (currently supported: in-memory data.frame, flat files or SQL connection)',
                                               selectInput(inputId="datasource_type",
                                                           label="Datasource type",
-                                                          choices=c("already in memory", "load from file", "SQL database"),
+                                                          choices=c("already in memory",
+                                                                    "load from file",
+                                                                    "SQL database"),
                                                           selected="already in memory")),
 
                                           # Use in-memory dataset ----
@@ -992,33 +996,72 @@ ui <- fluidPage(
                                             condition = "(input.datasource_type == 'load from file')",
 
                                             # Obligatory stuff:
-                                            div(title='Required: which type of file to load?\n.csv and .tsv are prefered, .RData and .rds should pose no problems, but for the others there might be limitations (please see the help for package "foreign").',
+                                            div(title='Required: which type of file to load?\n.csv and .tsv are prefered, .RData and .rds should pose no problems, but for the others there might be limitations (please see the help for packages "foreign" and "readODS").\nPlease note that readling very big files might be very slow and need quite a bit of RAM.',
                                                 selectInput(inputId="dataset_from_file_filetype",
-                                                            label="What type of file?",
+                                                            label="Type of file",
                                                             choices=c("Comma/TAB-separated (.csv; .tsv; .txt)",
-                                                                      "R objects with save() (.RData)",
+                                                                      "R objects from save() (.RData)",
                                                                       "Serialized single R object (.rds)",
                                                                       "Open Document Spreadsheet (.ods)",
-                                                                      "Miscrosoft Excel (.xls; .xlsx)",
+                                                                      "Microsoft Excel (.xls; .xlsx)",
                                                                       "SPSS (.sav; .por)",
                                                                       "SAS Transport data file (.xpt)",
                                                                       "Stata (.dta)"),
                                                             selected="Comma/TAB-separated (.csv; .tsv; .txt)")),
 
                                             conditionalPanel(
-                                              condition = "(dataset_from_file_filetype == 'Comma/TAB-separated (.csv; .tsv; .txt)')",
+                                              condition = "(input.dataset_from_file_filetype == 'Comma/TAB-separated (.csv; .tsv; .txt)')",
 
                                               div(title='The filed separator (or delimiter); usually, a comma (,) for .csv files and a [TAB] for .tsv files...',
                                                   selectInput(inputId="dataset_from_file_csv_separator",
                                                               label="Filed separator",
                                                               choices=c("[TAB] (\\t)",
                                                                         "comma (,)",
-                                                                        "white spaces (one or more spaces [ ], tabs [\\t], newlines [\\n] and/or carriage returns [\\r])",
+                                                                        "white spaces (1+)",
                                                                         "semicolon (;)",
                                                                         "colon (:)"),
-                                                              selected="[TAB] (\\t)"))
+                                                              selected="[TAB] (\\t)")),
 
+                                              div(title='The quote character (if any); usually, single (\' \') or double quotes (" ")...',
+                                                  selectInput(inputId="dataset_from_file_csv_quotes",
+                                                              label="Quote character",
+                                                              choices=c("[none] ()",
+                                                                        "singe quotes (' ')",
+                                                                        "double quotes (\" \")"),
+                                                              selected="[none] ()")),
 
+                                              div(title='The decimal point symbol; usually, the dot (.) or the comma (,)...',
+                                                  selectInput(inputId="dataset_from_file_csv_decimal",
+                                                              label="Decimal point",
+                                                              choices=c("dot (.)",
+                                                                        "comma (,)"),
+                                                              selected="dot (.)")),
+
+                                              div(title='Should the first row to be considered as the header?',
+                                                  checkboxInput(inputId="dataset_from_file_csv_header",
+                                                                label=HTML("Is header on 1<sup>st</sup> row?"),
+                                                                value=TRUE)),
+
+                                              conditionalPanel(
+                                                condition = "(input.dataset_from_file_csv_quotes != '[none] ()')",
+                                                div(title='Should the leading and trailing white spaces from unquoted fields be deleted?',
+                                                    checkboxInput(inputId="dataset_from_file_csv_strip_white",
+                                                                  label="Strip white spaces",
+                                                                  value=FALSE))),
+
+                                              div(title='Which strings in the file should be considered as missing data?\nPlease include the value(s) within double quotes and, if multiple values, separate them with commas (e.g. "NA", " ", "9999", "?").',
+                                                  textInput(inputId="dataset_from_file_csv_na_strings",
+                                                                label="Missing data symbols",
+                                                                value='"NA"'))
+                                            ),
+
+                                            conditionalPanel(
+                                              condition = "(input.dataset_from_file_filetype == 'Open Document Spreadsheet (.ods)') || (input.dataset_from_file_filetype == 'Microsoft Excel (.xls; .xlsx)')",
+
+                                              div(title='Which sheet to load (if there are several sheets)?',
+                                                  numericInput(inputId="dataset_from_file_sheet",
+                                                               label="Which sheet to load?",
+                                                               value=1, min=1, max=NA, step=1))
                                             ),
 
                                             div(title='Required: select and load a file...',
@@ -1026,6 +1069,7 @@ ui <- fluidPage(
                                                           label="Load from file",
                                                           multiple=FALSE,
                                                           buttonLabel="Select")),
+
                                             div(title="Click here to peek at the selected dataset...",
                                                 actionButton("dataset_from_file_peek_button", label="Peek at file...", icon=icon("eye-open", lib="glyphicon"))),
 
@@ -1829,6 +1873,11 @@ server <- function(input, output, session) {
                                        max.rows=50, # if NA, show all
                                        escape=TRUE)
   {
+    if( is.null(d) || !inherits(d, "data.frame") || nrow(d) < 1 || ncol(d) < 3 )
+    {
+      return ("<b>The given dataset is empty, of the wrong type, or too small!</b>");
+    }
+
     # This is a pretty basic thing thet tweaks the output of knitr::kable...
     d.as.html <- knitr::kable(d[1:min(max.rows,nrow(d),na.rm=TRUE),], format="html",
                               align="c",
@@ -1907,10 +1956,9 @@ server <- function(input, output, session) {
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return;
     }
-    # Use shorter name:
-    d <- .GlobalEnv$.plotting.params$.inmemory.dataset;
+
     showModal(modalDialog(title="AdhereR: peeking at the selected in-memory dataset ...",
-                          div(HTML(.show.data.frame.as.HTML(d)),
+                          div(HTML(.show.data.frame.as.HTML(.GlobalEnv$.plotting.params$.inmemory.dataset)),
                                    style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
 
@@ -2131,9 +2179,179 @@ server <- function(input, output, session) {
   # For a given dataset from file, load it, list the columns and upate the selections:
   observeEvent(input$dataset_from_file_filename,
   {
-    cat("LOAD FROM FILE...\n");
+    if( is.null(input$dataset_from_file_filename) || nrow(input$dataset_from_file_filename) < 1 )
+    {
+      # No file loaded, nothing to do:
+      return;
+    }
+
+    # Try to parse and load it:
+    d <- NULL;
+
+    if( input$dataset_from_file_filetype == "Comma/TAB-separated (.csv; .tsv; .txt)" )
+    {
+      # Load CSV/TSV:
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(d <- read.table(input$dataset_from_file_filename$datapath[1],
+                                      header=input$dataset_from_file_csv_header,
+                                      sep=switch(input$dataset_from_file_csv_separator,
+                                                 "[TAB] (\\t)"="\t",
+                                                 "comma (,)"=",",
+                                                 "white spaces (1+)"="",
+                                                 "semicolon (;)"=";",
+                                                 "colon (:)"=":"),
+                                      quote=switch(input$dataset_from_file_csv_quotes,
+                                                   "[none] ()"="",
+                                                   "singe quotes (' ')"="'",
+                                                   "double quotes (\" \")"='"'),
+                                      dec=switch(input$dataset_from_file_csv_decimal,
+                                                 "dot (.)"=".",
+                                                 "comma (,)"=","),
+                                      strip.white=input$dataset_from_file_csv_strip_white,
+                                      na.strings=gsub('["\']','',trimws(strsplit(input$dataset_from_file_csv_na_strings,",",fixed=TRUE)[[1]], "both"))),
+                      error=function(e) e, warning=function(w) w);
+      removeModal();
+      if( is.null(d) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("There's something wrong with the given CSV/TSV file: I tried reading it and this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("This CSV/TSV file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+    } else if( input$dataset_from_file_filetype == "R objects from save() (.RData)" )
+    {
+      # Use load to recover them but then ask the user to use "load from memory" UI to continue...
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(read.objs <- load(input$dataset_from_file_filename$datapath[1]),
+                      error=function(e) e, warning=function(w) w);
+      removeModal();
+      if( is.null(read.objs) || length(read.objs) == 0 || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("There's something wrong with the given R datasets file: I tried reading it and this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("This R datasets file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+
+      # Show the user the objects that were read and redirect them to load them from memory:
+      showModal(modalDialog(title="AdhereR R datasets file loaded!",
+                            HTML(paste0("The R datasets file was successfully loaded and the following objects are now in memory: ",paste0("'",read.objs,"'",collapse=", "),".<br/>Please use the <b>load from memory</b> option to load the desired object from memory...")),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return; # don't continue...
+    } else if( input$dataset_from_file_filetype == "Serialized single R object (.rds)" )
+    {
+      # Load them with readRDS:
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(d <- readRDS(input$dataset_from_file_filename$datapath[1]),
+                      error=function(e) e, warning=function(w) w);
+      removeModal();
+      if( is.null(d) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("There's something wrong with the given serialized single R object file: I tried reading it and this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("This serialized single R object file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+    } else if( input$dataset_from_file_filetype == "Open Document Spreadsheet (.ods)" )
+    {
+      # Use readODS::read.ods to read the first sheet:
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(d <- readODS::read_ods(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet),
+                      error=function(e) e, warning=function(w) w);
+      removeModal();
+      if( is.null(d) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("There's something wrong with the given ODS file: I tried reading it and this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("This ODS file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+    } else if( input$dataset_from_file_filetype == "Microsoft Excel (.xls; .xlsx)" )
+    {
+      # Use readxl::read_excel to read the first sheet:
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(d <- as.data.frame(readxl::read_excel(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet)),
+                      #d <- openxlsx::read.xlsx(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet),
+                      error=function(e) e, warning=function(w) w);
+      removeModal();
+      if( is.null(d) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("There's something wrong with the given XLS/XLSX file: I tried reading it and this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("This XLS/XLSX file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+    }
+
+    # Set it as the from-file dataset:
+    if( !is.null(d) ) .GlobalEnv$.plotting.params$.fromfile.dataset <- d;
   })
 
+  # Peek at in-memory dataset:
+  observeEvent(input$dataset_from_file_peek_button,
+  {
+    # Sanity checks:
+    if( is.null(.GlobalEnv$.plotting.params$.fromfile.dataset) ||
+        !inherits(.GlobalEnv$.plotting.params$.fromfile.dataset, "data.frame") ||
+        ncol(.GlobalEnv$.plotting.params$.fromfile.dataset) < 1 ||
+        nrow(.GlobalEnv$.plotting.params$.fromfile.dataset) < 3 )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Could not load the selected file '",input$dataset_from_file_filename$name[1], "' in memory!\nPlease make sure you selected a valid file contaning at least 3 columns and 1 row..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    showModal(modalDialog(title="AdhereR: peeking at the selected file ...",
+                          div(HTML(.show.data.frame.as.HTML(.GlobalEnv$.plotting.params$.fromfile.dataset)),
+                                   style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
+                          footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+  })
 
 }
 
