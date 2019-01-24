@@ -1118,6 +1118,9 @@ ui <- fluidPage(
 # The server logic ----
 server <- function(input, output, session) {
 
+  # Reactive value to allow UI updating on dataset changes:
+  rv <- reactiveValues(toggle.me = FALSE);
+
   # The plotting function:
   .renderPlot <- function()
   {
@@ -1220,6 +1223,8 @@ server <- function(input, output, session) {
 
   # Do the ploting:
   output$distPlot <- renderPlot({
+
+      rv$toggle.me; # make the plot care about forced updated to the UI (for example, when chainging the dataset)
 
       # Depeding on the CMA class we might do things differently:
       msgs <- ""; # the output messages
@@ -1729,6 +1734,75 @@ server <- function(input, output, session) {
     updateSelectInput(session, "dataset_from_memory_daily_dose",       choices=c("[not defined]", x), selected="[not defined]");
   })
 
+  # Display a data.frame as a nice HTML table:
+  .show.data.frame.as.HTML <- function(d, # the data.frame-derived object to show
+                                       max.rows=50, # if NA, show all
+                                       escape=TRUE)
+  {
+    # This is a pretty basic thing thet tweaks the output of knitr::kable...
+    d.as.html <- knitr::kable(d[1:min(max.rows,nrow(d),na.rm=TRUE),], format="html",
+                              align="c",
+                              col.names=names(d), #col.names=paste0("\U2007\U2007",names(d),"\U2007\U2007"),
+                              row.names=FALSE);
+
+    # The data.frame info in a nice HTML format:
+    d.info <- paste0("An object of type", ifelse(length(class(d))>1,"s "," "),
+                     paste0("<i>",class(d),"</i>", collapse=", "),
+                     ". It has ", nrow(d), " rows × ", ncol(d), " columns [with type(s)]: <br/>",
+                     paste0(vapply(1:ncol(d),function(i) paste0("<b>",names(d)[i], "</b> [", paste0("<i>",class(d[,i]),"</i>",collapse=", "), "]"), character(1)), collapse=", "),
+                     ".");
+
+    if( length(s <- strsplit(d.as.html, "<table", fixed=TRUE)[[1]]) > 1 )
+    {
+      # Found the <table> tag: add its class and caption:
+      d.as.html <- paste0(s[1],
+                          paste0("<table class='peekAtTable'",
+                                 "<caption style='caption-side: top;'>", d.info,"</caption", # > is already in s[2] because of <table
+                                 s[-1]));
+
+      # Add the CSS:
+      d.as.html <- paste0(d.as.html, "\n\n
+                          <style>
+                            table.peekAtTable {
+                              border: 1px solid #1C6EA4;
+                              background-color: #EEEEEE;
+                              #width: 100%;
+                              text-align: left;
+                              border-collapse: collapse;
+                              white-space: nowrap;
+                            }
+                            table.peekAtTable td, table.peekAtTable th {
+                              border: 1px solid #AAAAAA;
+                              padding: 0.2em 0.5em;
+                            }
+                            table.peekAtTable tbody td {
+                              font-size: 13px;
+                            }
+                            table.peekAtTable tr:nth-child(even) {
+                              background: #D0E4F5;
+                            }
+                            table.peekAtTable thead {
+                              background: #1C6EA4;
+                              background: -moz-linear-gradient(top, #5592bb 0%, #327cad 66%, #1C6EA4 100%);
+                              background: -webkit-linear-gradient(top, #5592bb 0%, #327cad 66%, #1C6EA4 100%);
+                              background: linear-gradient(to bottom, #5592bb 0%, #327cad 66%, #1C6EA4 100%);
+                              border-bottom: 2px solid #444444;
+                            }
+                            table.peekAtTable thead th {
+                              font-size: 15px;
+                              font-weight: bold;
+                              color: #FFFFFF;
+                              border-left: 2px solid #D0E4F5;
+                            }
+                            table.peekAtTable thead th:first-child {
+                              border-left: none;
+                            }
+                          </style>\n");
+    }
+
+    return (d.as.html);
+  }
+
   # Peek at in-memory dataset:
   observeEvent(input$dataset_from_memory_peek_button,
   {
@@ -1746,14 +1820,8 @@ server <- function(input, output, session) {
     # Use shorter name:
     d <- .GlobalEnv$.plotting.params$.inmemory.dataset;
     showModal(modalDialog(title="AdhereR: peeking at the selected in-memory dataset ...",
-                          div(HTML(knitr::kable(d[1:min(50,nrow(d),na.rm=TRUE),], format="html",
-                                                align="c", col.names=paste0("\U2007\U2007",names(d),"\U2007\U2007"), row.names=FALSE)),
-                                   #htmlTable::htmlTable(d[1:min(50,nrow(d),na.rm=TRUE), ],
-                                   #                     col.rgroup = c("none", "#F7F7F7"),
-                                   #                     css.table="margin-top: 1em; margin-bottom: 1em; padding: 50px;")),
-                                   #DT::datatable(data=d[1:min(50,nrow(d),na.rm=TRUE),], callback = DT::JS("return table;"), editable=FALSE)),
-                                   #xtable::print.xtable(xtable::xtable(d[1:min(50,nrow(d),na.rm=TRUE),], format="html"), type="html", html.table.attributes="border=1")),
-                                   style="max-height: 50vh; max-width: 90vw; overflow: auto;"),
+                          div(HTML(.show.data.frame.as.HTML(d)),
+                                   style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
 
   })
@@ -1965,6 +2033,8 @@ server <- function(input, output, session) {
     updateSelectInput(session, "cma_class", selected="simple");
     updateSelectInput(session, "cma_to_compute", selected=.GlobalEnv$.plotting.params$cma.class);
     updateSelectInput(session, "patient", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$ID);
+
+    rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not send any UI elements)
   }
 }
 
