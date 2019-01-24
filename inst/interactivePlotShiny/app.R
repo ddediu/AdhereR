@@ -987,6 +987,96 @@ ui <- fluidPage(
                                                 style="float: center;")
                                           ),
 
+                                          # Use dataset from file ----
+                                          conditionalPanel(
+                                            condition = "(input.datasource_type == 'load from file')",
+
+                                            # Obligatory stuff:
+                                            div(title='Required: which type of file to load?\n.csv and .tsv are prefered, .RData and .rds should pose no problems, but for the others there might be limitations (please see the help for package "foreign").',
+                                                selectInput(inputId="dataset_from_file_filetype",
+                                                            label="What type of file?",
+                                                            choices=c("Comma/TAB-separated (.csv; .tsv; .txt)",
+                                                                      "R objects with save() (.RData)",
+                                                                      "Serialized single R object (.rds)",
+                                                                      "Open Document Spreadsheet (.ods)",
+                                                                      "Miscrosoft Excel (.xls; .xlsx)",
+                                                                      "SPSS (.sav; .por)",
+                                                                      "SAS Transport data file (.xpt)",
+                                                                      "Stata (.dta)"),
+                                                            selected="Comma/TAB-separated (.csv; .tsv; .txt)")),
+
+                                            conditionalPanel(
+                                              condition = "(dataset_from_file_filetype == 'Comma/TAB-separated (.csv; .tsv; .txt)')",
+
+                                              div(title='The filed separator (or delimiter); usually, a comma (,) for .csv files and a [TAB] for .tsv files...',
+                                                  selectInput(inputId="dataset_from_file_csv_separator",
+                                                              label="Filed separator",
+                                                              choices=c("[TAB] (\\t)",
+                                                                        "comma (,)",
+                                                                        "white spaces (one or more spaces [ ], tabs [\\t], newlines [\\n] and/or carriage returns [\\r])",
+                                                                        "semicolon (;)",
+                                                                        "colon (:)"),
+                                                              selected="[TAB] (\\t)"))
+
+
+                                            ),
+
+                                            div(title='Required: select and load a file...',
+                                                fileInput(inputId="dataset_from_file_filename",
+                                                          label="Load from file",
+                                                          multiple=FALSE,
+                                                          buttonLabel="Select")),
+                                            div(title="Click here to peek at the selected dataset...",
+                                                actionButton("dataset_from_file_peek_button", label="Peek at file...", icon=icon("eye-open", lib="glyphicon"))),
+
+                                            hr(),
+
+                                            div(title='Required: select the name of the column containing the patient IDs',
+                                                selectInput(inputId="dataset_from_file_patient_id",
+                                                            label="Patient ID column",
+                                                            choices=c("none"),
+                                                            selected="none")),
+
+                                            div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
+                                                textInput(inputId="dataset_from_file_event_format",
+                                                          label="Date format",
+                                                          value="%m/%d/%Y",
+                                                          placeholder="%m/%d/%Y")),
+
+                                            div(title='Required: select the name of the column containing the event dates (in the format defined above)',
+                                                selectInput(inputId="dataset_from_filey_event_date",
+                                                            label="Event date column",
+                                                            choices=c("none"),
+                                                            selected="none")),
+
+                                            div(title='Required: select the name of the column containing the event duration (in days)',
+                                                selectInput(inputId="dataset_from_file_event_duration",
+                                                            label="Event duration column",
+                                                            choices=c("none"),
+                                                            selected="none")),
+
+                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
+                                                selectInput(inputId="dataset_from_file_daily_dose",
+                                                            label="Daily dose column",
+                                                            choices=c("[not defined]"),
+                                                            selected="[not defined]")),
+
+                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
+                                                selectInput(inputId="dataset_from_filey_medication_class",
+                                                            label="Treatment class column",
+                                                            choices=c("[not defined]"),
+                                                            selected="[not defined]")),
+
+                                            hr(),
+
+                                            div(title='Validate choices and use the dataset!',
+                                                actionButton(inputId="dataset_file_memory_button_use",
+                                                             label=strong("Validate & use!"),
+                                                             icon=icon("sunglasses", lib="glyphicon"),
+                                                             style="color:DarkBlue; border-color:DarkBlue;"),
+                                                style="float: center;")
+                                          ),
+
 
                                           # Allow last comma:
                                           NULL
@@ -2036,6 +2126,15 @@ server <- function(input, output, session) {
 
     rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not send any UI elements)
   }
+
+
+  # For a given dataset from file, load it, list the columns and upate the selections:
+  observeEvent(input$dataset_from_file_filename,
+  {
+    cat("LOAD FROM FILE...\n");
+  })
+
+
 }
 
 
