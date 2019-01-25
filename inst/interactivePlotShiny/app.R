@@ -31,6 +31,8 @@
 #' @import readODS
 #' @import readxl
 #' @import haven
+#' @import DBI
+#' @import RMariaDB
 NULL
 
 
@@ -1134,6 +1136,53 @@ ui <- fluidPage(
                                           ),
 
 
+                                          # Use dataset from SQL database ----
+                                          conditionalPanel(
+                                            condition = "(input.datasource_type == 'SQL database')",
+
+                                            # Obligatory stuff:
+                                            div(title=HTML('Required: connection to SQL database (please note that the credentials are <b>not</b> stored!'),
+                                                selectInput(inputId="dataset_from_sql_server_type",
+                                                            label="Which SQL server",
+                                                            choices=c("MySQL/MariaDB"),
+                                                            selected="MySQL/MariaDB")),
+
+                                            div(title=HTML('Required: the address (name or IP) of the host database (if on the local machine, use "localhost" or "[none]").'),
+                                                textInput(inputId="dataset_from_sql_server_host",
+                                                          label="Host name/address",
+                                                          value=c("[none]"))),
+
+                                            div(title=HTML('Required: the database server TCP/IP port number.'),
+                                                numericInput(inputId="dataset_from_sql_server_port",
+                                                          label="TCP/IP port number",
+                                                          value=c(0), min=0, max=NA, step=1)),
+
+                                            div(title=HTML('Required: the name of the database.'),
+                                                textInput(inputId="dataset_from_sql_database_name",
+                                                          label="Database name",
+                                                          value=c("[none]"))),
+
+                                            div(title=HTML('Required: the username.'),
+                                                textInput(inputId="dataset_from_sql_username",
+                                                          label="Username",
+                                                          value=c(""),
+                                                          placeholder="user")),
+
+                                            div(title=HTML('Required: the password'),
+                                                passwordInput(inputId="dataset_from_sql_password",
+                                                          label="Password",
+                                                          value=c(""),
+                                                          placeholder="password")),
+
+                                            div(title='Connect to datadase and fetch tables!',
+                                                actionButton(inputId="dataset_from_sql_button_connect",
+                                                             label=strong("Connect!"),
+                                                             icon=icon("transfer", lib="glyphicon"),
+                                                             style="color:DarkBlue; border-color:DarkBlue;"),
+                                                style="float: center;")
+                                          ),
+
+
                                           # Allow last comma:
                                           NULL
                                 )
@@ -2203,7 +2252,7 @@ server <- function(input, output, session) {
     updateSelectInput(session, "cma_to_compute", selected=.GlobalEnv$.plotting.params$cma.class);
     updateSelectInput(session, "patient", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$ID);
 
-    rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not send any UI elements)
+    rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not change any UI elements)
   }
 
 
@@ -2545,6 +2594,125 @@ server <- function(input, output, session) {
                                date.format=input$dataset_from_file_event_format);
   })
 
+  # Connect to the SQL database and fecth tables:
+  observeEvent(input$dataset_from_sql_button_connect,
+  {
+    if( input$dataset_from_sql_server_type == "MySQL/MariaDB" )
+    {
+      d <- NULL;
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Connecting to SQL database...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(d <- DBI::dbConnect(RMariaDB::MariaDB(), # works also for MySQL
+                                               user=input$dataset_from_sql_username, # the username
+                                               password=input$dataset_from_sql_password, # and password
+                                               dbname=if( input$dataset_from_sql_database_name == "[none]" ) NULL else input$dataset_from_sql_database_name, # which database
+                                               host=if( input$dataset_from_sql_server_host == "[none]" ) NULL else input$dataset_from_sql_server_host, # on which host
+                                               port=input$dataset_from_sql_server_port # the TCP/IP port
+                                              ),
+                      error=function(e) e, warning=function(w) w);
+      removeModal();
+      if( is.null(d) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("Can't connect to the SQL server: this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("The SQL server seems ok, but when connecting I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+
+      # Fetch the tables:
+      db_tables <- NULL;
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Reading tables from the SQL database...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(db_tables <- DBI::dbListTables(d),
+                      error=function(e) e, warning=function(w) w);
+      if( is.null(db_tables) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("Can't read tables from the SQL server: this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        removeModal();
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("Could read tables from SQL server, but I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+
+      # Build a list of columns for each table:
+      d.tables.columns <- do.call(rbind, lapply(db_tables, function(s)
+        {
+          x <- NULL;
+          try(x <- DBI::dbGetQuery(d, paste0("SHOW COLUMNS FROM ",s,";")), silent=TRUE);
+          if( !is.null(x) && inherits(x, "data.frame") )
+          {
+            return (data.frame("table"=s,
+                               "column"=x$Field,
+                               "type"=x$Type,
+                               "null"=x$Null,
+                               "key"=x$Key));
+          } else
+          {
+            return (NULL);
+          }
+        }));
+      print(d.tables.columns);
+
+      removeModal();
+
+      if( is.null(d.tables.columns) )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("Could not fetch any info from the database!"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      }
+
+      # Display this info:
+      showModal(modalDialog(title="AdhereR SQL database connection...",
+                            div(style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;",
+                                HTML(paste0("Successfully connected to SQL server <i>",
+                                     if( input$dataset_from_sql_server_host == "[none]" ) "localhost" else input$dataset_from_sql_server_host, "</i>",
+                                     if( input$dataset_from_sql_server_port > 0 ) paste0(":",input$dataset_from_sql_server_port)," and fetched data from ",
+                                     length(unique(d.tables.columns$table))," tables. We list below, for each <b>table</b>, the <b>columns</b> [with their types and other relevant info]:<br/>",
+                                     "<ul>",
+                                     paste0(vapply(unique(d.tables.columns$table), function(table_name)
+                                     {
+                                       s <- which(d.tables.columns$table == table_name);
+                                       if( length(s) > 0 )
+                                       {
+                                         paste0("<li><b>", table_name, "</b>",
+                                                "<ul>",
+                                                paste0(vapply(s, function(i) paste0("<li><b>", d.tables.columns$column[i], "</b>",
+                                                                                    " [", d.tables.columns$type[i],
+                                                                                    if( d.tables.columns$key[i] == "PRI" ) ", <i>primary key</i>",
+                                                                                    "]",
+                                                                                    "</li>"),
+                                                              character(1)), collapse="\n"),
+                                                "</ul>",
+                                                "</li>")
+                                       }
+                                     }, character(1)), collapse="\n"),
+                                     "</ul>"
+                                     ))),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+
+      # TEMPORARY:
+      DBI::dbDisconnect(d);
+    }
+  })
 }
 
 
