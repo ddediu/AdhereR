@@ -1561,8 +1561,8 @@ server <- function(input, output, session) {
     tryCatch(showModal(modalDialog(HTML(msg),
                                    title=NULL,
                                    footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
-             error = function(e) showModal(modalDialog(title="AdhereR error!",
-                                                       "Cannot display the About message!",
+             error = function(e) showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                                       div("Cannot display the About message!", style="color: red;"),
                                                        footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))))
     );
   })
@@ -1573,10 +1573,10 @@ server <- function(input, output, session) {
   {
     if( is.null(input$patient) || length(input$patient) < 1 )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            "No patients selected, so nothing to do!",
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("No patients selected, so nothing to do!", style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     # Create the R code:
@@ -1606,19 +1606,19 @@ server <- function(input, output, session) {
     fnc.code <- capture.output(print(.GlobalEnv$.plotting.params$get.data.for.patients.fnc));
     if( is.null(fnc.code) || length(fnc.code) == 0 )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            "Cannot display the R code for plot!",
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("Cannot display the R code for plot!", style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
     if( length(grep("<environment", fnc.code[length(fnc.code)], fixed=TRUE)) == 1 ){ fnc.code <- fnc.code[-length(fnc.code)]; }
     if( length(grep("<bytecode", fnc.code[length(fnc.code)], fixed=TRUE)) == 1 ){ fnc.code <- fnc.code[-length(fnc.code)]; }
     if( is.null(fnc.code) || length(fnc.code) == 0 )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            "Cannot display the R code for plot!",
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("Cannot display the R code for plot!", style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
     if( length(fnc.code) == 1 )
     {
@@ -1779,8 +1779,8 @@ server <- function(input, output, session) {
                                    title=HTML("<code>R</code> code for the current plot"),
                                    footer = tagList(actionButton("copy_code", "Copy to clipboard", icon=icon("copy", lib="glyphicon")),
                                                     modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
-             error = function(e) showModal(modalDialog(title="AdhereR error!",
-                                                       "Cannot display the R code for plot!",
+             error = function(e) showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                                       div("Cannot display the R code for plot!", style="color: red;"),
                                                        footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))))
     );
   })
@@ -1885,7 +1885,7 @@ server <- function(input, output, session) {
     if( input$dataset_from_memory == "none" )
     {
       # Initialisation:
-      return;
+      return (invisible(NULL));
     } else if( input$dataset_from_memory == "<<'data' argument to plot_interactive_cma() call>>" )
     {
       # The special value pointing to the argument to plot_interactive_cma():
@@ -1903,18 +1903,18 @@ server <- function(input, output, session) {
          ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
          nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ))
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!"),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!"), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     if( (input$dataset_from_memory != "none") && nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Dataset '",input$dataset_from_memory, "' must have at least three distinct columns (patient ID, event date and duration)!"),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Dataset '",input$dataset_from_memory, "' must have at least three distinct columns (patient ID, event date and duration)!"), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     x <- names(.GlobalEnv$.plotting.params$.inmemory.dataset);
@@ -2012,10 +2012,10 @@ server <- function(input, output, session) {
         ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
         nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     showModal(modalDialog(title="AdhereR: peeking at the selected in-memory dataset ...",
@@ -2037,78 +2037,78 @@ server <- function(input, output, session) {
     all.IDs <- get.patients.fnc(d, ID.colname);
     if( length(all.IDs) < min.npats || length(get.colnames.fnc(d)) < min.ncol )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Cannot load the selected dataset!\nPlease make sure your selection is valid and has at least ",min.ncol," column(s) and data for at least ",min.npats," patient(s)..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected dataset!\nPlease make sure your selection is valid and has at least ",min.ncol," column(s) and data for at least ",min.npats," patient(s)..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     # Check if the column names refer to existing columns in the dataset:
     if( is.na(ID.colname) || length(ID.colname) != 1 || ID.colname=="" || !(ID.colname %in% get.colnames.fnc(d)) )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Patient ID column '",ID.colname, "' must be a string and a valid column name in the selected dataset..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Patient ID column '",ID.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     if( is.na(event.date.colname) || length(event.date.colname) != 1 || event.date.colname=="" || !(event.date.colname %in% get.colnames.fnc(d)) )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Event date column '",event.date.colname, "' must be a string and a valid column name in the selected dataset..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Event date column '",event.date.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     if( is.na(event.duration.colname) || length(event.duration.colname) != 1 || event.duration.colname=="" || !(event.duration.colname %in% get.colnames.fnc(d)) )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Event duration column '",event.duration.colname, "' must be a string and a valid column name in the selected dataset..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Event duration column '",event.duration.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     if( is.na(event.daily.dose.colname) || length(event.daily.dose.colname) != 1 || event.daily.dose.colname=="" )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Event duration column '",event.daily.dose.colname, "' must be a non-empty string..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Event duration column '",event.daily.dose.colname, "' must be a non-empty string..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     } else if( event.daily.dose.colname == "[not defined]" )
     {
       event.daily.dose.colname <- NA; # not defined
     } else if( !(event.daily.dose.colname %in% get.colnames.fnc(d)) )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Event duration column '",event.daily.dose.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Event duration column '",event.daily.dose.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     if( is.na(medication.class.colname) || length(medication.class.colname) != 1 || medication.class.colname=="" )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Treatment class column '",medication.class.colname, "' must be a non-empty string..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Treatment class column '",medication.class.colname, "' must be a non-empty string..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     } else if( medication.class.colname == "[not defined]" )
     {
       medication.class.colname <- NA; # not defined
     } else if( !(medication.class.colname %in% get.colnames.fnc(d)) )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Treatment class column '",medication.class.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Treatment class column '",medication.class.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     # Check if the column names are unique (i.e., do not repeat):
     if( anyDuplicated(na.omit(c(ID.colname, event.date.colname, event.duration.colname, event.daily.dose.colname, medication.class.colname))) )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("The selected column names must be unique!"),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("The selected column names must be unique!", style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     # More advanced checks of the column types:
@@ -2123,47 +2123,47 @@ server <- function(input, output, session) {
         s <- na.omit(as.character(d[,event.date.colname]));
         if( length(s) == 0 )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("There are no non-missing dates in the '",event.date.colname,"' column!"),
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div(paste0("There are no non-missing dates in the '",event.date.colname,"' column!"), style="color: red;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-          return;
+          return (invisible(NULL));
         }
         tmp <- as.Date(s, format=input$dataset_from_memory_event_format);
         if( all(is.na(tmp)) )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: all conversions failed!"),
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div(paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: all conversions failed!"), style="color: red;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-          return;
+          return (invisible(NULL));
         } else if( any(is.na(tmp)) )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: ", length(is.na(tmp))," conversions failed!"),
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div(paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: ", length(is.na(tmp))," conversions failed!"), style="color: red;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-          return;
+          return (invisible(NULL));
         }
       } else
       {
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("The event date column '",event.date.colname,"' must contain either objects of class 'Date' or correctly-formatted strings (or factor levels)!"),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div(paste0("The event date column '",event.date.colname,"' must contain either objects of class 'Date' or correctly-formatted strings (or factor levels)!"), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       }
 
       if( !is.na(event.duration.colname) && (!is.numeric(d[,event.duration.colname]) || any(d[,event.duration.colname] < 0, na.rm=TRUE)) )
       {
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("If given, the event duration column '",event.duration.colname,"' must contain non-negative numbers!"),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div(paste0("If given, the event duration column '",event.duration.colname,"' must contain non-negative numbers!"), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       }
 
       if( !is.na(event.daily.dose.colname) && (!is.numeric(d[,event.daily.dose.colname]) || any(d[,event.daily.dose.colname] < 0, na.rm=TRUE)) )
       {
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("If given, the daily dose column '",event.daily.dose.colname,"' must contain non-negative numbers!"),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div(paste0("If given, the daily dose column '",event.daily.dose.colname,"' must contain non-negative numbers!"), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       }
     }
 
@@ -2180,16 +2180,16 @@ server <- function(input, output, session) {
     if( is.null(test.cma) || inherits(test.res, "error") )
     {
       # Some error occured!
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("There's something wrong with these data!\nI tried to create a CMA0 object and this is what I got back:\n", as.character(test.res)),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("There's something wrong with these data!\nI tried to create a CMA0 object and this is what I got back:\n"), div(as.character(test.res), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     } else
     {
       if( inherits(test.res, "warning") )
       {
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("These data seem ok, but when I tried to create a CMA0 object I got some warnings:\n", as.character(test.res)),
+        showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                              div("These data seem ok, but when I tried to create a CMA0 object I got some warnings:\n"), div(as.character(test.res), style="color: blue;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       }
     }
@@ -2226,10 +2226,10 @@ server <- function(input, output, session) {
         ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
         nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     # Checks:
@@ -2262,7 +2262,7 @@ server <- function(input, output, session) {
     if( is.null(input$dataset_from_file_filename) || nrow(input$dataset_from_file_filename) < 1 )
     {
       # No file loaded, nothing to do:
-      return;
+      return (invisible(NULL));
     }
 
     # Try to parse and load it:
@@ -2271,7 +2271,7 @@ server <- function(input, output, session) {
     if( input$dataset_from_file_filetype == "Comma/TAB-separated (.csv; .tsv; .txt)" )
     {
       # Load CSV/TSV:
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- read.table(input$dataset_from_file_filename$datapath[1],
                                       header=input$dataset_from_file_csv_header,
                                       sep=switch(input$dataset_from_file_csv_separator,
@@ -2294,16 +2294,16 @@ server <- function(input, output, session) {
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("There's something wrong with the given CSV/TSV file: I tried reading it and this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given CSV/TSV file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("This CSV/TSV file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This CSV/TSV file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
@@ -2311,23 +2311,23 @@ server <- function(input, output, session) {
     } else if( input$dataset_from_file_filetype == "R objects from save() (.RData)" )
     {
       # Use load to recover them but then ask the user to use "load from memory" UI to continue...
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(read.objs <- load(input$dataset_from_file_filename$datapath[1]),
                       error=function(e) e, warning=function(w) w);
       removeModal();
       if( is.null(read.objs) || length(read.objs) == 0 || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("There's something wrong with the given R datasets file: I tried reading it and this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given R datasets file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("This R datasets file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This R datasets file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
@@ -2336,50 +2336,50 @@ server <- function(input, output, session) {
       showModal(modalDialog(title="AdhereR R datasets file loaded!",
                             HTML(paste0("The R datasets file was successfully loaded and the following objects are now in memory: ",paste0("'",read.objs,"'",collapse=", "),".<br/>Please use the <b>load from memory</b> option to load the desired object from memory...")),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return; # don't continue...
+      return (invisible(NULL)); # don't continue...
     } else if( input$dataset_from_file_filetype == "Serialized single R object (.rds)" )
     {
       # Load them with readRDS:
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- readRDS(input$dataset_from_file_filename$datapath[1]),
                       error=function(e) e, warning=function(w) w);
       removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("There's something wrong with the given serialized single R object file: I tried reading it and this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given serialized single R object file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("This serialized single R object file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This serialized single R object file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
     } else if( input$dataset_from_file_filetype == "Open Document Spreadsheet (.ods)" )
     {
       # Use readODS::read.ods to read the first sheet:
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- readODS::read_ods(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet),
                       error=function(e) e, warning=function(w) w);
       removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("There's something wrong with the given ODS file: I tried reading it and this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given ODS file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("This ODS file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This ODS file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
@@ -2387,7 +2387,7 @@ server <- function(input, output, session) {
     } else if( input$dataset_from_file_filetype == "Microsoft Excel (.xls; .xlsx)" )
     {
       # Use readxl::read_excel to read the first sheet:
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- readxl::read_excel(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet),
                       #d <- openxlsx::read.xlsx(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet),
                       error=function(e) e, warning=function(w) w);
@@ -2395,16 +2395,16 @@ server <- function(input, output, session) {
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("There's something wrong with the given XLS/XLSX file: I tried reading it and this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given XLS/XLSX file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("This XLS/XLSX file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This XLS/XLSX file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
@@ -2412,23 +2412,23 @@ server <- function(input, output, session) {
     } else if( input$dataset_from_file_filetype == "SPSS (.sav; .por)" )
     {
       # Use haven::read_spss to read the first sheet:
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- haven::read_spss(input$dataset_from_file_filename$datapath[1]),
                       error=function(e) e, warning=function(w) w);
       removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("There's something wrong with the given SPSS file: I tried reading it and this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given SPSS file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("This SPSS file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This SPSS file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
@@ -2436,7 +2436,7 @@ server <- function(input, output, session) {
     } else if( input$dataset_from_file_filetype == "SAS Transport data file (.xpt)" )
     {
       # Use haven::read_xpt to read the first sheet:
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- haven::read_xpt(input$dataset_from_file_filename$datapath[1]),
                       #d <- SASxport::read.xport(input$dataset_from_file_filename$datapath[1], as.list=TRUE),
                       error=function(e) e, warning=function(w) w);
@@ -2444,16 +2444,16 @@ server <- function(input, output, session) {
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("There's something wrong with the given SAS Transport file: I tried reading it and this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given SAS Transport file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("This SAS Transport file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This SAS Transport file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
@@ -2472,23 +2472,23 @@ server <- function(input, output, session) {
     } else if( input$dataset_from_file_filetype == "SAS sas7bdat data file (.sas7bdat)" )
     {
       # Use haven::read_sas to read the first sheet:
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- haven::read_sas(input$dataset_from_file_filename$datapath[1]),
                       error=function(e) e, warning=function(w) w);
       removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("There's something wrong with the given SAS sas7bdat file: I tried reading it and this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given SAS sas7bdat file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("This SAS sas7bdat file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This SAS sas7bdat file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
@@ -2496,23 +2496,23 @@ server <- function(input, output, session) {
     } else if( input$dataset_from_file_filetype == "Stata (.dta)" )
     {
       # Use haven::read_stata to read the first sheet:
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- haven::read_stata(input$dataset_from_file_filename$datapath[1]),
                       error=function(e) e, warning=function(w) w);
       removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("There's something wrong with the given Stata file: I tried reading it and this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given Stata file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("This Stata file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This Stata file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
@@ -2524,10 +2524,10 @@ server <- function(input, output, session) {
     {
       if( nrow(d) < 3 )
       {
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("The selected file must have at least three distinct columns (patient ID, event date and duration)!"),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("The selected file must have at least three distinct columns (patient ID, event date and duration)!", style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       }
 
       x <- names(d);
@@ -2554,10 +2554,10 @@ server <- function(input, output, session) {
         ncol(.GlobalEnv$.plotting.params$.fromfile.dataset) < 1 ||
         nrow(.GlobalEnv$.plotting.params$.fromfile.dataset) < 3 )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Could not load the selected file '",input$dataset_from_file_filename$name[1], "' in memory!\nPlease make sure you selected a valid file contaning at least 3 columns and 1 row..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("Could not load the selected file '",input$dataset_from_file_filename$name[1], "' in memory!\nPlease make sure you selected a valid file contaning at least 3 columns and 1 row...", style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     showModal(modalDialog(title="AdhereR: peeking at the selected file ...",
@@ -2575,10 +2575,10 @@ server <- function(input, output, session) {
         ncol(.GlobalEnv$.plotting.params$.fromfile.dataset) < 1 ||
         nrow(.GlobalEnv$.plotting.params$.fromfile.dataset) < 3 )
     {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("Cannot load the selected file '",input$dataset_from_file_filename$name[1], "'!\nPlease make sure you selected a valid file with at least 3 columns and 1 row..."),
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected file '",input$dataset_from_file_filename$name[1], "'!\nPlease make sure you selected a valid file with at least 3 columns and 1 row..."), style="color: red;"),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      return (invisible(NULL));
     }
 
     # Checks:
@@ -2600,7 +2600,7 @@ server <- function(input, output, session) {
     if( input$dataset_from_sql_server_type == "MySQL/MariaDB" )
     {
       d <- NULL;
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Connecting to SQL database...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Connecting to SQL database...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL))
       res <- tryCatch(d <- DBI::dbConnect(RMariaDB::MariaDB(), # works also for MySQL
                                                user=input$dataset_from_sql_username, # the username
                                                password=input$dataset_from_sql_password, # and password
@@ -2613,39 +2613,39 @@ server <- function(input, output, session) {
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("Can't connect to the SQL server: this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("Can't connect to the SQL server: this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("The SQL server seems ok, but when connecting I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("The SQL server seems ok, but when connecting I got some warnings:\n"), div(as.character(res, style="color: blue;")),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
 
       # Fetch the tables:
       db_tables <- NULL;
-      showModal(modalDialog(icon("time", lib="glyphicon"), "Reading tables from the SQL database...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Reading tables from the SQL database...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL))
       res <- tryCatch(db_tables <- DBI::dbListTables(d),
                       error=function(e) e, warning=function(w) w);
       if( is.null(db_tables) || inherits(res, "error") )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("Can't read tables from the SQL server: this is what I got back:\n", as.character(res)),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("Can't read tables from the SQL server: this is what I got back:\n"), div(as.character(res), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         removeModal();
-        return;
+        return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          showModal(modalDialog(title="AdhereR error!",
-                                paste0("Could read tables from SQL server, but I got some warnings:\n", as.character(res)),
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("Could read tables from SQL server, but I got some warnings:\n"), div(as.character(res), style="color: blue;"),
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
@@ -2674,10 +2674,10 @@ server <- function(input, output, session) {
       if( is.null(d.tables.columns) )
       {
         # Some error occured!
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("Could not fetch any info from the database!"),
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("Could not fetch any info from the database!", style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
+        return (invisible(NULL));
       }
 
       # Display this info:
@@ -2686,17 +2686,17 @@ server <- function(input, output, session) {
                                 HTML(paste0("Successfully connected to SQL server <i>",
                                      if( input$dataset_from_sql_server_host == "[none]" ) "localhost" else input$dataset_from_sql_server_host, "</i>",
                                      if( input$dataset_from_sql_server_port > 0 ) paste0(":",input$dataset_from_sql_server_port)," and fetched data from ",
-                                     length(unique(d.tables.columns$table))," tables. We list below, for each <b>table</b>, the <b>columns</b> [with their types and other relevant info]:<br/>",
+                                     length(unique(d.tables.columns$table))," tables.<br/>We list below, for each <b style='color: red'>table</b>, the <b style='color: blue'>columns</b> [with their <span style='color: green'>types</span> and other <i>relevant info</i>]:<br/>",
                                      "<ul>",
                                      paste0(vapply(unique(d.tables.columns$table), function(table_name)
                                      {
                                        s <- which(d.tables.columns$table == table_name);
                                        if( length(s) > 0 )
                                        {
-                                         paste0("<li><b>", table_name, "</b>",
+                                         paste0("<li><b style='color: red'>", table_name, "</b>",
                                                 "<ul>",
-                                                paste0(vapply(s, function(i) paste0("<li><b>", d.tables.columns$column[i], "</b>",
-                                                                                    " [", d.tables.columns$type[i],
+                                                paste0(vapply(s, function(i) paste0("<li><b style='color: blue'>", d.tables.columns$column[i], "</b>",
+                                                                                    " [<span style='color: green'>", d.tables.columns$type[i], "</span>",
                                                                                     if( d.tables.columns$key[i] == "PRI" ) ", <i>primary key</i>",
                                                                                     "]",
                                                                                     "</li>"),
@@ -2710,7 +2710,7 @@ server <- function(input, output, session) {
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
 
       # TEMPORARY:
-      DBI::dbDisconnect(d);
+      if( !is.null(d) ) DBI::dbDisconnect(d);
     }
   })
 }
