@@ -29,6 +29,8 @@
 #' @import shinyjs
 #' @import knitr
 #' @import readODS
+#' @import readxl
+#' @import haven
 NULL
 
 
@@ -996,7 +998,7 @@ ui <- fluidPage(
                                             condition = "(input.datasource_type == 'load from file')",
 
                                             # Obligatory stuff:
-                                            div(title='Required: which type of file to load?\n.csv and .tsv are prefered, .RData and .rds should pose no problems, but for the others there might be limitations (please see the help for packages "foreign" and "readODS").\nPlease note that readling very big files might be very slow and need quite a bit of RAM.',
+                                            div(title='Required: which type of file to load?\n.csv and .tsv are prefered, .RData and .rds should pose no problems, but for the others there might be limitations (please see the help for packages "readODS", "SASxport", "readxl" and "heaven").\nPlease note that readling very big files might be very slow and need quite a bit of RAM.',
                                                 selectInput(inputId="dataset_from_file_filetype",
                                                             label="Type of file",
                                                             choices=c("Comma/TAB-separated (.csv; .tsv; .txt)",
@@ -1006,6 +1008,7 @@ ui <- fluidPage(
                                                                       "Microsoft Excel (.xls; .xlsx)",
                                                                       "SPSS (.sav; .por)",
                                                                       "SAS Transport data file (.xpt)",
+                                                                      "SAS sas7bdat data file (.sas7bdat)",
                                                                       "Stata (.dta)"),
                                                             selected="Comma/TAB-separated (.csv; .tsv; .txt)")),
 
@@ -1064,6 +1067,15 @@ ui <- fluidPage(
                                                                value=1, min=1, max=NA, step=1))
                                             ),
 
+                                            #conditionalPanel(
+                                            #  condition = "(input.dataset_from_file_filetype == 'SAS Transport data file (.xpt)')",
+                                            #
+                                            #  div(title='Which dataset to load (if there are several of them)?',
+                                            #      numericInput(inputId="dataset_from_file_sheet_sas",
+                                            #                   label="Which dataset to load?",
+                                            #                   value=1, min=1, max=NA, step=1))
+                                            #),
+
                                             div(title='Required: select and load a file...',
                                                 fileInput(inputId="dataset_from_file_filename",
                                                           label="Load from file",
@@ -1088,7 +1100,7 @@ ui <- fluidPage(
                                                           placeholder="%m/%d/%Y")),
 
                                             div(title='Required: select the name of the column containing the event dates (in the format defined above)',
-                                                selectInput(inputId="dataset_from_filey_event_date",
+                                                selectInput(inputId="dataset_from_file_event_date",
                                                             label="Event date column",
                                                             choices=c("none"),
                                                             selected="none")),
@@ -1106,7 +1118,7 @@ ui <- fluidPage(
                                                             selected="[not defined]")),
 
                                             div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
-                                                selectInput(inputId="dataset_from_filey_medication_class",
+                                                selectInput(inputId="dataset_from_file_medication_class",
                                                             label="Treatment class column",
                                                             choices=c("[not defined]"),
                                                             selected="[not defined]")),
@@ -1114,7 +1126,7 @@ ui <- fluidPage(
                                             hr(),
 
                                             div(title='Validate choices and use the dataset!',
-                                                actionButton(inputId="dataset_file_memory_button_use",
+                                                actionButton(inputId="dataset_from_file_button_use",
                                                              label=strong("Validate & use!"),
                                                              icon=icon("sunglasses", lib="glyphicon"),
                                                              style="color:DarkBlue; border-color:DarkBlue;"),
@@ -1964,31 +1976,26 @@ server <- function(input, output, session) {
 
   })
 
-  # Validate and use in-memory dataset:
-  observeEvent(input$dataset_from_memory_button_use,
+  # Validate a given dataset and possibly load it:
+  .validate.and.load.dataset <- function(d, # the dataset
+                                         get.colnames.fnc, get.patients.fnc, get.data.for.patients.fnc, # getter functions appropriate for the dataset
+                                         min.npats=1, min.ncol=3, # minimum number of patients and columns
+                                         ID.colname, event.date.colname, event.duration.colname, event.daily.dose.colname, medication.class.colname, # column names
+                                         date.format # date format
+  )
   {
-    # The appropriate getters:
-    .get.colnames.fnc <- function(d) names(d);
-    .patients.fnc <- function(d, idcol) unique(d[[idcol]]);
-    .get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ];
-
-    # Sanity checks:
-    if( is.null(.GlobalEnv$.plotting.params$.inmemory.dataset) ||
-        !inherits(.GlobalEnv$.plotting.params$.inmemory.dataset, "data.frame") ||
-        ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
-        nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
+    # Check dataset dimensions:
+    all.IDs <- get.patients.fnc(d, ID.colname);
+    if( length(all.IDs) < min.npats || length(get.colnames.fnc(d)) < min.ncol )
     {
       showModal(modalDialog(title="AdhereR error!",
-                            paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."),
+                            paste0("Cannot load the selected dataset!\nPlease make sure your selection is valid and has at least ",min.ncol," column(s) and data for at least ",min.npats," patient(s)..."),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return;
     }
-    # Use shorter name:
-    d <- .GlobalEnv$.plotting.params$.inmemory.dataset;
 
     # Check if the column names refer to existing columns in the dataset:
-    ID.colname <- input$dataset_from_memory_patient_id;
-    if( is.na(ID.colname) || length(ID.colname) != 1 || ID.colname=="" || !(ID.colname %in% .get.colnames.fnc(d)) )
+    if( is.na(ID.colname) || length(ID.colname) != 1 || ID.colname=="" || !(ID.colname %in% get.colnames.fnc(d)) )
     {
       showModal(modalDialog(title="AdhereR error!",
                             paste0("Patient ID column '",ID.colname, "' must be a string and a valid column name in the selected dataset..."),
@@ -1996,8 +2003,7 @@ server <- function(input, output, session) {
       return;
     }
 
-    event.date.colname <- input$dataset_from_memory_event_date;
-    if( is.na(event.date.colname) || length(event.date.colname) != 1 || event.date.colname=="" || !(event.date.colname %in% .get.colnames.fnc(d)) )
+    if( is.na(event.date.colname) || length(event.date.colname) != 1 || event.date.colname=="" || !(event.date.colname %in% get.colnames.fnc(d)) )
     {
       showModal(modalDialog(title="AdhereR error!",
                             paste0("Event date column '",event.date.colname, "' must be a string and a valid column name in the selected dataset..."),
@@ -2005,10 +2011,7 @@ server <- function(input, output, session) {
       return;
     }
 
-    date.format <- input$dataset_from_memory_event_format;
-
-    event.duration.colname <- input$dataset_from_memory_event_duration;
-    if( is.na(event.duration.colname) || length(event.duration.colname) != 1 || event.duration.colname=="" || !(event.duration.colname %in% .get.colnames.fnc(d)) )
+    if( is.na(event.duration.colname) || length(event.duration.colname) != 1 || event.duration.colname=="" || !(event.duration.colname %in% get.colnames.fnc(d)) )
     {
       showModal(modalDialog(title="AdhereR error!",
                             paste0("Event duration column '",event.duration.colname, "' must be a string and a valid column name in the selected dataset..."),
@@ -2016,7 +2019,6 @@ server <- function(input, output, session) {
       return;
     }
 
-    event.daily.dose.colname <- input$dataset_from_memory_daily_dose;
     if( is.na(event.daily.dose.colname) || length(event.daily.dose.colname) != 1 || event.daily.dose.colname=="" )
     {
       showModal(modalDialog(title="AdhereR error!",
@@ -2026,7 +2028,7 @@ server <- function(input, output, session) {
     } else if( event.daily.dose.colname == "[not defined]" )
     {
       event.daily.dose.colname <- NA; # not defined
-    } else if( !(event.daily.dose.colname %in% .get.colnames.fnc(d)) )
+    } else if( !(event.daily.dose.colname %in% get.colnames.fnc(d)) )
     {
       showModal(modalDialog(title="AdhereR error!",
                             paste0("Event duration column '",event.daily.dose.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."),
@@ -2034,7 +2036,6 @@ server <- function(input, output, session) {
       return;
     }
 
-    medication.class.colname <- input$dataset_from_memory_medication_class;
     if( is.na(medication.class.colname) || length(medication.class.colname) != 1 || medication.class.colname=="" )
     {
       showModal(modalDialog(title="AdhereR error!",
@@ -2044,7 +2045,7 @@ server <- function(input, output, session) {
     } else if( medication.class.colname == "[not defined]" )
     {
       medication.class.colname <- NA; # not defined
-    } else if( !(medication.class.colname %in% .get.colnames.fnc(d)) )
+    } else if( !(medication.class.colname %in% get.colnames.fnc(d)) )
     {
       showModal(modalDialog(title="AdhereR error!",
                             paste0("Treatment class column '",medication.class.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."),
@@ -2062,61 +2063,64 @@ server <- function(input, output, session) {
     }
 
     # More advanced checks of the column types:
-    if( inherits(d[,event.date.colname], "Date") )
+    if( inherits(d, "data.frame") ) # for data.frame's
     {
-      # It's a column of Dates: perfect!
-    } else if( is.factor(d[,event.date.colname]) || is.character(d[,event.date.colname]) )
-    {
-      # It's a factor or string: check if it conforms to the given date.format:
-      s <- na.omit(as.character(d[,event.date.colname]));
-      if( length(s) == 0 )
+      if( inherits(d[,event.date.colname], "Date") )
+      {
+        # It's a column of Dates: perfect!
+      } else if( is.factor(d[,event.date.colname]) || is.character(d[,event.date.colname]) )
+      {
+        # It's a factor or string: check if it conforms to the given date.format:
+        s <- na.omit(as.character(d[,event.date.colname]));
+        if( length(s) == 0 )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("There are no non-missing dates in the '",event.date.colname,"' column!"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+          return;
+        }
+        tmp <- as.Date(s, format=input$dataset_from_memory_event_format);
+        if( all(is.na(tmp)) )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: all conversions failed!"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+          return;
+        } else if( any(is.na(tmp)) )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: ", length(is.na(tmp))," conversions failed!"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+          return;
+        }
+      } else
       {
         showModal(modalDialog(title="AdhereR error!",
-                              paste0("There are no non-missing dates in the '",event.date.colname,"' column!"),
+                              paste0("The event date column '",event.date.colname,"' must contain either objects of class 'Date' or correctly-formatted strings (or factor levels)!"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return;
       }
-      tmp <- as.Date(s, format=input$dataset_from_memory_event_format);
-      if( all(is.na(tmp)) )
+
+      if( !is.na(event.duration.colname) && (!is.numeric(d[,event.duration.colname]) || any(d[,event.duration.colname] < 0, na.rm=TRUE)) )
       {
         showModal(modalDialog(title="AdhereR error!",
-                              paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: all conversions failed!"),
-                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return;
-      } else if( any(is.na(tmp)) )
-      {
-        showModal(modalDialog(title="AdhereR error!",
-                              paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: ", length(is.na(tmp))," conversions failed!"),
+                              paste0("If given, the event duration column '",event.duration.colname,"' must contain non-negative numbers!"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return;
       }
-    } else
-    {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("The event date column '",event.date.colname,"' must contain either objects of class 'Date' or correctly-formatted strings (or factor levels)!"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
-    }
 
-    if( !is.na(event.duration.colname) && (!is.numeric(d[,event.duration.colname]) || any(d[,event.duration.colname] < 0, na.rm=TRUE)) )
-    {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("If given, the event duration column '",event.duration.colname,"' must contain non-negative numbers!"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
-    }
-
-    if( !is.na(event.daily.dose.colname) && (!is.numeric(d[,event.daily.dose.colname]) || any(d[,event.daily.dose.colname] < 0, na.rm=TRUE)) )
-    {
-      showModal(modalDialog(title="AdhereR error!",
-                            paste0("If given, the daily dose column '",event.daily.dose.colname,"' must contain non-negative numbers!"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return;
+      if( !is.na(event.daily.dose.colname) && (!is.numeric(d[,event.daily.dose.colname]) || any(d[,event.daily.dose.colname] < 0, na.rm=TRUE)) )
+      {
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("If given, the daily dose column '",event.daily.dose.colname,"' must contain non-negative numbers!"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      }
     }
 
     # Even more complex check: try to compute CMA0 on the first patient:
     test.cma <- NULL;
-    test.res <- tryCatch(test.cma <- CMA0(data=.get.data.for.patients.fnc(.patients.fnc(d, ID.colname)[1], d, ID.colname),
+    test.res <- tryCatch(test.cma <- CMA0(data=get.data.for.patients.fnc(all.IDs[1], d, ID.colname),
                                           ID.colname=ID.colname,
                                           event.date.colname=event.date.colname,
                                           event.duration.colname=event.duration.colname,
@@ -2151,18 +2155,45 @@ server <- function(input, output, session) {
     .GlobalEnv$.plotting.params$medication.class.colname <- medication.class.colname;
     .GlobalEnv$.plotting.params$date.format <- date.format;
     # This is a data.frame, so use the appropriate getters:
-    .GlobalEnv$.plotting.params$get.colnames.fnc <- function(d) names(d);
-    .GlobalEnv$.plotting.params$get.patients.fnc <- function(d, idcol) unique(d[[idcol]]);
-    .GlobalEnv$.plotting.params$get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ];
+    .GlobalEnv$.plotting.params$get.colnames.fnc <- get.colnames.fnc;
+    .GlobalEnv$.plotting.params$get.patients.fnc <- get.patients.fnc;
+    .GlobalEnv$.plotting.params$get.data.for.patients.fnc <- get.data.for.patients.fnc;
     # CMA class:
     .GlobalEnv$.plotting.params$cma.class <- "CMA0";
     # Patient IDs and selected ID:
-    all.IDs <- .GlobalEnv$.plotting.params$get.patients.fnc(d, ID.colname);
     .GlobalEnv$.plotting.params$all.IDs <- all.IDs;
     .GlobalEnv$.plotting.params$ID <- all.IDs[1];
 
     # Force UI updating...
     .force.update.UI();
+  }
+
+  # Validate and use in-memory dataset:
+  observeEvent(input$dataset_from_memory_button_use,
+  {
+    # Sanity checks:
+    if( is.null(.GlobalEnv$.plotting.params$.inmemory.dataset) ||
+        !inherits(.GlobalEnv$.plotting.params$.inmemory.dataset, "data.frame") ||
+        ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
+        nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    # Checks:
+    .validate.and.load.dataset(.GlobalEnv$.plotting.params$.inmemory.dataset,
+                               get.colnames.fnc=function(d) names(d),
+                               get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
+                               get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
+                               ID.colname=input$dataset_from_memory_patient_id,
+                               event.date.colname=input$dataset_from_memory_event_date,
+                               event.duration.colname=input$dataset_from_memory_event_duration,
+                               event.daily.dose.colname=input$dataset_from_memory_daily_dose,
+                               medication.class.colname=input$dataset_from_memory_medication_class,
+                               date.format=input$dataset_from_memory_event_format);
   })
 
   # Force updating the Shiny UI using the new data:
@@ -2227,6 +2258,7 @@ server <- function(input, output, session) {
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
+      d <- as.data.frame(d);
     } else if( input$dataset_from_file_filetype == "R objects from save() (.RData)" )
     {
       # Use load to recover them but then ask the user to use "load from memory" UI to continue...
@@ -2302,11 +2334,12 @@ server <- function(input, output, session) {
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
+      d <- as.data.frame(d);
     } else if( input$dataset_from_file_filetype == "Microsoft Excel (.xls; .xlsx)" )
     {
       # Use readxl::read_excel to read the first sheet:
       showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
-      res <- tryCatch(d <- as.data.frame(readxl::read_excel(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet)),
+      res <- tryCatch(d <- readxl::read_excel(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet),
                       #d <- openxlsx::read.xlsx(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet),
                       error=function(e) e, warning=function(w) w);
       removeModal();
@@ -2326,10 +2359,141 @@ server <- function(input, output, session) {
                                 footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
+      d <- as.data.frame(d);
+    } else if( input$dataset_from_file_filetype == "SPSS (.sav; .por)" )
+    {
+      # Use haven::read_spss to read the first sheet:
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(d <- haven::read_spss(input$dataset_from_file_filename$datapath[1]),
+                      error=function(e) e, warning=function(w) w);
+      removeModal();
+      if( is.null(d) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("There's something wrong with the given SPSS file: I tried reading it and this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("This SPSS file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+      d <- as.data.frame(d);
+    } else if( input$dataset_from_file_filetype == "SAS Transport data file (.xpt)" )
+    {
+      # Use haven::read_xpt to read the first sheet:
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(d <- haven::read_xpt(input$dataset_from_file_filename$datapath[1]),
+                      #d <- SASxport::read.xport(input$dataset_from_file_filename$datapath[1], as.list=TRUE),
+                      error=function(e) e, warning=function(w) w);
+      removeModal();
+      if( is.null(d) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("There's something wrong with the given SAS Transport file: I tried reading it and this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("This SAS Transport file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+      d <- as.data.frame(d);
+
+      #if( length(d) < input$dataset_from_file_sheet_sas )
+      #{
+      #  showModal(modalDialog(title="AdhereR warning!",
+      #                        paste0("This SAS Transport file contains only ",length(d)," datasets, so I can't load the ",input$dataset_from_file_sheet_sas,"th: loading the first instead!"),
+      #                        footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      #  d <- d[[1]];
+      #} else
+      #{
+      #  d <- d[[input$dataset_from_file_sheet_sas]];
+      #}
+    } else if( input$dataset_from_file_filetype == "SAS sas7bdat data file (.sas7bdat)" )
+    {
+      # Use haven::read_sas to read the first sheet:
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(d <- haven::read_sas(input$dataset_from_file_filename$datapath[1]),
+                      error=function(e) e, warning=function(w) w);
+      removeModal();
+      if( is.null(d) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("There's something wrong with the given SAS sas7bdat file: I tried reading it and this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("This SAS sas7bdat file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+      d <- as.data.frame(d);
+    } else if( input$dataset_from_file_filetype == "Stata (.dta)" )
+    {
+      # Use haven::read_stata to read the first sheet:
+      showModal(modalDialog(icon("time", lib="glyphicon"), "Loading and processing data...", title="Please wait...", easyClose=FALSE, footer=NULL))
+      res <- tryCatch(d <- haven::read_stata(input$dataset_from_file_filename$datapath[1]),
+                      error=function(e) e, warning=function(w) w);
+      removeModal();
+      if( is.null(d) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("There's something wrong with the given Stata file: I tried reading it and this is what I got back:\n", as.character(res)),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title="AdhereR error!",
+                                paste0("This Stata file seems ok, but when reading it I got some warnings:\n", as.character(res)),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+      d <- as.data.frame(d);
     }
 
-    # Set it as the from-file dataset:
-    if( !is.null(d) ) .GlobalEnv$.plotting.params$.fromfile.dataset <- d;
+    # Set it as the from-file dataset and update columns:
+    if( !is.null(d) && inherits(d, "data.frame") )
+    {
+      if( nrow(d) < 3 )
+      {
+        showModal(modalDialog(title="AdhereR error!",
+                              paste0("The selected file must have at least three distinct columns (patient ID, event date and duration)!"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return;
+      }
+
+      x <- names(d);
+
+      # Required columns:
+      updateSelectInput(session, "dataset_from_file_patient_id",     choices=x, selected=head(x,1));
+      updateSelectInput(session, "dataset_from_file_event_date",     choices=x, selected=head(x,2));
+      updateSelectInput(session, "dataset_from_file_event_duration", choices=x, selected=head(x,3));
+
+      # Optional columns (possibly used by CMA5+):
+      updateSelectInput(session, "dataset_from_file_medication_class", choices=c("[not defined]", x), selected="[not defined]");
+      updateSelectInput(session, "dataset_from_file_daily_dose",       choices=c("[not defined]", x), selected="[not defined]");
+
+      .GlobalEnv$.plotting.params$.fromfile.dataset <- d;
+    }
   })
 
   # Peek at in-memory dataset:
@@ -2351,6 +2515,34 @@ server <- function(input, output, session) {
                           div(HTML(.show.data.frame.as.HTML(.GlobalEnv$.plotting.params$.fromfile.dataset)),
                                    style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+  })
+
+  # Validate and use from-file dataset:
+  observeEvent(input$dataset_from_file_button_use,
+  {
+    # Sanity checks:
+    if( is.null(.GlobalEnv$.plotting.params$.fromfile.dataset) ||
+        !inherits(.GlobalEnv$.plotting.params$.fromfile.dataset, "data.frame") ||
+        ncol(.GlobalEnv$.plotting.params$.fromfile.dataset) < 1 ||
+        nrow(.GlobalEnv$.plotting.params$.fromfile.dataset) < 3 )
+    {
+      showModal(modalDialog(title="AdhereR error!",
+                            paste0("Cannot load the selected file '",input$dataset_from_file_filename$name[1], "'!\nPlease make sure you selected a valid file with at least 3 columns and 1 row..."),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return;
+    }
+
+    # Checks:
+    .validate.and.load.dataset(.GlobalEnv$.plotting.params$.fromfile.dataset,
+                               get.colnames.fnc=function(d) names(d),
+                               get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
+                               get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
+                               ID.colname=input$dataset_from_file_patient_id,
+                               event.date.colname=input$dataset_from_file_event_date,
+                               event.duration.colname=input$dataset_from_file_event_duration,
+                               event.daily.dose.colname=input$dataset_from_file_daily_dose,
+                               medication.class.colname=input$dataset_from_file_medication_class,
+                               date.format=input$dataset_from_file_event_format);
   })
 
 }
