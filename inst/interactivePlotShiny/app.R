@@ -1880,6 +1880,13 @@ server <- function(input, output, session) {
   # For a given dataset from memory, list the columns and upate the selections:
   observeEvent(input$dataset_from_memory,
   {
+    # Disconnect any pre-existing database connections:
+    if( !is.null(.GlobalEnv$.plotting.params.db.connection) )
+    {
+      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params.db.connection), silent=TRUE);
+      .GlobalEnv$.plotting.params.db.connection <- NULL;
+    }
+
     # Set the data.frame:
     .GlobalEnv$.plotting.params$.inmemory.dataset <- NULL;
     if( input$dataset_from_memory == "none" )
@@ -2259,6 +2266,13 @@ server <- function(input, output, session) {
   # For a given dataset from file, load it, list the columns and upate the selections:
   observeEvent(input$dataset_from_file_filename,
   {
+    # Disconnect any pre-existing database connections:
+    if( !is.null(.GlobalEnv$.plotting.params.db.connection) )
+    {
+      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params.db.connection), silent=TRUE);
+      .GlobalEnv$.plotting.params.db.connection <- NULL;
+    }
+
     if( is.null(input$dataset_from_file_filename) || nrow(input$dataset_from_file_filename) < 1 )
     {
       # No file loaded, nothing to do:
@@ -2597,6 +2611,13 @@ server <- function(input, output, session) {
   # Connect to the SQL database and fecth tables:
   observeEvent(input$dataset_from_sql_button_connect,
   {
+    # Disconnect any pre-existing database connections:
+    if( !is.null(.GlobalEnv$.plotting.params.db.connection) )
+    {
+      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params.db.connection), silent=TRUE);
+      .GlobalEnv$.plotting.params.db.connection <- NULL;
+    }
+
     if( input$dataset_from_sql_server_type == "MySQL/MariaDB" )
     {
       d <- NULL;
@@ -2657,7 +2678,18 @@ server <- function(input, output, session) {
           try(x <- DBI::dbGetQuery(d, paste0("SHOW COLUMNS FROM ",s,";")), silent=TRUE);
           if( !is.null(x) && inherits(x, "data.frame") )
           {
+            n <- NULL;
+            try(n <- DBI::dbGetQuery(d, paste0("SELECT COUNT(*) FROM ",s,";")), silent=TRUE);
+            if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
+            {
+              # Error retreiving the number of rows:
+              n <- NA;
+            } else
+            {
+              n <- as.numeric(n[1,1]);
+            }
             return (data.frame("table"=s,
+                               "nrow"=n,
                                "column"=x$Field,
                                "type"=x$Type,
                                "null"=x$Null,
@@ -2667,7 +2699,6 @@ server <- function(input, output, session) {
             return (NULL);
           }
         }));
-      print(d.tables.columns);
 
       removeModal();
 
@@ -2686,14 +2717,36 @@ server <- function(input, output, session) {
                                 HTML(paste0("Successfully connected to SQL server <i>",
                                      if( input$dataset_from_sql_server_host == "[none]" ) "localhost" else input$dataset_from_sql_server_host, "</i>",
                                      if( input$dataset_from_sql_server_port > 0 ) paste0(":",input$dataset_from_sql_server_port)," and fetched data from ",
-                                     length(unique(d.tables.columns$table))," tables.<br/>We list below, for each <b style='color: red'>table</b>, the <b style='color: blue'>columns</b> [with their <span style='color: green'>types</span> and other <i>relevant info</i>]:<br/>",
+                                     length(unique(d.tables.columns$table))," tables.<br/><br/><hl/>",
+                                     "Please note that, currently, this interactive Shiny User Interface <b style='color: red'>requires that all the data</b> (namely, patient ID, event date and duration,(and possibly dosage and type)) are in <b style='color: red'>ONE TABLE or VIEW</b>!<br/>",
+                                     "If this is not the case, please create a <i>temporary table</i> or a <i>view</i> and reconnect to the database.<br/>",
+                                     "For example, using the <code>MySQL</code> database described in the vignette <i>Using AdhereR with various database technologies for processing very large datasets</i>, named <code>med_events</code> and consisting of 4 tables containing information about the patients (<code>patients</code>), the events (<code>event_info</code> and <code>event_date</code>), and the connections between the two (<code>event_patients</code>), we can create a <i>view</i> named <code>all_info_view</code> with the <code>SQL</code> commands:<br/>",
+"<pre>
+CREATE VIEW `all_info_view` AS
+SELECT event_date.id,
+       event_date.date,
+       event_info.category,
+       event_info.duration,
+       event_info.perday,
+       event_patients.patient_id,
+       patients.sex
+FROM event_date
+  JOIN event_info
+  ON event_info.id = event_date.id
+    JOIN event_patients
+    ON event_patients.id = event_info.id
+      JOIN patients
+      ON patients.id = event_patients.patient_id;</pre>",
+                                     "<hl/><br><br>",
+                                     "We list below, for each <b style='color: DarkBlue'>table</b>, the <b style='color: blue'>columns</b> [with their <span style='color: green'>types</span> and other <i>relevant info</i>]:<br/>",
                                      "<ul>",
                                      paste0(vapply(unique(d.tables.columns$table), function(table_name)
                                      {
                                        s <- which(d.tables.columns$table == table_name);
                                        if( length(s) > 0 )
                                        {
-                                         paste0("<li><b style='color: red'>", table_name, "</b>",
+                                         paste0("<li><b style='color: DarkBlue'>", table_name, "</b>",
+                                                ": ", if( is.na(d.tables.columns$nrow[s[1]]) ) "<span style='color: red'>ERROR RETREIVING NUMBER OF ROWS</span>" else paste0("with ", d.tables.columns$nrow[s[1]]," row(s)"),
                                                 "<ul>",
                                                 paste0(vapply(s, function(i) paste0("<li><b style='color: blue'>", d.tables.columns$column[i], "</b>",
                                                                                     " [<span style='color: green'>", d.tables.columns$type[i], "</span>",
@@ -2709,8 +2762,15 @@ server <- function(input, output, session) {
                                      ))),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
 
-      # TEMPORARY:
-      if( !is.null(d) ) DBI::dbDisconnect(d);
+
+      # Set it as the SQL databse and update columns:
+      if( !is.null(d) )
+      {
+        # Update columns
+        #updateSelectInput(session, "dataset_from_file_patient_id",     choices=x, selected=head(x,1));
+
+        .GlobalEnv$.plotting.params$.db.connection <- d;
+      }
     }
   })
 }
