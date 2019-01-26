@@ -1504,6 +1504,18 @@ server <- function(input, output, session) {
 
       rv$toggle.me; # make the plot care about forced updated to the UI (for example, when chainging the dataset)
 
+      if( is.null(.GlobalEnv$.plotting.params$data) )
+      {
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR..."),
+                                div(span(code("plot_interactive_cma()"),
+                                         span("was called without a dataset!\nPlease use the ")),
+                                  span(icon("hdd",lib="glyphicon")),
+                                  span("Data"),
+                                  span(" tab to select a datesource!"), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return (invisible(NULL));
+      }
+
       # Depeding on the CMA class we might do things differently:
       msgs <- ""; # the output messages
       res <- NULL; # the result of plotting
@@ -1954,7 +1966,11 @@ server <- function(input, output, session) {
           !is.null(.GlobalEnv$.plotting.params$data) &&
           inherits(.GlobalEnv$.plotting.params$data, "data.frame"))
       {
-        x <- c("<<'data' argument to plot_interactive_cma() call>>", x);
+        if( .GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments )
+        {
+          # Add the function argument as well:
+          x <- c("<<'data' argument to plot_interactive_cma() call>>", x);
+        }
       }
       updateSelectInput(session, "dataset_from_memory", choices=x, selected=head(x,1));
     }
@@ -2017,6 +2033,7 @@ server <- function(input, output, session) {
     # Optional columns (possibly used by CMA5+):
     updateSelectInput(session, "dataset_from_memory_medication_class", choices=c("[not defined]", x), selected="[not defined]");
     updateSelectInput(session, "dataset_from_memory_daily_dose",       choices=c("[not defined]", x), selected="[not defined]");
+
   })
 
   # Display a data.frame as a nice HTML table:
@@ -2713,7 +2730,7 @@ server <- function(input, output, session) {
      # Let the world know this:
     .GlobalEnv$.plotting.params$.dataset.type <- "from file";
     .GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments <- FALSE;
-    .GlobalEnv$.plotting.params$.dataset.name <- input$dataset_from_file_filename$datapath[1];
+    .GlobalEnv$.plotting.params$.dataset.name <- input$dataset_from_file_filename$name[1];
   })
 
   # Connect to the SQL database and fecth tables:
@@ -2995,7 +3012,8 @@ server <- function(input, output, session) {
      # Let the world know this:
     .GlobalEnv$.plotting.params$.dataset.type <- "SQL database";
     .GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments <- FALSE;
-    .GlobalEnv$.plotting.params$.dataset.name <- paste0({if( input$dataset_from_sql_server_host == "[none]" ) "localhost" else input$dataset_from_sql_server_host},
+    .GlobalEnv$.plotting.params$.dataset.name <- paste0({if( input$dataset_from_sql_username != "" ) paste0(input$dataset_from_sql_username," @ ")},
+                                                        {if( input$dataset_from_sql_server_host == "[none]" ) "localhost" else input$dataset_from_sql_server_host},
                                                         {if( input$dataset_from_sql_server_port > 0 ) paste0(":",input$dataset_from_sql_server_port)},
                                                         " :: ",.GlobalEnv$.plotting.params$.db.connection.selected.table);
   })
@@ -3004,17 +3022,37 @@ server <- function(input, output, session) {
   # Show info about the currently used dataset:
   observeEvent(input$about_dataset_button,
   {
-    showModal(modalDialog(title="AdhereR: info over the current dataset...",
+    showModal(modalDialog(title=div(icon("hdd", lib="glyphicon"), "AdhereR: info over the current dataset..."),
                           div(style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;",
                               HTML(paste0("The dataset currently used ",
                                      {if(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments)
                                       {
-                                        paste0("was given as the <code>data</code> argument to the <code>plot_interactive_cma()</code> function called by the user.<br/> Therefore, we cannot know its name outside the function call (and there might not be such a \"name\" as the data might have been created on-the-fly in the function call), and instead we identify it as the <b style='color:darkblue'><<'data' argument to plot_interactive_cma() call>></b>.");
+                                        paste0("was given as the <code>data</code> argument to the <code>plot_interactive_cma()</code> function called by the user.<br/>",
+                                               "Therefore, we cannot know its name outside the function call (and there might not be such a \"name\" as the data might have been created on-the-fly in the function call), and instead we identify it as the <b style='color:darkblue'><<'data' argument to plot_interactive_cma() call>></b> of class <i>", class(.GlobalEnv$.plotting.params$data), "</i>."
+                                               )
                                       } else
                                       {
-                                        "was manualy defined as "
+                                        paste0("was manualy defined as ",
+                                               switch(.GlobalEnv$.plotting.params$.dataset.type,
+                                                      "in memory"=paste0("an object of class <i>data.frame</i> (or derived from it, such a <i>data.table</i>) that was already <b>in-memory</b> under the name <b style='color:darkblue'>",.GlobalEnv$.plotting.params$.dataset.name,"</b>"),
+                                                      "from file"=paste0("a <i>data.frame</i> object loaded <b>from the file</b> <b style='color:darkblue'>",.GlobalEnv$.plotting.params$.dataset.name,"</b>"),
+                                                      "SQL database"=paste0("a connection to the <b>SQL database</b> <b style='color:darkblue'>",.GlobalEnv$.plotting.params$.dataset.name,"</b>")
+                                                     ),
+                                               ".")
                                       }
-                                     }))),
+                                     },
+                                     "<br/><hr/>",
+                                     "These data has <b>", length(.GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)), " columns</b>, ",
+                                     "and contains info for <b>", length(unique(.GlobalEnv$.plotting.params$get.patients.fnc(.GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname))), " patients</b>.<br/>",
+                                     "The relevant information is distributed as:</br>",
+                                     "<ul>",
+                                     "<li>the <i>patient IDs</i> are in column <b>", .GlobalEnv$.plotting.params$ID.colname, "</b></li>",
+                                     "<li>the event <i>dates</i> are in column <b>", .GlobalEnv$.plotting.params$event.date.colname, "</b></li>",
+                                     "<li>the event <i>durations</i> are in column <b>", .GlobalEnv$.plotting.params$event.duration.colname, "</b></li>",
+                                     {if(!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)) paste0("<li>the <i>doses</i> are in column <b>", .GlobalEnv$.plotting.params$event.daily.dose.colname, "</b></li>")},
+                                     {if(!is.na(.GlobalEnv$.plotting.params$medication.class.colname)) paste0("<li>the <i>treatment types</i> are in column <b>", .GlobalEnv$.plotting.params$medication.class.colname, "</b></li>")},
+                                     "</ul>"
+                                     ))),
                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
   })
 }

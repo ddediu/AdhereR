@@ -9563,6 +9563,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     cma.class <- "simple";
   }
 
+  all.IDs <- NULL;
+
   # Preconditions:
   if( !is.null(data) )
   {
@@ -9618,14 +9620,14 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
       stop(paste0("Column medication.class.colname='",medication.class.colname,"' must appear in the 'data'!\n"));
       return (NULL);
     }
+
+    # Check the requested ID (if any):
+    if( is.null(ID) || is.na(ID) || !(ID %in% all.IDs) ) ID <- all.IDs[1];
   } else
   {
-    stop("The 'data' cannot be empty!\n");
-    return (NULL);
+    #stop("The 'data' cannot be empty!\n");
+    #return (NULL);
   }
-
-  # Check the requested ID (if any):
-  if( is.null(ID) || is.na(ID) || !(ID %in% all.IDs) ) ID <- all.IDs[1];
 
   # The function encapsulating the plotting:
   .plotting.fnc <- function(data=NULL, # the data used to compute the CMA on
