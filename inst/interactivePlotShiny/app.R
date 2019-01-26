@@ -73,6 +73,12 @@ ui <- fluidPage(
                        tabPanel("Params", value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
                                 wellPanel(id = "tPanel", style = "overflow:scroll; max-height: 90vh;",
 
+                                          # Dataset info ----
+                                          div(title="Info about the currently used dataset...",
+                                              actionButton(inputId="about_dataset_button",
+                                                           label=strong("Dataset info..."),
+                                                           icon=icon("hdd", lib="glyphicon"),
+                                                           style="color: #3498db; border: none; background: none;")),
 
                                           # General settings ----
                                           div(id='general_settings_section', style="cursor: pointer;",
@@ -1388,9 +1394,9 @@ server <- function(input, output, session) {
   # Reactive value to allow UI updating on dataset changes:
   rv <- reactiveValues(toggle.me = FALSE);
   # Show/hide UI elements based on various conditions:
-  output$is_dose_defined <- reactive({TRUE});
+  output$is_dose_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
   outputOptions(output, "is_dose_defined", suspendWhenHidden = FALSE);
-  output$is_treat_class_defined <- reactive({TRUE});
+  output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
   outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
   # The plotting function:
@@ -2327,6 +2333,22 @@ server <- function(input, output, session) {
                                event.daily.dose.colname=input$dataset_from_memory_daily_dose,
                                medication.class.colname=input$dataset_from_memory_medication_class,
                                date.format=input$dataset_from_memory_event_format);
+
+     # Let the world know this:
+    .GlobalEnv$.plotting.params$.dataset.type <- "in memory";
+    .GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments <- FALSE;
+    if( input$dataset_from_memory == "none" )
+    {
+      # How did we get here???
+      return (invisible(NULL));
+    } else if( input$dataset_from_memory == "<<'data' argument to plot_interactive_cma() call>>" )
+    {
+      # The special value pointing to the argument to plot_interactive_cma():
+      .GlobalEnv$.plotting.params$.dataset.name <- NA;
+    } else
+    {
+      .GlobalEnv$.plotting.params$.dataset.name <- input$dataset_from_memory;
+    }
   })
 
   # Force updating the Shiny UI using the new data:
@@ -2687,6 +2709,11 @@ server <- function(input, output, session) {
                                event.daily.dose.colname=input$dataset_from_file_daily_dose,
                                medication.class.colname=input$dataset_from_file_medication_class,
                                date.format=input$dataset_from_file_event_format);
+
+     # Let the world know this:
+    .GlobalEnv$.plotting.params$.dataset.type <- "from file";
+    .GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments <- FALSE;
+    .GlobalEnv$.plotting.params$.dataset.name <- input$dataset_from_file_filename$datapath[1];
   })
 
   # Connect to the SQL database and fecth tables:
@@ -2964,6 +2991,31 @@ server <- function(input, output, session) {
                                event.daily.dose.colname=input$dataset_from_sql_daily_dose,
                                medication.class.colname=input$dataset_from_sql_medication_class,
                                date.format="%Y-%m-%d");
+
+     # Let the world know this:
+    .GlobalEnv$.plotting.params$.dataset.type <- "SQL database";
+    .GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments <- FALSE;
+    .GlobalEnv$.plotting.params$.dataset.name <- paste0({if( input$dataset_from_sql_server_host == "[none]" ) "localhost" else input$dataset_from_sql_server_host},
+                                                        {if( input$dataset_from_sql_server_port > 0 ) paste0(":",input$dataset_from_sql_server_port)},
+                                                        " :: ",.GlobalEnv$.plotting.params$.db.connection.selected.table);
+  })
+
+
+  # Show info about the currently used dataset:
+  observeEvent(input$about_dataset_button,
+  {
+    showModal(modalDialog(title="AdhereR: info over the current dataset...",
+                          div(style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;",
+                              HTML(paste0("The dataset currently used ",
+                                     {if(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments)
+                                      {
+                                        paste0("was given as the <code>data</code> argument to the <code>plot_interactive_cma()</code> function called by the user.<br/> Therefore, we cannot know its name outside the function call (and there might not be such a \"name\" as the data might have been created on-the-fly in the function call), and instead we identify it as the <b style='color:darkblue'><<'data' argument to plot_interactive_cma() call>></b>.");
+                                      } else
+                                      {
+                                        "was manualy defined as "
+                                      }
+                                     }))),
+                          footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
   })
 }
 
