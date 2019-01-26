@@ -275,16 +275,22 @@ ui <- fluidPage(
 
                                             shinyjs::hidden(div(id="episodes_contents",
                                                                 # Does treat. change start new episode?
-                                                                div(title='Does changing the treatment type trigger a new episode?',
-                                                                    checkboxInput(inputId="medication_change_means_new_treatment_episode",
-                                                                                  label="Treat. change starts new episode?",
-                                                                                  value=FALSE)),
+                                                                conditionalPanel(
+                                                                  condition="output.is_treat_class_defined",
+                                                                  div(title='Does changing the treatment type trigger a new episode?',
+                                                                      checkboxInput(inputId="medication_change_means_new_treatment_episode",
+                                                                                    label="Treat. change starts new episode?",
+                                                                                    value=FALSE))
+                                                                ),
 
                                                                 # Does dosage change start new episode?
-                                                                div(title='Does changing the dose trigger a new episode?',
-                                                                    checkboxInput(inputId="dosage_change_means_new_treatment_episode",
-                                                                                  label="Dose change starts new episode?",
-                                                                                  value=FALSE)),
+                                                                conditionalPanel(
+                                                                  condition="output.is_dose_defined",
+                                                                  div(title='Does changing the dose trigger a new episode?',
+                                                                      checkboxInput(inputId="dosage_change_means_new_treatment_episode",
+                                                                                    label="Dose change starts new episode?",
+                                                                                    value=FALSE))
+                                                                ),
 
                                                                 # Max. permis. gap duration unit
                                                                 div(title='The unit of the maximum permissible gap after which a new episode is triggered: either absolute ("days", "weeks", "months" or "years") or relative ("percent")',
@@ -483,62 +489,66 @@ ui <- fluidPage(
 
 
                                           # Dose ----
-                                          div(id='dose_section', style="cursor: pointer;",
-                                              span(title='Show dose', h4("Show dose"), style="color:DarkBlue"),
-                                              div(title='Click to unfold...', id="dose_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+                                          conditionalPanel(
+                                            condition="output.is_dose_defined",
 
-                                          shinyjs::hidden(div(id="dose_contents",
-                                                              # Print dose?
-                                                              div(title='Print the dosage (i.e., the actual numeric values)?',
-                                                                  checkboxInput(inputId="print_dose",
-                                                                                label="Print dose?",
-                                                                                value=FALSE)),
+                                            div(id='dose_section', style="cursor: pointer;",
+                                                span(title='Show dose', h4("Show dose"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="dose_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                                              # Print dose attributes
-                                                              conditionalPanel(
-                                                                condition="input.print_dose",
-
-                                                                div(title='Relative font size',
-                                                                    numericInput(inputId="cex_dose",
-                                                                                 label="Font size",
-                                                                                 value=0.75, min=0.0, max=NA, step=0.25)),
-
-                                                                div(title='Dose text outline color',
-                                                                    colourpicker::colourInput(inputId="print_dose_outline_col",
-                                                                                              label="Outline color",
-                                                                                              value="white")),
-
-                                                                div(title='Print the dose centered on the event?',
-                                                                    checkboxInput(inputId="print_dose_centered",
-                                                                                  label="Print centered?",
+                                            shinyjs::hidden(div(id="dose_contents",
+                                                                # Print dose?
+                                                                div(title='Print the dosage (i.e., the actual numeric values)?',
+                                                                    checkboxInput(inputId="print_dose",
+                                                                                  label="Print dose?",
                                                                                   value=FALSE)),
 
+                                                                # Print dose attributes
+                                                                conditionalPanel(
+                                                                  condition="input.print_dose",
+
+                                                                  div(title='Relative font size',
+                                                                      numericInput(inputId="cex_dose",
+                                                                                   label="Font size",
+                                                                                   value=0.75, min=0.0, max=NA, step=0.25)),
+
+                                                                  div(title='Dose text outline color',
+                                                                      colourpicker::colourInput(inputId="print_dose_outline_col",
+                                                                                                label="Outline color",
+                                                                                                value="white")),
+
+                                                                  div(title='Print the dose centered on the event?',
+                                                                      checkboxInput(inputId="print_dose_centered",
+                                                                                    label="Print centered?",
+                                                                                    value=FALSE)),
+
+                                                                  hr()
+                                                                ),
+
+                                                                # Plot dose?
+                                                                div(title='Represent the dose as event line width?',
+                                                                    checkboxInput(inputId="plot_dose",
+                                                                                  label="Dose as line width?",
+                                                                                  value=FALSE)),
+
+                                                                # Plot dose attributes
+                                                                conditionalPanel(
+                                                                  condition="input.plot_dose",
+
+                                                                  div(title='What line width corresponds to the maximum dose?',
+                                                                      numericInput(inputId="lwd_event_max_dose",
+                                                                                   label="Max dose width",
+                                                                                   value=8, min=1, max=NA, step=1)),
+
+                                                                  div(title='Consider maximum dose globally or per each medication class separately?',
+                                                                      checkboxInput(inputId="plot_dose_lwd_across_medication_classes",
+                                                                                    label="Global max dose?",
+                                                                                    value=FALSE))
+                                                                ),
+
                                                                 hr()
-                                                              ),
-
-                                                              # Plot dose?
-                                                              div(title='Represent the dose as event line width?',
-                                                                  checkboxInput(inputId="plot_dose",
-                                                                                label="Dose as line width?",
-                                                                                value=FALSE)),
-
-                                                              # Plot dose attributes
-                                                              conditionalPanel(
-                                                                condition="input.plot_dose",
-
-                                                                div(title='What line width corresponds to the maximum dose?',
-                                                                    numericInput(inputId="lwd_event_max_dose",
-                                                                                 label="Max dose width",
-                                                                                 value=8, min=1, max=NA, step=1)),
-
-                                                                div(title='Consider maximum dose globally or per each medication class separately?',
-                                                                    checkboxInput(inputId="plot_dose_lwd_across_medication_classes",
-                                                                                  label="Global max dose?",
-                                                                                  value=FALSE))
-                                                              ),
-
-                                                              hr()
-                                          )),
+                                            ))
+                                          ),
 
 
                                           # Legend ----
@@ -628,11 +638,14 @@ ui <- fluidPage(
                                                                             value="drug")),
 
                                                               # The colour palette for treatment types:
-                                                              div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on category order.',
-                                                                  selectInput(inputId="col_cats",
-                                                                              label="Treatment palette",
-                                                                              choices=c("rainbow", "heat.colors", "terrain.colors", "topo.colors", "cm.colors", "magma", "inferno", "plasma", "viridis", "cividis"),
-                                                                              selected="rainbow")),
+                                                              conditionalPanel(
+                                                                condition="output.is_treat_class_defined",
+                                                                div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on category order.',
+                                                                    selectInput(inputId="col_cats",
+                                                                                label="Treatment palette",
+                                                                                choices=c("rainbow", "heat.colors", "terrain.colors", "topo.colors", "cm.colors", "magma", "inferno", "plasma", "viridis", "cividis"),
+                                                                                selected="rainbow"))
+                                                              ),
 
                                                               hr(),
 
@@ -1141,9 +1154,9 @@ ui <- fluidPage(
                                             condition = "(input.datasource_type == 'SQL database')",
 
                                             # Obligatory stuff:
-                                            div(title=HTML('Required: connection to SQL database (please note that the credentials are <b>not</b> stored!'),
+                                            div(title=HTML('Required: connection to SQL database (please note that the credentials are <b>not</b> stored! What RDBMS/SQL server type/vendor/solution to connect to?'),
                                                 selectInput(inputId="dataset_from_sql_server_type",
-                                                            label="Which SQL server",
+                                                            label="What RDBMS solution?",
                                                             choices=c("MySQL/MariaDB"),
                                                             selected="MySQL/MariaDB")),
 
@@ -1179,7 +1192,19 @@ ui <- fluidPage(
                                                              label=strong("Connect!"),
                                                              icon=icon("transfer", lib="glyphicon"),
                                                              style="color:DarkBlue; border-color:DarkBlue;"),
-                                                style="float: center;"),
+                                                style="padding-bottom: 10px;"),
+
+                                            div(title='Disconnect from datadase (not really necessary, as the disconnection is automatic when closing the application, but nice to do))',
+                                                actionButton(inputId="dataset_from_sql_button_disconnect",
+                                                             label=strong("Disconnect!"),
+                                                             icon=icon("ban-circle", lib="glyphicon"),
+                                                             style="color:red; border-color:red;"),
+                                                style="padding-bottom: 20px;"),
+
+                                            div(title='Peek at database!',
+                                                actionButton(inputId="dataset_from_sql_button_peek",
+                                                             label=strong("Peek at database..."),
+                                                             icon=icon("eye-open", lib="glyphicon"))),
 
                                             hr(),
 
@@ -1362,6 +1387,11 @@ server <- function(input, output, session) {
 
   # Reactive value to allow UI updating on dataset changes:
   rv <- reactiveValues(toggle.me = FALSE);
+  # Show/hide UI elements based on various conditions:
+  output$is_dose_defined <- reactive({TRUE});
+  outputOptions(output, "is_dose_defined", suspendWhenHidden = FALSE);
+  output$is_treat_class_defined <- reactive({TRUE});
+  outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
   # The plotting function:
   .renderPlot <- function()
@@ -2306,6 +2336,10 @@ server <- function(input, output, session) {
     updateSelectInput(session, "cma_to_compute", selected=.GlobalEnv$.plotting.params$cma.class);
     updateSelectInput(session, "patient", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$ID);
 
+    #if( is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname) ) shinyjs::hide(id="dose_is_defined") else shinyjs::show(id="dose_is_defined");
+    output$is_dose_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
+    output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
+
     rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not change any UI elements)
   }
 
@@ -2758,67 +2792,102 @@ server <- function(input, output, session) {
         return (invisible(NULL));
       }
 
-      # Display this info:
-      showModal(modalDialog(title="AdhereR SQL database connection...",
-                            div(style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;",
-                                HTML(paste0("Successfully connected to SQL server <i>",
-                                     if( input$dataset_from_sql_server_host == "[none]" ) "localhost" else input$dataset_from_sql_server_host, "</i>",
-                                     if( input$dataset_from_sql_server_port > 0 ) paste0(":",input$dataset_from_sql_server_port)," and fetched data from ",
-                                     length(unique(d.tables.columns$table))," tables.<br/><hl/><br/>",
-                                     "Please note that, currently, this interactive Shiny User Interface <b style='color: red'>requires that all the data</b> (namely, patient ID, event date and duration,(and possibly dosage and type)) are in <b style='color: red'>ONE TABLE or VIEW</b>! ",
-                                     "If this is not the case, please create a <i>temporary table</i> or a <i>view</i> and reconnect to the database. ",
-                                     "(Please see the vignette for more details.) ",
-#                                      "For example, using the <code>MySQL</code> database described in the vignette <i>Using AdhereR with various database technologies for processing very large datasets</i>, named <code>med_events</code> and consisting of 4 tables containing information about the patients (<code>patients</code>), the events (<code>event_info</code> and <code>event_date</code>), and the connections between the two (<code>event_patients</code>), we can create a <i>view</i> named <code>all_info_view</code> with the <code>SQL</code> commands:<br/>",
-# "<pre>
-# CREATE VIEW `all_info_view` AS
-# SELECT event_date.id,
-#        event_date.date,
-#        event_info.category,
-#        event_info.duration,
-#        event_info.perday,
-#        event_patients.patient_id,
-#        patients.sex
-# FROM event_date
-#   JOIN event_info
-#   ON event_info.id = event_date.id
-#     JOIN event_patients
-#     ON event_patients.id = event_info.id
-#       JOIN patients
-#       ON patients.id = event_patients.patient_id;</pre>",
-                                     "<br/><hl/><br/>",
-                                     "We list below, for each <b style='color: DarkBlue'>table</b>, the <b style='color: blue'>columns</b> [with their <span style='color: green'>types</span> and other <i>relevant info</i>]:<br/>",
-                                     "<ul>",
-                                     paste0(vapply(unique(d.tables.columns$table), function(table_name)
-                                     {
-                                       s <- which(d.tables.columns$table == table_name);
-                                       if( length(s) > 0 )
-                                       {
-                                         paste0("<li><b style='color: DarkBlue'>", table_name, "</b>",
-                                                ": ", if( is.na(d.tables.columns$nrow[s[1]]) ) "<span style='color: red'>ERROR RETREIVING NUMBER OF ROWS</span>" else paste0("with ", d.tables.columns$nrow[s[1]]," row(s)"),
-                                                "<ul>",
-                                                paste0(vapply(s, function(i) paste0("<li><b style='color: blue'>", d.tables.columns$column[i], "</b>",
-                                                                                    " [<span style='color: green'>", d.tables.columns$type[i], "</span>",
-                                                                                    if( d.tables.columns$key[i] == "PRI" ) ", <i>primary key</i>",
-                                                                                    "]",
-                                                                                    "</li>"),
-                                                              character(1)), collapse="\n"),
-                                                "</ul>",
-                                                "</li>")
-                                       }
-                                     }, character(1)), collapse="\n"),
-                                     "</ul>"
-                                     ))),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-
-
       # Set it as the current SQL databse:
       .GlobalEnv$.plotting.params$.db.connection.tables <- d.tables.columns;
       .GlobalEnv$.plotting.params$.db.connection <- d;
 
       # Update the list of tables/views:
       updateSelectInput(session, "dataset_from_sql_table", choices=unique(d.tables.columns$table), selected=head(unique(d.tables.columns$table),1));
+
+      # Show the info:
+      .show.db.info();
     }
   })
+
+  # Disconnect from database:
+  observeEvent(input$dataset_from_sql_button_disconnect,
+  {
+    if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
+    {
+      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
+      .GlobalEnv$.plotting.params$.db.connection <- NULL;
+    }
+  })
+
+  # Peek at the database:
+  observeEvent(input$dataset_from_sql_button_peek,
+  {
+     .show.db.info();
+  })
+
+  # Show database info:
+  .show.db.info <- function()
+  {
+    if( is.null(.GlobalEnv$.plotting.params$.db.connection.tables) ||
+        !inherits(.GlobalEnv$.plotting.params$.db.connection.tables, "data.frame") ||
+        nrow(.GlobalEnv$.plotting.params$.db.connection.tables) < 1 ||
+        is.null(.GlobalEnv$.plotting.params$.db.connection) ||
+        !DBI::dbIsValid(.GlobalEnv$.plotting.params$.db.connection) )
+    {
+      # Some error occured!
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("Error accessing the database!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return (invisible(NULL));
+    }
+
+    # Display the info:
+    showModal(modalDialog(title="AdhereR SQL database connection...",
+                          div(style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;",
+                              HTML(paste0("Successfully connected to SQL server <i>",
+                                          if( input$dataset_from_sql_server_host == "[none]" ) "localhost" else input$dataset_from_sql_server_host, "</i>",
+                                          if( input$dataset_from_sql_server_port > 0 ) paste0(":",input$dataset_from_sql_server_port)," and fetched data from ",
+                                          length(unique(.GlobalEnv$.plotting.params$.db.connection.tables$table))," tables.<br/><hl/><br/>",
+                                          "Please note that, currently, this interactive Shiny User Interface <b style='color: red'>requires that all the data</b> (namely, patient ID, event date and duration,(and possibly dosage and type)) are in <b style='color: red'>ONE TABLE or VIEW</b>! ",
+                                          "If this is not the case, please create a <i>temporary table</i> or a <i>view</i> and reconnect to the database. ",
+                                          "(Please see the vignette for more details.) ",
+                                          #                                      "For example, using the <code>MySQL</code> database described in the vignette <i>Using AdhereR with various database technologies for processing very large datasets</i>, named <code>med_events</code> and consisting of 4 tables containing information about the patients (<code>patients</code>), the events (<code>event_info</code> and <code>event_date</code>), and the connections between the two (<code>event_patients</code>), we can create a <i>view</i> named <code>all_info_view</code> with the <code>SQL</code> commands:<br/>",
+                                          # "<pre>
+                                          # CREATE VIEW `all_info_view` AS
+                                          # SELECT event_date.id,
+                                          #        event_date.date,
+                                          #        event_info.category,
+                                          #        event_info.duration,
+                                          #        event_info.perday,
+                                          #        event_patients.patient_id,
+                                          #        patients.sex
+                                          # FROM event_date
+                                          #   JOIN event_info
+                                          #   ON event_info.id = event_date.id
+                                          #     JOIN event_patients
+                                          #     ON event_patients.id = event_info.id
+                                          #       JOIN patients
+                                          #       ON patients.id = event_patients.patient_id;</pre>",
+                                          "<br/><hl/><br/>",
+                                          "We list below, for each <b style='color: DarkBlue'>table</b>, the <b style='color: blue'>columns</b> [with their <span style='color: green'>types</span> and other <i>relevant info</i>]:<br/>",
+                                          "<ul>",
+                                          paste0(vapply(unique(.GlobalEnv$.plotting.params$.db.connection.tables$table), function(table_name)
+                                          {
+                                            s <- which(.GlobalEnv$.plotting.params$.db.connection.tables$table == table_name);
+                                            if( length(s) > 0 )
+                                            {
+                                              paste0("<li><b style='color: DarkBlue'>", table_name, "</b>",
+                                                     ": ", if( is.na(.GlobalEnv$.plotting.params$.db.connection.tables$nrow[s[1]]) ) "<span style='color: red'>ERROR RETREIVING NUMBER OF ROWS</span>" else paste0("with ", .GlobalEnv$.plotting.params$.db.connection.tables$nrow[s[1]]," row(s)"),
+                                                     "<ul>",
+                                                     paste0(vapply(s, function(i) paste0("<li><b style='color: blue'>", .GlobalEnv$.plotting.params$.db.connection.tables$column[i], "</b>",
+                                                                                         " [<span style='color: green'>", .GlobalEnv$.plotting.params$.db.connection.tables$type[i], "</span>",
+                                                                                         if( .GlobalEnv$.plotting.params$.db.connection.tables$key[i] == "PRI" ) ", <i>primary key</i>",
+                                                                                         "]",
+                                                                                         "</li>"),
+                                                                   character(1)), collapse="\n"),
+                                                     "</ul>",
+                                                     "</li>")
+                                            }
+                                          }, character(1)), collapse="\n"),
+                                          "</ul>"
+                              ))),
+                          footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+  }
 
 
   # Update columns depending on the selected table:
@@ -2868,23 +2937,26 @@ server <- function(input, output, session) {
     .validate.and.load.dataset(.GlobalEnv$.plotting.params$.db.connection,
                                get.colnames.fnc=function(d)
                                  {
+                                   if( is.null(d) || !DBI::dbIsValid(d) ){ warning("Connection to database lost!"); return (NULL); }
                                    x <- NULL;
                                    try(x <- DBI::dbGetQuery(d, paste0("SHOW COLUMNS FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,";")), silent=TRUE);
-                                   if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (as.character(x$Field)) else return (NULL);
+                                   if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (as.character(x$Field)) else { warning("Cannot fetch DB column names!"); return (NULL); }
                                  },
                                get.patients.fnc=function(d, idcol)
                                  {
+                                   if( is.null(d) || !DBI::dbIsValid(d) ){ warning("Connection to database lost!"); return (NULL); }
                                    x <- NULL;
                                    try(x <- DBI::dbGetQuery(d, paste0("SELECT DISTINCT ",idcol," FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,";")), silent=TRUE);
-                                   if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (x[,1]) else return (NULL);
+                                   if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (x[,1]) else { warning("Cannot fetch patients from DB!"); return (NULL); }
                                  },
                                get.data.for.patients.fnc=function(patientid, d, idcol)
                                  {
+                                   if( is.null(d) || !DBI::dbIsValid(d) ){ warning("Connection to database lost!"); return (NULL); }
                                    x <- NULL;
                                    try(x <- DBI::dbGetQuery(d, paste0("SELECT * FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,
                                                                       " WHERE ",idcol,
                                                                       " IN (",paste0(patientid,collapse=","),");")), silent=TRUE);
-                                   if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (x) else return (NULL);
+                                   if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (x) else { warning("Cannot fetch data for patient(s) from DB!"); return (NULL); }
                                  },
                                ID.colname=input$dataset_from_sql_patient_id,
                                event.date.colname=input$dataset_from_sql_event_date,
@@ -2893,7 +2965,6 @@ server <- function(input, output, session) {
                                medication.class.colname=input$dataset_from_sql_medication_class,
                                date.format="%Y-%m-%d");
   })
-
 }
 
 
