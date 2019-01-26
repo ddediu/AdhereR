@@ -9871,6 +9871,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       ".plotting.fnc"=.plotting.fnc,
                                       ".inmemory.dataset"=NULL,
                                       ".fromfile.dataset"=NULL,
+                                      ".db.connection.tables"=NULL,
+                                      ".db.connection.selected.table"=NULL,
                                       ".db.connection"=NULL
                                      );
   # make sure they are deleted on exit from shiny:

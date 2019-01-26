@@ -1179,8 +1179,55 @@ ui <- fluidPage(
                                                              label=strong("Connect!"),
                                                              icon=icon("transfer", lib="glyphicon"),
                                                              style="color:DarkBlue; border-color:DarkBlue;"),
+                                                style="float: center;"),
+
+                                            hr(),
+
+                                            div(title=HTML('Required: the table or view to use...'),
+                                                selectInput(inputId="dataset_from_sql_table",
+                                                            label="Which table/view",
+                                                            choices=c("[none]"),
+                                                            selected="[none]")),
+
+                                            selectInput(inputId="dataset_from_sql_patient_id",
+                                                        label="Patient ID column",
+                                                        choices=c("none"),
+                                                        selected="none"),
+
+                                            div(title='Required: select the name of the column containing the event dates (please note the the format is the standard SQL YYYY-MM-DD)',
+                                                selectInput(inputId="dataset_from_sql_event_date",
+                                                            label="Event date column",
+                                                            choices=c("none"),
+                                                            selected="none")),
+
+                                            div(title='Required: select the name of the column containing the event duration (in days)',
+                                                selectInput(inputId="dataset_from_sql_event_duration",
+                                                            label="Event duration column",
+                                                            choices=c("none"),
+                                                            selected="none")),
+
+                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
+                                                selectInput(inputId="dataset_from_sql_daily_dose",
+                                                            label="Daily dose column",
+                                                            choices=c("[not defined]"),
+                                                            selected="[not defined]")),
+
+                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
+                                                selectInput(inputId="dataset_from_sql_medication_class",
+                                                            label="Treatment class column",
+                                                            choices=c("[not defined]"),
+                                                            selected="[not defined]")),
+
+                                            hr(),
+
+                                            div(title='Validate choices and use the dataset!',
+                                                actionButton(inputId="dataset_from_sql_button_use",
+                                                             label=strong("Validate & use!"),
+                                                             icon=icon("sunglasses", lib="glyphicon"),
+                                                             style="color:DarkBlue; border-color:DarkBlue;"),
                                                 style="float: center;")
-                                          ),
+
+                                            ),
 
 
                                           # Allow last comma:
@@ -2717,27 +2764,28 @@ server <- function(input, output, session) {
                                 HTML(paste0("Successfully connected to SQL server <i>",
                                      if( input$dataset_from_sql_server_host == "[none]" ) "localhost" else input$dataset_from_sql_server_host, "</i>",
                                      if( input$dataset_from_sql_server_port > 0 ) paste0(":",input$dataset_from_sql_server_port)," and fetched data from ",
-                                     length(unique(d.tables.columns$table))," tables.<br/><br/><hl/>",
-                                     "Please note that, currently, this interactive Shiny User Interface <b style='color: red'>requires that all the data</b> (namely, patient ID, event date and duration,(and possibly dosage and type)) are in <b style='color: red'>ONE TABLE or VIEW</b>!<br/>",
-                                     "If this is not the case, please create a <i>temporary table</i> or a <i>view</i> and reconnect to the database.<br/>",
-                                     "For example, using the <code>MySQL</code> database described in the vignette <i>Using AdhereR with various database technologies for processing very large datasets</i>, named <code>med_events</code> and consisting of 4 tables containing information about the patients (<code>patients</code>), the events (<code>event_info</code> and <code>event_date</code>), and the connections between the two (<code>event_patients</code>), we can create a <i>view</i> named <code>all_info_view</code> with the <code>SQL</code> commands:<br/>",
-"<pre>
-CREATE VIEW `all_info_view` AS
-SELECT event_date.id,
-       event_date.date,
-       event_info.category,
-       event_info.duration,
-       event_info.perday,
-       event_patients.patient_id,
-       patients.sex
-FROM event_date
-  JOIN event_info
-  ON event_info.id = event_date.id
-    JOIN event_patients
-    ON event_patients.id = event_info.id
-      JOIN patients
-      ON patients.id = event_patients.patient_id;</pre>",
-                                     "<hl/><br><br>",
+                                     length(unique(d.tables.columns$table))," tables.<br/><hl/><br/>",
+                                     "Please note that, currently, this interactive Shiny User Interface <b style='color: red'>requires that all the data</b> (namely, patient ID, event date and duration,(and possibly dosage and type)) are in <b style='color: red'>ONE TABLE or VIEW</b>! ",
+                                     "If this is not the case, please create a <i>temporary table</i> or a <i>view</i> and reconnect to the database. ",
+                                     "(Please see the vignette for more details.) ",
+#                                      "For example, using the <code>MySQL</code> database described in the vignette <i>Using AdhereR with various database technologies for processing very large datasets</i>, named <code>med_events</code> and consisting of 4 tables containing information about the patients (<code>patients</code>), the events (<code>event_info</code> and <code>event_date</code>), and the connections between the two (<code>event_patients</code>), we can create a <i>view</i> named <code>all_info_view</code> with the <code>SQL</code> commands:<br/>",
+# "<pre>
+# CREATE VIEW `all_info_view` AS
+# SELECT event_date.id,
+#        event_date.date,
+#        event_info.category,
+#        event_info.duration,
+#        event_info.perday,
+#        event_patients.patient_id,
+#        patients.sex
+# FROM event_date
+#   JOIN event_info
+#   ON event_info.id = event_date.id
+#     JOIN event_patients
+#     ON event_patients.id = event_info.id
+#       JOIN patients
+#       ON patients.id = event_patients.patient_id;</pre>",
+                                     "<br/><hl/><br/>",
                                      "We list below, for each <b style='color: DarkBlue'>table</b>, the <b style='color: blue'>columns</b> [with their <span style='color: green'>types</span> and other <i>relevant info</i>]:<br/>",
                                      "<ul>",
                                      paste0(vapply(unique(d.tables.columns$table), function(table_name)
@@ -2763,16 +2811,89 @@ FROM event_date
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
 
 
-      # Set it as the SQL databse and update columns:
-      if( !is.null(d) )
-      {
-        # Update columns
-        #updateSelectInput(session, "dataset_from_file_patient_id",     choices=x, selected=head(x,1));
+      # Set it as the current SQL databse:
+      .GlobalEnv$.plotting.params$.db.connection.tables <- d.tables.columns;
+      .GlobalEnv$.plotting.params$.db.connection <- d;
 
-        .GlobalEnv$.plotting.params$.db.connection <- d;
-      }
+      # Update the list of tables/views:
+      updateSelectInput(session, "dataset_from_sql_table", choices=unique(d.tables.columns$table), selected=head(unique(d.tables.columns$table),1));
     }
   })
+
+
+  # Update columns depending on the selected table:
+  observeEvent(input$dataset_from_sql_table,
+  {
+    if( input$dataset_from_sql_table != "[none]" &&
+        !is.null(.GlobalEnv$.plotting.params$.db.connection) &&
+        !is.null(.GlobalEnv$.plotting.params$.db.connection.tables) &&
+        sum((s <- (.GlobalEnv$.plotting.params$.db.connection.tables$table == input$dataset_from_sql_table)), na.rm=TRUE) > 0 )
+    {
+      if( sum(s) < 3 )
+      {
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("The table/view must have at least three columns!", style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return (invisible(NULL));
+      }
+
+      # Save this as the selected table:
+      .GlobalEnv$.plotting.params$.db.connection.selected.table <- input$dataset_from_sql_table;
+
+      # Update them:
+      column.names <- as.character(.GlobalEnv$.plotting.params$.db.connection.tables$column[s]);
+      updateSelectInput(session, "dataset_from_sql_patient_id", choices=column.names, selected=column.names[1]);
+      updateSelectInput(session, "dataset_from_sql_event_date", choices=column.names, selected=column.names[2]);
+      updateSelectInput(session, "dataset_from_sql_event_duration", choices=column.names, selected=column.names[3]);
+
+      updateSelectInput(session, "dataset_from_sql_daily_dose", choices=c("[not defined]", column.names), selected="[not defined]");
+      updateSelectInput(session, "dataset_from_sql_medication_class", choices=c("[not defined]", column.names), selected="[not defined]");
+    }
+  })
+
+  # Validate and use sql dataset:
+  observeEvent(input$dataset_from_sql_button_use,
+  {
+    # Sanity checks:
+    if( is.null(.GlobalEnv$.plotting.params$.db.connection) ||
+        !DBI::dbIsValid(.GlobalEnv$.plotting.params$.db.connection) )
+    {
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div(paste0("Cannot use the selected database and table/view!"), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        return (invisible(NULL));
+    }
+
+    # Checks:
+    .validate.and.load.dataset(.GlobalEnv$.plotting.params$.db.connection,
+                               get.colnames.fnc=function(d)
+                                 {
+                                   x <- NULL;
+                                   try(x <- DBI::dbGetQuery(d, paste0("SHOW COLUMNS FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,";")), silent=TRUE);
+                                   if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (as.character(x$Field)) else return (NULL);
+                                 },
+                               get.patients.fnc=function(d, idcol)
+                                 {
+                                   x <- NULL;
+                                   try(x <- DBI::dbGetQuery(d, paste0("SELECT DISTINCT ",idcol," FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,";")), silent=TRUE);
+                                   if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (x[,1]) else return (NULL);
+                                 },
+                               get.data.for.patients.fnc=function(patientid, d, idcol)
+                                 {
+                                   x <- NULL;
+                                   try(x <- DBI::dbGetQuery(d, paste0("SELECT * FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,
+                                                                      " WHERE ",idcol,
+                                                                      " IN (",paste0(patientid,collapse=","),");")), silent=TRUE);
+                                   if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (x) else return (NULL);
+                                 },
+                               ID.colname=input$dataset_from_sql_patient_id,
+                               event.date.colname=input$dataset_from_sql_event_date,
+                               event.duration.colname=input$dataset_from_sql_event_duration,
+                               event.daily.dose.colname=input$dataset_from_sql_daily_dose,
+                               medication.class.colname=input$dataset_from_sql_medication_class,
+                               date.format="%Y-%m-%d");
+  })
+
 }
 
 
