@@ -1504,8 +1504,15 @@ server <- function(input, output, session) {
 
       rv$toggle.me; # make the plot care about forced updated to the UI (for example, when chainging the dataset)
 
+      msgs <- ""; # the output messages
+      res <- NULL; # the result of plotting
+
       if( is.null(.GlobalEnv$.plotting.params$data) )
       {
+        # Select the Data tab:
+        updateTabsetPanel(session=session, inputId="sidebar-tabpanel", selected="sidebar-params-data");
+
+        # Display a warning urging the user to select a data source:
         showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR..."),
                                 div(span(code("plot_interactive_cma()"),
                                          span("was called without a dataset!\nPlease use the ")),
@@ -1513,36 +1520,33 @@ server <- function(input, output, session) {
                                   span("Data"),
                                   span(" tab to select a datesource!"), style="color: red;"),
                               footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return (invisible(NULL));
-      }
-
-      # Depeding on the CMA class we might do things differently:
-      msgs <- ""; # the output messages
-      res <- NULL; # the result of plotting
-      if( input$cma_class %in% c("simple", "per episode", "sliding window") )
-      {
-        # Call the workhorse plotting function with the appropriate argumens:
-        msgs <- capture.output(res <- .renderPlot());
       } else
       {
-        # Quitting....
-        showModal(modalDialog(title="AdhereR interactive plotting...", paste0("Unknwon CMA class '",input$cma_class,"'."), easyClose=TRUE));
-      }
+        # Depeding on the CMA class we might do things differently:
+        if( input$cma_class %in% c("simple", "per episode", "sliding window") )
+        {
+          # Call the workhorse plotting function with the appropriate argumens:
+          msgs <- capture.output(res <- .renderPlot());
+        } else
+        {
+          # Quitting....
+          showModal(modalDialog(title="AdhereR interactive plotting...", paste0("Unknwon CMA class '",input$cma_class,"'."), easyClose=TRUE));
+        }
 
-      if( is.null(res) || length(grep("error", msgs, ignore.case=TRUE)) > 0 )
-      {
-        # Errors:
-        output$messages <- renderText({ paste0("<font color=\"red\"><b>",msgs,"</b></font>"); })
-      } else if( length(grep("warning", msgs, ignore.case=TRUE)) > 0 )
-      {
-        # Warnings:
-        output$messages <- renderText({ paste0("<font color=\"green\"><i>",msgs,"</i></font>"); })
-      } else
-      {
-        # Normal output:
-        output$messages <- renderText({ paste0("<font color=\"blue\">",msgs,"</font>"); })
+        if( is.null(res) || length(grep("error", msgs, ignore.case=TRUE)) > 0 )
+        {
+          # Errors:
+          output$messages <- renderText({ paste0("<font color=\"red\"><b>",msgs,"</b></font>"); })
+        } else if( length(grep("warning", msgs, ignore.case=TRUE)) > 0 )
+        {
+          # Warnings:
+          output$messages <- renderText({ paste0("<font color=\"green\"><i>",msgs,"</i></font>"); })
+        } else
+        {
+          # Normal output:
+          output$messages <- renderText({ paste0("<font color=\"blue\">",msgs,"</font>"); })
+        }
       }
-
     },
     width=function() # plot width
       {
@@ -1666,6 +1670,14 @@ server <- function(input, output, session) {
   # Show r code:
   observeEvent(input$show_r_code,
   {
+    if( is.na(.GlobalEnv$.plotting.params$.dataset.type) )
+    {
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            HTML("No dataset (or a NULL one) was given through the <code>data</code> argument to the <code>plot_interactive_cma()</code> function call, and no datasource was manually selected either: please select one using the <b>Data</b> tab!"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return (invisible(NULL));
+    }
+
     if( is.null(input$patient) || length(input$patient) < 1 )
     {
       showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
@@ -1680,24 +1692,42 @@ server <- function(input, output, session) {
     # Initial comments:
     r_code <<- paste0(r_code, "# The R code corresponding to the currently displayed Shiny plot:\n\n");
 
-    # The data and selected patients:
+    # The selected patients:
     r_code <<- paste0(r_code, "# Extract the data for the selected ", length(input$patient), " patient(s) with ID(s):\n");
     r_code <<- paste0(r_code, "# ",paste0('"',input$patient,'"',collapse=", "),"\n\n");
 
+    # The datasource:
     r_code <<- paste0(r_code, "# We denote here by DATA the data you are using in the Shiny plot.\n");
-    r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
-    r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
-    r_code <<- paste0(r_code, "# \"", class(.GlobalEnv$.plotting.params$data), "\", and it has the structure:\n");
-    r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.GlobalEnv$.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n\n");
+    if( .GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments )
+    {
+      # The dataset came as the `data` argument to `plot_interactive_cam()`, so we don't know it's "name":
+      r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
+      r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
+      r_code <<- paste0(r_code, "# \"", class(.GlobalEnv$.plotting.params$data), "\", and it has the structure:\n");
+      r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.GlobalEnv$.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n\n");
+    } else
+    {
+      # The dataset was manually selected, so we know quite a bit about it:
+      r_code <<- paste0(r_code, "# This was manually defined as:\n");
+      r_code <<- paste0(r_code, switch(.GlobalEnv$.plotting.params$.dataset.type,
+                                       "in memory"=   paste0("# an object of class data.frame (or derived from it, such a data.table)",
+                                                             "# that was already in-memory under the name '",.GlobalEnv$.plotting.params$.dataset.name,"'"),
+                                       "from file"=   paste0("# a data.frame object loaded from the file '",.GlobalEnv$.plotting.params$.dataset.name,"'"),
+                                       "SQL database"=paste0("# a connection to the SQL database '",.GlobalEnv$.plotting.params$.dataset.name,"'")),
+                        ".\n");
+      r_code <<- paste0(r_code, "# These data has ", length(.GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)), " columns, \n",
+                                "# and contains info for ", length(unique(.GlobalEnv$.plotting.params$get.patients.fnc(.GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname))), " patients.\n");
+    }
 
+    # The accessor functions:
     r_code <<- paste0(r_code, "# To allow using data from other sources than a \"data.frame\"\n");
     r_code <<- paste0(r_code, "# and other similar structures (for example, from a remote SQL\n");
     r_code <<- paste0(r_code, "# database), we use a metchanism to request the data for the\n");
     r_code <<- paste0(r_code, "# selected patients that uses a function called\n");
     r_code <<- paste0(r_code, "# \"get.data.for.patients.fnc()\" which you may have redefined\n");
     r_code <<- paste0(r_code, "# to better suit your case (chances are, however, that you are\n");
-    r_code <<- paste0(r_code, "# using its default version); in any case, the following is its\n");
-    r_code <<- paste0(r_code, "# definition:\n");
+    r_code <<- paste0(r_code, "# using its default version appropriate to the data source);\n");
+    r_code <<- paste0(r_code, "# in any case, the following is its definition:\n");
     fnc.code <- capture.output(print(.GlobalEnv$.plotting.params$get.data.for.patients.fnc));
     if( is.null(fnc.code) || length(fnc.code) == 0 )
     {
@@ -1746,11 +1776,11 @@ server <- function(input, output, session) {
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # not relevant for a particular CMA type, we\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # nevertheless pass them as they will be ignored)\n");
-    params.cma <- list("all"=c("ID.colname"=paste0('"',.GlobalEnv$.plotting.params$ID.colname,'"'),
-                               "event.date.colname"=paste0('"',.GlobalEnv$.plotting.params$event.date.colname,'"'),
-                               "event.duration.colname"=paste0('"',.GlobalEnv$.plotting.params$event.duration.colname,'"'),
-                               "event.daily.dose.colname"=paste0('"',.GlobalEnv$.plotting.params$event.daily.dose.colname,'"'),
-                               "medication.class.colname"=paste0('"',.GlobalEnv$.plotting.params$medication.class.colname,'"'),
+    params.cma <- list("all"=c("ID.colname"=if(!is.na(.GlobalEnv$.plotting.params$ID.colname)) paste0('"',.GlobalEnv$.plotting.params$ID.colname,'"') else "NA",
+                               "event.date.colname"=if(!is.na(.GlobalEnv$.plotting.params$event.date.colname)) paste0('"',.GlobalEnv$.plotting.params$event.date.colname,'"') else "NA",
+                               "event.duration.colname"=if(!is.na(.GlobalEnv$.plotting.params$event.duration.colname)) paste0('"',.GlobalEnv$.plotting.params$event.duration.colname,'"') else "NA",
+                               "event.daily.dose.colname"=if(!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)) paste0('"',.GlobalEnv$.plotting.params$event.daily.dose.colname,'"') else "NA",
+                               "medication.class.colname"=if(!is.na(.GlobalEnv$.plotting.params$medication.class.colname)) paste0('"',.GlobalEnv$.plotting.params$medication.class.colname,'"') else "NA",
                                #"carryover.within.obs.window"=NA,
                                #"carryover.into.obs.window"=NA,
                                "carry.only.for.same.medication"=input$carry_only_for_same_medication,
@@ -3024,7 +3054,9 @@ server <- function(input, output, session) {
   {
     showModal(modalDialog(title=div(icon("hdd", lib="glyphicon"), "AdhereR: info over the current dataset..."),
                           div(style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;",
-                              HTML(paste0("The dataset currently used ",
+                              HTML(if( .GlobalEnv$.plotting.params$.dataset.type %in% c("in memory", "from file", "SQL database") )
+                                   {
+                                    paste0("The dataset currently used ",
                                      {if(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments)
                                       {
                                         paste0("was given as the <code>data</code> argument to the <code>plot_interactive_cma()</code> function called by the user.<br/>",
@@ -3052,7 +3084,12 @@ server <- function(input, output, session) {
                                      {if(!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)) paste0("<li>the <i>doses</i> are in column <b>", .GlobalEnv$.plotting.params$event.daily.dose.colname, "</b></li>")},
                                      {if(!is.na(.GlobalEnv$.plotting.params$medication.class.colname)) paste0("<li>the <i>treatment types</i> are in column <b>", .GlobalEnv$.plotting.params$medication.class.colname, "</b></li>")},
                                      "</ul>"
-                                     ))),
+                                     )
+                                    } else
+                                    {
+                                      "There was no argument (or a NULL) passed as the <code>data</code> argument to the <code>plot_interactive_cma()</code>, which means that there's no dataset defined: please define one using the <b>Data</b> tab!"
+                                    }
+                                )),
                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
   })
 }

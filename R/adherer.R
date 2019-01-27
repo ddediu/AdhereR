@@ -9563,8 +9563,6 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     cma.class <- "simple";
   }
 
-  all.IDs <- NULL;
-
   # Preconditions:
   if( !is.null(data) )
   {
@@ -9627,6 +9625,12 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   {
     #stop("The 'data' cannot be empty!\n");
     #return (NULL);
+
+    all.IDs <- c("[not defined]");
+    ID <- all.IDs[1];
+    cma.class <- "simple";
+    ID.colname <- event.date.colname <- event.duration.colname <- event.daily.dose.colname <- medication.class.colname <- NA;
+    date.format <- NA;
   }
 
   # The function encapsulating the plotting:
@@ -9871,8 +9875,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       "get.patients.fnc"=get.patients.fnc,
                                       "get.data.for.patients.fnc"=get.data.for.patients.fnc,
                                       ".plotting.fnc"=.plotting.fnc,
-                                      ".dataset.type"=c(NA, "in memory", "from file", "SQL database")[2],
-                                      ".dataset.comes.from.function.arguments"=TRUE,
+                                      ".dataset.type"=if(is.null(data)) NA else c("in memory", "from file", "SQL database")[2],
+                                      ".dataset.comes.from.function.arguments"=!is.null(data),
                                       ".dataset.name"=NA,
                                       ".inmemory.dataset"=NULL,
                                       ".fromfile.dataset"=NULL,
