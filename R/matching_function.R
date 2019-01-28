@@ -737,13 +737,12 @@ compute_event_durations <- function(disp.data = NULL,
       med_presc[, `:=` (START.PRESC = get(presc.date.colname), # set prescription date as start date
                         END.PRESC = get(presc.date.colname))]; # set end date to prescription date ...
 
-      # connect episodes with limited durations with following episodes if they have the same dosage and matching end- and start dates.
       med_presc[,END.PRESC := shift(END.PRESC, type = "lead")]; # ... and shift end dates up by one
 
       # adjust end date if prescription duration is provided and change start date of following prescriptions
-      med_presc[!is.na(get(presc.duration.colname)), END.PRESC := DATE.PRESC + get(presc.duration.colname)];
-      end.limited.presc <- head(med_presc,-1)[!is.na(get(presc.duration.colname))]$END.PRESC; #don't include last prescription episode
-      med_presc[shift(!is.na(get(presc.duration.colname)), type = "lag"), START.PRESC := end.limited.presc];
+      med_presc[!is.na(get(presc.duration.colname)) & (DATE.PRESC + get(presc.duration.colname)) <= END.PRESC, END.PRESC := DATE.PRESC + get(presc.duration.colname)]; # only if prescription ends before the current end prescription date!
+      end.limited.presc <- head(med_presc,-1)[!is.na(get(presc.duration.colname)) & (DATE.PRESC + get(presc.duration.colname)) <= END.PRESC]$END.PRESC; #don't include last prescription episode
+      med_presc[shift(!is.na(get(presc.duration.colname)), type = "lag") & shift((DATE.PRESC + get(presc.duration.colname)) <= END.PRESC, type = "lag"), START.PRESC := end.limited.presc];
       med_presc[DATE.PRESC>START.PRESC & get(presc.daily.dose.colname) != 0,START.PRESC:=DATE.PRESC];
 
       med_presc[shift(get(presc.daily.dose.colname),type="lag")==get(presc.daily.dose.colname) & !is.na(shift(get(presc.duration.colname),type="lag")) & shift(END.PRESC, type = "lag") == START.PRESC, .episode := as.integer(.episode-1)];
@@ -773,6 +772,7 @@ compute_event_durations <- function(disp.data = NULL,
       med_presc[,.episode := rleidv(med_presc, cols = c("START.PRESC", "END.PRESC"))];
 
       # add treatment interruptions
+
       med_presc <- rbind(med_presc,med_presc[shift(START.PRESC,type = "lead")!=END.PRESC][,c(presc.daily.dose.colname, "START.PRESC", ".episode") := list(0, END.PRESC, 0)]);
       setorder(med_presc, START.PRESC, END.PRESC);
       end.trt.interruptions <- med_presc[shift(END.PRESC,type = "lag")!=START.PRESC]$START.PRESC;
