@@ -1023,8 +1023,8 @@ ui <- fluidPage(
                                                 selectInput(inputId="dataset_from_file_filetype",
                                                             label="Type of file",
                                                             choices=c("Comma/TAB-separated (.csv; .tsv; .txt)",
-                                                                      "R objects from save() (.RData)",
-                                                                      "Serialized single R object (.rds)",
+                                                                      #"R objects from save() (.RData)",
+                                                                      "Serialized R object (.rds)",
                                                                       "Open Document Spreadsheet (.ods)",
                                                                       "Microsoft Excel (.xls; .xlsx)",
                                                                       "SPSS (.sav; .por)",
@@ -1690,11 +1690,13 @@ server <- function(input, output, session) {
     r_code <<- "";
 
     # Initial comments:
-    r_code <<- paste0(r_code, "# The R code corresponding to the currently displayed Shiny plot:\n\n");
+    r_code <<- paste0(r_code, "# The R code corresponding to the currently displayed Shiny plot:\n");
+    r_code <<- paste0(r_code, "# \n");
 
     # The selected patients:
     r_code <<- paste0(r_code, "# Extract the data for the selected ", length(input$patient), " patient(s) with ID(s):\n");
-    r_code <<- paste0(r_code, "# ",paste0('"',input$patient,'"',collapse=", "),"\n\n");
+    r_code <<- paste0(r_code, "# ",paste0('"',input$patient,'"',collapse=", "),"\n");
+    r_code <<- paste0(r_code, "# \n");
 
     # The datasource:
     r_code <<- paste0(r_code, "# We denote here by DATA the data you are using in the Shiny plot.\n");
@@ -1708,18 +1710,57 @@ server <- function(input, output, session) {
     } else
     {
       # The dataset was manually selected, so we know quite a bit about it:
-      r_code <<- paste0(r_code, "# This was manually defined as:\n");
+      r_code <<- paste0(r_code, "# This was manually defined as ");
       r_code <<- paste0(r_code, switch(.GlobalEnv$.plotting.params$.dataset.type,
-                                       "in memory"=   paste0("# an object of class data.frame (or derived from it, such a data.table)",
-                                                             "# that was already in-memory under the name '",.GlobalEnv$.plotting.params$.dataset.name,"'"),
-                                       "from file"=   paste0("# a data.frame object loaded from the file '",.GlobalEnv$.plotting.params$.dataset.name,"'"),
+                                       "in memory"=   paste0("an object of class data.frame\n",
+                                                             "# (or derived from it, such a data.table) that was already in\n",
+                                                             "# memory under the name '",.GlobalEnv$.plotting.params$.dataset.name,"'.\n",
+                                                             "# Assuming this object still exists with the same name, then:\n\n",
+                                                             "DATA <- ",.GlobalEnv$.plotting.params$.dataset.name,";\n\n"),
+                                       "from file"=   paste0("a data.frame object loaded from the\n",
+                                                             "# file '",.GlobalEnv$.plotting.params$.dataset.name,"'\n",
+                                                             "# of type '",.GlobalEnv$.plotting.params$.fromfile.dataset.filetype,"'\n",
+                                                             "# (unfortunately, the full path to the original file cannot be recovered)\n",
+                                                             "# Assuming this file still exists with the same name, then:\n\n",
+                                                             switch(.GlobalEnv$.plotting.params$.fromfile.dataset.filetype,
+                                                                    "Comma/TAB-separated (.csv; .tsv; .txt)"=
+                                                                      paste0("DATA <- read.table(\"",.GlobalEnv$.plotting.params$.dataset.name,"\",\n",
+                                                                             "    header=",.GlobalEnv$.plotting.params$.fromfile.dataset.header,",\n",
+                                                                             "    sep=\"",if(.GlobalEnv$.plotting.params$.fromfile.dataset.sep=="\t") "\\t" else .GlobalEnv$.plotting.params$.fromfile.dataset.sep,"\",\n",
+                                                                             "    quote=",if(.GlobalEnv$.plotting.params$.fromfile.dataset.quote=='"') "'\"'" else paste0('"',.GlobalEnv$.plotting.params$.fromfile.dataset.quote,'"'),",\n",
+                                                                             "    dec=\"",.GlobalEnv$.plotting.params$.fromfile.dataset.dec,"\",\n",
+                                                                             "    strip.white=",.GlobalEnv$.plotting.params$.fromfile.dataset.strip.white,",\n",
+                                                                             "    na.strings=c(",paste0('"',.GlobalEnv$.plotting.params$.fromfile.dataset.na.strings,'"',collapse=","),")\n",
+                                                                             ");\n"),
+                                                                    "R objects from save() (.RData)"=
+                                                                      paste0("# load the .RData file that contains the object using load() and\n",
+                                                                             "DATA <- ",.GlobalEnv$.plotting.params$.dataset.name,";\n"),
+                                                                    "Serialized R object (.rds)"=
+                                                                      paste0("DATA <- readRDS(\"",.GlobalEnv$.plotting.params$.dataset.name,"\");\n"),
+                                                                    "Open Document Spreadsheet (.ods)"=
+                                                                      paste0("DATA <- readODS::read_ods(\"",.GlobalEnv$.plotting.params$.dataset.name,"\",\n",
+                                                                             "    sheet=",.GlobalEnv$.plotting.params$.fromfile.dataset.sheet,");\n"),
+                                                                    "Microsoft Excel (.xls; .xlsx)"=
+                                                                      paste0("DATA <- readxl::read_excel(\"",.GlobalEnv$.plotting.params$.dataset.name,"\",\n",
+                                                                             "    sheet=",.GlobalEnv$.plotting.params$.fromfile.dataset.sheet,");\n"),
+                                                                    "SPSS (.sav; .por)"=
+                                                                      paste0("DATA <- haven::read_spss(\"",.GlobalEnv$.plotting.params$.dataset.name,"\");\n"),
+                                                                    "SAS Transport data file (.xpt)"=
+                                                                      paste0("DATA <- haven::read_xpt(\"",.GlobalEnv$.plotting.params$.dataset.name,"\");\n"),
+                                                                    "SAS sas7bdat data file (.sas7bdat)"=
+                                                                      paste0("DATA <- haven::read_sas(\"",.GlobalEnv$.plotting.params$.dataset.name,"\");\n"),
+                                                                    "Stata (.dta)"=
+                                                                      paste0("DATA <- haven::read_stata(\"",.GlobalEnv$.plotting.params$.dataset.name,"\");\n"),
+                                                                    "NULL; # please make sure you load this file manually!!!"),
+                                                             "\n"),
                                        "SQL database"=paste0("# a connection to the SQL database '",.GlobalEnv$.plotting.params$.dataset.name,"'")),
-                        ".\n");
-      r_code <<- paste0(r_code, "# These data has ", length(.GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)), " columns, \n",
-                                "# and contains info for ", length(unique(.GlobalEnv$.plotting.params$get.patients.fnc(.GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname))), " patients.\n");
+                        "");
+      r_code <<- paste0(r_code, "# These data has ", length(.GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)), " columns, ",
+                                "and contains info for ", length(unique(.GlobalEnv$.plotting.params$get.patients.fnc(.GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname))), " patients.\n");
     }
 
     # The accessor functions:
+    r_code <<- paste0(r_code, "# \n");
     r_code <<- paste0(r_code, "# To allow using data from other sources than a \"data.frame\"\n");
     r_code <<- paste0(r_code, "# and other similar structures (for example, from a remote SQL\n");
     r_code <<- paste0(r_code, "# database), we use a metchanism to request the data for the\n");
@@ -1901,7 +1942,7 @@ server <- function(input, output, session) {
                                                      fixed=TRUE)),
                                        #div(HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
                                            style="max-height: 50vh; overflow: auto;")),
-                                   title=HTML("<code>R</code> code for the current plot"),
+                                   title=HTML("The <code>R</code> code for the current plot..."),
                                    footer = tagList(actionButton("copy_code", "Copy to clipboard", icon=icon("copy", lib="glyphicon")),
                                                     modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
              error = function(e) showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
@@ -2501,7 +2542,7 @@ server <- function(input, output, session) {
                             HTML(paste0("The R datasets file was successfully loaded and the following objects are now in memory: ",paste0("'",read.objs,"'",collapse=", "),".<br/>Please use the <b>load from memory</b> option to load the desired object from memory...")),
                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL)); # don't continue...
-    } else if( input$dataset_from_file_filetype == "Serialized single R object (.rds)" )
+    } else if( input$dataset_from_file_filetype == "Serialized R object (.rds)" )
     {
       # Load them with readRDS:
       showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
@@ -2705,7 +2746,26 @@ server <- function(input, output, session) {
       updateSelectInput(session, "dataset_from_file_medication_class", choices=c("[not defined]", x), selected="[not defined]");
       updateSelectInput(session, "dataset_from_file_daily_dose",       choices=c("[not defined]", x), selected="[not defined]");
 
+      # set the dataset and various parameters used to read it:
       .GlobalEnv$.plotting.params$.fromfile.dataset <- d;
+      .GlobalEnv$.plotting.params$.fromfile.dataset.filetype <- input$dataset_from_file_filetype;
+      .GlobalEnv$.plotting.params$.fromfile.dataset.header <- input$dataset_from_file_csv_header;
+      .GlobalEnv$.plotting.params$.fromfile.dataset.sep <- switch(input$dataset_from_file_csv_separator,
+                                                                  "[TAB] (\\t)"="\t",
+                                                                  "comma (,)"=",",
+                                                                  "white spaces (1+)"="",
+                                                                  "semicolon (;)"=";",
+                                                                  "colon (:)"=":");
+      .GlobalEnv$.plotting.params$.fromfile.dataset.quote <- switch(input$dataset_from_file_csv_quotes,
+                                                                    "[none] ()"="",
+                                                                    "singe quotes (' ')"="'",
+                                                                    "double quotes (\" \")"='"');
+      .GlobalEnv$.plotting.params$.fromfile.dataset.dec <- switch(input$dataset_from_file_csv_decimal,
+                                                                  "dot (.)"=".",
+                                                                  "comma (,)"=",");
+      .GlobalEnv$.plotting.params$.fromfile.dataset.strip.white <- input$dataset_from_file_csv_strip_white;
+      .GlobalEnv$.plotting.params$.fromfile.dataset.na.strings <- gsub('["\']','',trimws(strsplit(input$dataset_from_file_csv_na_strings,",",fixed=TRUE)[[1]], "both"));
+      .GlobalEnv$.plotting.params$.fromfile.dataset.sheet <- input$dataset_from_file_sheet;
     }
   })
 
