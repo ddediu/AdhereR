@@ -1402,6 +1402,29 @@ server <- function(input, output, session) {
   # The plotting function:
   .renderPlot <- function()
   {
+    patients.to.plot <- input$patient;
+    # Checks concerning the maximum number of patients and events to plot:
+    if( length(patients.to.plot) > .GlobalEnv$.plotting.params$max.number.patients.to.plot )
+    {
+      patients.to.plot <- patients.to.plot[ 1:.GlobalEnv$.plotting.params$max.number.patients.to.plot ];
+      #updateSelectInput(session, inputId="patient", selected=patients.to.plot);
+      cat(paste0("Warning: a maximum of ",.GlobalEnv$.plotting.params$max.number.patients.to.plot,
+                     " patients can be shown in an interactive plot: we kept only the first ",.GlobalEnv$.plotting.params$max.number.patients.to.plot,
+                     " from those you selected!\n"));
+    }
+    ## This check can be too constly during plotting (especially for database connections), so we don't do it for now assuming there's not too many events per patient anyway:
+    #if( !is.null(n.events <- .GlobalEnv$.plotting.params$get.data.for.patients.fnc(patients.to.plot, .GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname)) &&
+    #    nrow(n.events) > .GlobalEnv$.plotting.params$max.number.events.to.plot )
+    #{
+    #  n.events.per.patient <- cumsum(table(n.events[,.GlobalEnv$.plotting.params$ID.colname]));
+    #  n <- min(which(n.events.per.patient > .GlobalEnv$.plotting.params$max.number.events.to.plot));
+    #  if( n > 1 ) n <- n-1;
+    #  patients.to.plot <- patients.to.plot[ 1:n ];
+    #  cat(paste0("Warning: a maximum of ",.GlobalEnv$.plotting.params$max.number.events.to.plot,
+    #                 " events across all patients can be shown in an interactive plot: we kept only the first ",length(patients.to.plot),
+    #                 " patients from those you selected (totalling ",n.events.per.patient[n]," events)!\n"));
+    #}
+
     .GlobalEnv$.plotting.params$.plotting.fnc(data=.GlobalEnv$.plotting.params$data,
                                               ID.colname=.GlobalEnv$.plotting.params$ID.colname,
                                               event.date.colname=.GlobalEnv$.plotting.params$event.date.colname,
@@ -1410,7 +1433,7 @@ server <- function(input, output, session) {
                                               medication.class.colname=.GlobalEnv$.plotting.params$medication.class.colname,
                                               date.format=.GlobalEnv$.plotting.params$date.format,
 
-                                              ID=input$patient,
+                                              ID=patients.to.plot,
                                               cma=ifelse(input$cma_class == "simple",
                                                          input$cma_to_compute,
                                                          input$cma_class),
