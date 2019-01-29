@@ -1379,8 +1379,12 @@ ui <- fluidPage(
       # The R code for the plot ----
       column(12,
         # Show the R code:
-        div(title='Show the R code that would generate the current plot',
-                 actionButton(inputId="show_r_code", label=strong("Show R code..."), icon=icon("eye-open", lib="glyphicon")))
+        span(title='Show the R code that would generate the current plot',
+                 actionButton(inputId="show_r_code", label=strong("Show R code..."), icon=icon("eye-open", lib="glyphicon"))),
+
+        # Compute CMA for a (larger) set of patients using the same parameters as for the current plot:
+        span(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
+                 actionButton(inputId="compute_cma_for_larger_sample", label=strong("Compute CMA for (more) patients..."), icon=icon("play", lib="glyphicon")))
       )
 
     )
@@ -3174,6 +3178,12 @@ server <- function(input, output, session) {
                                     }
                                 )),
                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+  })
+
+
+  observeEvent(input$compute_cma_for_larger_sample,
+  {
+    cat("Computing...\n");
   })
 }
 
