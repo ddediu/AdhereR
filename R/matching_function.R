@@ -399,7 +399,6 @@ compute_event_durations <- function(disp.data = NULL,
       process_dispensing_events <- function(event)
       {
         if(exists("debug.mode") && debug.mode==TRUE) print(paste("Event:", event));
-
         ## !Important: We assume that the prescribed dose can be accomodated with the dispensed medication
 
         #subset data to event
@@ -592,7 +591,7 @@ compute_event_durations <- function(disp.data = NULL,
               # check various parameters to decide wheter to stop or continue
 
               # check if end of supply is before end of episode OR last row of prescription episodes is reached
-              if( disp.end.date.i < end.episode | episode == tail(episodes,1) )
+              if( disp.end.date.i < end.episode | episode == last(episodes) )
               {
                 stop <- 1;
               } else {
@@ -740,11 +739,12 @@ compute_event_durations <- function(disp.data = NULL,
       med_presc[,END.PRESC := shift(END.PRESC, type = "lead")]; # ... and shift end dates up by one
 
       # adjust end date if prescription duration is provided and change start date of following prescriptions
-      med_presc[!is.na(get(presc.duration.colname)) & (DATE.PRESC + get(presc.duration.colname)) <= END.PRESC, END.PRESC := DATE.PRESC + get(presc.duration.colname)]; # only if prescription ends before the current end prescription date!
-      end.limited.presc <- head(med_presc,-1)[!is.na(get(presc.duration.colname)) & (DATE.PRESC + get(presc.duration.colname)) <= END.PRESC]$END.PRESC; #don't include last prescription episode
+      med_presc[!is.na(get(presc.duration.colname)) & ((DATE.PRESC + get(presc.duration.colname)) <= END.PRESC | is.na(END.PRESC)), END.PRESC := DATE.PRESC + get(presc.duration.colname)]; # only if prescription ends before the current end prescription date!
+      end.limited.presc <- head(med_presc,-1)[!is.na(get(presc.duration.colname)) & ((DATE.PRESC + get(presc.duration.colname)) <= END.PRESC | is.na(END.PRESC))]$END.PRESC; #don't include last prescription episode
       med_presc[shift(!is.na(get(presc.duration.colname)), type = "lag") & shift((DATE.PRESC + get(presc.duration.colname)) <= END.PRESC, type = "lag"), START.PRESC := end.limited.presc];
       med_presc[DATE.PRESC>START.PRESC & get(presc.daily.dose.colname) != 0,START.PRESC:=DATE.PRESC];
 
+      # combine episodes with set durations with previous episodes of same dosage but unrestricted duration
       med_presc[shift(get(presc.daily.dose.colname),type="lag")==get(presc.daily.dose.colname) & !is.na(shift(get(presc.duration.colname),type="lag")) & shift(END.PRESC, type = "lag") == START.PRESC, .episode := as.integer(.episode-1)];
 
       # fill in start and end dates by group
@@ -789,6 +789,7 @@ compute_event_durations <- function(disp.data = NULL,
           med_presc[1, START.PRESC := first_disp];
         }
       }
+
 
       ## calculate medication events for "simple" events not extending over multiple episodes or affected by hospitalizations
       # add prescription events to dispensing events
