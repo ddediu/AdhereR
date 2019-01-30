@@ -1311,9 +1311,13 @@ ui <- fluidPage(
       column(2,
         # Save image to file:
         div(title='Export this plot to an image file?',
-                 checkboxInput(inputId="save_to_file_info",
-                    label="Save plot!",
-                    value=FALSE))
+            checkboxInput(inputId="save_to_file_info",
+                          label="Save plot!",
+                          value=FALSE))
+            #shinyWidgets::checkboxGroupButtons(inputId="save_to_file_info",
+            #                     label=NULL,
+            #                     choices=c(`<span><i class='fa fa-bar-chart'></i>&nbsp; Save plot!</span>` = "Save it!")))
+            #                     #choices=c(`<i class='fa fa-bar-chart'></i>` = "Save it!")))
       ),
 
       column(2,
@@ -1376,16 +1380,98 @@ ui <- fluidPage(
                            style="resize: none; overflow:scroll; max-height: 75vh; max-width: 80vw",
                            plotOutput(outputId = "distPlot", inline=TRUE))),
 
-      # The R code for the plot ----
+      # Export R code for plot ----
       column(12,
-        # Show the R code:
-        span(title='Show the R code that would generate the current plot',
-                 actionButton(inputId="show_r_code", label=strong("Show R code..."), icon=icon("eye-open", lib="glyphicon"))),
+             column(3,
+                    # Show the R code:
+                    span(title='Show the R code that would generate the current plot',
+                         actionButton(inputId="show_r_code", label=strong("Show R code..."), icon=icon("eye-open", lib="glyphicon")))
+             ),
 
-        # Compute CMA for a (larger) set of patients using the same parameters as for the current plot:
-        span(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
-                 actionButton(inputId="compute_cma_for_larger_sample", label=strong("Compute CMA for (more) patients..."), icon=icon("play", lib="glyphicon")))
+             # Compute CMA for a (larger) set of patients using the same parameters as for the current plot:
+             column(9,
+                    span(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
+                         # actionButton(inputId="compute_cma_for_larger_sample", label=strong("Compute CMA for (more) patients..."), icon=icon("play", lib="glyphicon")))
+                         checkboxInput(inputId="compute_cma_for_larger_sample",
+                                       label="Compute CMA for (more) patients...",
+                                       value=FALSE))
+             )
+      ),
+
+      # Compute CMA and export results and R code ----
+      column(12,
+        conditionalPanel(
+          condition="(input.compute_cma_for_larger_sample)",
+
+          column(12,
+                 div(HTML(paste0('Please select the patients for which to compute the <code>CMA</code>.<br/>',
+                                  'Please note that, due to the potentially high computational costs associated, we limit the <b>maximum number of patients</b> to ',
+                                  .GlobalEnv$.plotting.params$max.number.patients.to.compute,
+                                  ', the <b>maximum number of events</b> across all patients to ',
+                                  .GlobalEnv$.plotting.params$max.number.events.to.compute,
+                                  ', and the <b>running time</b> to a maximum of ',
+                                  .GlobalEnv$.plotting.params$max.running.time.in.minutes.to.compute,
+                                  ' minutes.<br/>',
+                                  'For larger computations, we provide the <code>R</code> code, ',
+                                  'which we recommend running from a <b>dedicated <code>R</code> session</b> on appropriately powerful hardware...<hr/>',
+                                 'You can select the patients:'))),
+
+                 #div(title="TEST!",
+                 #    radioButtons(inputId="compute_cma_patient_selection_method",
+                 #                 label="You can select the patients either:",
+                 #                 choices=c("individually by their ID"="by_id",
+                 #                           "or as a range based on their position in a list"="by_position"),
+                 #                 inline=TRUE)),
+
+                 tabsetPanel(id="compute_cma_patient_selection_method",
+
+                 #conditionalPanel(
+                 #  condition="(input.compute_cma_patient_selection_method == 'by_idXXX'",
+                 tabPanel(title=HTML("<b>individually</b>, using their IDs"), value="by_id",
+                   column(12,div(title="Please select one or more patient IDs to process...",
+                       selectInput(inputId="compute_cma_patient_by_id",
+                                   label="Select the IDs of the patients to include",
+                                   choices=.GlobalEnv$.plotting.params$all.IDs,
+                                   selected=.GlobalEnv$.plotting.params$all.IDs[1],
+                                   multiple=TRUE)))
+                 ),
+
+                 #conditionalPanel(
+                 #  condition="(input.compute_cma_patient_selection_method == 'by_position'",
+                 tabPanel(title=HTML("as a <b>range</b>, based on their position in a list"), value="by_position",
+                          column(12,
+                                 div(title="Define the range of positions (#) corresponding to the selected IDs...",
+                                     sliderInput(inputId="compute_cma_patient_by_group_range",
+                                                 label="Select range of ID positions (#)",
+                                                 min=1, max=NA, step=1, value=c(1,1),
+                                                 round=TRUE))
+                                 ),
+
+                          column(3,
+                                 div(title="Order the patients by..."),
+                                 selectInput(inputId="compute_cma_patient_by_group_sorting",
+                                             label="Sort patients by",
+                                             choices=c("original order",
+                                                       "by ID (↑)",
+                                                       "by ID (↓)"))
+                                 ),
+
+                          column(9,
+                                 div(div("The patient IDs with their position (#):"),
+                                     dataTableOutput(outputId="show_patients_as_list"))
+                                 )
+                 )
+              ),
+
+              hr(),
+              actionButton(inputId="compute_cma_for_larger_sample_button",
+                           label=strong("Start computing CMA!"),
+                           icon=icon("play", lib="glyphicon"),
+                           style="color: darkblue ; border-color: darkblue")
+          )
+        )
       )
+
 
     )
   )
@@ -3181,7 +3267,41 @@ server <- function(input, output, session) {
   })
 
 
-  observeEvent(input$compute_cma_for_larger_sample,
+  # Update the patient IDs table:
+  .update.patients.IDs.table <- function()
+  {
+    tmp <- data.frame("#"=  1:length(.GlobalEnv$.plotting.params$all.IDs),
+                      "ID"= if( input$compute_cma_patient_by_group_sorting == "by ID (↑)" )
+                            {
+                              sort(.GlobalEnv$.plotting.params$all.IDs, decreasing=FALSE)
+                            } else if( input$compute_cma_patient_by_group_sorting == "by ID (↓)" )
+                            {
+                              sort(.GlobalEnv$.plotting.params$all.IDs, decreasing=TRUE)
+                            } else
+                            {
+                              .GlobalEnv$.plotting.params$all.IDs
+                            },
+                      check.names=FALSE);
+
+    output$show_patients_as_list <- renderDataTable(tmp, options=list(pageLength=10));
+    updateSliderInput(session, inputId="compute_cma_patient_by_group_range",
+                      max=nrow(tmp), value=c(1,1));
+  }
+
+  observeEvent(input$compute_cma_patient_selection_method,
+  {
+    if( input$compute_cma_patient_selection_method == "by_position" )
+    {
+      .update.patients.IDs.table();
+    }
+  })
+
+  observeEvent(input$compute_cma_patient_by_group_sorting,
+  {
+    .update.patients.IDs.table();
+  })
+
+  observeEvent(input$compute_cma_for_larger_sample_button,
   {
     cat("Computing...\n");
   })
