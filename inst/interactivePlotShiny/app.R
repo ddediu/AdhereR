@@ -1413,8 +1413,8 @@ ui <- fluidPage(
                                   .GlobalEnv$.plotting.params$max.running.time.in.minutes.to.compute,
                                   ' minutes.<br/>',
                                   'For larger computations, we provide the <code>R</code> code, ',
-                                  'which we recommend running from a <b>dedicated <code>R</code> session</b> on appropriately powerful hardware...<hr/>',
-                                 'You can select the patients:'))),
+                                  'which we recommend running from a <b>dedicated <code>R</code> session</b> on appropriately powerful hardware...'
+                                 ))),
 
                  #div(title="TEST!",
                  #    radioButtons(inputId="compute_cma_patient_selection_method",
@@ -1423,10 +1423,21 @@ ui <- fluidPage(
                  #                           "or as a range based on their position in a list"="by_position"),
                  #                 inline=TRUE)),
 
+                 hr(),
+                 div(title="Compue the CMA for the selected patients...",
+                     actionButton(inputId="compute_cma_for_larger_sample_button",
+                                  label=strong("Start computing CMA!"),
+                                  icon=icon("play", lib="glyphicon"),
+                                  style="color: darkblue ; border-color: darkblue")),
+                 hr(),
+
+                 div(HTML('<b>You can select the patients:</b>')),
+                 #hr(),
+
                  tabsetPanel(id="compute_cma_patient_selection_method",
 
                  #conditionalPanel(
-                 #  condition="(input.compute_cma_patient_selection_method == 'by_idXXX'",
+                 #  condition="(input.compute_cma_patient_selection_method == 'by_id'",
                  tabPanel(title=HTML("<b>individually</b>, using their IDs"), value="by_id",
                    column(12,div(title="Please select one or more patient IDs to process...",
                        selectInput(inputId="compute_cma_patient_by_id",
@@ -1444,7 +1455,7 @@ ui <- fluidPage(
                                      sliderInput(inputId="compute_cma_patient_by_group_range",
                                                  label="Select range of ID positions (#)",
                                                  min=1, max=NA, step=1, value=c(1,1),
-                                                 round=TRUE))
+                                                 round=TRUE, width="100%"))
                                  ),
 
                           column(3,
@@ -1461,13 +1472,7 @@ ui <- fluidPage(
                                      dataTableOutput(outputId="show_patients_as_list"))
                                  )
                  )
-              ),
-
-              hr(),
-              actionButton(inputId="compute_cma_for_larger_sample_button",
-                           label=strong("Start computing CMA!"),
-                           icon=icon("play", lib="glyphicon"),
-                           style="color: darkblue ; border-color: darkblue")
+              )
           )
         )
       )
@@ -3283,7 +3288,8 @@ server <- function(input, output, session) {
                             },
                       check.names=FALSE);
 
-    output$show_patients_as_list <- renderDataTable(tmp, options=list(pageLength=10));
+    .GlobalEnv$.plotting.params$.patients.to.compute <- tmp;
+    output$show_patients_as_list <- renderDataTable(.GlobalEnv$.plotting.params$.patients.to.compute, options=list(pageLength=10));
     updateSliderInput(session, inputId="compute_cma_patient_by_group_range",
                       max=nrow(tmp), value=c(1,1));
   }
@@ -3301,10 +3307,292 @@ server <- function(input, output, session) {
     .update.patients.IDs.table();
   })
 
+  # Start the CMA computation:
+  # allow the user to break it and show progress
+  # inpured by https://gist.github.com/jcheng5/1659aff15904a0c4ffcd4d0c7788f789
   observeEvent(input$compute_cma_for_larger_sample_button,
   {
-    cat("Computing...\n");
+    # Get the selected patient IDs:
+    if( input$compute_cma_patient_selection_method == "by_id" )
+    {
+      patients.to.compute <- input$compute_cma_patient_by_id;
+    } else if( input$compute_cma_patient_selection_method == "by_position" )
+    {
+      patients.to.compute <- .GlobalEnv$.plotting.params$.patients.to.compute$ID[
+        .GlobalEnv$.plotting.params$.patients.to.compute$`#` %in%
+          input$compute_cma_patient_by_group_range[1]:input$compute_cma_patient_by_group_range[2] ];
+    }
+
+    # Checks concerning the maximum number of patients and events to plot:
+    msgs <- NULL;
+    if( length(patients.to.compute) > .GlobalEnv$.plotting.params$max.number.patients.to.compute )
+    {
+      patients.to.compute <- patients.to.compute[ 1:.GlobalEnv$.plotting.params$max.number.patients.to.compute ];
+      msgs <- c(msgs, paste0("Warning: a maximum of ",.GlobalEnv$.plotting.params$max.number.patients.to.compute,
+                             " patients can be shown in an interactive plot: we kept only the first ",.GlobalEnv$.plotting.params$max.number.patients.to.compute,
+                             " from those you selected!\n"));
+    }
+
+    data.for.patients <- .GlobalEnv$.plotting.params$get.data.for.patients.fnc(patients.to.compute, .GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname)
+    n.events.per.patient <- cumsum(table(data.for.patients[,.GlobalEnv$.plotting.params$ID.colname]));
+    if( !is.null(data.for.patients) && nrow(data.for.patients) > .GlobalEnv$.plotting.params$max.number.events.to.compute )
+    {
+      n <- min(which(n.events.per.patient > .GlobalEnv$.plotting.params$max.number.events.to.compute));
+      if( n > 1 ) n <- n-1;
+      patients.to.compute <- patients.to.compute[ 1:n ];
+      msgs <- c(msgs, paste0("Warning: a maximum of ",.GlobalEnv$.plotting.params$max.number.events.to.compute,
+                             " events across all patients can be shown in an interactive plot: we kept only the first ",length(patients.to.compute),
+                             " patients from those you selected (totalling ",n.events.per.patient[n]," events)!\n"));
+    }
+    .GlobalEnv$.plotting.params$.patients.to.compute <- patients.to.compute;
+
+    # Where there any messages or anyhting else wrong? Ask the user if they are sure they want to start this...
+    r.ver.info <- sessionInfo();
+    showModal(modalDialog(title=div(icon("play", lib="glyphicon"), "AdhereR..."),
+                          div(div(if(!is.null(msgs)) paste0("There ",ifelse(length(msgs)==1,"was a warning",paste0("were ",length(msgs)," warnings")),":\n") else ""),
+                              div(HTML(paste0(msgs,collapse="<br/>")), style="color: red;"),
+                              div(HTML(paste0("We will compute the selected CMA for the <b>",length(patients.to.compute)," patients</b>:"))),
+                              div(paste0(patients.to.compute,collapse=", "), style="overflow: auto; max-height: 10em; color: blue;"),
+                              div(HTML(paste0("totalling <b>",n.events.per.patient[length(patients.to.compute)]," events</b>."))),
+                              div(HTML(paste0("The running time is limited to <b>",.GlobalEnv$.plotting.params$max.running.time.in.minutes.to.compute," minutes</b>."))),
+                              div(HTML("The actual <code>R</code> code needed to compute the selected CMA for any set of patients and data source can be accessed through the "),
+                                  span(icon("eye-open", lib="glyphicon"), strong("Show R code..."), style="border: 1px solid darkblue; border-radius: 5px; color: darkblue; background-color: lightblue"),
+                                  HTML(" button in the main window (please ignore the plotting code).<br/>")),
+                              hr(),
+                              div(HTML(paste0("We are using ",R.version.string,
+                                              " and AdhereR version ",descr <- utils::packageDescription("AdhereR.devel")$Version,
+                                              " on ",r.ver.info$running,"."))),
+                              hr(),
+                              shinyWidgets::progressBar(id="cma_computation_progress",
+                                                        value=0, display_pct=TRUE, status="info",
+                                                        title="Progress:")
+
+                            ),
+                          footer = tagList(span(title="Close this dialog box",
+                                               actionButton(inputId="close_compute_cma_dialog", label="Close", icon=icon("remove", lib="glyphicon"))),
+                                           span(title="Start the computation",
+                                                actionButton(inputId="start_computation_now", label="Start computation!", icon=icon("play", lib="glyphicon"))),
+                                           span(title="Stop the computation",
+                                                actionButton(inputId="cancel_cma_computation", label="Stop computation!", icon=icon("stop", lib="glyphicon"))),
+                                           span(title="Save the results to a TAB-separated (no quotes) CSV file...",
+                                                actionButton(inputId="save_cma_computation_results", label="Save results...", icon=icon("floppy-save", lib="glyphicon")))
+                                          )));
+
   })
+
+  observeEvent(input$close_compute_cma_dialog,
+  {
+    removeModal();
+  })
+
+
+  # observeEvent(input$start_computation_now,
+  # {
+  #   session=shiny::getDefaultReactiveDomain();
+  #   # Show up the progress bar and stopping button:
+  #   #showModal(modalDialog(title=div(icon("hourglass", lib="glyphicon"), paste0("Computing CMA for ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients: please wait...")),
+  #   #                      #div(checkboxInput(inputId="stop_cma_computation", label="STOP!", value=FALSE)),
+  #   #                      actionButton("stop","Stop",class="btn-danger", onclick="Shiny.onInputChange('stopThis',true)"),
+  #   #                      footer=NULL));
+  #
+  #   cat(session$input$cma_class);
+  #   cat('Computing CMA for patient: ');
+  #   withProgress(message="", detail="",
+  #                min=0, max=length(.GlobalEnv$.plotting.params$.patients.to.compute), value=0,
+  #                {
+  #                  start.time <- Sys.time();
+  #                  for(i in seq_along(.GlobalEnv$.plotting.params$.patients.to.compute) )
+  #                  {
+  #                    # Show the patient currently processed:
+  #                    cur.time <- Sys.time();
+  #                    time.left <- difftime(cur.time, start.time, units="sec");
+  #                    incProgress(0,
+  #                                message=paste0("Computing patient ",.GlobalEnv$.plotting.params$.patients.to.compute[i]),
+  #                                detail=paste0(" (",round(difftime(cur.time, start.time, units="sec"),1),"s)"));
+  #                    cat(paste0(.GlobalEnv$.plotting.params$.patients.to.compute[i]," (",round(difftime(cur.time, start.time, units="sec"),1),"s)",", "));
+  #
+  #                    # The computation:
+  #                    Sys.sleep(1);
+  #
+  #                    # Increment the progress:
+  #                    incProgress(1);
+  #
+  #                    # Stop?
+  #                    httpuv:::service();
+  #                    invalidateLater(1);
+  #                    cat(input$cma_class);
+  #                    if( !is.null(session$input$stopThis) && session$input$stopThis )
+  #                    {
+  #                      cat("\nCancelled....\n")
+  #                      break;
+  #                    }
+  #                  }
+  #                  incProgress(0,
+  #                              message=paste0("Completed in ",round(difftime(cur.time, start.time, units="sec"),1)," seconds!"), detail="");
+  #                  cat("DONE in ",round(difftime(cur.time, start.time, units="sec"),1)," seconds\n");
+  #                  Sys.sleep(2); # wait a bit for the message to be (possibly) seen...
+  #                });
+  #
+  #   removeModal();
+  # })
+
+  .compute.cma.for.patient <- function(i, start.time)
+  {
+    # Show the patient currently processed:
+    cur.time <- Sys.time();
+    cat(paste0(.GlobalEnv$.plotting.params$.patients.to.compute[i]," (",round(difftime(cur.time, start.time, units="sec"),1),"s)",", "));
+    shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=(i/length(.GlobalEnv$.plotting.params$.patients.to.compute))*100,
+                                    title=paste0("Progress: computing CMA for patient '",
+                                                      .GlobalEnv$.plotting.params$.patients.to.compute[i],"' (",
+                                                      i," of ",length(.GlobalEnv$.plotting.params$.patients.to.compute),"); time: ",
+                                                      round(difftime(cur.time, start.time, units="sec"),1)," seconds."));
+
+    # The computation:
+    Sys.sleep(1);
+
+    # Return value:
+    return (i);
+  }
+
+  collected.results <<- list();
+  workQueue <- function(start.time = Sys.time(),
+                        max.time = Inf, # max run time (in seconds, Inf == forever)
+                        cancel = cancelFunc,
+                        onSuccess = NULL,
+                        onError = stop)
+  {
+    i <- 1;
+
+    if (is.null(onSuccess)) { onSuccess <- function(...) NULL }
+
+    result <- list();
+    makeReactiveBinding("result");
+
+    observe(
+    {
+      if( i > length(.GlobalEnv$.plotting.params$.patients.to.compute) ) # natural finishing
+      {
+        message("Finished naturally");
+        result <<- i;
+        #removeModal();
+        shinyjs::enable('start_computation_now');
+        shinyjs::disable('cancel_cma_computation');
+        shinyjs::enable('close_compute_cma_dialog');
+        shinyjs::enable('save_cma_computation_results');
+        shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=100,
+                                        title=paste0("Finished for all ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients, took ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds."));
+        return();
+      }
+
+      time.spent <- difftime(Sys.time(), start.time, units="sec");
+      if( time.spent > max.time ) # finished because the time ran out
+      {
+        message("Ran out of time");
+        result <<- Inf; # ran out of time
+        #removeModal();
+        shinyjs::enable('start_computation_now');
+        shinyjs::disable('cancel_cma_computation');
+        shinyjs::enable('close_compute_cma_dialog');
+        shinyjs::enable('save_cma_computation_results');
+        shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=(i/length(.GlobalEnv$.plotting.params$.patients.to.compute))*100,
+                                        title=paste0("Stopped after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients."));
+        return();
+      }
+
+      if( isolate(cancel()) )
+      {
+        message("Cancelled by user");
+        #collected.results <<- list(); # erase the results collected so far...
+        result <- NA; # cancelled by user
+        #removeModal();
+        shinyjs::enable('start_computation_now');
+        shinyjs::disable('cancel_cma_computation');
+        shinyjs::enable('close_compute_cma_dialog');
+        shinyjs::enable('save_cma_computation_results');
+        shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=(i/length(.GlobalEnv$.plotting.params$.patients.to.compute))*100,
+                                        title=paste0("Manually cancelled after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients."));
+        return();
+      }
+
+      tryCatch(
+        {
+          collected.results[[length(collected.results) + 1]] <<- isolate(.compute.cma.for.patient(i, start.time));
+          names(collected.results)[length(collected.results)] <- .GlobalEnv$.plotting.params$.patients.to.compute[i];
+          result <<- i;
+        }, error = onError)
+      i <<- i + 1;
+      invalidateLater(1);
+    });
+
+    reactive(req(result));
+  }
+
+  # observeEvent(input$go,
+  # {
+  #   isCancelled <- local(
+  #   {
+  #     origCancel <- isolate(input$cancel_cma_computation);
+  #     function() { !identical(origCancel, input$cancel_cma_computation) }
+  #   });
+  #
+  #   cat('Computing CMA for patient: ');
+  #   collected.results <<- list();
+  #   result <- workQueue(patients=.GlobalEnv$.plotting.params$.patients.to.compute,
+  #                       cancel=isCancelled);
+  #
+  #   #observe(
+  #   #{
+  #   #  val <- result();
+  #   #  message("The result was ", val);
+  #   #});
+  # })
+
+  observeEvent(input$start_computation_now,
+  {
+    # Show up the progress bar and stopping button:
+    #showModal(modalDialog(title=div(icon("hourglass", lib="glyphicon"), paste0("Computing CMA for ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients: please wait...")),
+    #                      #div(checkboxInput(inputId="stop_cma_computation", label="STOP!", value=FALSE)),
+    #                      #actionButton("go", "Go"),
+    #                      actionButton("cancel_cma_computation", "Stop"),
+    #                      footer=NULL));
+
+    shinyjs::disable('start_computation_now');
+    shinyjs::enable('cancel_cma_computation');
+    shinyjs::disable('close_compute_cma_dialog');
+    shinyjs::disable('save_cma_computation_results');
+    shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=0);
+
+    isCancelled <- local(
+    {
+      origCancel <- isolate(input$cancel_cma_computation);
+      function() { !identical(origCancel, input$cancel_cma_computation) }
+    });
+
+    cat('Computing CMA for patient: ');
+    collected.results <<- list();
+    result <- workQueue(cancel=isCancelled);
+
+    #observe(
+    #{
+    #  val <- result();
+    #  message("The result was ", val);
+    #});
+  })
+
+  observeEvent(input$save_cma_computation_results,
+  {
+    if( is.null(collected.results) || length(collected.results) < 1 )
+    {
+      showModal(modalDialog(title="Adherer warning...", "No results to export..."));
+      return (invisible(NULL));
+    }
+
+    # Assemble the results as a single data.frame:
+    #d <- do.call(rbind, collected.results);
+
+
+  })
+
 }
 
 

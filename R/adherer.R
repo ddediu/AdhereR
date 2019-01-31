@@ -9855,6 +9855,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       "ID"=ID, "all.IDs"=all.IDs,
                                       "max.number.patients.to.plot"=10, "max.number.events.to.plot"=500,
                                       "max.number.patients.to.compute"=100, "max.number.events.to.compute"=5000, "max.running.time.in.minutes.to.compute"=5,
+                                      ".patients.to.compute"=NULL,
                                       "cma.class"=cma.class,
                                       "print.full.params"=print.full.params,
                                       "ID.colname"=ID.colname,
