@@ -42,6 +42,7 @@ ui <- fluidPage(
 
   # JavaScript ----
   shinyjs::useShinyjs(),
+  shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}"),
   #shinyjs::extendShinyjs(text="shinyjs.show_hide_sections = function() {$('#follow_up_folding_bits').toggle();"),
 
   # APP TITLE ----
@@ -3376,7 +3377,8 @@ server <- function(input, output, session) {
                                                         title="Progress:"),
                               div(title="Progress long...",
                                   strong("Progress log:"), br(),
-                                  div(textOutput(outputId="cma_computation_progress_log", inline=FALSE),
+                                  div(htmlOutput(outputId="cma_computation_progress_log", inline=FALSE),
+                                      id="cma_computation_progress_log_container",
                                       style="height: 5em; overflow: auto; border-radius: 5px; border-style: solid; border-width: 2px; background-color: #f0f0f0;"))
 
                             ),
@@ -3461,6 +3463,7 @@ server <- function(input, output, session) {
 
     # The computation:
     res <- NULL;
+    compute.start.time <- Sys.time();
     msgs <- capture.output(res <-
                              .GlobalEnv$.plotting.params$.plotting.fnc(data=.GlobalEnv$.plotting.params$data,
                                                                        ID.colname=.GlobalEnv$.plotting.params$ID.colname,
@@ -3522,32 +3525,45 @@ server <- function(input, output, session) {
     if( is.null(res) || length(grep("error", msgs, ignore.case=TRUE)) > 0 )
     {
       # Errors:
-      cat(paste0("Patient '",.GlobalEnv$.plotting.params$.patients.to.compute[i],
-                 "' failed after ",round(difftime(cur.time, start.time, units="sec"),1),
-                 " seconds with error(s): ",
-                 paste0("'",msgs,"'",collapse="; "),".\n"));
+      cma.computation.progress.log.text <<- paste0(cma.computation.progress.log.text,
+                                                   "<span style='color: red;'>Patient <b>",
+                                                   .GlobalEnv$.plotting.params$.patients.to.compute[i],
+                                                   "</b> <b>failed</b> after ",
+                                                   round(difftime(Sys.time(),compute.start.time,units="sec"),2)," seconds",
+                                                   if(length(msgs)>1) paste0(" with error(s): ", paste0("'",msgs,"'",collapse="; ")),
+                                                   ".</span><br/>");
     } else if( length(grep("warning", msgs, ignore.case=TRUE)) > 0 )
     {
       # Warnings:
-      cat(paste0("Patient '",.GlobalEnv$.plotting.params$.patients.to.compute[i],
-                 "' finished after ",round(difftime(cur.time, start.time, units="sec"),1),
-                 " seconds with warning(s): ",
-                 paste0("'",msgs,"'",collapse="; "),".\n"));
+      cma.computation.progress.log.text <<- paste0(cma.computation.progress.log.text,
+                                                   "<span style='color: blue;'>Patient <b>",
+                                                   .GlobalEnv$.plotting.params$.patients.to.compute[i],
+                                                   "</b> finished <b>successfully</b> after ",
+                                                   round(difftime(Sys.time(),compute.start.time,units="sec"),2)," seconds",
+                                                   if(length(msgs)>1) paste0(", but with warning(s): ", paste0("'",msgs,"'",collapse="; ")),
+                                                   ".</span><br/>");
     } else
     {
       # Normal output:
-      output$cma_computation_progress_log <- renderText(paste0("Patient ",.GlobalEnv$.plotting.params$.patients.to.compute[i]));
-      cat(paste0("Patient '",.GlobalEnv$.plotting.params$.patients.to.compute[i],
-                 "' finished after ",round(difftime(cur.time, start.time, units="sec"),1),
-                 " seconds with messages(s): ",
-                 paste0("'",msgs,"'",collapse="; "),".\n"));
+      cma.computation.progress.log.text <<- paste0(cma.computation.progress.log.text,
+                                                   "<span style='color: black;'>Patient <b>",
+                                                   .GlobalEnv$.plotting.params$.patients.to.compute[i],
+                                                   "</b> finished <b>successfully</b> after ",
+                                                   round(difftime(Sys.time(),compute.start.time,units="sec"),2)," seconds",
+                                                   if(length(msgs)>1) paste0(" with message(s): ", paste0("'",msgs,"'",collapse="; ")),
+                                                   ".</span><br/>");
     }
+
+    # Print progress so far...
+    output$cma_computation_progress_log <- renderText(cma.computation.progress.log.text);
+    shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
 
     # Return the results:
     return (getCMA(res));
   }
 
   collected.results <<- list();
+  cma.computation.progress.log.text <<- "";
   workQueue <- function(start.time = Sys.time(),
                         max.time = Inf, # max run time (in seconds, Inf == forever)
                         cancel = cancelFunc,
@@ -3574,6 +3590,10 @@ server <- function(input, output, session) {
         if( !is.null(collected.results) && length(collected.results) > 0 ) shinyjs::enable('save_cma_computation_results');
         shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=100,
                                         title=paste0("Finished for all ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients, took ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds."));
+        cma.computation.progress.log.text <<- paste0(cma.computation.progress.log.text,
+                                                     "<br/>Finished for all ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients, took ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds.");
+        output$cma_computation_progress_log <- renderText(cma.computation.progress.log.text);
+        shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
         return();
       }
 
@@ -3589,6 +3609,10 @@ server <- function(input, output, session) {
         if( !is.null(collected.results) && length(collected.results) > 0 ) shinyjs::enable('save_cma_computation_results');
         shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=(i/length(.GlobalEnv$.plotting.params$.patients.to.compute))*100,
                                         title=paste0("Stopped after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients."));
+        cma.computation.progress.log.text <<- paste0(cma.computation.progress.log.text,
+                                                     "<br/>Stopped after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients.");
+        output$cma_computation_progress_log <- renderText(cma.computation.progress.log.text);
+        shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
         return();
       }
 
@@ -3604,6 +3628,10 @@ server <- function(input, output, session) {
         if( !is.null(collected.results) && length(collected.results) > 0 ) shinyjs::enable('save_cma_computation_results');
         shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=(i/length(.GlobalEnv$.plotting.params$.patients.to.compute))*100,
                                         title=paste0("Manually cancelled after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients."));
+        cma.computation.progress.log.text <<- paste0(cma.computation.progress.log.text,
+                                                     "<br/>Manually cancelled after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients.");
+        output$cma_computation_progress_log <- renderText(cma.computation.progress.log.text);
+        shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
         return();
       }
 
@@ -3663,6 +3691,7 @@ server <- function(input, output, session) {
 
     #cat('Computing CMA for patient: ');
     collected.results <<- list();
+    cma.computation.progress.log.text <<- "";
     result <- workQueue(cancel=isCancelled);
 
     #observe(
