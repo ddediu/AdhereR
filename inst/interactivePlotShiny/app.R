@@ -258,15 +258,15 @@ ui <- fluidPage(
                                             shinyjs::hidden(div(id="cma_plus_contents",
                                                                 # Carry-over for same treat only?
                                                                 div(title='Carry over only across treatments of the same type?',
-                                                                    checkboxInput(inputId="carry_only_for_same_medication",
-                                                                                  label="For same treat. only?",
-                                                                                  value=FALSE)),
+                                                                    shinyWidgets::materialSwitch(inputId="carry_only_for_same_medication",
+                                                                                                 label="For same treat. only?",
+                                                                                                 value=FALSE, status="primary", right=TRUE)),
 
                                                                 # Consider dosage changes?
                                                                 div(title='Consider dosage change when computing the carry over?',
-                                                                    checkboxInput(inputId="consider_dosage_change",
-                                                                                  label="Consider dose changes?",
-                                                                                  value=FALSE)),
+                                                                    shinyWidgets::materialSwitch(inputId="consider_dosage_change",
+                                                                                                 label="Consider dose changes?",
+                                                                                                 value=FALSE, status="primary", right=TRUE)),
 
                                                                 hr()
                                             ))
@@ -286,18 +286,18 @@ ui <- fluidPage(
                                                                 conditionalPanel(
                                                                   condition="output.is_treat_class_defined",
                                                                   div(title='Does changing the treatment type trigger a new episode?',
-                                                                      checkboxInput(inputId="medication_change_means_new_treatment_episode",
-                                                                                    label="Treat. change starts new episode?",
-                                                                                    value=FALSE))
+                                                                      shinyWidgets::materialSwitch(inputId="medication_change_means_new_treatment_episode",
+                                                                                                   label="Treat. change starts new episode?",
+                                                                                                   value=FALSE, status="primary", right=TRUE))
                                                                 ),
 
                                                                 # Does dosage change start new episode?
                                                                 conditionalPanel(
                                                                   condition="output.is_dose_defined",
                                                                   div(title='Does changing the dose trigger a new episode?',
-                                                                      checkboxInput(inputId="dosage_change_means_new_treatment_episode",
-                                                                                    label="Dose change starts new episode?",
-                                                                                    value=FALSE))
+                                                                      shinyWidgets::materialSwitch(inputId="dosage_change_means_new_treatment_episode",
+                                                                                                   label="Dose change starts new episode?",
+                                                                                                   value=FALSE, status="primary", right=TRUE))
                                                                 ),
 
                                                                 # Max. permis. gap duration unit
@@ -315,9 +315,9 @@ ui <- fluidPage(
 
                                                                 # Plot CMA as histogram
                                                                 div(title='Show the distribution of estimated CMAs across episodes as a histogram or barplot?',
-                                                                    checkboxInput(inputId="plot_CMA_as_histogram_episodes",
-                                                                                  label="Plot CMA as histogram?",
-                                                                                  value=FALSE)),
+                                                                    shinyWidgets::materialSwitch(inputId="plot_CMA_as_histogram_episodes",
+                                                                                                 label="Plot CMA as histogram?",
+                                                                                                 value=FALSE, status="primary", right=TRUE)),
 
                                                                 hr()
                                             ))
@@ -389,9 +389,9 @@ ui <- fluidPage(
 
                                                                 # Plot CMA as histogram
                                                                 div(title='Show the distribution of estimated CMAs across sliding windows as a histogram or barplot?',
-                                                                    checkboxInput(inputId="plot_CMA_as_histogram_sliding_window",
-                                                                                  label="Plot CMA as histogram?",
-                                                                                  value=TRUE)),
+                                                                    shinyWidgets::materialSwitch(inputId="plot_CMA_as_histogram_sliding_window",
+                                                                                                 label="Plot CMA as histogram?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
 
                                                                 hr()
                                             ))
@@ -409,17 +409,17 @@ ui <- fluidPage(
 
                                             shinyjs::hidden(div(id="align_contents",
                                                                 div(title='Should all the patients be vertically aligned relative to their first event?',
-                                                                    checkboxInput(inputId="plot_align_all_patients",
-                                                                                  label="Align patients?",
-                                                                                  value=FALSE)),
+                                                                    shinyWidgets::materialSwitch(inputId="plot_align_all_patients",
+                                                                                                 label="Align patients?",
+                                                                                                 value=FALSE, status="primary", right=TRUE)),
 
                                                                 # Align al patients
                                                                 conditionalPanel(
                                                                   condition="input.plot_align_all_patients",
                                                                   div(title='Should the first event (across patients) be considered as the origin of time?',
-                                                                      checkboxInput(inputId="plot_align_first_event_at_zero",
-                                                                                    label="Align 1st event at 0?",
-                                                                                    value=FALSE))
+                                                                      shinyWidgets::materialSwitch(inputId="plot_align_first_event_at_zero",
+                                                                                                   label="Align 1st event at 0?",
+                                                                                                   value=FALSE, status="primary", right=TRUE))
                                                                 ),
 
                                                                 hr()
@@ -481,15 +481,15 @@ ui <- fluidPage(
                                                                   condition="input.cma_class == 'simple'",
 
                                                                   div(title='Print the CMA estimate next to the participant\'s ID?',
-                                                                      checkboxInput(inputId="print_cma",
-                                                                                    label="Print CMA?",
-                                                                                    value=TRUE))
+                                                                      shinyWidgets::materialSwitch(inputId="print_cma",
+                                                                                                   label="Print CMA?",
+                                                                                                   value=TRUE, status="primary", right=TRUE))
                                                                 ),
 
                                                                 div(title='Plot the CMA estimate next to the participant\'s ID?',
-                                                                    checkboxInput(inputId="plot_cma",
-                                                                                  label="Plot CMA?",
-                                                                                  value=TRUE)),
+                                                                    shinyWidgets::materialSwitch(inputId="plot_cma",
+                                                                                                 label="Plot CMA?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
 
                                                                 hr()
                                             ))
@@ -507,9 +507,9 @@ ui <- fluidPage(
                                             shinyjs::hidden(div(id="dose_contents",
                                                                 # Print dose?
                                                                 div(title='Print the dosage (i.e., the actual numeric values)?',
-                                                                    checkboxInput(inputId="print_dose",
-                                                                                  label="Print dose?",
-                                                                                  value=FALSE)),
+                                                                    shinyWidgets::materialSwitch(inputId="print_dose",
+                                                                                                 label="Print it?",
+                                                                                                 value=FALSE, status="primary", right=TRUE)),
 
                                                                 # Print dose attributes
                                                                 conditionalPanel(
@@ -526,18 +526,18 @@ ui <- fluidPage(
                                                                                                 value="white")),
 
                                                                   div(title='Print the dose centered on the event?',
-                                                                      checkboxInput(inputId="print_dose_centered",
-                                                                                    label="Print centered?",
-                                                                                    value=FALSE)),
+                                                                      shinyWidgets::materialSwitch(inputId="print_dose_centered",
+                                                                                                   label="Centered?",
+                                                                                                   value=FALSE, status="primary", right=TRUE)),
 
                                                                   hr()
                                                                 ),
 
                                                                 # Plot dose?
                                                                 div(title='Represent the dose as event line width?',
-                                                                    checkboxInput(inputId="plot_dose",
-                                                                                  label="Dose as line width?",
-                                                                                  value=FALSE)),
+                                                                    shinyWidgets::materialSwitch(inputId="plot_dose",
+                                                                                                 label="As line width?",
+                                                                                                 value=FALSE, status="primary", right=TRUE)),
 
                                                                 # Plot dose attributes
                                                                 conditionalPanel(
@@ -549,9 +549,9 @@ ui <- fluidPage(
                                                                                    value=8, min=1, max=NA, step=1)),
 
                                                                   div(title='Consider maximum dose globally or per each medication class separately?',
-                                                                      checkboxInput(inputId="plot_dose_lwd_across_medication_classes",
-                                                                                    label="Global max dose?",
-                                                                                    value=FALSE))
+                                                                      shinyWidgets::materialSwitch(inputId="plot_dose_lwd_across_medication_classes",
+                                                                                                   label="Global max?",
+                                                                                                   value=FALSE, status="primary", right=TRUE))
                                                                 ),
 
                                                                 hr()
@@ -567,9 +567,9 @@ ui <- fluidPage(
                                           shinyjs::hidden(div(id="legend_contents",
                                                               # Show legend?
                                                               div(title='Display the plot legend?',
-                                                                  checkboxInput(inputId="show_legend",
-                                                                                label="Show the legend?",
-                                                                                value=TRUE)),
+                                                                  shinyWidgets::materialSwitch(inputId="show_legend",
+                                                                                               label="Show legend?",
+                                                                                               value=TRUE, status="primary", right=TRUE)),
 
                                                               # Legend attributes
                                                               conditionalPanel(
@@ -623,39 +623,43 @@ ui <- fluidPage(
                                                                   span(p("Color or grayscale"), style="color:RoyalBlue; font-weight: bold;")),
 
                                                               # Draw grayscale?
-                                                              div(title='Draw grayscale (overrides everything lese)?',
-                                                                  checkboxInput(inputId="bw_plot",
-                                                                                label="Draw grayscale?",
-                                                                                value=FALSE)),
+                                                              div(title='Draw using only grayscales? (overrides everything else)',
+                                                                  shinyWidgets::materialSwitch(inputId="bw_plot",
+                                                                                               label="Grayscale?",
+                                                                                               value=FALSE, status="primary", right=TRUE)),
 
                                                               hr(),
 
-                                                              div(title='Colors for catgories of treatment',
-                                                                  span(p("Treatment colors"), style="color:RoyalBlue; font-weight: bold;")),
-
-                                                              # Colors for categories:
-                                                              div(title='The color for missing data',
-                                                                  colourpicker::colourInput(inputId="col_na",
-                                                                                            label="Missing data color",
-                                                                                            value="lightgray")),
-
-                                                              # Unspecified category name:
-                                                              div(title='The label of the unspecified (generic) treatment category',
-                                                                  textInput(inputId="unspecified_category_label",
-                                                                            label="Unspec. cat. label",
-                                                                            value="drug")),
-
-                                                              # The colour palette for treatment types:
                                                               conditionalPanel(
-                                                                condition="output.is_treat_class_defined",
-                                                                div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on category order.',
-                                                                    selectInput(inputId="col_cats",
-                                                                                label="Treatment palette",
-                                                                                choices=c("rainbow", "heat.colors", "terrain.colors", "topo.colors", "cm.colors", "magma", "inferno", "plasma", "viridis", "cividis"),
-                                                                                selected="rainbow"))
-                                                              ),
+                                                                condition="!(input.bw_plot)",
 
-                                                              hr(),
+                                                                div(title='Colors for catgories of treatment',
+                                                                    span(p("Treatment colors"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                # Colors for categories:
+                                                                div(title='The color for missing data',
+                                                                    colourpicker::colourInput(inputId="col_na",
+                                                                                              label="Missing data color",
+                                                                                              value="lightgray")),
+
+                                                                # Unspecified category name:
+                                                                div(title='The label of the unspecified (generic) treatment category',
+                                                                    textInput(inputId="unspecified_category_label",
+                                                                              label="Unspec. cat. label",
+                                                                              value="drug")),
+
+                                                                # The colour palette for treatment types:
+                                                                conditionalPanel(
+                                                                  condition="output.is_treat_class_defined",
+                                                                  div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on category order.',
+                                                                      selectInput(inputId="col_cats",
+                                                                                  label="Treatment palette",
+                                                                                  choices=c("rainbow", "heat.colors", "terrain.colors", "topo.colors", "cm.colors", "magma", "inferno", "plasma", "viridis", "cividis"),
+                                                                                  selected="rainbow"))
+                                                                ),
+
+                                                                hr()
+                                                              ),
 
                                                               div(title='Event visual attributes',
                                                                   span(p("Events"), style="color:RoyalBlue; font-weight: bold;")),
@@ -734,10 +738,14 @@ ui <- fluidPage(
                                                                 div(title='Continuation visual attributes',
                                                                     span(p("Continuation"), style="color:RoyalBlue; font-weight: bold;")),
 
-                                                                div(title='The color of continuation lines connecting consecutive events',
-                                                                    colourpicker::colourInput(inputId="col_continuation",
-                                                                                              label="Cont. line color",
-                                                                                              value="black")),
+                                                                conditionalPanel(
+                                                                  condition="!(input.bw_plot)",
+
+                                                                  div(title='The color of continuation lines connecting consecutive events',
+                                                                      colourpicker::colourInput(inputId="col_continuation",
+                                                                                                label="Cont. line color",
+                                                                                                value="black"))
+                                                                ),
                                                                 div(title='The line style of continuation lines connecting consecutive events',
                                                                     selectInput(inputId="lty_continuation",
                                                                                 label="Cont. line style",
@@ -765,9 +773,9 @@ ui <- fluidPage(
                                                                     span(p("Event intervals"), style="color:RoyalBlue; font-weight: bold;")),
 
                                                                 div(title='Show the event intervals?',
-                                                                    checkboxInput(inputId="show_event_intervals",
-                                                                                  label="Show event interv.?",
-                                                                                  value=TRUE)),
+                                                                    shinyWidgets::materialSwitch(inputId="show_event_intervals",
+                                                                                                 label="Show event interv.?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
 
                                                                 hr()
                                                               ),
@@ -794,11 +802,11 @@ ui <- fluidPage(
                                                               div(title='Follow-up window visual attributes',
                                                                   span(p("FUW visuals"), style="color:RoyalBlue; font-weight: bold;")),
                                                               div(title='Show the follow-up window?',
-                                                                  checkboxInput(inputId="highlight_followup_window",
-                                                                                label="Show FUW?",
-                                                                                value=TRUE)),
+                                                                  shinyWidgets::materialSwitch(inputId="highlight_followup_window",
+                                                                                               label="Show FUW?",
+                                                                                               value=TRUE, status="primary", right=TRUE)),
                                                               conditionalPanel(
-                                                                condition="input.highlight_followup_window",
+                                                                condition="input.highlight_followup_window &&  !(input.bw_plot)",
 
                                                                 div(title='The color of the follow-up window',
                                                                     colourpicker::colourInput(inputId="followup_window_col",
@@ -812,16 +820,20 @@ ui <- fluidPage(
                                                               div(title='Observation window visual attributes',
                                                                   span(p("OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
                                                               div(title='Show the observation window?',
-                                                                  checkboxInput(inputId="highlight_observation_window",
-                                                                                label="Show OW?",
-                                                                                value=TRUE)),
+                                                                  shinyWidgets::materialSwitch(inputId="highlight_observation_window",
+                                                                                               label="Show OW?",
+                                                                                               value=TRUE, status="primary", right=TRUE)),
                                                               conditionalPanel(
                                                                 condition="input.highlight_observation_window",
 
-                                                                div(title='The color of the observation window',
-                                                                    colourpicker::colourInput(inputId="observation_window_col",
-                                                                                              label="OW color",
-                                                                                              value="yellow")),
+                                                                conditionalPanel(
+                                                                  condition="!(input.bw_plot)",
+
+                                                                  div(title='The color of the observation window',
+                                                                      colourpicker::colourInput(inputId="observation_window_col",
+                                                                                                label="OW color",
+                                                                                                value="yellow"))
+                                                                ),
                                                                 div(title='The density of the hashing lines (number of lines per inch) used to draw the observation window',
                                                                     numericInput(inputId="observation_window_density",
                                                                                  label="OW hash dens.",
@@ -845,9 +857,9 @@ ui <- fluidPage(
                                                                 div(title='Real observation window visual attributes',
                                                                     span(p("Real OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
                                                                 div(title='Show the real observation window (the color and transparency are the same as for the theoretial observation window but the hasing pattern can be different)?',
-                                                                    checkboxInput(inputId="show_real_obs_window_start",
-                                                                                  label="Show real OW?",
-                                                                                  value=TRUE)),
+                                                                    shinyWidgets::materialSwitch(inputId="show_real_obs_window_start",
+                                                                                                 label="Show real OW?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
                                                                 conditionalPanel(
                                                                   condition="input.show_real_obs_window_start",
 
@@ -890,25 +902,29 @@ ui <- fluidPage(
                                                                                   label="CMA plot area %",
                                                                                   min=0, max=100, value=10, step=5, round=TRUE)),
 
-                                                                  div(title='The color of the CMA plot',
-                                                                      colourpicker::colourInput(inputId="cma_plot_col",
-                                                                                                label="CMA plot color",
-                                                                                                value="lightgreen")),
+                                                                  conditionalPanel(
+                                                                    condition="!(input.bw_plot)",
 
-                                                                  div(title='The color of the CMA plot border',
-                                                                      colourpicker::colourInput(inputId="cma_plot_border",
-                                                                                                label="CMA border color",
-                                                                                                value="darkgreen")),
+                                                                    div(title='The color of the CMA plot',
+                                                                        colourpicker::colourInput(inputId="cma_plot_col",
+                                                                                                  label="CMA plot color",
+                                                                                                  value="lightgreen")),
 
-                                                                  div(title='The color of the CMA plot background',
-                                                                      colourpicker::colourInput(inputId="cma_plot_bkg",
-                                                                                                label="CMA bkg. color",
-                                                                                                value="aquamarine")),
+                                                                    div(title='The color of the CMA plot border',
+                                                                        colourpicker::colourInput(inputId="cma_plot_border",
+                                                                                                  label="CMA border color",
+                                                                                                  value="darkgreen")),
 
-                                                                  div(title='The color of the CMA plot text',
-                                                                      colourpicker::colourInput(inputId="cma_plot_text",
-                                                                                                label="CMA text color",
-                                                                                                value="darkgreen")),
+                                                                    div(title='The color of the CMA plot background',
+                                                                        colourpicker::colourInput(inputId="cma_plot_bkg",
+                                                                                                  label="CMA bkg. color",
+                                                                                                  value="aquamarine")),
+
+                                                                    div(title='The color of the CMA plot text',
+                                                                        colourpicker::colourInput(inputId="cma_plot_text",
+                                                                                                  label="CMA text color",
+                                                                                                  value="darkgreen"))
+                                                                  ),
 
                                                                   hr()
                                                                 )
@@ -1064,16 +1080,16 @@ ui <- fluidPage(
                                                               selected="dot (.)")),
 
                                               div(title='Should the first row to be considered as the header?',
-                                                  checkboxInput(inputId="dataset_from_file_csv_header",
-                                                                label=HTML("Is header on 1<sup>st</sup> row?"),
-                                                                value=TRUE)),
+                                                  shinyWidgets::materialSwitch(inputId="dataset_from_file_csv_header",
+                                                                               label=HTML("Header on 1<sup>st</sup> row"),
+                                                                               value=TRUE, status="primary", right=TRUE)),
 
                                               conditionalPanel(
                                                 condition = "(input.dataset_from_file_csv_quotes != '[none] ()')",
                                                 div(title='Should the leading and trailing white spaces from unquoted fields be deleted?',
-                                                    checkboxInput(inputId="dataset_from_file_csv_strip_white",
-                                                                  label="Strip white spaces",
-                                                                  value=FALSE))),
+                                                    shinyWidgets::materialSwitch(inputId="dataset_from_file_csv_strip_white",
+                                                                                 label="Strip white spaces",
+                                                                                 value=FALSE, status="primary", right=TRUE))),
 
                                               div(title='Which strings in the file should be considered as missing data?\nPlease include the value(s) within double quotes and, if multiple values, separate them with commas (e.g. "NA", " ", "9999", "?").',
                                                   textInput(inputId="dataset_from_file_csv_na_strings",
@@ -1299,27 +1315,27 @@ ui <- fluidPage(
         )
       ),
 
-      column(2,
-        div(title='Freeze the width/height ratio of the plotting area (or make the width and height independent of each other)?',
-                 checkboxInput(inputId="plot_keep_ratio",
-                    label="Keep ratio",
-                    value=TRUE))#,
+      column(3,
+             div(title='Freeze the width/height ratio of the plotting area (or make the width and height independent of each other)?',
+                 shinyWidgets::materialSwitch(inputId="plot_keep_ratio",
+                                              label="Keep ratio",
+                                              value=TRUE, status="primary", right=TRUE)),
 
-        #checkboxInput(inputId="plot_auto_size",
-        #            label="auto size",
-        #            value=TRUE)
-      ),
+             #checkboxInput(inputId="plot_auto_size",
+             #            label="auto size",
+             #            value=TRUE)
+             #),
 
-      column(2,
-        # Save image to file:
-        div(title='Export this plot to an image file?',
-            checkboxInput(inputId="save_to_file_info",
-                          label="Save plot!",
-                          value=FALSE))
-            #shinyWidgets::checkboxGroupButtons(inputId="save_to_file_info",
-            #                     label=NULL,
-            #                     choices=c(`<span><i class='fa fa-bar-chart'></i>&nbsp; Save plot!</span>` = "Save it!")))
-            #                     #choices=c(`<i class='fa fa-bar-chart'></i>` = "Save it!")))
+             #column(2,
+             # Save image to file:
+             div(title='Export this plot to an image file?',
+                 shinyWidgets::materialSwitch(inputId="save_to_file_info",
+                                              label="Save plot!",
+                                              value=FALSE, status="primary", right=TRUE))
+             #shinyWidgets::checkboxGroupButtons(inputId="save_to_file_info",
+             #                     label=NULL,
+             #                     choices=c(`<span><i class='fa fa-bar-chart'></i>&nbsp; Save plot!</span>` = "Save it!")))
+             #                     #choices=c(`<i class='fa fa-bar-chart'></i>` = "Save it!")))
       ),
 
       column(2,
@@ -1384,22 +1400,26 @@ ui <- fluidPage(
 
       # Export R code for plot ----
       column(12,
-             column(3,
-                    # Show the R code:
-                    span(title='Show the R code that would generate the current plot',
-                         actionButton(inputId="show_r_code", label=strong("Show R code..."), icon=icon("eye-open", lib="glyphicon")))
-             ),
+             # Show the R code:
+             div(title='Show the R code that would generate the current plot',
+                  actionButton(inputId="show_r_code", label=strong("Show R code..."), icon=icon("eye-open", lib="glyphicon")))
+      ),
 
-             # Compute CMA for a (larger) set of patients using the same parameters as for the current plot:
-             column(9,
-                    conditionalPanel(
-                      condition="!(input.cma_class == 'simple' && input.cma_to_compute == 'CMA0')",
-                      span(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
-                           # actionButton(inputId="compute_cma_for_larger_sample", label=strong("Compute CMA for (more) patients..."), icon=icon("play", lib="glyphicon")))
-                           checkboxInput(inputId="compute_cma_for_larger_sample",
-                                         label="Compute CMA for (more) patients...",
-                                         value=FALSE))
-                    )
+      column(12,
+             div(p(" "))
+      ),
+
+      hr(),
+
+      # Compute CMA for a (larger) set of patients using the same parameters as for the current plot:
+      column(12,
+             conditionalPanel(
+               condition="!(input.cma_class == 'simple' && input.cma_to_compute == 'CMA0')",
+               div(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
+                    # actionButton(inputId="compute_cma_for_larger_sample", label=strong("Compute CMA for (more) patients..."), icon=icon("play", lib="glyphicon")))
+                    shinyWidgets::materialSwitch(inputId="compute_cma_for_larger_sample",
+                                                 label=strong("Compute CMA for several  patients..."),
+                                                 value=FALSE, status="primary", right=TRUE))
              )
       ),
 
@@ -3359,6 +3379,8 @@ server <- function(input, output, session) {
 
     # Where there any messages or anyhting else wrong? Ask the user if they are sure they want to start this...
     r.ver.info <- sessionInfo();
+    cma.computation.progress.log.text <<- "";
+    try(output$cma_computation_progress_log <- renderText(cma.computation.progress.log.text), silent=TRUE);
     showModal(modalDialog(title=div(icon("play", lib="glyphicon"), "AdhereR..."),
                           div(div(if(!is.null(msgs)) paste0("There ",ifelse(length(msgs)==1,"was a warning",paste0("were ",length(msgs)," warnings")),":\n") else ""),
                               div(HTML(paste0(msgs,collapse="<br/>")), style="color: red;"),
