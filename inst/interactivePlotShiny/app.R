@@ -27,6 +27,7 @@
 #' @import highlight
 #' @import clipr
 #' @import shinyjs
+#' @import shinyWidgets
 #' @import knitr
 #' @import readODS
 #' @import readxl
@@ -1390,18 +1391,21 @@ ui <- fluidPage(
 
              # Compute CMA for a (larger) set of patients using the same parameters as for the current plot:
              column(9,
-                    span(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
-                         # actionButton(inputId="compute_cma_for_larger_sample", label=strong("Compute CMA for (more) patients..."), icon=icon("play", lib="glyphicon")))
-                         checkboxInput(inputId="compute_cma_for_larger_sample",
-                                       label="Compute CMA for (more) patients...",
-                                       value=FALSE))
+                    conditionalPanel(
+                      condition="!(input.cma_class == 'simple' && input.cma_to_compute == 'CMA0')",
+                      span(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
+                           # actionButton(inputId="compute_cma_for_larger_sample", label=strong("Compute CMA for (more) patients..."), icon=icon("play", lib="glyphicon")))
+                           checkboxInput(inputId="compute_cma_for_larger_sample",
+                                         label="Compute CMA for (more) patients...",
+                                         value=FALSE))
+                    )
              )
       ),
 
       # Compute CMA and export results and R code ----
       column(12,
         conditionalPanel(
-          condition="(input.compute_cma_for_larger_sample)",
+          condition="!(input.cma_class == 'simple' && input.cma_to_compute == 'CMA0') && (input.compute_cma_for_larger_sample)",
 
           column(12,
                  div(HTML(paste0('Please select the patients for which to compute the <code>CMA</code>.<br/>',
@@ -1426,7 +1430,7 @@ ui <- fluidPage(
                  hr(),
                  div(title="Compue the CMA for the selected patients...",
                      actionButton(inputId="compute_cma_for_larger_sample_button",
-                                  label=strong("Start computing CMA!"),
+                                  label=strong("Compute CMA..."),
                                   icon=icon("play", lib="glyphicon"),
                                   style="color: darkblue ; border-color: darkblue")),
                  hr(),
@@ -1707,7 +1711,7 @@ server <- function(input, output, session) {
       {
         paste0("adherer-plot-",
                input$cma_class,"-",
-               ifelse(input$cma_class=="simple", input$cma_to_compute, cma_to_compute_within_complex),
+               ifelse(input$cma_class=="simple", input$cma_to_compute, input$cma_to_compute_within_complex),
                "-",
                "ID-",input$patient,
                ".",
@@ -3273,7 +3277,7 @@ server <- function(input, output, session) {
 
 
   # Update the patient IDs table:
-  .update.patients.IDs.table <- function()
+  .update.patients.IDs.table <- function(reset.slider=TRUE)
   {
     tmp <- data.frame("#"=  1:length(.GlobalEnv$.plotting.params$all.IDs),
                       "ID"= if( input$compute_cma_patient_by_group_sorting == "by ID (↑)" )
@@ -3290,8 +3294,7 @@ server <- function(input, output, session) {
 
     .GlobalEnv$.plotting.params$.patients.to.compute <- tmp;
     output$show_patients_as_list <- renderDataTable(.GlobalEnv$.plotting.params$.patients.to.compute, options=list(pageLength=10));
-    updateSliderInput(session, inputId="compute_cma_patient_by_group_range",
-                      max=nrow(tmp), value=c(1,1));
+    if( reset.slider ) updateSliderInput(session, inputId="compute_cma_patient_by_group_range", max=nrow(tmp), value=c(1,1));
   }
 
   observeEvent(input$compute_cma_patient_selection_method,
@@ -3318,6 +3321,11 @@ server <- function(input, output, session) {
       patients.to.compute <- input$compute_cma_patient_by_id;
     } else if( input$compute_cma_patient_selection_method == "by_position" )
     {
+      if( is.null(.GlobalEnv$.plotting.params$.patients.to.compute) ||
+          !inherits(.GlobalEnv$.plotting.params$.patients.to.compute, "data.frame") )
+      {
+        .update.patients.IDs.table(reset.slider=FALSE); # for re-udating this table (there were left-over from previous computations that result in an ugly crash (but keep range)...
+      }
       patients.to.compute <- .GlobalEnv$.plotting.params$.patients.to.compute$ID[
         .GlobalEnv$.plotting.params$.patients.to.compute$`#` %in%
           input$compute_cma_patient_by_group_range[1]:input$compute_cma_patient_by_group_range[2] ];
@@ -3365,7 +3373,11 @@ server <- function(input, output, session) {
                               hr(),
                               shinyWidgets::progressBar(id="cma_computation_progress",
                                                         value=0, display_pct=TRUE, status="info",
-                                                        title="Progress:")
+                                                        title="Progress:"),
+                              div(title="Progress long...",
+                                  strong("Progress log:"), br(),
+                                  div(textOutput(outputId="cma_computation_progress_log", inline=FALSE),
+                                      style="height: 5em; overflow: auto; border-radius: 5px; border-style: solid; border-width: 2px; background-color: #f0f0f0;"))
 
                             ),
                           footer = tagList(span(title="Close this dialog box",
@@ -3373,9 +3385,9 @@ server <- function(input, output, session) {
                                            span(title="Start the computation",
                                                 actionButton(inputId="start_computation_now", label="Start computation!", icon=icon("play", lib="glyphicon"))),
                                            span(title="Stop the computation",
-                                                actionButton(inputId="cancel_cma_computation", label="Stop computation!", icon=icon("stop", lib="glyphicon"))),
+                                                shinyjs::disabled(actionButton(inputId="cancel_cma_computation", label="Stop computation!", icon=icon("stop", lib="glyphicon")))),
                                            span(title="Save the results to a TAB-separated (no quotes) CSV file...",
-                                                actionButton(inputId="save_cma_computation_results", label="Save results...", icon=icon("floppy-save", lib="glyphicon")))
+                                                shinyjs::disabled(downloadButton(outputId="save_cma_computation_results", label="Save results...", icon=icon("floppy-save", lib="glyphicon"))))
                                           )));
 
   })
@@ -3440,7 +3452,7 @@ server <- function(input, output, session) {
   {
     # Show the patient currently processed:
     cur.time <- Sys.time();
-    cat(paste0(.GlobalEnv$.plotting.params$.patients.to.compute[i]," (",round(difftime(cur.time, start.time, units="sec"),1),"s)",", "));
+    #cat(paste0(.GlobalEnv$.plotting.params$.patients.to.compute[i]," (",round(difftime(cur.time, start.time, units="sec"),1),"s)",", "));
     shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=(i/length(.GlobalEnv$.plotting.params$.patients.to.compute))*100,
                                     title=paste0("Progress: computing CMA for patient '",
                                                       .GlobalEnv$.plotting.params$.patients.to.compute[i],"' (",
@@ -3448,10 +3460,91 @@ server <- function(input, output, session) {
                                                       round(difftime(cur.time, start.time, units="sec"),1)," seconds."));
 
     # The computation:
-    Sys.sleep(1);
+    res <- NULL;
+    msgs <- capture.output(res <-
+                             .GlobalEnv$.plotting.params$.plotting.fnc(data=.GlobalEnv$.plotting.params$data,
+                                                                       ID.colname=.GlobalEnv$.plotting.params$ID.colname,
+                                                                       event.date.colname=.GlobalEnv$.plotting.params$event.date.colname,
+                                                                       event.duration.colname=.GlobalEnv$.plotting.params$event.duration.colname,
+                                                                       event.daily.dose.colname=.GlobalEnv$.plotting.params$event.daily.dose.colname,
+                                                                       medication.class.colname=.GlobalEnv$.plotting.params$medication.class.colname,
+                                                                       date.format=.GlobalEnv$.plotting.params$date.format,
 
-    # Return value:
-    return (i);
+                                                                       ID=.GlobalEnv$.plotting.params$.patients.to.compute[i],
+                                                                       cma=ifelse(input$cma_class == "simple",
+                                                                                  input$cma_to_compute,
+                                                                                  input$cma_class),
+                                                                       cma.to.apply=ifelse(input$cma_class == "simple",
+                                                                                           "none",
+                                                                                           ifelse(input$cma_to_compute_within_complex == "CMA0",
+                                                                                                  "CMA1",
+                                                                                                  input$cma_to_compute_within_complex)), # don't use CMA0 for complex CMAs
+                                                                       #carryover.within.obs.window=FALSE,
+                                                                       #carryover.into.obs.window=FALSE,
+                                                                       carry.only.for.same.medication=input$carry_only_for_same_medication,
+                                                                       consider.dosage.change=input$consider_dosage_change,
+                                                                       followup.window.start=ifelse(input$followup_window_start_unit== "calendar date",
+                                                                                                    as.Date(input$followup_window_start_date, format="%Y-%m-%d"),
+                                                                                                    as.numeric(input$followup_window_start_no_units)),
+                                                                       followup.window.start.unit=ifelse(input$followup_window_start_unit== "calendar date",
+                                                                                                         "days",
+                                                                                                         input$followup_window_start_unit),
+                                                                       followup.window.duration=as.numeric(input$followup_window_duration),
+                                                                       followup.window.duration.unit=input$followup_window_duration_unit,
+                                                                       observation.window.start=ifelse(input$observation_window_start_unit== "calendar date",
+                                                                                                       as.Date(input$observation_window_start_date, format="%Y-%m-%d"),
+                                                                                                       as.numeric(input$observation_window_start_no_units)),
+                                                                       observation.window.start.unit=ifelse(input$observation_window_start_unit== "calendar date",
+                                                                                                            "days",
+                                                                                                            input$observation_window_start_unit),
+                                                                       observation.window.duration=as.numeric(input$observation_window_duration),
+                                                                       observation.window.duration.unit=input$observation_window_duration_unit,
+                                                                       medication.change.means.new.treatment.episode=input$medication_change_means_new_treatment_episode,
+                                                                       dosage.change.means.new.treatment.episode=input$dosage_change_means_new_treatment_episode,
+                                                                       maximum.permissible.gap=as.numeric(input$maximum_permissible_gap),
+                                                                       maximum.permissible.gap.unit=input$maximum_permissible_gap_unit,
+                                                                       sliding.window.start=as.numeric(input$sliding_window_start),
+                                                                       sliding.window.start.unit=input$sliding_window_start_unit,
+                                                                       sliding.window.duration=as.numeric(input$sliding_window_duration),
+                                                                       sliding.window.duration.unit=input$sliding_window_duration_unit,
+                                                                       sliding.window.step.duration=as.numeric(input$sliding_window_step_duration),
+                                                                       sliding.window.step.unit=input$sliding_window_step_unit,
+                                                                       sliding.window.no.steps=ifelse(input$sliding_window_step_choice == "number of steps" ,
+                                                                                                      as.numeric(input$sliding_window_no_steps),
+                                                                                                      NA),
+                                                                       get.colnames.fnc=.GlobalEnv$.plotting.params$get.colnames.fnc,
+                                                                       get.patients.fnc=.GlobalEnv$.plotting.params$get.patients.fnc,
+                                                                       get.data.for.patients.fnc=.GlobalEnv$.plotting.params$get.data.for.patients.fnc,
+                                                                       compute.cma.only=TRUE # just compute the CMA, no plotting please!
+                             ));
+
+    # Display result summary and return full info (including any messages/warnings/errors):
+    if( is.null(res) || length(grep("error", msgs, ignore.case=TRUE)) > 0 )
+    {
+      # Errors:
+      cat(paste0("Patient '",.GlobalEnv$.plotting.params$.patients.to.compute[i],
+                 "' failed after ",round(difftime(cur.time, start.time, units="sec"),1),
+                 " seconds with error(s): ",
+                 paste0("'",msgs,"'",collapse="; "),".\n"));
+    } else if( length(grep("warning", msgs, ignore.case=TRUE)) > 0 )
+    {
+      # Warnings:
+      cat(paste0("Patient '",.GlobalEnv$.plotting.params$.patients.to.compute[i],
+                 "' finished after ",round(difftime(cur.time, start.time, units="sec"),1),
+                 " seconds with warning(s): ",
+                 paste0("'",msgs,"'",collapse="; "),".\n"));
+    } else
+    {
+      # Normal output:
+      output$cma_computation_progress_log <- renderText(paste0("Patient ",.GlobalEnv$.plotting.params$.patients.to.compute[i]));
+      cat(paste0("Patient '",.GlobalEnv$.plotting.params$.patients.to.compute[i],
+                 "' finished after ",round(difftime(cur.time, start.time, units="sec"),1),
+                 " seconds with messages(s): ",
+                 paste0("'",msgs,"'",collapse="; "),".\n"));
+    }
+
+    # Return the results:
+    return (getCMA(res));
   }
 
   collected.results <<- list();
@@ -3472,13 +3565,13 @@ server <- function(input, output, session) {
     {
       if( i > length(.GlobalEnv$.plotting.params$.patients.to.compute) ) # natural finishing
       {
-        message("Finished naturally");
+        #message("Finished naturally");
         result <<- i;
         #removeModal();
         shinyjs::enable('start_computation_now');
         shinyjs::disable('cancel_cma_computation');
         shinyjs::enable('close_compute_cma_dialog');
-        shinyjs::enable('save_cma_computation_results');
+        if( !is.null(collected.results) && length(collected.results) > 0 ) shinyjs::enable('save_cma_computation_results');
         shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=100,
                                         title=paste0("Finished for all ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients, took ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds."));
         return();
@@ -3487,13 +3580,13 @@ server <- function(input, output, session) {
       time.spent <- difftime(Sys.time(), start.time, units="sec");
       if( time.spent > max.time ) # finished because the time ran out
       {
-        message("Ran out of time");
+        #message("Ran out of time");
         result <<- Inf; # ran out of time
         #removeModal();
         shinyjs::enable('start_computation_now');
         shinyjs::disable('cancel_cma_computation');
         shinyjs::enable('close_compute_cma_dialog');
-        shinyjs::enable('save_cma_computation_results');
+        if( !is.null(collected.results) && length(collected.results) > 0 ) shinyjs::enable('save_cma_computation_results');
         shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=(i/length(.GlobalEnv$.plotting.params$.patients.to.compute))*100,
                                         title=paste0("Stopped after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients."));
         return();
@@ -3501,14 +3594,14 @@ server <- function(input, output, session) {
 
       if( isolate(cancel()) )
       {
-        message("Cancelled by user");
+        #message("Cancelled by user");
         #collected.results <<- list(); # erase the results collected so far...
         result <- NA; # cancelled by user
         #removeModal();
         shinyjs::enable('start_computation_now');
         shinyjs::disable('cancel_cma_computation');
         shinyjs::enable('close_compute_cma_dialog');
-        shinyjs::enable('save_cma_computation_results');
+        if( !is.null(collected.results) && length(collected.results) > 0 ) shinyjs::enable('save_cma_computation_results');
         shinyWidgets::updateProgressBar(session, id="cma_computation_progress", value=(i/length(.GlobalEnv$.plotting.params$.patients.to.compute))*100,
                                         title=paste0("Manually cancelled after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients."));
         return();
@@ -3568,7 +3661,7 @@ server <- function(input, output, session) {
       function() { !identical(origCancel, input$cancel_cma_computation) }
     });
 
-    cat('Computing CMA for patient: ');
+    #cat('Computing CMA for patient: ');
     collected.results <<- list();
     result <- workQueue(cancel=isCancelled);
 
@@ -3579,19 +3672,55 @@ server <- function(input, output, session) {
     #});
   })
 
-  observeEvent(input$save_cma_computation_results,
-  {
-    if( is.null(collected.results) || length(collected.results) < 1 )
+  # observeEvent(input$save_cma_computation_results,
+  # {
+  #   if( is.null(collected.results) || length(collected.results) < 1 )
+  #   {
+  #     showModal(modalDialog(title="Adherer warning...", "No results to export..."));
+  #     return (invisible(NULL));
+  #   }
+  #
+  #   # Assemble the results as a single data.frame:
+  #   d <- NULL;
+  #   try(d <- do.call(rbind, collected.results), silent=TRUE);
+  #   if( !is.null(d) || !inherits(d, "data.frame") || nrow(d) < 1 || ncol(d) < 1 )
+  #   {
+  #     showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+  #                           div("Error collecting the results of the CMA computation: nothing to save to file!", style="color: red;"),
+  #                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+  #     return (invisible(NULL));
+  #   }
+  #
+  #   # Ask the user for a file to save them to:
+  #
+  # })
+
+  # Export results to file:
+  output$save_cma_computation_results <- downloadHandler(
+    filename = function() paste0("adherer-compute-",input$cma_class,"-",ifelse(input$cma_class=="simple", input$cma_to_compute, input$cma_to_compute_within_complex),"-results.tsv"),
+    content = function(file)
     {
-      showModal(modalDialog(title="Adherer warning...", "No results to export..."));
-      return (invisible(NULL));
+      if( is.null(collected.results) || length(collected.results) < 1 )
+      {
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "Adherer warning..."), "No results to export..."));
+      } else
+      {
+        # Assemble the results as a single data.frame:
+        d <- NULL;
+        try(d <- do.call(rbind, collected.results), silent=FALSE);
+        if( is.null(d) || !inherits(d, "data.frame") || nrow(d) < 1 || ncol(d) < 1 )
+        {
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div("Error collecting the results of the CMA computation: nothing to save to file!", style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        } else
+        {
+          # Write them to file:
+          write.table(d, file=file, col.names=TRUE, row.names=FALSE, quote=FALSE, sep="\t");
+        }
+      }
     }
-
-    # Assemble the results as a single data.frame:
-    #d <- do.call(rbind, collected.results);
-
-
-  })
+  )
 
 }
 

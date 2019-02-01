@@ -36,6 +36,8 @@ Imports: lubridate (>= 1.5),
     data.table (>= 1.9),
     manipulate (>= 1.0),
     shiny (>= 1.0),
+    shinyWidgets(>= 0.4.4),
+    shinyjs(>= 1.0),
     colourpicker (>= 1.0),
     viridisLite(>= 0.3),
     highlight (>= 0.4),
@@ -47,8 +49,7 @@ Imports: lubridate (>= 1.5),
     DBI (>= 1.0),
     RMariaDB (>= 1.0.5)
 Depends: R (>= 3.0)
-Suggests: knitr (>= 1.15),
-    rmarkdown (>= 1.1),
+Suggests: rmarkdown (>= 1.1),
     R.rsp (>= 0.40)
 VignetteBuilder: knitr, R.rsp
 Encoding: UTF-8

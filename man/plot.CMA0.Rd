@@ -65,8 +65,8 @@ drawn (or 0 for no grid).}
 \item{legend.bkg.opacity}{A \emph{number} between 0.0 and 1.0 specifying the
 opacity of the legend background.}
 
-\item{cex, cex.axis, cex.lab}{\emph{numeric} values specifying the cex of the
-various types of text.}
+\item{cex, cex.axis, cex.lab, legend.cex, legend.cex.title}{\emph{numeric} values
+specifying the cex of the various types of text.}
 
 \item{col.cats}{A \emph{color} or a \emph{function} that specifies the single
 colour or the colour palette used to plot the different medication; by
@@ -112,8 +112,8 @@ be plotted?}
 \item{highlight.observation.window}{\emph{Logical}, should the observation
 window be plotted?}
 
-\item{observation.window.col, observation.window.density, observation.window.angle}{Attributes of the observation window
-(colour, shading density and angle).}
+\item{observation.window.col, observation.window.density, observation.window.angle, observation.window.opacity}{Attributes of the observation window (colour, shading density, angle and
+opacity).}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}

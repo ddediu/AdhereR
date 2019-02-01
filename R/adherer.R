@@ -612,8 +612,8 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' (default), "top", or a \emph{numeric} value.
 #' @param legend.bkg.opacity A \emph{number} between 0.0 and 1.0 specifying the
 #' opacity of the legend background.
-#' @param cex,cex.axis,cex.lab \emph{numeric} values specifying the cex of the
-#' various types of text.
+#' @param cex,cex.axis,cex.lab,legend.cex,legend.cex.title \emph{numeric} values
+#' specifying the cex of the various types of text.
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
 #' default \code{rainbow}, but we recommend, whenever possible, a
@@ -644,8 +644,9 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' @param followup.window.col The follow-up window's colour.
 #' @param highlight.observation.window \emph{Logical}, should the observation
 #' window be plotted?
-#' @param observation.window.col,observation.window.density,observation.window.angle Attributes of the observation window
-#' (colour, shading density and angle).
+#' @param observation.window.col,observation.window.density,observation.window.angle,observation.window.opacity
+#' Attributes of the observation window (colour, shading density, angle and
+#' opacity).
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
 #' @param print.CMA \emph{Logical}, should the CMA values be printed?
@@ -9709,49 +9710,61 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             # Data accessor functions:
                             get.colnames.fnc=function(d) names(d),
                             get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
-                            get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ]
+                            get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
+
+                            # Plot the results or only compute the CMA and return it:
+                            compute.cma.only=FALSE
   )
   {
-    # Progress messages:
-    cat(paste0("Plotting patient ID '",ID,"' with CMA '",cma,"'",ifelse(cma.to.apply != "none",paste0(" ('",cma.to.apply,"')"),"")));
-    if( print.full.params )
+    if( !compute.cma.only ) # for computing CMA only these messages are not very informative and positively distracting...
     {
-      cat(paste0(" with params: ",
-                 "carryover.within.obs.window=",carryover.within.obs.window,", ",
-                 "carryover.into.obs.window=",carryover.into.obs.window,", ",
-                 "carry.only.for.same.medication=",carry.only.for.same.medication,", ",
-                 "consider.dosage.change=",consider.dosage.change,", ",
-                 "followup.window.start=",followup.window.start,", ",
-                 "followup.window.start.unit=",followup.window.start.unit,", ",
-                 "followup.window.duration=",followup.window.duration,", ",
-                 "followup.window.duration.unit=",followup.window.duration.unit,", ",
-                 "observation.window.start=",observation.window.start,", ",
-                 "observation.window.start.unit=",observation.window.start.unit,", ",
-                 "observation.window.duration=",observation.window.duration,", ",
-                 "observation.window.duration.unit=",observation.window.duration.unit,", ",
-                 "medication.change.means.new.treatment.episode=",medication.change.means.new.treatment.episode,", ",
-                 "dosage.change.means.new.treatment.episode=",dosage.change.means.new.treatment.episode,", ",
-                 "maximum.permissible.gap=",maximum.permissible.gap,", ",
-                 "maximum.permissible.gap.unit=",maximum.permissible.gap.unit,", ",
-                 "sliding.window.start=",sliding.window.start,", ",
-                 "sliding.window.start.unit=",sliding.window.start.unit,", ",
-                 "sliding.window.duration=",sliding.window.duration,", ",
-                 "sliding.window.duration.unit=",sliding.window.duration.unit,", ",
-                 "sliding.window.step.duration=",sliding.window.step.duration,", ",
-                 "sliding.window.step.unit=",sliding.window.step.unit,", ",
-                 "sliding.window.no.steps=",sliding.window.no.steps,", ",
-                 "align.all.patients=",align.all.patients,", ",
-                 "align.first.event.at.zero=",align.first.event.at.zero
-      ));
+      # Progress messages:
+      cat(paste0("Plotting patient ID '",ID,"' with CMA '",cma,"'",ifelse(cma.to.apply != "none",paste0(" ('",cma.to.apply,"')"),"")));
+      if( print.full.params )
+      {
+        cat(paste0(" with params: ",
+                   "carryover.within.obs.window=",carryover.within.obs.window,", ",
+                   "carryover.into.obs.window=",carryover.into.obs.window,", ",
+                   "carry.only.for.same.medication=",carry.only.for.same.medication,", ",
+                   "consider.dosage.change=",consider.dosage.change,", ",
+                   "followup.window.start=",followup.window.start,", ",
+                   "followup.window.start.unit=",followup.window.start.unit,", ",
+                   "followup.window.duration=",followup.window.duration,", ",
+                   "followup.window.duration.unit=",followup.window.duration.unit,", ",
+                   "observation.window.start=",observation.window.start,", ",
+                   "observation.window.start.unit=",observation.window.start.unit,", ",
+                   "observation.window.duration=",observation.window.duration,", ",
+                   "observation.window.duration.unit=",observation.window.duration.unit,", ",
+                   "medication.change.means.new.treatment.episode=",medication.change.means.new.treatment.episode,", ",
+                   "dosage.change.means.new.treatment.episode=",dosage.change.means.new.treatment.episode,", ",
+                   "maximum.permissible.gap=",maximum.permissible.gap,", ",
+                   "maximum.permissible.gap.unit=",maximum.permissible.gap.unit,", ",
+                   "sliding.window.start=",sliding.window.start,", ",
+                   "sliding.window.start.unit=",sliding.window.start.unit,", ",
+                   "sliding.window.duration=",sliding.window.duration,", ",
+                   "sliding.window.duration.unit=",sliding.window.duration.unit,", ",
+                   "sliding.window.step.duration=",sliding.window.step.duration,", ",
+                   "sliding.window.step.unit=",sliding.window.step.unit,", ",
+                   "sliding.window.no.steps=",sliding.window.no.steps,", ",
+                   "align.all.patients=",align.all.patients,", ",
+                   "align.first.event.at.zero=",align.first.event.at.zero
+        ));
+      }
+      cat("\n");
     }
-    cat("\n");
 
     # Preconditions (and data extraction):
     if( is.null(ID) ||
         is.null(data <- get.data.for.patients.fnc(ID, data, ID.colname)) || # extract the data for these IDs
         nrow(data)==0 )
     {
-      plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
+      if( compute.cma.only )
+      {
+        warning("No data for patient ",ID);
+      } else
+      {
+        plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
+      }
       return (invisible(NULL));
     }
 
@@ -9808,38 +9821,53 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                               warning=function(w) return(list(results=results,warning=conditionMessage(w))));
     if( is.null(results) )
     {
-      # Plot an error message:
-      plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab="");
-      text(0,0,paste0("Error computing '",cma,"' for patient '",ID,"'\n(see console for possible warnings or errors)!"),col="red");
-      if( !is.null(full.results$error) )   cat(paste0("Error(s): ",paste0(full.results$error,collapse="\n")));
-      if( !is.null(full.results$warning) ) cat(paste0("Warning(s): ",paste0(full.results$warning,collapse="\n")));
+      if( compute.cma.only )
+      {
+        warning(paste0("Error computing '",cma,"' for patient '",ID,". ",
+                       if( !is.null(full.results$error) )   paste0("Error(s): ",  paste0(full.results$error,collapse="; "),". "),
+                       if( !is.null(full.results$warning) ) paste0("Warning(s): ",paste0(full.results$warning,collapse="; "),". ")));
+        return (invisible(NULL));
+      } else
+      {
+        # Plot an error message:
+        plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab="");
+        text(0,0,paste0("Error computing '",cma,"' for patient '",ID,"'\n(see console for possible warnings or errors)!"),col="red");
+        if( !is.null(full.results$error) )   cat(paste0("Error(s): ",paste0(full.results$error,collapse="\n")));
+        if( !is.null(full.results$warning) ) cat(paste0("Warning(s): ",paste0(full.results$warning,collapse="\n")));
+      }
     } else
     {
-      # Plot the results:
-      plot(results,
-           show.legend=show.legend, legend.x=legend.x, legend.y=legend.y, legend.bkg.opacity=legend.bkg.opacity, legend.cex=legend.cex, legend.cex.title=legend.cex.title,
-           duration=duration,
-           bw.plot=bw.plot,
-           show.cma=show.cma,
-           col.na=col.na, col.cats=col.cats, unspecified.category.label=unspecified.category.label,
-           lty.event=lty.event, lwd.event=lwd.event, pch.start.event=pch.start.event, pch.end.event=pch.end.event,
-           col.continuation=col.continuation, lty.continuation=lty.continuation, lwd.continuation=lwd.continuation,
-           cex=cex, cex.axis=cex.axis, cex.lab=cex.lab,
-           highlight.followup.window=highlight.followup.window, followup.window.col=followup.window.col,
-           highlight.observation.window=highlight.observation.window, observation.window.col=observation.window.col,
-           observation.window.density=observation.window.density, observation.window.angle=observation.window.angle, observation.window.opacity=observation.window.opacity,
-           show.real.obs.window.start=show.real.obs.window.start, real.obs.window.density=real.obs.window.density, real.obs.window.angle=real.obs.window.angle,
-           show.event.intervals=show.event.intervals,
-           print.CMA=print.CMA, CMA.cex=CMA.cex,
-           plot.CMA=plot.CMA, CMA.plot.ratio=CMA.plot.ratio, CMA.plot.col=CMA.plot.col, CMA.plot.border=CMA.plot.border, CMA.plot.bkg=CMA.plot.bkg, CMA.plot.text=CMA.plot.text,
-           min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
-           show.period=show.period, period.in.days=period.in.days,
-           plot.CMA.as.histogram=plot.CMA.as.histogram,
-           align.all.patients=align.all.patients,
-           align.first.event.at.zero=align.first.event.at.zero,
-           print.dose=print.dose, cex.dose=cex.dose, print.dose.outline.col=print.dose.outline.col, print.dose.centered=print.dose.centered,
-           plot.dose=plot.dose, lwd.event.max.dose=lwd.event.max.dose, plot.dose.lwd.across.medication.classes=plot.dose.lwd.across.medication.classes
-          );
+      if( compute.cma.only )
+      {
+        return (invisible(results));
+      } else
+      {
+        # Plot the results:
+        plot(results,
+             show.legend=show.legend, legend.x=legend.x, legend.y=legend.y, legend.bkg.opacity=legend.bkg.opacity, legend.cex=legend.cex, legend.cex.title=legend.cex.title,
+             duration=duration,
+             bw.plot=bw.plot,
+             show.cma=show.cma,
+             col.na=col.na, col.cats=col.cats, unspecified.category.label=unspecified.category.label,
+             lty.event=lty.event, lwd.event=lwd.event, pch.start.event=pch.start.event, pch.end.event=pch.end.event,
+             col.continuation=col.continuation, lty.continuation=lty.continuation, lwd.continuation=lwd.continuation,
+             cex=cex, cex.axis=cex.axis, cex.lab=cex.lab,
+             highlight.followup.window=highlight.followup.window, followup.window.col=followup.window.col,
+             highlight.observation.window=highlight.observation.window, observation.window.col=observation.window.col,
+             observation.window.density=observation.window.density, observation.window.angle=observation.window.angle, observation.window.opacity=observation.window.opacity,
+             show.real.obs.window.start=show.real.obs.window.start, real.obs.window.density=real.obs.window.density, real.obs.window.angle=real.obs.window.angle,
+             show.event.intervals=show.event.intervals,
+             print.CMA=print.CMA, CMA.cex=CMA.cex,
+             plot.CMA=plot.CMA, CMA.plot.ratio=CMA.plot.ratio, CMA.plot.col=CMA.plot.col, CMA.plot.border=CMA.plot.border, CMA.plot.bkg=CMA.plot.bkg, CMA.plot.text=CMA.plot.text,
+             min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
+             show.period=show.period, period.in.days=period.in.days,
+             plot.CMA.as.histogram=plot.CMA.as.histogram,
+             align.all.patients=align.all.patients,
+             align.first.event.at.zero=align.first.event.at.zero,
+             print.dose=print.dose, cex.dose=cex.dose, print.dose.outline.col=print.dose.outline.col, print.dose.centered=print.dose.centered,
+             plot.dose=plot.dose, lwd.event.max.dose=lwd.event.max.dose, plot.dose.lwd.across.medication.classes=plot.dose.lwd.across.medication.classes
+        );
+      }
     }
   }
 
