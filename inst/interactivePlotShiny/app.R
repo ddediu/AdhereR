@@ -1499,6 +1499,8 @@ server <- function(input, output, session) {
   output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
   outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
+  #outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
+
   # The plotting function:
   .renderPlot <- function()
   {
