@@ -73,172 +73,189 @@ ui <- fluidPage(
            # PARAMS TAB ----
            tabsetPanel(id="sidebar-tabpanel",
                        tabPanel("Params", value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
-                                wellPanel(id = "tPanel", style = "overflow:scroll; max-height: 90vh;",
+                                conditionalPanel(
+                                  condition="!(output.is_dataset_defined)",
 
-                                          # Dataset info ----
-                                          div(title="Info about the currently used dataset...",
-                                              actionButton(inputId="about_dataset_button",
-                                                           label=strong("Dataset info..."),
-                                                           icon=icon("hdd", lib="glyphicon"),
-                                                           style="color: #3498db; border: none; background: none;")),
+                                  wellPanel(id = "tPanelnodataset", style = "overflow:scroll; max-height: 90vh;",
+                                            div(h4("No datasource!"), style="color:DarkRed"),
+                                            br(),
+                                            div(span(span("There is no valid source of data defined (probably because the interactive Shiny plotting was invoked without passing a dataset).")), style="color: red;"),
+                                            hr(),
+                                            div(span("Please use the "),
+                                                span(icon("hdd",lib="glyphicon"),strong("Data"), style="color: darkblue"),
+                                                span(" tab to select a valid datesource!"))
+                                  )
+                                ),
 
-                                          # General settings ----
-                                          div(id='general_settings_section', style="cursor: pointer;",
-                                              span(title='General setting that apply to all kinds of plots', # trick for adding tooltips: create a container div with the title the desired tootltip text...
-                                                   id = "general_settings", h4("General settings"), style="color:DarkBlue"),
-                                              shinyjs::hidden(div(title='Click to unfold...', id="general_settings_unfold_icon", icon("option-horizontal", lib="glyphicon")))),
+                                conditionalPanel(
+                                  condition="(output.is_dataset_defined)",
 
-                                          div(id="general_settings_contents",
-                                              # Select the CMA class ----
-                                              div(title='Select the type of CMA to plot: "simple", "per eipsode" or "sliding window"',
-                                                  selectInput(inputId="cma_class",
-                                                              label="CMA type",
-                                                              choices=c("simple", "per episode", "sliding window"),
-                                                              selected=.GlobalEnv$.plotting.params$cma.class)),
+                                  wellPanel(id = "tPanel", style = "overflow:scroll; max-height: 90vh;",
 
-                                              # Select the simple CMA to compute
-                                              conditionalPanel(
-                                                condition = "(input.cma_class == 'simple')",
-                                                div(title='The "simple" CMA to compute by itself',
-                                                    selectInput(inputId="cma_to_compute",
-                                                                label="CMA to compute",
-                                                                choices=paste0("CMA",0:9),
-                                                                selected="CMA0"))
-                                              ),
-                                              conditionalPanel(
-                                                condition = "(input.cma_class != 'simple')",
-                                                div(title='The "simple" CMA to compute for each episode/sliding window',
-                                                    selectInput(inputId="cma_to_compute_within_complex",
-                                                                label="CMA to compute",
-                                                                choices=paste0("CMA",1:9),
-                                                                selected="CMA1"))
-                                              ),
+                                            # Dataset info ----
+                                            div(title="Info about the currently used dataset...",
+                                                actionButton(inputId="about_dataset_button",
+                                                             label=strong("Dataset info..."),
+                                                             icon=icon("hdd", lib="glyphicon"),
+                                                             style="color: #3498db; border: none; background: none;")),
 
-                                              # Select the patients to plot ----
-                                              div(title='Select one (or more, by repeatedly selecting) patient(s) to plot',
-                                                  selectInput(inputId="patient",
-                                                              label="Patient(s) to plot",
-                                                              choices=.GlobalEnv$.plotting.params$all.IDs,
-                                                              selected=.GlobalEnv$.plotting.params$ID,
-                                                              multiple=TRUE)),
+                                            # General settings ----
+                                            div(id='general_settings_section', style="cursor: pointer;",
+                                                span(title='General setting that apply to all kinds of plots', # trick for adding tooltips: create a container div with the title the desired tootltip text...
+                                                     id = "general_settings", h4("General settings"), style="color:DarkBlue"),
+                                                shinyjs::hidden(div(title='Click to unfold...', id="general_settings_unfold_icon", icon("option-horizontal", lib="glyphicon")))),
 
-                                              hr()
-                                          ),
+                                            div(id="general_settings_contents",
+                                                # Select the CMA class ----
+                                                div(title='Select the type of CMA to plot: "simple", "per eipsode" or "sliding window"',
+                                                    selectInput(inputId="cma_class",
+                                                                label="CMA type",
+                                                                choices=c("simple", "per episode", "sliding window"),
+                                                                selected=.GlobalEnv$.plotting.params$cma.class)),
 
-                                          # Follow-up window ----
-                                          div(id='follow_up_section', style="cursor: pointer;",
-                                              div(title='Define the follow-up window (shortened to FUW)', h4(id="followup_window", "Follow-up window (FUW)"), style="color:DarkBlue;"),
-                                              div(title='Click to unfold...', id="follow_up_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+                                                # Select the simple CMA to compute
+                                                conditionalPanel(
+                                                  condition = "(input.cma_class == 'simple')",
+                                                  div(title='The "simple" CMA to compute by itself',
+                                                      selectInput(inputId="cma_to_compute",
+                                                                  label="CMA to compute",
+                                                                  choices=paste0("CMA",0:9),
+                                                                  selected="CMA0"))
+                                                ),
+                                                conditionalPanel(
+                                                  condition = "(input.cma_class != 'simple')",
+                                                  div(title='The "simple" CMA to compute for each episode/sliding window',
+                                                      selectInput(inputId="cma_to_compute_within_complex",
+                                                                  label="CMA to compute",
+                                                                  choices=paste0("CMA",1:9),
+                                                                  selected="CMA1"))
+                                                ),
 
-                                          shinyjs::hidden(div(id="follow_up_contents",
-                                                              # Follow-up window start
-                                                              div(title='The unit of the start of the follow-up window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
-                                                                  selectInput(inputId="followup_window_start_unit",
-                                                                              label="FUW start unit",
-                                                                              choices=c("days", "weeks", "months", "years", "calendar date"), # "column in dataset"),
-                                                                              selected="days")),
+                                                # Select the patients to plot ----
+                                                div(title='Select one (or more, by repeatedly selecting) patient(s) to plot',
+                                                    selectInput(inputId="patient",
+                                                                label="Patient(s) to plot",
+                                                                choices=.GlobalEnv$.plotting.params$all.IDs,
+                                                                selected=.GlobalEnv$.plotting.params$ID,
+                                                                multiple=TRUE)),
 
-                                                              # If follow-up window unit is "calendar date"
-                                                              conditionalPanel(
-                                                                condition = "(input.followup_window_start_unit == 'calendar date')",
-                                                                # Select an actual date
-                                                                div(title='Select the actual start date of the follow-up window (possibly using a calendar widget)',
-                                                                    dateInput(inputId="followup_window_start_date",
-                                                                              label="FUW start",
-                                                                              value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
-                                                              ),
+                                                hr()
+                                            ),
 
-                                                              ## If follow-up window unit is "column in dataset"
-                                                              #conditionalPanel(
-                                                              #  condition = "(input.followup_window_start_unit == 'column in dataset')",
-                                                              #              # Select an actual date ----
-                                                              #              selectInput(inputId="followup_window_start_column",
-                                                              #                        label="Follow-up wnd. start",
-                                                              #                        choices=names(.GlobalEnv$.plotting.params$data),
-                                                              #                        selected="")
-                                                              #),
+                                            # Follow-up window ----
+                                            div(id='follow_up_section', style="cursor: pointer;",
+                                                div(title='Define the follow-up window (shortened to FUW)', h4(id="followup_window", "Follow-up window (FUW)"), style="color:DarkBlue;"),
+                                                div(title='Click to unfold...', id="follow_up_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                                              # If follow-up window unit is regular unit
-                                                              conditionalPanel(
-                                                                condition = "(input.followup_window_start_unit != 'calendar date')",  # && input.followup_window_start_unit != 'column in dataset')",
+                                            shinyjs::hidden(div(id="follow_up_contents",
+                                                                # Follow-up window start
+                                                                div(title='The unit of the start of the follow-up window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
+                                                                    selectInput(inputId="followup_window_start_unit",
+                                                                                label="FUW start unit",
+                                                                                choices=c("days", "weeks", "months", "years", "calendar date"), # "column in dataset"),
+                                                                                selected="days")),
+
+                                                                # If follow-up window unit is "calendar date"
+                                                                conditionalPanel(
+                                                                  condition = "(input.followup_window_start_unit == 'calendar date')",
+                                                                  # Select an actual date
+                                                                  div(title='Select the actual start date of the follow-up window (possibly using a calendar widget)',
+                                                                      dateInput(inputId="followup_window_start_date",
+                                                                                label="FUW start",
+                                                                                value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
+                                                                ),
+
+                                                                ## If follow-up window unit is "column in dataset"
+                                                                #conditionalPanel(
+                                                                #  condition = "(input.followup_window_start_unit == 'column in dataset')",
+                                                                #              # Select an actual date ----
+                                                                #              selectInput(inputId="followup_window_start_column",
+                                                                #                        label="Follow-up wnd. start",
+                                                                #                        choices=names(.GlobalEnv$.plotting.params$data),
+                                                                #                        selected="")
+                                                                #),
+
+                                                                # If follow-up window unit is regular unit
+                                                                conditionalPanel(
+                                                                  condition = "(input.followup_window_start_unit != 'calendar date')",  # && input.followup_window_start_unit != 'column in dataset')",
+                                                                  # Select the number of units
+                                                                  div(title='Select the number of units defining the start of the follow-up window',
+                                                                      numericInput(inputId="followup_window_start_no_units",
+                                                                                   label="FUW start",
+                                                                                   value=0, min=0, max=NA, step=30))
+                                                                ),
+
+                                                                # Follow-up window duration
+                                                                div(title='The unit of the duration of the follow-up window (can be "days", "weeks", "months" or "years")',
+                                                                    selectInput(inputId="followup_window_duration_unit",
+                                                                                label="FUW duration unit",
+                                                                                choices=c("days", "weeks", "months", "years"),
+                                                                                selected="days")),
+
                                                                 # Select the number of units
-                                                                div(title='Select the number of units defining the start of the follow-up window',
-                                                                    numericInput(inputId="followup_window_start_no_units",
-                                                                                 label="FUW start",
-                                                                                 value=0, min=0, max=NA, step=30))
-                                                              ),
+                                                                div(title='Select the number of units defining the duration of the follow-up window',
+                                                                    numericInput(inputId="followup_window_duration",
+                                                                                 label="FUW duration",
+                                                                                 value=2*365, min=0, max=NA, step=30)),
 
-                                                              # Follow-up window duration
-                                                              div(title='The unit of the duration of the follow-up window (can be "days", "weeks", "months" or "years")',
-                                                                  selectInput(inputId="followup_window_duration_unit",
-                                                                              label="FUW duration unit",
-                                                                              choices=c("days", "weeks", "months", "years"),
-                                                                              selected="days")),
+                                                                hr()
+                                            )),
 
-                                                              # Select the number of units
-                                                              div(title='Select the number of units defining the duration of the follow-up window',
-                                                                  numericInput(inputId="followup_window_duration",
-                                                                               label="FUW duration",
-                                                                               value=2*365, min=0, max=NA, step=30)),
+                                            # Observation window ----
+                                            div(id='observation_section', style="cursor: pointer;",
+                                                span(title='Define the observation window (shortened to OW)', id="observation_window", h4("Observation window (OW)"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="observation_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                                              hr()
-                                          )),
+                                            shinyjs::hidden(div(id="observation_contents",
+                                                                # Observation window start
+                                                                div(title='The unit of the start of the observation window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
+                                                                    selectInput(inputId="observation_window_start_unit",
+                                                                                label="OW start unit",
+                                                                                choices=c("days", "weeks", "months", "years", "calendar date"),
+                                                                                selected="days")),
 
-                                          # Observation window ----
-                                          div(id='observation_section', style="cursor: pointer;",
-                                              span(title='Define the observation window (shortened to OW)', id="observation_window", h4("Observation window (OW)"), style="color:DarkBlue"),
-                                              div(title='Click to unfold...', id="observation_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+                                                                # If observation window unit is "calendar date"
+                                                                conditionalPanel(
+                                                                  condition = "(input.observation_window_start_unit == 'calendar date')",
+                                                                  # Select an actual date
+                                                                  div(title='Select the actual start date of the observation window (possibly using a calendar widget)',
+                                                                      dateInput(inputId="observation_window_start_date",
+                                                                                label="OW start",
+                                                                                value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
+                                                                ),
 
-                                          shinyjs::hidden(div(id="observation_contents",
-                                                              # Observation window start
-                                                              div(title='The unit of the start of the observation window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
-                                                                  selectInput(inputId="observation_window_start_unit",
-                                                                              label="OW start unit",
-                                                                              choices=c("days", "weeks", "months", "years", "calendar date"),
-                                                                              selected="days")),
+                                                                # If observation window unit is not "calendar date"
+                                                                conditionalPanel(
+                                                                  condition = "(input.observation_window_start_unit != 'calendar date')",
+                                                                  # Select the number of units
+                                                                  div(title='Select the number of units defining the start of the observation window',
+                                                                      numericInput(inputId="observation_window_start_no_units",
+                                                                                   label="OW start",
+                                                                                   value=0, min=0, max=NA, step=30))
+                                                                ),
 
-                                                              # If observation window unit is "calendar date"
-                                                              conditionalPanel(
-                                                                condition = "(input.observation_window_start_unit == 'calendar date')",
-                                                                # Select an actual date
-                                                                div(title='Select the actual start date of the observation window (possibly using a calendar widget)',
-                                                                    dateInput(inputId="observation_window_start_date",
-                                                                              label="OW start",
-                                                                              value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
-                                                              ),
 
-                                                              # If observation window unit is not "calendar date"
-                                                              conditionalPanel(
-                                                                condition = "(input.observation_window_start_unit != 'calendar date')",
+                                                                # Observation window duration
+                                                                div(title='The unit of the duration of the observation window (can be "days", "weeks", "months" or "years")',
+                                                                    selectInput(inputId="observation_window_duration_unit",
+                                                                                label="OW duration unit",
+                                                                                choices=c("days", "weeks", "months", "years"),
+                                                                                selected="days")),
+
                                                                 # Select the number of units
-                                                                div(title='Select the number of units defining the start of the observation window',
-                                                                    numericInput(inputId="observation_window_start_no_units",
-                                                                                 label="OW start",
-                                                                                 value=0, min=0, max=NA, step=30))
-                                                              ),
+                                                                div(title='Select the number of units defining the duration of the observation window',
+                                                                    numericInput(inputId="observation_window_duration",
+                                                                                 label="OW duration",
+                                                                                 value=2*365, min=0, max=NA, step=30)),
+
+                                                                hr()
+                                            )),
 
 
-                                                              # Observation window duration
-                                                              div(title='The unit of the duration of the observation window (can be "days", "weeks", "months" or "years")',
-                                                                  selectInput(inputId="observation_window_duration_unit",
-                                                                              label="OW duration unit",
-                                                                              choices=c("days", "weeks", "months", "years"),
-                                                                              selected="days")),
-
-                                                              # Select the number of units
-                                                              div(title='Select the number of units defining the duration of the observation window',
-                                                                  numericInput(inputId="observation_window_duration",
-                                                                               label="OW duration",
-                                                                               value=2*365, min=0, max=NA, step=30)),
-
-                                                              hr()
-                                          )),
-
-
-                                          # CMA5+ only ----
-                                          # carry_only_for_same_medication, consider_dosage_change
-                                          conditionalPanel(
-                                            condition = "((input.cma_class == 'simple' &&
+                                            # CMA5+ only ----
+                                            # carry_only_for_same_medication, consider_dosage_change
+                                            conditionalPanel(
+                                              condition = "((input.cma_class == 'simple' &&
                        (input.cma_to_compute == 'CMA5' ||
                         input.cma_to_compute == 'CMA6' ||
                         input.cma_to_compute == 'CMA7' ||
@@ -251,504 +268,423 @@ ui <- fluidPage(
                         input.cma_to_compute_within_complex == 'CMA8' ||
                         input.cma_to_compute_within_complex == 'CMA9')))",
 
-                                            div(id='cma_plus_section', style="cursor: pointer;",
-                                                span(title='What type of carry over to consider?', h4("Carry over"), style="color:DarkBlue"),
-                                                div(title='Click to unfold...', id="cma_plus_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+                                              div(id='cma_plus_section', style="cursor: pointer;",
+                                                  span(title='What type of carry over to consider?', h4("Carry over"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="cma_plus_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                            shinyjs::hidden(div(id="cma_plus_contents",
-                                                                # Carry-over for same treat only?
-                                                                div(title='Carry over only across treatments of the same type?',
-                                                                    shinyWidgets::materialSwitch(inputId="carry_only_for_same_medication",
-                                                                                                 label="For same treat. only?",
-                                                                                                 value=FALSE, status="primary", right=TRUE)),
+                                              shinyjs::hidden(div(id="cma_plus_contents",
+                                                                  # Carry-over for same treat only?
+                                                                  div(title='Carry over only across treatments of the same type?',
+                                                                      shinyWidgets::materialSwitch(inputId="carry_only_for_same_medication",
+                                                                                                   label="For same treat. only?",
+                                                                                                   value=FALSE, status="primary", right=TRUE)),
 
-                                                                # Consider dosage changes?
-                                                                div(title='Consider dosage change when computing the carry over?',
-                                                                    shinyWidgets::materialSwitch(inputId="consider_dosage_change",
-                                                                                                 label="Consider dose changes?",
-                                                                                                 value=FALSE, status="primary", right=TRUE)),
-
-                                                                hr()
-                                            ))
-                                          ),
-
-
-                                          # Per episode only ----
-                                          conditionalPanel(
-                                            condition = "(input.cma_class == 'per episode')",
-
-                                            div(id='episodes_section', style="cursor: pointer;",
-                                                span(title='Parameters defining treatment episodes', h4("Define episodes"), style="color:DarkBlue"),
-                                                div(title='Click to unfold...', id="episodes_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
-
-                                            shinyjs::hidden(div(id="episodes_contents",
-                                                                # Does treat. change start new episode?
-                                                                conditionalPanel(
-                                                                  condition="output.is_treat_class_defined",
-                                                                  div(title='Does changing the treatment type trigger a new episode?',
-                                                                      shinyWidgets::materialSwitch(inputId="medication_change_means_new_treatment_episode",
-                                                                                                   label="Treat. change starts new episode?",
-                                                                                                   value=FALSE, status="primary", right=TRUE))
-                                                                ),
-
-                                                                # Does dosage change start new episode?
-                                                                conditionalPanel(
-                                                                  condition="output.is_dose_defined",
-                                                                  div(title='Does changing the dose trigger a new episode?',
-                                                                      shinyWidgets::materialSwitch(inputId="dosage_change_means_new_treatment_episode",
-                                                                                                   label="Dose change starts new episode?",
-                                                                                                   value=FALSE, status="primary", right=TRUE))
-                                                                ),
-
-                                                                # Max. permis. gap duration unit
-                                                                div(title='The unit of the maximum permissible gap after which a new episode is triggered: either absolute ("days", "weeks", "months" or "years") or relative ("percent")',
-                                                                    selectInput(inputId="maximum_permissible_gap_unit",
-                                                                                label="Max. gap duration unit",
-                                                                                choices=c("days", "weeks", "months", "years", "percent"),
-                                                                                selected="days")),
-
-                                                                # Max. permissible gap
-                                                                div(title='The maximum permissible gap after which a new episode is triggered (in the above-selected units)',
-                                                                    numericInput(inputId="maximum_permissible_gap",
-                                                                                 label="Max. gap duration",
-                                                                                 value=0, min=0, max=NA, step=1)),
-
-                                                                # Plot CMA as histogram
-                                                                div(title='Show the distribution of estimated CMAs across episodes as a histogram or barplot?',
-                                                                    shinyWidgets::materialSwitch(inputId="plot_CMA_as_histogram_episodes",
-                                                                                                 label="Plot CMA as histogram?",
-                                                                                                 value=FALSE, status="primary", right=TRUE)),
-
-                                                                hr()
-                                            ))
-                                          ),
-
-
-                                          # Sliding window only ----
-                                          conditionalPanel(
-                                            condition = "(input.cma_class == 'sliding window')",
-
-                                            div(id='sliding_windows_section', style="cursor: pointer;",
-                                                span(title='Parameters defining the sliding windows (shortened to SW))', h4("Define sliding windows (SW)"), style="color:DarkBlue"),
-                                                div(title='Click to unfold...', id="sliding_windows_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
-
-                                            shinyjs::hidden(div(id="sliding_windows_contents",
-                                                                # Sliding window start
-                                                                div(title='The unit of the start of the sliding windows ("days", "weeks", "months" or "years")',
-                                                                    selectInput(inputId="sliding_window_start_unit",
-                                                                                label="SW start unit",
-                                                                                choices=c("days", "weeks", "months", "years"),
-                                                                                selected="days")),
-
-                                                                # Select the number of units
-                                                                div(title='Select the number of units defining the start of the sliding windows',
-                                                                    numericInput(inputId="sliding_window_start",
-                                                                                 label="SW start",
-                                                                                 value=0, min=0, max=NA, step=30)),
-
-                                                                # Sliding window duration
-                                                                div(title='The unit of the duration of the sliding windows ("days", "weeks", "months" or "years")',
-                                                                    selectInput(inputId="sliding_window_duration_unit",
-                                                                                label="SW duration unit",
-                                                                                choices=c("days", "weeks", "months", "years"),
-                                                                                selected="days")),
-
-                                                                # Select the number of units
-                                                                div(title='Select the number of units defining the duration of the sliding windows',
-                                                                    numericInput(inputId="sliding_window_duration",
-                                                                                 label="SW duration",
-                                                                                 value=90, min=0, max=NA, step=30)),
-
-                                                                # Steps choice
-                                                                div(title='How is the step of the sliding windows defined: by giving their number or their duration?',
-                                                                    selectInput(inputId="sliding_window_step_choice",
-                                                                                label="Define SW steps by",
-                                                                                choices=c("number of steps", "duration of a step"),
-                                                                                selected="the duration of a step")),
-
-                                                                # Sliding window steps
-                                                                conditionalPanel(
-                                                                  condition = "(input.sliding_window_step_choice == 'duration of a step')",
-                                                                  div(title='The unit of the sliding windows step duration ("days", "weeks", "months" or "years")',
-                                                                      selectInput(inputId="sliding_window_step_unit",
-                                                                                  label="SW step unit",
-                                                                                  choices=c("days", "weeks", "months", "years"),
-                                                                                  selected="days")),
-                                                                  div(title='The sliding windows duration (in the units selected above)',
-                                                                      numericInput(inputId="sliding_window_step_duration",
-                                                                                   label="SW step duration",
-                                                                                   value=60, min=0, max=NA, step=7))
-                                                                ),
-                                                                conditionalPanel(
-                                                                  condition = "(input.sliding_window_step_choice == 'number of steps')",
-                                                                  div(title='The number of sliding windows steps',
-                                                                      numericInput(inputId="sliding_window_no_steps",
-                                                                                   label="SW number of steps",
-                                                                                   value=10, min=0, max=NA, step=1))
-                                                                ),
-
-                                                                # Plot CMA as histogram
-                                                                div(title='Show the distribution of estimated CMAs across sliding windows as a histogram or barplot?',
-                                                                    shinyWidgets::materialSwitch(inputId="plot_CMA_as_histogram_sliding_window",
-                                                                                                 label="Plot CMA as histogram?",
-                                                                                                 value=TRUE, status="primary", right=TRUE)),
-
-                                                                hr()
-                                            ))
-
-                                          ),
-
-
-                                          # Align all patients ----
-                                          conditionalPanel(
-                                            condition="(input.patient.length > 1)",
-
-                                            div(id='align_section', style="cursor: pointer;",
-                                                span(title='Align patients for clearer plots?', h4("Align patients"), style="color:DarkBlue"),
-                                                div(title='Click to unfold...', id="align_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
-
-                                            shinyjs::hidden(div(id="align_contents",
-                                                                div(title='Should all the patients be vertically aligned relative to their first event?',
-                                                                    shinyWidgets::materialSwitch(inputId="plot_align_all_patients",
-                                                                                                 label="Align patients?",
-                                                                                                 value=FALSE, status="primary", right=TRUE)),
-
-                                                                # Align al patients
-                                                                conditionalPanel(
-                                                                  condition="input.plot_align_all_patients",
-                                                                  div(title='Should the first event (across patients) be considered as the origin of time?',
-                                                                      shinyWidgets::materialSwitch(inputId="plot_align_first_event_at_zero",
-                                                                                                   label="Align 1st event at 0?",
-                                                                                                   value=FALSE, status="primary", right=TRUE))
-                                                                ),
-
-                                                                hr()
-                                            ))
-                                          ),
-
-
-                                          # Duration and period ----
-                                          div(id='duration_period_section', style="cursor: pointer;",
-                                              span(title='Duration and period', h4("Duration & period"), style="color:DarkBlue"),
-                                              div(title='Click to unfold...', id="duration_period_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
-
-                                          shinyjs::hidden(div(id="duration_period_contents",
-                                                              # Duration:
-                                                              div(title='The duration to plot (in days), or 0 to determine it from the data',
-                                                                  numericInput(inputId="duration",
-                                                                               label="Duration",
-                                                                               value=0, min=0, max=NA, step=90)),
-
-                                                              # Period:
-                                                              conditionalPanel(
-                                                                condition="(input.patient.length > 1) && input.plot_align_all_patients",
-
-                                                                div(title='Draw vertical grid at regular interval as days since the earliest date',
-                                                                    selectInput(inputId="show_period_align_patients",
-                                                                                label="Show period as",
-                                                                                choices=c("days"), # only days are possible when aligning the patients
-                                                                                selected="days"))
-                                                              ),
-                                                              conditionalPanel(
-                                                                condition="!((input.patient.length > 1) && input.plot_align_all_patients)", # ELSE
-
-                                                                div(title='Draw vertical grid at regular interval as days since the earliest date or as actual dates?',
-                                                                    selectInput(inputId="show_period",
-                                                                                label="Show period as",
-                                                                                choices=c("days", "dates"),
-                                                                                selected="days"))
-                                                              ),
-
-                                                              div(title='The interval (in days) at which to draw the vertical grid (or 0 for no grid)',
-                                                                  numericInput(inputId="period_in_days",
-                                                                               label="Period (in days)",
-                                                                               value=90, min=0, max=NA, step=30)),
-
-                                                              hr()
-                                          )),
-
-
-                                          # CMA estimate ----
-                                          conditionalPanel(
-                                            condition="(input.cma_class == 'per episode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
-
-                                            div(id='cma_estimate_section', style="cursor: pointer;",
-                                                span(title='How to show the CMA estimates', h4("CMA estimates"), style="color:DarkBlue"),
-                                                div(title='Click to unfold...', id="cma_estimate_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
-
-                                            shinyjs::hidden(div(id="cma_estimate_contents",
-                                                                conditionalPanel(
-                                                                  condition="input.cma_class == 'simple'",
-
-                                                                  div(title='Print the CMA estimate next to the participant\'s ID?',
-                                                                      shinyWidgets::materialSwitch(inputId="print_cma",
-                                                                                                   label="Print CMA?",
-                                                                                                   value=TRUE, status="primary", right=TRUE))
-                                                                ),
-
-                                                                div(title='Plot the CMA estimate next to the participant\'s ID?',
-                                                                    shinyWidgets::materialSwitch(inputId="plot_cma",
-                                                                                                 label="Plot CMA?",
-                                                                                                 value=TRUE, status="primary", right=TRUE)),
-
-                                                                hr()
-                                            ))
-                                          ),
-
-
-                                          # Dose ----
-                                          conditionalPanel(
-                                            condition="output.is_dose_defined",
-
-                                            div(id='dose_section', style="cursor: pointer;",
-                                                span(title='Show dose', h4("Show dose"), style="color:DarkBlue"),
-                                                div(title='Click to unfold...', id="dose_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
-
-                                            shinyjs::hidden(div(id="dose_contents",
-                                                                # Print dose?
-                                                                div(title='Print the dosage (i.e., the actual numeric values)?',
-                                                                    shinyWidgets::materialSwitch(inputId="print_dose",
-                                                                                                 label="Print it?",
-                                                                                                 value=FALSE, status="primary", right=TRUE)),
-
-                                                                # Print dose attributes
-                                                                conditionalPanel(
-                                                                  condition="input.print_dose",
-
-                                                                  div(title='Relative font size',
-                                                                      numericInput(inputId="cex_dose",
-                                                                                   label="Font size",
-                                                                                   value=0.75, min=0.0, max=NA, step=0.25)),
-
-                                                                  div(title='Dose text outline color',
-                                                                      colourpicker::colourInput(inputId="print_dose_outline_col",
-                                                                                                label="Outline color",
-                                                                                                value="white")),
-
-                                                                  div(title='Print the dose centered on the event?',
-                                                                      shinyWidgets::materialSwitch(inputId="print_dose_centered",
-                                                                                                   label="Centered?",
+                                                                  # Consider dosage changes?
+                                                                  div(title='Consider dosage change when computing the carry over?',
+                                                                      shinyWidgets::materialSwitch(inputId="consider_dosage_change",
+                                                                                                   label="Consider dose changes?",
                                                                                                    value=FALSE, status="primary", right=TRUE)),
 
                                                                   hr()
+                                              ))
+                                            ),
+
+
+                                            # Per episode only ----
+                                            conditionalPanel(
+                                              condition = "(input.cma_class == 'per episode')",
+
+                                              div(id='episodes_section', style="cursor: pointer;",
+                                                  span(title='Parameters defining treatment episodes', h4("Define episodes"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="episodes_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                              shinyjs::hidden(div(id="episodes_contents",
+                                                                  # Does treat. change start new episode?
+                                                                  conditionalPanel(
+                                                                    condition="output.is_treat_class_defined",
+                                                                    div(title='Does changing the treatment type trigger a new episode?',
+                                                                        shinyWidgets::materialSwitch(inputId="medication_change_means_new_treatment_episode",
+                                                                                                     label="Treat. change starts new episode?",
+                                                                                                     value=FALSE, status="primary", right=TRUE))
+                                                                  ),
+
+                                                                  # Does dosage change start new episode?
+                                                                  conditionalPanel(
+                                                                    condition="output.is_dose_defined",
+                                                                    div(title='Does changing the dose trigger a new episode?',
+                                                                        shinyWidgets::materialSwitch(inputId="dosage_change_means_new_treatment_episode",
+                                                                                                     label="Dose change starts new episode?",
+                                                                                                     value=FALSE, status="primary", right=TRUE))
+                                                                  ),
+
+                                                                  # Max. permis. gap duration unit
+                                                                  div(title='The unit of the maximum permissible gap after which a new episode is triggered: either absolute ("days", "weeks", "months" or "years") or relative ("percent")',
+                                                                      selectInput(inputId="maximum_permissible_gap_unit",
+                                                                                  label="Max. gap duration unit",
+                                                                                  choices=c("days", "weeks", "months", "years", "percent"),
+                                                                                  selected="days")),
+
+                                                                  # Max. permissible gap
+                                                                  div(title='The maximum permissible gap after which a new episode is triggered (in the above-selected units)',
+                                                                      numericInput(inputId="maximum_permissible_gap",
+                                                                                   label="Max. gap duration",
+                                                                                   value=0, min=0, max=NA, step=1)),
+
+                                                                  # Plot CMA as histogram
+                                                                  div(title='Show the distribution of estimated CMAs across episodes as a histogram or barplot?',
+                                                                      shinyWidgets::materialSwitch(inputId="plot_CMA_as_histogram_episodes",
+                                                                                                   label="Plot CMA as histogram?",
+                                                                                                   value=FALSE, status="primary", right=TRUE)),
+
+                                                                  hr()
+                                              ))
+                                            ),
+
+
+                                            # Sliding window only ----
+                                            conditionalPanel(
+                                              condition = "(input.cma_class == 'sliding window')",
+
+                                              div(id='sliding_windows_section', style="cursor: pointer;",
+                                                  span(title='Parameters defining the sliding windows (shortened to SW))', h4("Define sliding windows (SW)"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="sliding_windows_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                              shinyjs::hidden(div(id="sliding_windows_contents",
+                                                                  # Sliding window start
+                                                                  div(title='The unit of the start of the sliding windows ("days", "weeks", "months" or "years")',
+                                                                      selectInput(inputId="sliding_window_start_unit",
+                                                                                  label="SW start unit",
+                                                                                  choices=c("days", "weeks", "months", "years"),
+                                                                                  selected="days")),
+
+                                                                  # Select the number of units
+                                                                  div(title='Select the number of units defining the start of the sliding windows',
+                                                                      numericInput(inputId="sliding_window_start",
+                                                                                   label="SW start",
+                                                                                   value=0, min=0, max=NA, step=30)),
+
+                                                                  # Sliding window duration
+                                                                  div(title='The unit of the duration of the sliding windows ("days", "weeks", "months" or "years")',
+                                                                      selectInput(inputId="sliding_window_duration_unit",
+                                                                                  label="SW duration unit",
+                                                                                  choices=c("days", "weeks", "months", "years"),
+                                                                                  selected="days")),
+
+                                                                  # Select the number of units
+                                                                  div(title='Select the number of units defining the duration of the sliding windows',
+                                                                      numericInput(inputId="sliding_window_duration",
+                                                                                   label="SW duration",
+                                                                                   value=90, min=0, max=NA, step=30)),
+
+                                                                  # Steps choice
+                                                                  div(title='How is the step of the sliding windows defined: by giving their number or their duration?',
+                                                                      selectInput(inputId="sliding_window_step_choice",
+                                                                                  label="Define SW steps by",
+                                                                                  choices=c("number of steps", "duration of a step"),
+                                                                                  selected="the duration of a step")),
+
+                                                                  # Sliding window steps
+                                                                  conditionalPanel(
+                                                                    condition = "(input.sliding_window_step_choice == 'duration of a step')",
+                                                                    div(title='The unit of the sliding windows step duration ("days", "weeks", "months" or "years")',
+                                                                        selectInput(inputId="sliding_window_step_unit",
+                                                                                    label="SW step unit",
+                                                                                    choices=c("days", "weeks", "months", "years"),
+                                                                                    selected="days")),
+                                                                    div(title='The sliding windows duration (in the units selected above)',
+                                                                        numericInput(inputId="sliding_window_step_duration",
+                                                                                     label="SW step duration",
+                                                                                     value=60, min=0, max=NA, step=7))
+                                                                  ),
+                                                                  conditionalPanel(
+                                                                    condition = "(input.sliding_window_step_choice == 'number of steps')",
+                                                                    div(title='The number of sliding windows steps',
+                                                                        numericInput(inputId="sliding_window_no_steps",
+                                                                                     label="SW number of steps",
+                                                                                     value=10, min=0, max=NA, step=1))
+                                                                  ),
+
+                                                                  # Plot CMA as histogram
+                                                                  div(title='Show the distribution of estimated CMAs across sliding windows as a histogram or barplot?',
+                                                                      shinyWidgets::materialSwitch(inputId="plot_CMA_as_histogram_sliding_window",
+                                                                                                   label="Plot CMA as histogram?",
+                                                                                                   value=TRUE, status="primary", right=TRUE)),
+
+                                                                  hr()
+                                              ))
+
+                                            ),
+
+
+                                            # Align all patients ----
+                                            conditionalPanel(
+                                              condition="(input.patient.length > 1)",
+
+                                              div(id='align_section', style="cursor: pointer;",
+                                                  span(title='Align patients for clearer plots?', h4("Align patients"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="align_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                              shinyjs::hidden(div(id="align_contents",
+                                                                  div(title='Should all the patients be vertically aligned relative to their first event?',
+                                                                      shinyWidgets::materialSwitch(inputId="plot_align_all_patients",
+                                                                                                   label="Align patients?",
+                                                                                                   value=FALSE, status="primary", right=TRUE)),
+
+                                                                  # Align al patients
+                                                                  conditionalPanel(
+                                                                    condition="input.plot_align_all_patients",
+                                                                    div(title='Should the first event (across patients) be considered as the origin of time?',
+                                                                        shinyWidgets::materialSwitch(inputId="plot_align_first_event_at_zero",
+                                                                                                     label="Align 1st event at 0?",
+                                                                                                     value=FALSE, status="primary", right=TRUE))
+                                                                  ),
+
+                                                                  hr()
+                                              ))
+                                            ),
+
+
+                                            # Duration and period ----
+                                            div(id='duration_period_section', style="cursor: pointer;",
+                                                span(title='Duration and period', h4("Duration & period"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="duration_period_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                            shinyjs::hidden(div(id="duration_period_contents",
+                                                                # Duration:
+                                                                div(title='The duration to plot (in days), or 0 to determine it from the data',
+                                                                    numericInput(inputId="duration",
+                                                                                 label="Duration",
+                                                                                 value=0, min=0, max=NA, step=90)),
+
+                                                                # Period:
+                                                                conditionalPanel(
+                                                                  condition="(input.patient.length > 1) && input.plot_align_all_patients",
+
+                                                                  div(title='Draw vertical grid at regular interval as days since the earliest date',
+                                                                      selectInput(inputId="show_period_align_patients",
+                                                                                  label="Show period as",
+                                                                                  choices=c("days"), # only days are possible when aligning the patients
+                                                                                  selected="days"))
+                                                                ),
+                                                                conditionalPanel(
+                                                                  condition="!((input.patient.length > 1) && input.plot_align_all_patients)", # ELSE
+
+                                                                  div(title='Draw vertical grid at regular interval as days since the earliest date or as actual dates?',
+                                                                      selectInput(inputId="show_period",
+                                                                                  label="Show period as",
+                                                                                  choices=c("days", "dates"),
+                                                                                  selected="days"))
                                                                 ),
 
-                                                                # Plot dose?
-                                                                div(title='Represent the dose as event line width?',
-                                                                    shinyWidgets::materialSwitch(inputId="plot_dose",
-                                                                                                 label="As line width?",
+                                                                div(title='The interval (in days) at which to draw the vertical grid (or 0 for no grid)',
+                                                                    numericInput(inputId="period_in_days",
+                                                                                 label="Period (in days)",
+                                                                                 value=90, min=0, max=NA, step=30)),
+
+                                                                hr()
+                                            )),
+
+
+                                            # CMA estimate ----
+                                            conditionalPanel(
+                                              condition="(input.cma_class == 'per episode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
+
+                                              div(id='cma_estimate_section', style="cursor: pointer;",
+                                                  span(title='How to show the CMA estimates', h4("CMA estimates"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="cma_estimate_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                              shinyjs::hidden(div(id="cma_estimate_contents",
+                                                                  conditionalPanel(
+                                                                    condition="input.cma_class == 'simple'",
+
+                                                                    div(title='Print the CMA estimate next to the participant\'s ID?',
+                                                                        shinyWidgets::materialSwitch(inputId="print_cma",
+                                                                                                     label="Print CMA?",
+                                                                                                     value=TRUE, status="primary", right=TRUE))
+                                                                  ),
+
+                                                                  div(title='Plot the CMA estimate next to the participant\'s ID?',
+                                                                      shinyWidgets::materialSwitch(inputId="plot_cma",
+                                                                                                   label="Plot CMA?",
+                                                                                                   value=TRUE, status="primary", right=TRUE)),
+
+                                                                  hr()
+                                              ))
+                                            ),
+
+
+                                            # Dose ----
+                                            conditionalPanel(
+                                              condition="output.is_dose_defined",
+
+                                              div(id='dose_section', style="cursor: pointer;",
+                                                  span(title='Show dose', h4("Show dose"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="dose_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                              shinyjs::hidden(div(id="dose_contents",
+                                                                  # Print dose?
+                                                                  div(title='Print the dosage (i.e., the actual numeric values)?',
+                                                                      shinyWidgets::materialSwitch(inputId="print_dose",
+                                                                                                   label="Print it?",
+                                                                                                   value=FALSE, status="primary", right=TRUE)),
+
+                                                                  # Print dose attributes
+                                                                  conditionalPanel(
+                                                                    condition="input.print_dose",
+
+                                                                    div(title='Relative font size',
+                                                                        numericInput(inputId="cex_dose",
+                                                                                     label="Font size",
+                                                                                     value=0.75, min=0.0, max=NA, step=0.25)),
+
+                                                                    div(title='Dose text outline color',
+                                                                        colourpicker::colourInput(inputId="print_dose_outline_col",
+                                                                                                  label="Outline color",
+                                                                                                  value="white")),
+
+                                                                    div(title='Print the dose centered on the event?',
+                                                                        shinyWidgets::materialSwitch(inputId="print_dose_centered",
+                                                                                                     label="Centered?",
+                                                                                                     value=FALSE, status="primary", right=TRUE)),
+
+                                                                    hr()
+                                                                  ),
+
+                                                                  # Plot dose?
+                                                                  div(title='Represent the dose as event line width?',
+                                                                      shinyWidgets::materialSwitch(inputId="plot_dose",
+                                                                                                   label="As line width?",
+                                                                                                   value=FALSE, status="primary", right=TRUE)),
+
+                                                                  # Plot dose attributes
+                                                                  conditionalPanel(
+                                                                    condition="input.plot_dose",
+
+                                                                    div(title='What line width corresponds to the maximum dose?',
+                                                                        numericInput(inputId="lwd_event_max_dose",
+                                                                                     label="Max dose width",
+                                                                                     value=8, min=1, max=NA, step=1)),
+
+                                                                    div(title='Consider maximum dose globally or per each medication class separately?',
+                                                                        shinyWidgets::materialSwitch(inputId="plot_dose_lwd_across_medication_classes",
+                                                                                                     label="Global max?",
+                                                                                                     value=FALSE, status="primary", right=TRUE))
+                                                                  ),
+
+                                                                  hr()
+                                              ))
+                                            ),
+
+
+                                            # Legend ----
+                                            div(id='legend_section', style="cursor: pointer;",
+                                                span(title='The legend', h4("Legend"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="legend_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                            shinyjs::hidden(div(id="legend_contents",
+                                                                # Show legend?
+                                                                div(title='Display the plot legend?',
+                                                                    shinyWidgets::materialSwitch(inputId="show_legend",
+                                                                                                 label="Show legend?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
+
+                                                                # Legend attributes
+                                                                conditionalPanel(
+                                                                  condition="input.show_legend",
+
+                                                                  div(title='The legend\'s x position',
+                                                                      selectInput(inputId="legend_x",
+                                                                                  label="Legend x",
+                                                                                  choices=c("left", "right"),
+                                                                                  selected="right")),
+
+                                                                  div(title='The legend\'s y position',
+                                                                      selectInput(inputId="legend_y",
+                                                                                  label="Legend y",
+                                                                                  choices=c("bottom", "top"),
+                                                                                  selected="bottom")),
+
+                                                                  div(title='Relative font size of legend title',
+                                                                      numericInput(inputId="legend_cex_title",
+                                                                                   label="Title font size",
+                                                                                   value=1.0, min=0.0, max=NA, step=0.25)),
+
+                                                                  div(title='Relative font size of legend text and symbols',
+                                                                      numericInput(inputId="legend_cex",
+                                                                                   label="Text font size",
+                                                                                   value=0.75, min=0.0, max=NA, step=0.25)),
+
+                                                                  div(title='The legend\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
+                                                                      sliderInput(inputId="legend_bkg_opacity",
+                                                                                  label="Legend bkg. opacity",
+                                                                                  min=0.0, max=1.0, value=0.5, step=0.1, round=TRUE))
+                                                                ),
+
+                                                                hr()
+                                            )),
+
+
+                                            # Aesthetics ----
+                                            div(id='aesthetics_section', style="cursor: pointer;",
+                                                span(title='Colors, fonts, line style...', h4("Aesthetics"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="aesthetics_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                            shinyjs::hidden(div(id="aesthetics_contents",
+                                                                ## Show CMA type in the title?
+                                                                #div(title='Show CMA type in the plot title?',
+                                                                #         checkboxInput(inputId="show_cma",
+                                                                #            label="Show CMA in title?",
+                                                                #            value=TRUE)),
+
+                                                                div(title='Colors or grayscale?',
+                                                                    span(p("Color or grayscale"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                # Draw grayscale?
+                                                                div(title='Draw using only grayscales? (overrides everything else)',
+                                                                    shinyWidgets::materialSwitch(inputId="bw_plot",
+                                                                                                 label="Grayscale?",
                                                                                                  value=FALSE, status="primary", right=TRUE)),
 
-                                                                # Plot dose attributes
-                                                                conditionalPanel(
-                                                                  condition="input.plot_dose",
-
-                                                                  div(title='What line width corresponds to the maximum dose?',
-                                                                      numericInput(inputId="lwd_event_max_dose",
-                                                                                   label="Max dose width",
-                                                                                   value=8, min=1, max=NA, step=1)),
-
-                                                                  div(title='Consider maximum dose globally or per each medication class separately?',
-                                                                      shinyWidgets::materialSwitch(inputId="plot_dose_lwd_across_medication_classes",
-                                                                                                   label="Global max?",
-                                                                                                   value=FALSE, status="primary", right=TRUE))
-                                                                ),
-
-                                                                hr()
-                                            ))
-                                          ),
-
-
-                                          # Legend ----
-                                          div(id='legend_section', style="cursor: pointer;",
-                                              span(title='The legend', h4("Legend"), style="color:DarkBlue"),
-                                              div(title='Click to unfold...', id="legend_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
-
-                                          shinyjs::hidden(div(id="legend_contents",
-                                                              # Show legend?
-                                                              div(title='Display the plot legend?',
-                                                                  shinyWidgets::materialSwitch(inputId="show_legend",
-                                                                                               label="Show legend?",
-                                                                                               value=TRUE, status="primary", right=TRUE)),
-
-                                                              # Legend attributes
-                                                              conditionalPanel(
-                                                                condition="input.show_legend",
-
-                                                                div(title='The legend\'s x position',
-                                                                    selectInput(inputId="legend_x",
-                                                                                label="Legend x",
-                                                                                choices=c("left", "right"),
-                                                                                selected="right")),
-
-                                                                div(title='The legend\'s y position',
-                                                                    selectInput(inputId="legend_y",
-                                                                                label="Legend y",
-                                                                                choices=c("bottom", "top"),
-                                                                                selected="bottom")),
-
-                                                                div(title='Relative font size of legend title',
-                                                                    numericInput(inputId="legend_cex_title",
-                                                                                 label="Title font size",
-                                                                                 value=1.0, min=0.0, max=NA, step=0.25)),
-
-                                                                div(title='Relative font size of legend text and symbols',
-                                                                    numericInput(inputId="legend_cex",
-                                                                                 label="Text font size",
-                                                                                 value=0.75, min=0.0, max=NA, step=0.25)),
-
-                                                                div(title='The legend\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
-                                                                    sliderInput(inputId="legend_bkg_opacity",
-                                                                                label="Legend bkg. opacity",
-                                                                                min=0.0, max=1.0, value=0.5, step=0.1, round=TRUE))
-                                                              ),
-
-                                                              hr()
-                                          )),
-
-
-                                          # Aesthetics ----
-                                          div(id='aesthetics_section', style="cursor: pointer;",
-                                              span(title='Colors, fonts, line style...', h4("Aesthetics"), style="color:DarkBlue"),
-                                              div(title='Click to unfold...', id="aesthetics_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
-
-                                          shinyjs::hidden(div(id="aesthetics_contents",
-                                                              ## Show CMA type in the title?
-                                                              #div(title='Show CMA type in the plot title?',
-                                                              #         checkboxInput(inputId="show_cma",
-                                                              #            label="Show CMA in title?",
-                                                              #            value=TRUE)),
-
-                                                              div(title='Colors or grayscale?',
-                                                                  span(p("Color or grayscale"), style="color:RoyalBlue; font-weight: bold;")),
-
-                                                              # Draw grayscale?
-                                                              div(title='Draw using only grayscales? (overrides everything else)',
-                                                                  shinyWidgets::materialSwitch(inputId="bw_plot",
-                                                                                               label="Grayscale?",
-                                                                                               value=FALSE, status="primary", right=TRUE)),
-
-                                                              hr(),
-
-                                                              conditionalPanel(
-                                                                condition="!(input.bw_plot)",
-
-                                                                div(title='Colors for catgories of treatment',
-                                                                    span(p("Treatment colors"), style="color:RoyalBlue; font-weight: bold;")),
-
-                                                                # Colors for categories:
-                                                                div(title='The color for missing data',
-                                                                    colourpicker::colourInput(inputId="col_na",
-                                                                                              label="Missing data color",
-                                                                                              value="lightgray")),
-
-                                                                # Unspecified category name:
-                                                                div(title='The label of the unspecified (generic) treatment category',
-                                                                    textInput(inputId="unspecified_category_label",
-                                                                              label="Unspec. cat. label",
-                                                                              value="drug")),
-
-                                                                # The colour palette for treatment types:
-                                                                conditionalPanel(
-                                                                  condition="output.is_treat_class_defined",
-                                                                  div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on category order.',
-                                                                      selectInput(inputId="col_cats",
-                                                                                  label="Treatment palette",
-                                                                                  choices=c("rainbow", "heat.colors", "terrain.colors", "topo.colors", "cm.colors", "magma", "inferno", "plasma", "viridis", "cividis"),
-                                                                                  selected="rainbow"))
-                                                                ),
-
-                                                                hr()
-                                                              ),
-
-                                                              div(title='Event visual attributes',
-                                                                  span(p("Events"), style="color:RoyalBlue; font-weight: bold;")),
-
-                                                              # Event style:
-                                                              div(title='Event line style',
-                                                                  selectInput(inputId="lty_event",
-                                                                              label="Event line style",
-                                                                              choices=c("\U00A0\U00A0\U00A0\U00A0\U00A0 blank"="blank",
-                                                                                        "\U2E3B solid"="solid",
-                                                                                        "\U2012\U2009\U2012\U2009\U2012\U2009\U2012 dashed"="dashed",
-                                                                                        "\U00B7\U00B7\U00B7\U00B7\U00B7\U00B7\U00B7 dotted"="dotted",
-                                                                                        "\U00B7\U2012\U00B7\U2012\U00B7\U2012 dotdash"="dotdash",
-                                                                                        "\U2014\U2014\U2009\U2014\U2014 longdash"="longdash",
-                                                                                        "\U2012\U2009\U2014\U2009\U2012\U2009\U2014 twodash"="twodash"),
-                                                                              selected="solid")),
-                                                              div(title='Event line width',
-                                                                  numericInput(inputId="lwd_event",
-                                                                               label="Event line width",
-                                                                               value=2, min=0, max=NA, step=1)),
-                                                              div(title='Event start symbol (most commonly used)...',
-                                                                  selectInput(inputId="pch_start_event",
-                                                                              label="Event start",
-                                                                              choices=c("none"=NA,
-                                                                                        "\UFF0B plus"=3,
-                                                                                        "\U00D7times"=4,
-                                                                                        "\U2733\UFE0E star"=8,
-                                                                                        "\U25FB\UFE0E square"=0,
-                                                                                        "\U25CB circle"=1,
-                                                                                        "\U25B3 up triangle"=2,
-                                                                                        "\U25BD down triangle"=6,
-                                                                                        "\U25C7 diamond"=5,
-                                                                                        "\U25A0 fill square"=15,
-                                                                                        "\U25CF fill small circle"=20,
-                                                                                        "\U26AB\UFE0E fill med circle"=16,
-                                                                                        "\U2B24 fill big circle"=19,
-                                                                                        "\U25B2 fill triangle"=17,
-                                                                                        "\U25C6 fill diamond"=18,
-                                                                                        "\U229E square plus"=12,
-                                                                                        "\U22A0 square times"=7,
-                                                                                        "\U2A01 circle plus"=10,
-                                                                                        "\U2A02 circle times"=13,
-                                                                                        "\U2721 David star"=11),
-                                                                              selected=15)),
-                                                              div(title='Event end symbol (most commonly used)...',
-                                                                  selectInput(inputId="pch_end_event",
-                                                                              label="Event end",
-                                                                              choices=c("none"=NA,
-                                                                                        "\UFF0B plus"=3,
-                                                                                        "\U00D7times"=4,
-                                                                                        "\U2733\UFE0E star"=8,
-                                                                                        "\U25FB\UFE0E square"=0,
-                                                                                        "\U25CB circle"=1,
-                                                                                        "\U25B3 up triangle"=2,
-                                                                                        "\U25BD down triangle"=6,
-                                                                                        "\U25C7 diamond"=5,
-                                                                                        "\U25A0 fill square"=15,
-                                                                                        "\U25CF fill small circle"=20,
-                                                                                        "\U26AB\UFE0E fill med circle"=16,
-                                                                                        "\U2B24 fill big circle"=19,
-                                                                                        "\U25B2 fill triangle"=17,
-                                                                                        "\U25C6 fill diamond"=18,
-                                                                                        "\U229E square plus"=12,
-                                                                                        "\U22A0 square times"=7,
-                                                                                        "\U2A01 circle plus"=10,
-                                                                                        "\U2A02 circle times"=13,
-                                                                                        "\U2721 David star"=11),
-                                                                              selected=16)),
-
-                                                              hr(),
-
-                                                              # Continuation (CMA0 and complex only):
-                                                              conditionalPanel(
-                                                                condition="(input.cma_class == 'per eipsode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute == 'CMA0')",
-
-                                                                div(title='Continuation visual attributes',
-                                                                    span(p("Continuation"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                hr(),
 
                                                                 conditionalPanel(
                                                                   condition="!(input.bw_plot)",
 
-                                                                  div(title='The color of continuation lines connecting consecutive events',
-                                                                      colourpicker::colourInput(inputId="col_continuation",
-                                                                                                label="Cont. line color",
-                                                                                                value="black"))
+                                                                  div(title='Colors for catgories of treatment',
+                                                                      span(p("Treatment colors"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                  # Colors for categories:
+                                                                  div(title='The color for missing data',
+                                                                      colourpicker::colourInput(inputId="col_na",
+                                                                                                label="Missing data color",
+                                                                                                value="lightgray")),
+
+                                                                  # Unspecified category name:
+                                                                  div(title='The label of the unspecified (generic) treatment category',
+                                                                      textInput(inputId="unspecified_category_label",
+                                                                                label="Unspec. cat. label",
+                                                                                value="drug")),
+
+                                                                  # The colour palette for treatment types:
+                                                                  conditionalPanel(
+                                                                    condition="output.is_treat_class_defined",
+                                                                    div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on category order.',
+                                                                        selectInput(inputId="col_cats",
+                                                                                    label="Treatment palette",
+                                                                                    choices=c("rainbow", "heat.colors", "terrain.colors", "topo.colors", "cm.colors", "magma", "inferno", "plasma", "viridis", "cividis"),
+                                                                                    selected="rainbow"))
+                                                                  ),
+
+                                                                  hr()
                                                                 ),
-                                                                div(title='The line style of continuation lines connecting consecutive events',
-                                                                    selectInput(inputId="lty_continuation",
-                                                                                label="Cont. line style",
+
+                                                                div(title='Event visual attributes',
+                                                                    span(p("Events"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                # Event style:
+                                                                div(title='Event line style',
+                                                                    selectInput(inputId="lty_event",
+                                                                                label="Event line style",
                                                                                 choices=c("\U00A0\U00A0\U00A0\U00A0\U00A0 blank"="blank",
                                                                                           "\U2E3B solid"="solid",
                                                                                           "\U2012\U2009\U2012\U2009\U2012\U2009\U2012 dashed"="dashed",
@@ -756,204 +692,287 @@ ui <- fluidPage(
                                                                                           "\U00B7\U2012\U00B7\U2012\U00B7\U2012 dotdash"="dotdash",
                                                                                           "\U2014\U2014\U2009\U2014\U2014 longdash"="longdash",
                                                                                           "\U2012\U2009\U2014\U2009\U2012\U2009\U2014 twodash"="twodash"),
-                                                                                selected="dotted")),
-                                                                div(title='The line width of continuation lines connecting consecutive events',
-                                                                    numericInput(inputId="lwd_continuation",
-                                                                                 label="Cont. line width",
-                                                                                 value=1, min=0, max=NA, step=1)),
+                                                                                selected="solid")),
+                                                                div(title='Event line width',
+                                                                    numericInput(inputId="lwd_event",
+                                                                                 label="Event line width",
+                                                                                 value=2, min=0, max=NA, step=1)),
+                                                                div(title='Event start symbol (most commonly used)...',
+                                                                    selectInput(inputId="pch_start_event",
+                                                                                label="Event start",
+                                                                                choices=c("none"=NA,
+                                                                                          "\UFF0B plus"=3,
+                                                                                          "\U00D7times"=4,
+                                                                                          "\U2733\UFE0E star"=8,
+                                                                                          "\U25FB\UFE0E square"=0,
+                                                                                          "\U25CB circle"=1,
+                                                                                          "\U25B3 up triangle"=2,
+                                                                                          "\U25BD down triangle"=6,
+                                                                                          "\U25C7 diamond"=5,
+                                                                                          "\U25A0 fill square"=15,
+                                                                                          "\U25CF fill small circle"=20,
+                                                                                          "\U26AB\UFE0E fill med circle"=16,
+                                                                                          "\U2B24 fill big circle"=19,
+                                                                                          "\U25B2 fill triangle"=17,
+                                                                                          "\U25C6 fill diamond"=18,
+                                                                                          "\U229E square plus"=12,
+                                                                                          "\U22A0 square times"=7,
+                                                                                          "\U2A01 circle plus"=10,
+                                                                                          "\U2A02 circle times"=13,
+                                                                                          "\U2721 David star"=11),
+                                                                                selected=15)),
+                                                                div(title='Event end symbol (most commonly used)...',
+                                                                    selectInput(inputId="pch_end_event",
+                                                                                label="Event end",
+                                                                                choices=c("none"=NA,
+                                                                                          "\UFF0B plus"=3,
+                                                                                          "\U00D7times"=4,
+                                                                                          "\U2733\UFE0E star"=8,
+                                                                                          "\U25FB\UFE0E square"=0,
+                                                                                          "\U25CB circle"=1,
+                                                                                          "\U25B3 up triangle"=2,
+                                                                                          "\U25BD down triangle"=6,
+                                                                                          "\U25C7 diamond"=5,
+                                                                                          "\U25A0 fill square"=15,
+                                                                                          "\U25CF fill small circle"=20,
+                                                                                          "\U26AB\UFE0E fill med circle"=16,
+                                                                                          "\U2B24 fill big circle"=19,
+                                                                                          "\U25B2 fill triangle"=17,
+                                                                                          "\U25C6 fill diamond"=18,
+                                                                                          "\U229E square plus"=12,
+                                                                                          "\U22A0 square times"=7,
+                                                                                          "\U2A01 circle plus"=10,
+                                                                                          "\U2A02 circle times"=13,
+                                                                                          "\U2721 David star"=11),
+                                                                                selected=16)),
 
-                                                                hr()
-                                                              ),
+                                                                hr(),
 
-                                                              # Show event intervals:
-                                                              conditionalPanel(
-                                                                condition="(input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
-
-                                                                div(title='Event intervals',
-                                                                    span(p("Event intervals"), style="color:RoyalBlue; font-weight: bold;")),
-
-                                                                div(title='Show the event intervals?',
-                                                                    shinyWidgets::materialSwitch(inputId="show_event_intervals",
-                                                                                                 label="Show event interv.?",
-                                                                                                 value=TRUE, status="primary", right=TRUE)),
-
-                                                                hr()
-                                                              ),
-
-                                                              # Font sizes:
-                                                              div(title='Font sizes',
-                                                                  span(p("Font sizes"), style="color:RoyalBlue; font-weight: bold;")),
-                                                              div(title='Relative font size of general plotting text',
-                                                                  numericInput(inputId="cex",
-                                                                               label="General font size",
-                                                                               value=1.0, min=0.0, max=NA, step=0.25)),
-                                                              div(title='Relative font size of axis text',
-                                                                  numericInput(inputId="cex_axis",
-                                                                               label="Axis font size",
-                                                                               value=0.75, min=0.0, max=NA, step=0.25)),
-                                                              div(title='Relative font size of axis labels text',
-                                                                  numericInput(inputId="cex_lab",
-                                                                               label="Axis labels font size",
-                                                                               value=1.0, min=0.0, max=NA, step=0.25)),
-
-                                                              hr(),
-
-                                                              # Follow-up window:
-                                                              div(title='Follow-up window visual attributes',
-                                                                  span(p("FUW visuals"), style="color:RoyalBlue; font-weight: bold;")),
-                                                              div(title='Show the follow-up window?',
-                                                                  shinyWidgets::materialSwitch(inputId="highlight_followup_window",
-                                                                                               label="Show FUW?",
-                                                                                               value=TRUE, status="primary", right=TRUE)),
-                                                              conditionalPanel(
-                                                                condition="input.highlight_followup_window &&  !(input.bw_plot)",
-
-                                                                div(title='The color of the follow-up window',
-                                                                    colourpicker::colourInput(inputId="followup_window_col",
-                                                                                              label="FUW color",
-                                                                                              value="green"))
-                                                              ),
-
-                                                              hr(),
-
-                                                              # Observation window:
-                                                              div(title='Observation window visual attributes',
-                                                                  span(p("OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
-                                                              div(title='Show the observation window?',
-                                                                  shinyWidgets::materialSwitch(inputId="highlight_observation_window",
-                                                                                               label="Show OW?",
-                                                                                               value=TRUE, status="primary", right=TRUE)),
-                                                              conditionalPanel(
-                                                                condition="input.highlight_observation_window",
-
+                                                                # Continuation (CMA0 and complex only):
                                                                 conditionalPanel(
-                                                                  condition="!(input.bw_plot)",
+                                                                  condition="(input.cma_class == 'per eipsode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute == 'CMA0')",
 
-                                                                  div(title='The color of the observation window',
-                                                                      colourpicker::colourInput(inputId="observation_window_col",
-                                                                                                label="OW color",
-                                                                                                value="yellow"))
-                                                                ),
-                                                                div(title='The density of the hashing lines (number of lines per inch) used to draw the observation window',
-                                                                    numericInput(inputId="observation_window_density",
-                                                                                 label="OW hash dens.",
-                                                                                 value=35, min=0, max=NA, step=5)),
-                                                                div(title='The orientation of the hashing lines (in degrees) used to draw the observation window',
-                                                                    sliderInput(inputId="observation_window_angle",
-                                                                                label="OW hash angle",
-                                                                                min=-90.0, max=90.0, value=-30, step=15, round=TRUE)),
-                                                                div(title='The observation window\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
-                                                                    sliderInput(inputId="observation_window_opacity",
-                                                                                label="OW opacity",
-                                                                                min=0.0, max=1.0, value=0.3, step=0.1, round=TRUE))
-                                                              ),
-
-                                                              hr(),
-
-                                                              # Real observation window:
-                                                              conditionalPanel(
-                                                                condition="(input.cma_class == 'simple' && input.cma_to_compute == 'CMA8')",
-
-                                                                div(title='Real observation window visual attributes',
-                                                                    span(p("Real OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
-                                                                div(title='Show the real observation window (the color and transparency are the same as for the theoretial observation window but the hasing pattern can be different)?',
-                                                                    shinyWidgets::materialSwitch(inputId="show_real_obs_window_start",
-                                                                                                 label="Show real OW?",
-                                                                                                 value=TRUE, status="primary", right=TRUE)),
-                                                                conditionalPanel(
-                                                                  condition="input.show_real_obs_window_start",
-
-                                                                  div(title='The density of the hashing lines (number of lines per inch) used to draw the real observation window',
-                                                                      numericInput(inputId="real_obs_window_density",
-                                                                                   label="Real OW hash dens.",
-                                                                                   value=35, min=0, max=NA, step=5)),
-                                                                  div(title='The orientation of the hashing lines (in degrees) used to draw the real observation window',
-                                                                      sliderInput(inputId="real_obs_window_angle",
-                                                                                  label="Real OW hash angle",
-                                                                                  min=-90.0, max=90.0, value=30, step=15, round=TRUE))
-                                                                ),
-
-                                                                hr()
-                                                              ),
-
-                                                              # CMA estimate aesthetics:
-                                                              conditionalPanel(
-                                                                condition="(input.cma_class == 'per episode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
-
-                                                                div(title='CMA estimate visual attributes',
-                                                                    span(p("CMA estimate"), style="color:RoyalBlue; font-weight: bold;")),
-
-                                                                conditionalPanel(
-                                                                  condition="input.plot_cma",
-
-                                                                  div(title='Relative font size of CMA estimate for per episode and sliding windows',
-                                                                      numericInput(inputId="cma_cex",
-                                                                                   label="CMA font size",
-                                                                                   value=0.5, min=0.0, max=NA, step=0.25)),
-
-                                                                  hr()
-                                                                ),
-
-                                                                conditionalPanel(
-                                                                  condition="input.plot_cma",
-
-                                                                  div(title='The horizontal percent of the total plotting area to be taken by the CMA plot',
-                                                                      sliderInput(inputId="cma_plot_ratio",
-                                                                                  label="CMA plot area %",
-                                                                                  min=0, max=100, value=10, step=5, round=TRUE)),
+                                                                  div(title='Continuation visual attributes',
+                                                                      span(p("Continuation"), style="color:RoyalBlue; font-weight: bold;")),
 
                                                                   conditionalPanel(
                                                                     condition="!(input.bw_plot)",
 
-                                                                    div(title='The color of the CMA plot',
-                                                                        colourpicker::colourInput(inputId="cma_plot_col",
-                                                                                                  label="CMA plot color",
-                                                                                                  value="lightgreen")),
+                                                                    div(title='The color of continuation lines connecting consecutive events',
+                                                                        colourpicker::colourInput(inputId="col_continuation",
+                                                                                                  label="Cont. line color",
+                                                                                                  value="black"))
+                                                                  ),
+                                                                  div(title='The line style of continuation lines connecting consecutive events',
+                                                                      selectInput(inputId="lty_continuation",
+                                                                                  label="Cont. line style",
+                                                                                  choices=c("\U00A0\U00A0\U00A0\U00A0\U00A0 blank"="blank",
+                                                                                            "\U2E3B solid"="solid",
+                                                                                            "\U2012\U2009\U2012\U2009\U2012\U2009\U2012 dashed"="dashed",
+                                                                                            "\U00B7\U00B7\U00B7\U00B7\U00B7\U00B7\U00B7 dotted"="dotted",
+                                                                                            "\U00B7\U2012\U00B7\U2012\U00B7\U2012 dotdash"="dotdash",
+                                                                                            "\U2014\U2014\U2009\U2014\U2014 longdash"="longdash",
+                                                                                            "\U2012\U2009\U2014\U2009\U2012\U2009\U2014 twodash"="twodash"),
+                                                                                  selected="dotted")),
+                                                                  div(title='The line width of continuation lines connecting consecutive events',
+                                                                      numericInput(inputId="lwd_continuation",
+                                                                                   label="Cont. line width",
+                                                                                   value=1, min=0, max=NA, step=1)),
 
-                                                                    div(title='The color of the CMA plot border',
-                                                                        colourpicker::colourInput(inputId="cma_plot_border",
-                                                                                                  label="CMA border color",
-                                                                                                  value="darkgreen")),
+                                                                  hr()
+                                                                ),
 
-                                                                    div(title='The color of the CMA plot background',
-                                                                        colourpicker::colourInput(inputId="cma_plot_bkg",
-                                                                                                  label="CMA bkg. color",
-                                                                                                  value="aquamarine")),
+                                                                # Show event intervals:
+                                                                conditionalPanel(
+                                                                  condition="(input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
 
-                                                                    div(title='The color of the CMA plot text',
-                                                                        colourpicker::colourInput(inputId="cma_plot_text",
-                                                                                                  label="CMA text color",
-                                                                                                  value="darkgreen"))
+                                                                  div(title='Event intervals',
+                                                                      span(p("Event intervals"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                  div(title='Show the event intervals?',
+                                                                      shinyWidgets::materialSwitch(inputId="show_event_intervals",
+                                                                                                   label="Show event interv.?",
+                                                                                                   value=TRUE, status="primary", right=TRUE)),
+
+                                                                  hr()
+                                                                ),
+
+                                                                # Font sizes:
+                                                                div(title='Font sizes',
+                                                                    span(p("Font sizes"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                div(title='Relative font size of general plotting text',
+                                                                    numericInput(inputId="cex",
+                                                                                 label="General font size",
+                                                                                 value=1.0, min=0.0, max=NA, step=0.25)),
+                                                                div(title='Relative font size of axis text',
+                                                                    numericInput(inputId="cex_axis",
+                                                                                 label="Axis font size",
+                                                                                 value=0.75, min=0.0, max=NA, step=0.25)),
+                                                                div(title='Relative font size of axis labels text',
+                                                                    numericInput(inputId="cex_lab",
+                                                                                 label="Axis labels font size",
+                                                                                 value=1.0, min=0.0, max=NA, step=0.25)),
+
+                                                                hr(),
+
+                                                                # Follow-up window:
+                                                                div(title='Follow-up window visual attributes',
+                                                                    span(p("FUW visuals"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                div(title='Show the follow-up window?',
+                                                                    shinyWidgets::materialSwitch(inputId="highlight_followup_window",
+                                                                                                 label="Show FUW?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
+                                                                conditionalPanel(
+                                                                  condition="input.highlight_followup_window &&  !(input.bw_plot)",
+
+                                                                  div(title='The color of the follow-up window',
+                                                                      colourpicker::colourInput(inputId="followup_window_col",
+                                                                                                label="FUW color",
+                                                                                                value="green"))
+                                                                ),
+
+                                                                hr(),
+
+                                                                # Observation window:
+                                                                div(title='Observation window visual attributes',
+                                                                    span(p("OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                div(title='Show the observation window?',
+                                                                    shinyWidgets::materialSwitch(inputId="highlight_observation_window",
+                                                                                                 label="Show OW?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
+                                                                conditionalPanel(
+                                                                  condition="input.highlight_observation_window",
+
+                                                                  conditionalPanel(
+                                                                    condition="!(input.bw_plot)",
+
+                                                                    div(title='The color of the observation window',
+                                                                        colourpicker::colourInput(inputId="observation_window_col",
+                                                                                                  label="OW color",
+                                                                                                  value="yellow"))
+                                                                  ),
+                                                                  div(title='The density of the hashing lines (number of lines per inch) used to draw the observation window',
+                                                                      numericInput(inputId="observation_window_density",
+                                                                                   label="OW hash dens.",
+                                                                                   value=35, min=0, max=NA, step=5)),
+                                                                  div(title='The orientation of the hashing lines (in degrees) used to draw the observation window',
+                                                                      sliderInput(inputId="observation_window_angle",
+                                                                                  label="OW hash angle",
+                                                                                  min=-90.0, max=90.0, value=-30, step=15, round=TRUE)),
+                                                                  div(title='The observation window\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
+                                                                      sliderInput(inputId="observation_window_opacity",
+                                                                                  label="OW opacity",
+                                                                                  min=0.0, max=1.0, value=0.3, step=0.1, round=TRUE))
+                                                                ),
+
+                                                                hr(),
+
+                                                                # Real observation window:
+                                                                conditionalPanel(
+                                                                  condition="(input.cma_class == 'simple' && input.cma_to_compute == 'CMA8')",
+
+                                                                  div(title='Real observation window visual attributes',
+                                                                      span(p("Real OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                  div(title='Show the real observation window (the color and transparency are the same as for the theoretial observation window but the hasing pattern can be different)?',
+                                                                      shinyWidgets::materialSwitch(inputId="show_real_obs_window_start",
+                                                                                                   label="Show real OW?",
+                                                                                                   value=TRUE, status="primary", right=TRUE)),
+                                                                  conditionalPanel(
+                                                                    condition="input.show_real_obs_window_start",
+
+                                                                    div(title='The density of the hashing lines (number of lines per inch) used to draw the real observation window',
+                                                                        numericInput(inputId="real_obs_window_density",
+                                                                                     label="Real OW hash dens.",
+                                                                                     value=35, min=0, max=NA, step=5)),
+                                                                    div(title='The orientation of the hashing lines (in degrees) used to draw the real observation window',
+                                                                        sliderInput(inputId="real_obs_window_angle",
+                                                                                    label="Real OW hash angle",
+                                                                                    min=-90.0, max=90.0, value=30, step=15, round=TRUE))
                                                                   ),
 
                                                                   hr()
+                                                                ),
+
+                                                                # CMA estimate aesthetics:
+                                                                conditionalPanel(
+                                                                  condition="(input.cma_class == 'per episode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
+
+                                                                  div(title='CMA estimate visual attributes',
+                                                                      span(p("CMA estimate"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                  conditionalPanel(
+                                                                    condition="input.plot_cma",
+
+                                                                    div(title='Relative font size of CMA estimate for per episode and sliding windows',
+                                                                        numericInput(inputId="cma_cex",
+                                                                                     label="CMA font size",
+                                                                                     value=0.5, min=0.0, max=NA, step=0.25)),
+
+                                                                    hr()
+                                                                  ),
+
+                                                                  conditionalPanel(
+                                                                    condition="input.plot_cma",
+
+                                                                    div(title='The horizontal percent of the total plotting area to be taken by the CMA plot',
+                                                                        sliderInput(inputId="cma_plot_ratio",
+                                                                                    label="CMA plot area %",
+                                                                                    min=0, max=100, value=10, step=5, round=TRUE)),
+
+                                                                    conditionalPanel(
+                                                                      condition="!(input.bw_plot)",
+
+                                                                      div(title='The color of the CMA plot',
+                                                                          colourpicker::colourInput(inputId="cma_plot_col",
+                                                                                                    label="CMA plot color",
+                                                                                                    value="lightgreen")),
+
+                                                                      div(title='The color of the CMA plot border',
+                                                                          colourpicker::colourInput(inputId="cma_plot_border",
+                                                                                                    label="CMA border color",
+                                                                                                    value="darkgreen")),
+
+                                                                      div(title='The color of the CMA plot background',
+                                                                          colourpicker::colourInput(inputId="cma_plot_bkg",
+                                                                                                    label="CMA bkg. color",
+                                                                                                    value="aquamarine")),
+
+                                                                      div(title='The color of the CMA plot text',
+                                                                          colourpicker::colourInput(inputId="cma_plot_text",
+                                                                                                    label="CMA text color",
+                                                                                                    value="darkgreen"))
+                                                                    ),
+
+                                                                    hr()
+                                                                  )
+
                                                                 )
-
-                                                              )
-                                          )),
+                                            )),
 
 
-                                          # Advanced ----
-                                          div(id='advanced_section', style="cursor: pointer;",
-                                              span(title='Advanced stuff...', h4("Advanced"), style="color:DarkBlue"),
-                                              div(title='Click to unfold...', id="advanced_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+                                            # Advanced ----
+                                            div(id='advanced_section', style="cursor: pointer;",
+                                                span(title='Advanced stuff...', h4("Advanced"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="advanced_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                          shinyjs::hidden(div(id="advanced_contents",
-                                                              div(title='The minimum horizontal plot size (in characters, for the whole duration to plot)',
-                                                                  numericInput(inputId="min_plot_size_in_characters_horiz",
-                                                                               label="Min plot size (horiz.)",
-                                                                               value=10, min=0, max=NA, step=1.0)),
+                                            shinyjs::hidden(div(id="advanced_contents",
+                                                                div(title='The minimum horizontal plot size (in characters, for the whole duration to plot)',
+                                                                    numericInput(inputId="min_plot_size_in_characters_horiz",
+                                                                                 label="Min plot size (horiz.)",
+                                                                                 value=10, min=0, max=NA, step=1.0)),
 
-                                                              div(title='The minimum vertical plot size (in characters, per event)',
-                                                                  numericInput(inputId="min_plot_size_in_characters_vert",
-                                                                               label="Min plot size (vert.)",
-                                                                               value=0.5, min=0.0, max=NA, step=0.25))
-                                          )),
+                                                                div(title='The minimum vertical plot size (in characters, per event)',
+                                                                    numericInput(inputId="min_plot_size_in_characters_vert",
+                                                                                 label="Min plot size (vert.)",
+                                                                                 value=0.5, min=0.0, max=NA, step=0.25))
+                                            )),
 
 
-                                          # Allow last comma:
-                                          NULL
-                                )),
+                                            # Allow last comma:
+                                            NULL
+                                  )
+                                )
+                       ),
 
                        # DATA TAB ----
                        tabPanel("Data", value="sidebar-params-data", icon=icon("hdd", lib="glyphicon"), fluid=TRUE,
@@ -1093,8 +1112,8 @@ ui <- fluidPage(
 
                                               div(title='Which strings in the file should be considered as missing data?\nPlease include the value(s) within double quotes and, if multiple values, separate them with commas (e.g. "NA", " ", "9999", "?").',
                                                   textInput(inputId="dataset_from_file_csv_na_strings",
-                                                                label="Missing data symbols",
-                                                                value='"NA"'))
+                                                            label="Missing data symbols",
+                                                            value='"NA"'))
                                             ),
 
                                             conditionalPanel(
@@ -1191,8 +1210,8 @@ ui <- fluidPage(
 
                                             div(title=HTML('Required: the database server TCP/IP port number.'),
                                                 numericInput(inputId="dataset_from_sql_server_port",
-                                                          label="TCP/IP port number",
-                                                          value=c(0), min=0, max=NA, step=1)),
+                                                             label="TCP/IP port number",
+                                                             value=c(0), min=0, max=NA, step=1)),
 
                                             div(title=HTML('Required: the name of the database.'),
                                                 textInput(inputId="dataset_from_sql_database_name",
@@ -1207,9 +1226,9 @@ ui <- fluidPage(
 
                                             div(title=HTML('Required: the password'),
                                                 passwordInput(inputId="dataset_from_sql_password",
-                                                          label="Password",
-                                                          value=c(""),
-                                                          placeholder="password")),
+                                                              label="Password",
+                                                              value=c(""),
+                                                              placeholder="password")),
 
                                             div(title='Connect to datadase and fetch tables!',
                                                 actionButton(inputId="dataset_from_sql_button_connect",
@@ -1276,7 +1295,7 @@ ui <- fluidPage(
                                                              style="color:DarkBlue; border-color:DarkBlue;"),
                                                 style="float: center;")
 
-                                            ),
+                                          ),
 
 
                                           # Allow last comma:
@@ -1284,224 +1303,238 @@ ui <- fluidPage(
                                 )
                        )
 
-    )),
+           )),
 
 
     # OUTPUT PANEL ----
     #mainPanel(
     column(9,
 
-      # Plot dimensions ----
-      column(3,
-        div(title='The width of the plotting area (in pixles)',
-                 sliderInput(inputId="plot_width",
-                    label="Plot width",
-                    min=0, max=5000, value=500, step=20, round=TRUE))
-      ),
+           conditionalPanel(
+             condition="(output.is_dataset_defined)",
 
-      conditionalPanel(
-        condition = "(!input.plot_keep_ratio)",
-        column(3,
-          div(title='The height of the plotting area (in pixels)',
-                   sliderInput(inputId="plot_height",
-                      label="height",
-                      min=0, max=5000, value=300, step=20, round=TRUE))
-        )
-      ),
-      conditionalPanel(
-        condition = "(input.plot_keep_ratio)",
-        column(3,
-          p("")
-        )
-      ),
+             # Plot dimensions ----
+             column(3,
+                    div(title='The width of the plotting area (in pixles)',
+                        sliderInput(inputId="plot_width",
+                                    label="Plot width",
+                                    min=0, max=5000, value=500, step=20, round=TRUE))
+             ),
 
-      column(3,
-             div(title='Freeze the width/height ratio of the plotting area (or make the width and height independent of each other)?',
-                 shinyWidgets::materialSwitch(inputId="plot_keep_ratio",
-                                              label="Keep ratio",
-                                              value=TRUE, status="primary", right=TRUE)),
-
-             #checkboxInput(inputId="plot_auto_size",
-             #            label="auto size",
-             #            value=TRUE)
-             #),
-
-             #column(2,
-             # Save image to file:
-             div(title='Export this plot to an image file?',
-                 shinyWidgets::materialSwitch(inputId="save_to_file_info",
-                                              label="Save plot!",
-                                              value=FALSE, status="primary", right=TRUE))
-             #shinyWidgets::checkboxGroupButtons(inputId="save_to_file_info",
-             #                     label=NULL,
-             #                     choices=c(`<span><i class='fa fa-bar-chart'></i>&nbsp; Save plot!</span>` = "Save it!")))
-             #                     #choices=c(`<i class='fa fa-bar-chart'></i>` = "Save it!")))
-      ),
-
-      column(2,
-        # Close shop:
-        div(title='Exit this Shiny plotting app? (The plot will NOT be automatically saved!)',
-                 actionButton(inputId="close_shop", label=strong("Exit..."), icon=icon("remove-circle", lib="glyphicon"), style="color: #C70039 ; border-color: #C70039"))
-      ),
-
-      # Export to file ----
-      column(12,
-        conditionalPanel(
-          condition="(input.save_to_file_info)",
-
-          column(2,
-                 div(title='The width of the exported plot (in the selected units)',
-                          numericInput(inputId="save_plot_width", label="width", value=5))),
-          column(2,
-                 div(title='The height of the exported plot (in the selected units)',
-                          numericInput(inputId="save_plot_height", label="height", value=5))),
-
-          conditionalPanel( # EPS + PDF
-            condition="(input.save_plot_type == 'eps' || save_plot_type == 'pdf')",
-            column(2,
-                   div(title='For EPS and PDF, only inches are available',
-                            selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in"))) # only inches
-          ),
-          conditionalPanel( # JPEG + PNG + TIFF
-            condition="(input.save_plot_type != 'eps' && save_plot_type != 'pdf')",
-            column(2,
-                   div(title='The unit of exported plot',
-                            selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","mm","px"), selected="in")))
-          ),
-
-          column(2,
-                 div(title='The type of the exported image',
-                          selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpeg"))),
-
-          #column(2,numericInput(inputId="save_plot_quality", label="quality", value=75, min=0, max=100, step=1)),
-          column(2,
-                 div(title='The resolution of the exported image (not useful for EPS and PDF)',
-                          numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0))),
-
-          column(2, style="margin-top: 25px;",
-                 div(title='Export the plot now!',
-                          downloadButton(outputId="save_to_file", label="Save plot")))
-        )
-      ),
-
-      # Messages ----
-      column(12,
-        tags$head(tags$style("#container * { display: inline; }")),
-        div(id="container", title="Various messages (in blue), warnings (in green) and errors (in red) generated during plotting...",
-            span(" Messages:", style="color:DarkBlue; font-weight: bold;"),
-            span(htmlOutput(outputId = "messages")),
-            style="height: 2em; resize: none; overflow: auto")
-      ),
-
-      # The actual plot ----
-      column(12, wellPanel(id = "tPlot",
-                           style="resize: none; overflow:scroll; max-height: 75vh; max-width: 80vw",
-                           plotOutput(outputId = "distPlot", inline=TRUE))),
-
-      # Export R code for plot ----
-      column(12,
-             # Show the R code:
-             div(title='Show the R code that would generate the current plot',
-                  actionButton(inputId="show_r_code", label=strong("Show R code..."), icon=icon("eye-open", lib="glyphicon")))
-      ),
-
-      column(12,
-             div(p(" "))
-      ),
-
-      hr(),
-
-      # Compute CMA for a (larger) set of patients using the same parameters as for the current plot:
-      column(12,
              conditionalPanel(
-               condition="!(input.cma_class == 'simple' && input.cma_to_compute == 'CMA0')",
-               div(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
-                    # actionButton(inputId="compute_cma_for_larger_sample", label=strong("Compute CMA for (more) patients..."), icon=icon("play", lib="glyphicon")))
-                    shinyWidgets::materialSwitch(inputId="compute_cma_for_larger_sample",
-                                                 label=strong("Compute CMA for several  patients..."),
-                                                 value=FALSE, status="primary", right=TRUE))
+               condition = "(!input.plot_keep_ratio)",
+               column(3,
+                      div(title='The height of the plotting area (in pixels)',
+                          sliderInput(inputId="plot_height",
+                                      label="height",
+                                      min=0, max=5000, value=300, step=20, round=TRUE))
+               )
+             ),
+             conditionalPanel(
+               condition = "(input.plot_keep_ratio)",
+               column(3,
+                      p("")
+               )
+             ),
+
+             column(3,
+                    div(title='Freeze the width/height ratio of the plotting area (or make the width and height independent of each other)?',
+                        shinyWidgets::materialSwitch(inputId="plot_keep_ratio",
+                                                     label="Keep ratio",
+                                                     value=TRUE, status="primary", right=TRUE)),
+
+                    #checkboxInput(inputId="plot_auto_size",
+                    #            label="auto size",
+                    #            value=TRUE)
+                    #),
+
+                    #column(2,
+                    # Save image to file:
+                    div(title='Export this plot to an image file?',
+                        shinyWidgets::materialSwitch(inputId="save_to_file_info",
+                                                     label="Save plot!",
+                                                     value=FALSE, status="primary", right=TRUE))
+                    #shinyWidgets::checkboxGroupButtons(inputId="save_to_file_info",
+                    #                     label=NULL,
+                    #                     choices=c(`<span><i class='fa fa-bar-chart'></i>&nbsp; Save plot!</span>` = "Save it!")))
+                    #                     #choices=c(`<i class='fa fa-bar-chart'></i>` = "Save it!")))
              )
-      ),
+           ),
 
-      # Compute CMA and export results and R code ----
-      column(12,
-        conditionalPanel(
-          condition="!(input.cma_class == 'simple' && input.cma_to_compute == 'CMA0') && (input.compute_cma_for_larger_sample)",
+           conditionalPanel(
+             condition="!(output.is_dataset_defined)",
+             column(9,
+                    div(p(" "))
+             )
+           ),
 
-          column(12,
-                 div(HTML(paste0('Please select the patients for which to compute the <code>CMA</code>.<br/>',
-                                  'Please note that, due to the potentially high computational costs associated, we limit the <b>maximum number of patients</b> to ',
-                                  .GlobalEnv$.plotting.params$max.number.patients.to.compute,
-                                  ', the <b>maximum number of events</b> across all patients to ',
-                                  .GlobalEnv$.plotting.params$max.number.events.to.compute,
-                                  ', and the <b>running time</b> to a maximum of ',
-                                  .GlobalEnv$.plotting.params$max.running.time.in.minutes.to.compute,
-                                  ' minutes.<br/>',
-                                  'For larger computations, we provide the <code>R</code> code, ',
-                                  'which we recommend running from a <b>dedicated <code>R</code> session</b> on appropriately powerful hardware...'
-                                 ))),
+           column(3,
+                  # Close shop:
+                  div(title='Exit this Shiny plotting app? (The plot will NOT be automatically saved!)',
+                      actionButton(inputId="close_shop", label=strong("Exit..."), icon=icon("remove-circle", lib="glyphicon"), style="color: #C70039 ; border-color: #C70039"))
+           ),
 
-                 #div(title="TEST!",
-                 #    radioButtons(inputId="compute_cma_patient_selection_method",
-                 #                 label="You can select the patients either:",
-                 #                 choices=c("individually by their ID"="by_id",
-                 #                           "or as a range based on their position in a list"="by_position"),
-                 #                 inline=TRUE)),
+           # Export to file ----
+           column(12,
+                  conditionalPanel(
+                    condition="(input.save_to_file_info)",
 
-                 hr(),
-                 div(title="Compue the CMA for the selected patients...",
-                     actionButton(inputId="compute_cma_for_larger_sample_button",
-                                  label=strong("Compute CMA..."),
-                                  icon=icon("play", lib="glyphicon"),
-                                  style="color: darkblue ; border-color: darkblue")),
-                 hr(),
+                    column(2,
+                           div(title='The width of the exported plot (in the selected units)',
+                               numericInput(inputId="save_plot_width", label="width", value=5))),
+                    column(2,
+                           div(title='The height of the exported plot (in the selected units)',
+                               numericInput(inputId="save_plot_height", label="height", value=5))),
 
-                 div(HTML('<b>You can select the patients:</b>')),
-                 #hr(),
+                    conditionalPanel( # EPS + PDF
+                      condition="(input.save_plot_type == 'eps' || save_plot_type == 'pdf')",
+                      column(2,
+                             div(title='For EPS and PDF, only inches are available',
+                                 selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in"))) # only inches
+                    ),
+                    conditionalPanel( # JPEG + PNG + TIFF
+                      condition="(input.save_plot_type != 'eps' && save_plot_type != 'pdf')",
+                      column(2,
+                             div(title='The unit of exported plot',
+                                 selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","mm","px"), selected="in")))
+                    ),
 
-                 tabsetPanel(id="compute_cma_patient_selection_method",
+                    column(2,
+                           div(title='The type of the exported image',
+                               selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpeg"))),
 
-                 #conditionalPanel(
-                 #  condition="(input.compute_cma_patient_selection_method == 'by_id'",
-                 tabPanel(title=HTML("<b>individually</b>, using their IDs"), value="by_id",
-                   column(12,div(title="Please select one or more patient IDs to process...",
-                       selectInput(inputId="compute_cma_patient_by_id",
-                                   label="Select the IDs of the patients to include",
-                                   choices=.GlobalEnv$.plotting.params$all.IDs,
-                                   selected=.GlobalEnv$.plotting.params$all.IDs[1],
-                                   multiple=TRUE)))
-                 ),
+                    #column(2,numericInput(inputId="save_plot_quality", label="quality", value=75, min=0, max=100, step=1)),
+                    column(2,
+                           div(title='The resolution of the exported image (not useful for EPS and PDF)',
+                               numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0))),
 
-                 #conditionalPanel(
-                 #  condition="(input.compute_cma_patient_selection_method == 'by_position'",
-                 tabPanel(title=HTML("as a <b>range</b>, based on their position in a list"), value="by_position",
-                          column(12,
-                                 div(title="Define the range of positions (#) corresponding to the selected IDs...",
-                                     sliderInput(inputId="compute_cma_patient_by_group_range",
-                                                 label="Select range of ID positions (#)",
-                                                 min=1, max=NA, step=1, value=c(1,1),
-                                                 round=TRUE, width="100%"))
-                                 ),
+                    column(2, style="margin-top: 25px;",
+                           div(title='Export the plot now!',
+                               downloadButton(outputId="save_to_file", label="Save plot")))
+                  )
+           ),
 
-                          column(3,
-                                 div(title="Order the patients by..."),
-                                 selectInput(inputId="compute_cma_patient_by_group_sorting",
-                                             label="Sort patients by",
-                                             choices=c("original order",
-                                                       "by ID (↑)",
-                                                       "by ID (↓)"))
-                                 ),
+           conditionalPanel(
+             condition="(output.is_dataset_defined)",
 
-                          column(9,
-                                 div(div("The patient IDs with their position (#):"),
-                                     dataTableOutput(outputId="show_patients_as_list"))
-                                 )
-                 )
-              )
-          )
-        )
-      )
+             # Messages ----
+             column(12,
+                    tags$head(tags$style("#container * { display: inline; }")),
+                    div(id="container", title="Various messages (in blue), warnings (in green) and errors (in red) generated during plotting...",
+                        span(" Messages:", style="color:DarkBlue; font-weight: bold;"),
+                        span(htmlOutput(outputId = "messages")),
+                        style="height: 2em; resize: none; overflow: auto")
+             ),
 
+             # The actual plot ----
+             column(12, wellPanel(id = "tPlot",
+                                  style="resize: none; overflow:scroll; max-height: 75vh; max-width: 80vw",
+                                  plotOutput(outputId = "distPlot", inline=TRUE))),
+
+             # Export R code for plot ----
+             column(12,
+                    # Show the R code:
+                    div(title='Show the R code that would generate the current plot',
+                        actionButton(inputId="show_r_code", label=strong("Show R code..."), icon=icon("eye-open", lib="glyphicon")))
+             ),
+
+             column(12,
+                    div(p(" "))
+             ),
+
+             hr(),
+
+             # Compute CMA for a (larger) set of patients using the same parameters as for the current plot:
+             column(12,
+                    conditionalPanel(
+                      condition="!(input.cma_class == 'simple' && input.cma_to_compute == 'CMA0')",
+                      div(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
+                          # actionButton(inputId="compute_cma_for_larger_sample", label=strong("Compute CMA for (more) patients..."), icon=icon("play", lib="glyphicon")))
+                          shinyWidgets::materialSwitch(inputId="compute_cma_for_larger_sample",
+                                                       label=strong("Compute CMA for several  patients..."),
+                                                       value=FALSE, status="primary", right=TRUE))
+                    )
+             ),
+
+             # Compute CMA and export results and R code ----
+             column(12,
+                    conditionalPanel(
+                      condition="!(input.cma_class == 'simple' && input.cma_to_compute == 'CMA0') && (input.compute_cma_for_larger_sample)",
+
+                      column(12,
+                             div(HTML(paste0('Please select the patients for which to compute the <code>CMA</code>.<br/>',
+                                             'Please note that, due to the potentially high computational costs associated, we limit the <b>maximum number of patients</b> to ',
+                                             .GlobalEnv$.plotting.params$max.number.patients.to.compute,
+                                             ', the <b>maximum number of events</b> across all patients to ',
+                                             .GlobalEnv$.plotting.params$max.number.events.to.compute,
+                                             ', and the <b>running time</b> to a maximum of ',
+                                             .GlobalEnv$.plotting.params$max.running.time.in.minutes.to.compute,
+                                             ' minutes.<br/>',
+                                             'For larger computations, we provide the <code>R</code> code, ',
+                                             'which we recommend running from a <b>dedicated <code>R</code> session</b> on appropriately powerful hardware...'
+                             ))),
+
+                             #div(title="TEST!",
+                             #    radioButtons(inputId="compute_cma_patient_selection_method",
+                             #                 label="You can select the patients either:",
+                             #                 choices=c("individually by their ID"="by_id",
+                             #                           "or as a range based on their position in a list"="by_position"),
+                             #                 inline=TRUE)),
+
+                             hr(),
+                             div(title="Compue the CMA for the selected patients...",
+                                 actionButton(inputId="compute_cma_for_larger_sample_button",
+                                              label=strong("Compute CMA..."),
+                                              icon=icon("play", lib="glyphicon"),
+                                              style="color: darkblue ; border-color: darkblue")),
+                             hr(),
+
+                             div(HTML('<b>You can select the patients:</b>')),
+                             #hr(),
+
+                             tabsetPanel(id="compute_cma_patient_selection_method",
+
+                                         #conditionalPanel(
+                                         #  condition="(input.compute_cma_patient_selection_method == 'by_id'",
+                                         tabPanel(title=HTML("<b>individually</b>, using their IDs"), value="by_id",
+                                                  column(12,div(title="Please select one or more patient IDs to process...",
+                                                                selectInput(inputId="compute_cma_patient_by_id",
+                                                                            label="Select the IDs of the patients to include",
+                                                                            choices=.GlobalEnv$.plotting.params$all.IDs,
+                                                                            selected=.GlobalEnv$.plotting.params$all.IDs[1],
+                                                                            multiple=TRUE)))
+                                         ),
+
+                                         #conditionalPanel(
+                                         #  condition="(input.compute_cma_patient_selection_method == 'by_position'",
+                                         tabPanel(title=HTML("as a <b>range</b>, based on their position in a list"), value="by_position",
+                                                  column(12,
+                                                         div(title="Define the range of positions (#) corresponding to the selected IDs...",
+                                                             sliderInput(inputId="compute_cma_patient_by_group_range",
+                                                                         label="Select range of ID positions (#)",
+                                                                         min=1, max=NA, step=1, value=c(1,1),
+                                                                         round=TRUE, width="100%"))
+                                                  ),
+
+                                                  column(3,
+                                                         div(title="Order the patients by..."),
+                                                         selectInput(inputId="compute_cma_patient_by_group_sorting",
+                                                                     label="Sort patients by",
+                                                                     choices=c("original order",
+                                                                               "by ID (↑)",
+                                                                               "by ID (↓)"))
+                                                  ),
+
+                                                  column(9,
+                                                         div(div("The patient IDs with their position (#):"),
+                                                             dataTableOutput(outputId="show_patients_as_list"))
+                                                  )
+                                         )
+                             )
+                      )
+                    )
+             )
+           )
 
     )
   )
@@ -1514,6 +1547,8 @@ server <- function(input, output, session) {
   # Reactive value to allow UI updating on dataset changes:
   rv <- reactiveValues(toggle.me = FALSE);
   # Show/hide UI elements based on various conditions:
+  output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)});
+  outputOptions(output, "is_dataset_defined", suspendWhenHidden = FALSE);
   output$is_dose_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
   outputOptions(output, "is_dose_defined", suspendWhenHidden = FALSE);
   output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
@@ -1654,17 +1689,17 @@ server <- function(input, output, session) {
 
       if( is.null(.GlobalEnv$.plotting.params$data) )
       {
-        # Select the Data tab:
+        # Switch to the Data tab:
         updateTabsetPanel(session=session, inputId="sidebar-tabpanel", selected="sidebar-params-data");
 
-        # Display a warning urging the user to select a data source:
-        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR..."),
-                                div(span(code("plot_interactive_cma()"),
-                                         span("was called without a dataset!\nPlease use the ")),
-                                  span(icon("hdd",lib="glyphicon")),
-                                  span("Data"),
-                                  span(" tab to select a datesource!"), style="color: red;"),
-                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        ## Display a warning urging the user to select a data source:
+        #showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR..."),
+        #                        div(span(code("plot_interactive_cma()"),
+        #                                 span("was called without a dataset!\nPlease use the ")),
+        #                          span(icon("hdd",lib="glyphicon")),
+        #                          span("Data"),
+        #                          span(" tab to select a datesource!"), style="color: red;"),
+        #                      footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       } else
       {
         # Depeding on the CMA class we might do things differently:
@@ -2596,6 +2631,7 @@ server <- function(input, output, session) {
     output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
 
     rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not change any UI elements)
+    output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)});; # now a dataset is defined!
   }
 
 
