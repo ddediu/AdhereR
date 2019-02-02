@@ -1100,7 +1100,7 @@ ui <- fluidPage(
 
                                               div(title='Should the first row to be considered as the header?',
                                                   shinyWidgets::materialSwitch(inputId="dataset_from_file_csv_header",
-                                                                               label=HTML("Header on 1<sup>st</sup> row"),
+                                                                               label=HTML("Header 1<sup>st</sup> row"),
                                                                                value=TRUE, status="primary", right=TRUE)),
 
                                               conditionalPanel(
@@ -1140,55 +1140,60 @@ ui <- fluidPage(
                                                           multiple=FALSE,
                                                           buttonLabel="Select")),
 
-                                            div(title="Click here to peek at the selected dataset...",
-                                                actionButton("dataset_from_file_peek_button", label="Peek at file...", icon=icon("eye-open", lib="glyphicon"))),
+                                            conditionalPanel(
+                                              #condition="(typeof(input.dataset_from_file_filename) != 'undefined') && (input.dataset_from_file_filename != null)",
+                                              condition="(output.is_file_loaded)",
 
-                                            hr(),
+                                              div(title="Click here to peek at the selected dataset...",
+                                                  actionButton("dataset_from_file_peek_button", label="Peek at file...", icon=icon("eye-open", lib="glyphicon"))),
 
-                                            div(title='Required: select the name of the column containing the patient IDs',
-                                                selectInput(inputId="dataset_from_file_patient_id",
-                                                            label="Patient ID column",
-                                                            choices=c("none"),
-                                                            selected="none")),
+                                              hr(),
 
-                                            div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
-                                                textInput(inputId="dataset_from_file_event_format",
-                                                          label="Date format",
-                                                          value="%m/%d/%Y",
-                                                          placeholder="%m/%d/%Y")),
+                                              div(title='Required: select the name of the column containing the patient IDs',
+                                                  selectInput(inputId="dataset_from_file_patient_id",
+                                                              label="Patient ID column",
+                                                              choices=c("none"),
+                                                              selected="none")),
 
-                                            div(title='Required: select the name of the column containing the event dates (in the format defined above)',
-                                                selectInput(inputId="dataset_from_file_event_date",
-                                                            label="Event date column",
-                                                            choices=c("none"),
-                                                            selected="none")),
+                                              div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
+                                                  textInput(inputId="dataset_from_file_event_format",
+                                                            label="Date format",
+                                                            value="%m/%d/%Y",
+                                                            placeholder="%m/%d/%Y")),
 
-                                            div(title='Required: select the name of the column containing the event duration (in days)',
-                                                selectInput(inputId="dataset_from_file_event_duration",
-                                                            label="Event duration column",
-                                                            choices=c("none"),
-                                                            selected="none")),
+                                              div(title='Required: select the name of the column containing the event dates (in the format defined above)',
+                                                  selectInput(inputId="dataset_from_file_event_date",
+                                                              label="Event date column",
+                                                              choices=c("none"),
+                                                              selected="none")),
 
-                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
-                                                selectInput(inputId="dataset_from_file_daily_dose",
-                                                            label="Daily dose column",
-                                                            choices=c("[not defined]"),
-                                                            selected="[not defined]")),
+                                              div(title='Required: select the name of the column containing the event duration (in days)',
+                                                  selectInput(inputId="dataset_from_file_event_duration",
+                                                              label="Event duration column",
+                                                              choices=c("none"),
+                                                              selected="none")),
 
-                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
-                                                selectInput(inputId="dataset_from_file_medication_class",
-                                                            label="Treatment class column",
-                                                            choices=c("[not defined]"),
-                                                            selected="[not defined]")),
+                                              div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
+                                                  selectInput(inputId="dataset_from_file_daily_dose",
+                                                              label="Daily dose column",
+                                                              choices=c("[not defined]"),
+                                                              selected="[not defined]")),
 
-                                            hr(),
+                                              div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
+                                                  selectInput(inputId="dataset_from_file_medication_class",
+                                                              label="Treatment class column",
+                                                              choices=c("[not defined]"),
+                                                              selected="[not defined]")),
 
-                                            div(title='Validate choices and use the dataset!',
-                                                actionButton(inputId="dataset_from_file_button_use",
-                                                             label=strong("Validate & use!"),
-                                                             icon=icon("sunglasses", lib="glyphicon"),
-                                                             style="color:DarkBlue; border-color:DarkBlue;"),
-                                                style="float: center;")
+                                              hr(),
+
+                                              div(title='Validate choices and use the dataset!',
+                                                  actionButton(inputId="dataset_from_file_button_use",
+                                                               label=strong("Validate & use!"),
+                                                               icon=icon("sunglasses", lib="glyphicon"),
+                                                               style="color:DarkBlue; border-color:DarkBlue;"),
+                                                  style="float: center;")
+                                            )
                                           ),
 
 
@@ -1534,6 +1539,16 @@ ui <- fluidPage(
                       )
                     )
              )
+           ),
+
+           conditionalPanel(
+             condition="!(output.is_dataset_defined)",
+
+             column(12, align="center",
+             div(br(),br(),br(),
+                 span("Please use the "),
+                 span(icon("hdd",lib="glyphicon"),strong("Data"), style="color: darkblue"),
+                 span(" tab to select a valid datesource!")))
            )
 
     )
@@ -1549,8 +1564,13 @@ server <- function(input, output, session) {
   # Show/hide UI elements based on various conditions:
   output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)});
   outputOptions(output, "is_dataset_defined", suspendWhenHidden = FALSE);
+
+  output$is_file_loaded <- reactive({!is.null(.GlobalEnv$.plotting.params$.fromfile.dataset)});
+  outputOptions(output, "is_file_loaded", suspendWhenHidden = FALSE);
+
   output$is_dose_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
   outputOptions(output, "is_dose_defined", suspendWhenHidden = FALSE);
+
   output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
   outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
@@ -2631,7 +2651,7 @@ server <- function(input, output, session) {
     output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
 
     rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not change any UI elements)
-    output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)});; # now a dataset is defined!
+    output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)}); # now a dataset is defined!
   }
 
 
@@ -2652,7 +2672,8 @@ server <- function(input, output, session) {
     }
 
     # Try to parse and load it:
-    d <- NULL;
+    d <- NULL; .GlobalEnv$.plotting.params$.fromfile.dataset <- NULL;
+    output$is_file_loaded <- reactive({FALSE}); # Update UI
 
     if( input$dataset_from_file_filetype == "Comma/TAB-separated (.csv; .tsv; .txt)" )
     {
@@ -2947,6 +2968,8 @@ server <- function(input, output, session) {
       .GlobalEnv$.plotting.params$.fromfile.dataset.strip.white <- input$dataset_from_file_csv_strip_white;
       .GlobalEnv$.plotting.params$.fromfile.dataset.na.strings <- gsub('["\']','',trimws(strsplit(input$dataset_from_file_csv_na_strings,",",fixed=TRUE)[[1]], "both"));
       .GlobalEnv$.plotting.params$.fromfile.dataset.sheet <- input$dataset_from_file_sheet;
+
+      output$is_file_loaded <- reactive({TRUE}); # Update UI
     }
   })
 
