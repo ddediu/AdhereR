@@ -998,18 +998,18 @@ ui <- fluidPage(
                                             div(title='Required: select the name of the dataset to use from those available in memory',
                                                 selectInput(inputId="dataset_from_memory",
                                                             label="In-memory dataset",
-                                                            choices=c("none"),
-                                                            selected="none")),
+                                                            choices=c("[none]"),
+                                                            selected="[none]")),
                                             div(title="Click here to peek at the selected dataset...",
                                                 actionButton("dataset_from_memory_peek_button", label="Peek at dataset...", icon=icon("eye-open", lib="glyphicon"))),
 
                                             hr(),
 
                                             div(title='Required: select the name of the column containing the patient IDs',
-                                                selectInput(inputId="dataset_from_memory_patient_id",
-                                                            label="Patient ID column",
-                                                            choices=c("none"),
-                                                            selected="none")),
+                                                shinyWidgets::pickerInput(inputId="dataset_from_memory_patient_id",
+                                                                          label="Patient ID column",
+                                                                          choices=c("[none]"),
+                                                                          selected="[none]")),
 
                                             div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
                                                 textInput(inputId="dataset_from_memory_event_format",
@@ -1018,28 +1018,28 @@ ui <- fluidPage(
                                                           placeholder="%m/%d/%Y")),
 
                                             div(title='Required: select the name of the column containing the event dates (in the format defined above)',
-                                                selectInput(inputId="dataset_from_memory_event_date",
-                                                            label="Event date column",
-                                                            choices=c("none"),
-                                                            selected="none")),
+                                                shinyWidgets::pickerInput(inputId="dataset_from_memory_event_date",
+                                                                          label="Event date column",
+                                                                          choices=c("[none]"),
+                                                                          selected="[none]")),
 
                                             div(title='Required: select the name of the column containing the event duration (in days)',
-                                                selectInput(inputId="dataset_from_memory_event_duration",
-                                                            label="Event duration column",
-                                                            choices=c("none"),
-                                                            selected="none")),
+                                                shinyWidgets::pickerInput(inputId="dataset_from_memory_event_duration",
+                                                                          label="Event duration column",
+                                                                          choices=c("[none]"),
+                                                                          selected="[none]")),
 
                                             div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
-                                                selectInput(inputId="dataset_from_memory_daily_dose",
-                                                            label="Daily dose column",
-                                                            choices=c("[not defined]"),
-                                                            selected="[not defined]")),
+                                                shinyWidgets::pickerInput(inputId="dataset_from_memory_daily_dose",
+                                                                          label="Daily dose column",
+                                                                          choices=c("[not defined]"),
+                                                                          selected="[not defined]")),
 
                                             div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
-                                                selectInput(inputId="dataset_from_memory_medication_class",
-                                                            label="Treatment class column",
-                                                            choices=c("[not defined]"),
-                                                            selected="[not defined]")),
+                                                shinyWidgets::pickerInput(inputId="dataset_from_memory_medication_class",
+                                                                          label="Treatment class column",
+                                                                          choices=c("[not defined]"),
+                                                                          selected="[not defined]")),
 
                                             hr(),
 
@@ -1152,8 +1152,8 @@ ui <- fluidPage(
                                               div(title='Required: select the name of the column containing the patient IDs',
                                                   selectInput(inputId="dataset_from_file_patient_id",
                                                               label="Patient ID column",
-                                                              choices=c("none"),
-                                                              selected="none")),
+                                                              choices=c("[none]"),
+                                                              selected="[none]")),
 
                                               div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
                                                   textInput(inputId="dataset_from_file_event_format",
@@ -1164,14 +1164,14 @@ ui <- fluidPage(
                                               div(title='Required: select the name of the column containing the event dates (in the format defined above)',
                                                   selectInput(inputId="dataset_from_file_event_date",
                                                               label="Event date column",
-                                                              choices=c("none"),
-                                                              selected="none")),
+                                                              choices=c("[none]"),
+                                                              selected="[none]")),
 
                                               div(title='Required: select the name of the column containing the event duration (in days)',
                                                   selectInput(inputId="dataset_from_file_event_duration",
                                                               label="Event duration column",
-                                                              choices=c("none"),
-                                                              selected="none")),
+                                                              choices=c("[none]"),
+                                                              selected="[none]")),
 
                                               div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
                                                   selectInput(inputId="dataset_from_file_daily_dose",
@@ -1271,20 +1271,20 @@ ui <- fluidPage(
 
                                               selectInput(inputId="dataset_from_sql_patient_id",
                                                           label="Patient ID column",
-                                                          choices=c("none"),
-                                                          selected="none"),
+                                                          choices=c("[none]"),
+                                                          selected="[none]"),
 
                                               div(title='Required: select the name of the column containing the event dates (please note the the format is the standard SQL YYYY-MM-DD)',
                                                   selectInput(inputId="dataset_from_sql_event_date",
                                                               label="Event date column",
-                                                              choices=c("none"),
-                                                              selected="none")),
+                                                              choices=c("[none]"),
+                                                              selected="[none]")),
 
                                               div(title='Required: select the name of the column containing the event duration (in days)',
                                                   selectInput(inputId="dataset_from_sql_event_duration",
                                                               label="Event duration column",
-                                                              choices=c("none"),
-                                                              selected="none")),
+                                                              choices=c("[none]"),
+                                                              selected="[none]")),
 
                                               div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
                                                   selectInput(inputId="dataset_from_sql_daily_dose",
@@ -2206,6 +2206,8 @@ server <- function(input, output, session) {
   .recursively.list.objects.in.memory <- function(..., # inspired from http://adv-r.had.co.nz/Environments.html#env-recursion
                                                   env = parent.frame(),
                                                   of.class="data.frame", # if NULL, no type testing (all go)
+                                                  min.nrow=1, min.ncol=3,
+                                                  return.dimensions=TRUE,
                                                   consider.derived.classes=TRUE)
   {
     if( identical(env, emptyenv()) )
@@ -2223,7 +2225,13 @@ server <- function(input, output, session) {
         objects.to.keep <- vapply(all.objects, function(s)
         {
           x <- get(s, envir=env); # get the actual object
-          return( (!consider.derived.classes && (of.class %in% class(x))) || (consider.derived.classes && inherits(x, of.class)) );
+          if( (!consider.derived.classes && (of.class %in% class(x))) || (consider.derived.classes && inherits(x, of.class)) )
+          {
+            return (nrow(x) >= min.nrow && ncol(x) >= min.ncol);
+          } else
+          {
+            return (FALSE);
+          }
         }, logical(1));
         all.objects <- all.objects[ objects.to.keep ];
       }
@@ -2243,6 +2251,7 @@ server <- function(input, output, session) {
     {
       # List all the data.frame-derived objects currently in memory:
       x <- sort(.recursively.list.objects.in.memory());
+
       # If defined, add the data.frame sent to the Shiny plotting function:
       if( !is.null(.GlobalEnv$.plotting.params) &&
           !is.null(.GlobalEnv$.plotting.params$data) &&
@@ -2270,7 +2279,7 @@ server <- function(input, output, session) {
 
     # Set the data.frame:
     .GlobalEnv$.plotting.params$.inmemory.dataset <- NULL;
-    if( input$dataset_from_memory == "none" )
+    if( input$dataset_from_memory == "[none]" )
     {
       # Initialisation:
       return (invisible(NULL));
@@ -2285,7 +2294,7 @@ server <- function(input, output, session) {
     }
 
     # Sanity checks:
-    if( (input$dataset_from_memory != "none") &&
+    if( (input$dataset_from_memory != "[none]") &&
         (is.null(.GlobalEnv$.plotting.params$.inmemory.dataset) ||
          !inherits(.GlobalEnv$.plotting.params$.inmemory.dataset, "data.frame") ||
          ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
@@ -2297,7 +2306,7 @@ server <- function(input, output, session) {
       return (invisible(NULL));
     }
 
-    if( (input$dataset_from_memory != "none") && nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
+    if( (input$dataset_from_memory != "[none]") && nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
     {
       showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
                             div(paste0("Dataset '",input$dataset_from_memory, "' must have at least three distinct columns (patient ID, event date and duration)!"), style="color: red;"),
@@ -2305,16 +2314,25 @@ server <- function(input, output, session) {
       return (invisible(NULL));
     }
 
+    n.vals.to.show <-3;
     x <- names(.GlobalEnv$.plotting.params$.inmemory.dataset);
+    x.info <- vapply(1:ncol(.GlobalEnv$.plotting.params$.inmemory.dataset),
+                     function(i) paste0("(",
+                                        class(.GlobalEnv$.plotting.params$.inmemory.dataset[,i]),
+                                        ": ",
+                                        paste0(.GlobalEnv$.plotting.params$.inmemory.dataset[1:min(n.vals.to.show,nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)),i],collapse=", "),
+                                        if(nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)>n.vals.to.show) "...",
+                                        ")"),
+                     character(1));
 
     # Required columns:
-    updateSelectInput(session, "dataset_from_memory_patient_id",     choices=x, selected=head(x,1));
-    updateSelectInput(session, "dataset_from_memory_event_date",     choices=x, selected=head(x,2));
-    updateSelectInput(session, "dataset_from_memory_event_duration", choices=x, selected=head(x,3));
+    shinyWidgets::updatePickerInput(session, "dataset_from_memory_patient_id",     choices=x, selected=x[1], choicesOpt=list(subtext=x.info));
+    shinyWidgets::updatePickerInput(session, "dataset_from_memory_event_date",     choices=x, selected=x[2], choicesOpt=list(subtext=x.info));
+    shinyWidgets::updatePickerInput(session, "dataset_from_memory_event_duration", choices=x, selected=x[3], choicesOpt=list(subtext=x.info));
 
     # Optional columns (possibly used by CMA5+):
-    updateSelectInput(session, "dataset_from_memory_medication_class", choices=c("[not defined]", x), selected="[not defined]");
-    updateSelectInput(session, "dataset_from_memory_daily_dose",       choices=c("[not defined]", x), selected="[not defined]");
+    shinyWidgets::updatePickerInput(session, "dataset_from_memory_medication_class", choices=c("[not defined]", x), selected="[not defined]", choicesOpt=list(subtext=c("", x.info)));
+    shinyWidgets::updatePickerInput(session, "dataset_from_memory_daily_dose",       choices=c("[not defined]", x), selected="[not defined]", choicesOpt=list(subtext=c("", x.info)));
 
   })
 
@@ -2636,7 +2654,7 @@ server <- function(input, output, session) {
      # Let the world know this:
     .GlobalEnv$.plotting.params$.dataset.type <- "in memory";
     .GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments <- FALSE;
-    if( input$dataset_from_memory == "none" )
+    if( input$dataset_from_memory == "[none]" )
     {
       # How did we get here???
       return (invisible(NULL));
