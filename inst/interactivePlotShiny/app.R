@@ -1208,32 +1208,36 @@ ui <- fluidPage(
                                                             choices=c("MySQL/MariaDB"),
                                                             selected="MySQL/MariaDB")),
 
-                                            div(title=HTML('Required: the address (name or IP) of the host database (if on the local machine, use "localhost" or "[none]").'),
-                                                textInput(inputId="dataset_from_sql_server_host",
-                                                          label="Host name/address",
-                                                          value=c("[none]"))),
+                                            conditionalPanel(
+                                              condition="(input.dataset_from_sql_server_type == 'MySQL/MariaDB')",
 
-                                            div(title=HTML('Required: the database server TCP/IP port number.'),
-                                                numericInput(inputId="dataset_from_sql_server_port",
-                                                             label="TCP/IP port number",
-                                                             value=c(0), min=0, max=NA, step=1)),
+                                              div(title=HTML('Required: the address (name or IP) of the host database (if on the local machine, use "localhost" or "[none]").'),
+                                                  textInput(inputId="dataset_from_sql_server_host",
+                                                            label="Host name/address",
+                                                            value=c("[none]"))),
 
-                                            div(title=HTML('Required: the name of the database.'),
-                                                textInput(inputId="dataset_from_sql_database_name",
-                                                          label="Database name",
-                                                          value=c("[none]"))),
+                                              div(title=HTML('Required: the database server TCP/IP port number.'),
+                                                  numericInput(inputId="dataset_from_sql_server_port",
+                                                               label="TCP/IP port number",
+                                                               value=c(0), min=0, max=NA, step=1)),
 
-                                            div(title=HTML('Required: the username.'),
-                                                textInput(inputId="dataset_from_sql_username",
-                                                          label="Username",
-                                                          value=c(""),
-                                                          placeholder="user")),
+                                              div(title=HTML('Required: the name of the database.'),
+                                                  textInput(inputId="dataset_from_sql_database_name",
+                                                            label="Database name",
+                                                            value=c("[none]"))),
 
-                                            div(title=HTML('Required: the password'),
-                                                passwordInput(inputId="dataset_from_sql_password",
-                                                              label="Password",
-                                                              value=c(""),
-                                                              placeholder="password")),
+                                              div(title=HTML('Required: the username.'),
+                                                  textInput(inputId="dataset_from_sql_username",
+                                                            label="Username",
+                                                            value=c(""),
+                                                            placeholder="user")),
+
+                                              div(title=HTML('Required: the password'),
+                                                  passwordInput(inputId="dataset_from_sql_password",
+                                                                label="Password",
+                                                                value=c(""),
+                                                                placeholder="password"))
+                                            ),
 
                                             div(title='Connect to datadase and fetch tables!',
                                                 actionButton(inputId="dataset_from_sql_button_connect",
@@ -1242,63 +1246,67 @@ ui <- fluidPage(
                                                              style="color:DarkBlue; border-color:DarkBlue;"),
                                                 style="padding-bottom: 10px;"),
 
-                                            div(title='Disconnect from datadase (not really necessary, as the disconnection is automatic when closing the application, but nice to do))',
-                                                actionButton(inputId="dataset_from_sql_button_disconnect",
-                                                             label=strong("Disconnect!"),
-                                                             icon=icon("ban-circle", lib="glyphicon"),
-                                                             style="color:red; border-color:red;"),
-                                                style="padding-bottom: 20px;"),
+                                            conditionalPanel(
+                                              condition="(output.is_database_connected)",
 
-                                            div(title='Peek at database!',
-                                                actionButton(inputId="dataset_from_sql_button_peek",
-                                                             label=strong("Peek at database..."),
-                                                             icon=icon("eye-open", lib="glyphicon"))),
+                                              div(title='Disconnect from datadase (not really necessary, as the disconnection is automatic when closing the application, but nice to do))',
+                                                  actionButton(inputId="dataset_from_sql_button_disconnect",
+                                                               label=strong("Disconnect!"),
+                                                               icon=icon("ban-circle", lib="glyphicon"),
+                                                               style="color:red; border-color:red;"),
+                                                  style="padding-bottom: 20px;"),
 
-                                            hr(),
+                                              div(title='Peek at database!',
+                                                  actionButton(inputId="dataset_from_sql_button_peek",
+                                                               label=strong("Peek at database..."),
+                                                               icon=icon("eye-open", lib="glyphicon"))),
 
-                                            div(title=HTML('Required: the table or view to use...'),
-                                                selectInput(inputId="dataset_from_sql_table",
-                                                            label="Which table/view",
-                                                            choices=c("[none]"),
-                                                            selected="[none]")),
+                                              hr(),
 
-                                            selectInput(inputId="dataset_from_sql_patient_id",
-                                                        label="Patient ID column",
-                                                        choices=c("none"),
-                                                        selected="none"),
+                                              div(title=HTML('Required: the table or view to use...'),
+                                                  selectInput(inputId="dataset_from_sql_table",
+                                                              label="Which table/view",
+                                                              choices=c("[none]"),
+                                                              selected="[none]")),
 
-                                            div(title='Required: select the name of the column containing the event dates (please note the the format is the standard SQL YYYY-MM-DD)',
-                                                selectInput(inputId="dataset_from_sql_event_date",
-                                                            label="Event date column",
-                                                            choices=c("none"),
-                                                            selected="none")),
+                                              selectInput(inputId="dataset_from_sql_patient_id",
+                                                          label="Patient ID column",
+                                                          choices=c("none"),
+                                                          selected="none"),
 
-                                            div(title='Required: select the name of the column containing the event duration (in days)',
-                                                selectInput(inputId="dataset_from_sql_event_duration",
-                                                            label="Event duration column",
-                                                            choices=c("none"),
-                                                            selected="none")),
+                                              div(title='Required: select the name of the column containing the event dates (please note the the format is the standard SQL YYYY-MM-DD)',
+                                                  selectInput(inputId="dataset_from_sql_event_date",
+                                                              label="Event date column",
+                                                              choices=c("none"),
+                                                              selected="none")),
 
-                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
-                                                selectInput(inputId="dataset_from_sql_daily_dose",
-                                                            label="Daily dose column",
-                                                            choices=c("[not defined]"),
-                                                            selected="[not defined]")),
+                                              div(title='Required: select the name of the column containing the event duration (in days)',
+                                                  selectInput(inputId="dataset_from_sql_event_duration",
+                                                              label="Event duration column",
+                                                              choices=c("none"),
+                                                              selected="none")),
 
-                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
-                                                selectInput(inputId="dataset_from_sql_medication_class",
-                                                            label="Treatment class column",
-                                                            choices=c("[not defined]"),
-                                                            selected="[not defined]")),
+                                              div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
+                                                  selectInput(inputId="dataset_from_sql_daily_dose",
+                                                              label="Daily dose column",
+                                                              choices=c("[not defined]"),
+                                                              selected="[not defined]")),
 
-                                            hr(),
+                                              div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
+                                                  selectInput(inputId="dataset_from_sql_medication_class",
+                                                              label="Treatment class column",
+                                                              choices=c("[not defined]"),
+                                                              selected="[not defined]")),
 
-                                            div(title='Validate choices and use the dataset!',
-                                                actionButton(inputId="dataset_from_sql_button_use",
-                                                             label=strong("Validate & use!"),
-                                                             icon=icon("sunglasses", lib="glyphicon"),
-                                                             style="color:DarkBlue; border-color:DarkBlue;"),
-                                                style="float: center;")
+                                              hr(),
+
+                                              div(title='Validate choices and use the dataset!',
+                                                  actionButton(inputId="dataset_from_sql_button_use",
+                                                               label=strong("Validate & use!"),
+                                                               icon=icon("sunglasses", lib="glyphicon"),
+                                                               style="color:DarkBlue; border-color:DarkBlue;"),
+                                                  style="float: center;")
+                                            )
 
                                           ),
 
@@ -1567,6 +1575,9 @@ server <- function(input, output, session) {
 
   output$is_file_loaded <- reactive({!is.null(.GlobalEnv$.plotting.params$.fromfile.dataset)});
   outputOptions(output, "is_file_loaded", suspendWhenHidden = FALSE);
+
+  output$is_database_connected <- reactive({!is.null(.GlobalEnv$.plotting.params$.db.connection)});
+  outputOptions(output, "is_database_connected", suspendWhenHidden = FALSE);
 
   output$is_dose_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
   outputOptions(output, "is_dose_defined", suspendWhenHidden = FALSE);
@@ -2251,10 +2262,10 @@ server <- function(input, output, session) {
   observeEvent(input$dataset_from_memory,
   {
     # Disconnect any pre-existing database connections:
-    if( !is.null(.GlobalEnv$.plotting.params.db.connection) )
+    if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
     {
-      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params.db.connection), silent=TRUE);
-      .GlobalEnv$.plotting.params.db.connection <- NULL;
+      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
+      .GlobalEnv$.plotting.params$.db.connection <- NULL;
     }
 
     # Set the data.frame:
@@ -2659,10 +2670,10 @@ server <- function(input, output, session) {
   observeEvent(input$dataset_from_file_filename,
   {
     # Disconnect any pre-existing database connections:
-    if( !is.null(.GlobalEnv$.plotting.params.db.connection) )
+    if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
     {
-      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params.db.connection), silent=TRUE);
-      .GlobalEnv$.plotting.params.db.connection <- NULL;
+      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
+      .GlobalEnv$.plotting.params$.db.connection <- NULL;
     }
 
     if( is.null(input$dataset_from_file_filename) || nrow(input$dataset_from_file_filename) < 1 )
@@ -2672,8 +2683,9 @@ server <- function(input, output, session) {
     }
 
     # Try to parse and load it:
-    d <- NULL; .GlobalEnv$.plotting.params$.fromfile.dataset <- NULL;
-    output$is_file_loaded <- reactive({FALSE}); # Update UI
+    d <- NULL;
+    #.GlobalEnv$.plotting.params$.fromfile.dataset <- NULL;
+    #output$is_file_loaded <- reactive({FALSE}); # Update UI
 
     if( input$dataset_from_file_filetype == "Comma/TAB-separated (.csv; .tsv; .txt)" )
     {
@@ -2969,7 +2981,7 @@ server <- function(input, output, session) {
       .GlobalEnv$.plotting.params$.fromfile.dataset.na.strings <- gsub('["\']','',trimws(strsplit(input$dataset_from_file_csv_na_strings,",",fixed=TRUE)[[1]], "both"));
       .GlobalEnv$.plotting.params$.fromfile.dataset.sheet <- input$dataset_from_file_sheet;
 
-      output$is_file_loaded <- reactive({TRUE}); # Update UI
+      output$is_file_loaded <- reactive({TRUE}); # Update UI to reflect this change
     }
   })
 
@@ -3031,10 +3043,11 @@ server <- function(input, output, session) {
   observeEvent(input$dataset_from_sql_button_connect,
   {
     # Disconnect any pre-existing database connections:
-    if( !is.null(.GlobalEnv$.plotting.params.db.connection) )
+    if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
     {
-      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params.db.connection), silent=TRUE);
-      .GlobalEnv$.plotting.params.db.connection <- NULL;
+      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
+      .GlobalEnv$.plotting.params$.db.connection <- NULL;
+      output$is_database_connected <- reactive({FALSE}); # update UI
     }
 
     if( input$dataset_from_sql_server_type == "MySQL/MariaDB" )
@@ -3137,6 +3150,9 @@ server <- function(input, output, session) {
       # Update the list of tables/views:
       updateSelectInput(session, "dataset_from_sql_table", choices=unique(d.tables.columns$table), selected=head(unique(d.tables.columns$table),1));
 
+      # Update UI:
+      output$is_database_connected <- reactive({TRUE});
+
       # Show the info:
       .show.db.info();
     }
@@ -3149,6 +3165,8 @@ server <- function(input, output, session) {
     {
       try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
       .GlobalEnv$.plotting.params$.db.connection <- NULL;
+      # Update UI:
+      output$is_database_connected <- reactive({FALSE});
     }
   })
 
