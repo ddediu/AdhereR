@@ -898,6 +898,12 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   if( bw.plot )
   {
       if( is.function(col.cats) ) col.cats <- .bw.colors else col.cats <- gray(0.1);
+      followup.window.col <- "black";
+      observation.window.col <- gray(0.3);
+      CMA.plot.col <- gray(0.8);
+      CMA.plot.border <- gray(0.2);
+      CMA.plot.bkg <- gray(0.5);
+      CMA.plot.text <- CMA.plot.border;
   }
 
   # The colors for the categories:
