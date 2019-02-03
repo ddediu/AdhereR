@@ -1150,10 +1150,10 @@ ui <- fluidPage(
                                               hr(),
 
                                               div(title='Required: select the name of the column containing the patient IDs',
-                                                  selectInput(inputId="dataset_from_file_patient_id",
-                                                              label="Patient ID column",
-                                                              choices=c("[none]"),
-                                                              selected="[none]")),
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_file_patient_id",
+                                                                            label="Patient ID column",
+                                                                            choices=c("[none]"),
+                                                                            selected="[none]")),
 
                                               div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
                                                   textInput(inputId="dataset_from_file_event_format",
@@ -1162,28 +1162,28 @@ ui <- fluidPage(
                                                             placeholder="%m/%d/%Y")),
 
                                               div(title='Required: select the name of the column containing the event dates (in the format defined above)',
-                                                  selectInput(inputId="dataset_from_file_event_date",
-                                                              label="Event date column",
-                                                              choices=c("[none]"),
-                                                              selected="[none]")),
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_file_event_date",
+                                                                            label="Event date column",
+                                                                            choices=c("[none]"),
+                                                                            selected="[none]")),
 
                                               div(title='Required: select the name of the column containing the event duration (in days)',
-                                                  selectInput(inputId="dataset_from_file_event_duration",
-                                                              label="Event duration column",
-                                                              choices=c("[none]"),
-                                                              selected="[none]")),
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_file_event_duration",
+                                                                            label="Event duration column",
+                                                                            choices=c("[none]"),
+                                                                            selected="[none]")),
 
                                               div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
-                                                  selectInput(inputId="dataset_from_file_daily_dose",
-                                                              label="Daily dose column",
-                                                              choices=c("[not defined]"),
-                                                              selected="[not defined]")),
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_file_daily_dose",
+                                                                            label="Daily dose column",
+                                                                            choices=c("[not defined]"),
+                                                                            selected="[not defined]")),
 
                                               div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
-                                                  selectInput(inputId="dataset_from_file_medication_class",
-                                                              label="Treatment class column",
-                                                              choices=c("[not defined]"),
-                                                              selected="[not defined]")),
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_file_medication_class",
+                                                                            label="Treatment class column",
+                                                                            choices=c("[not defined]"),
+                                                                            selected="[not defined]")),
 
                                               hr(),
 
@@ -1264,39 +1264,40 @@ ui <- fluidPage(
                                               hr(),
 
                                               div(title=HTML('Required: the table or view to use...'),
-                                                  selectInput(inputId="dataset_from_sql_table",
-                                                              label="Which table/view",
-                                                              choices=c("[none]"),
-                                                              selected="[none]")),
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_sql_table",
+                                                                            label="Which table/view",
+                                                                            choices=c("[none]"),
+                                                                            selected="[none]")),
 
-                                              selectInput(inputId="dataset_from_sql_patient_id",
-                                                          label="Patient ID column",
-                                                          choices=c("[none]"),
-                                                          selected="[none]"),
+                                              div(title='Required: select the name of the column containing the patient IDs',
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_sql_patient_id",
+                                                                            label="Patient ID column",
+                                                                            choices=c("[none]"),
+                                                                            selected="[none]")),
 
                                               div(title='Required: select the name of the column containing the event dates (please note the the format is the standard SQL YYYY-MM-DD)',
-                                                  selectInput(inputId="dataset_from_sql_event_date",
-                                                              label="Event date column",
-                                                              choices=c("[none]"),
-                                                              selected="[none]")),
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_sql_event_date",
+                                                                            label="Event date column",
+                                                                            choices=c("[none]"),
+                                                                            selected="[none]")),
 
                                               div(title='Required: select the name of the column containing the event duration (in days)',
-                                                  selectInput(inputId="dataset_from_sql_event_duration",
-                                                              label="Event duration column",
-                                                              choices=c("[none]"),
-                                                              selected="[none]")),
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_sql_event_duration",
+                                                                            label="Event duration column",
+                                                                            choices=c("[none]"),
+                                                                            selected="[none]")),
 
                                               div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
-                                                  selectInput(inputId="dataset_from_sql_daily_dose",
-                                                              label="Daily dose column",
-                                                              choices=c("[not defined]"),
-                                                              selected="[not defined]")),
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_sql_daily_dose",
+                                                                            label="Daily dose column",
+                                                                            choices=c("[not defined]"),
+                                                                            selected="[not defined]")),
 
                                               div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
-                                                  selectInput(inputId="dataset_from_sql_medication_class",
-                                                              label="Treatment class column",
-                                                              choices=c("[not defined]"),
-                                                              selected="[not defined]")),
+                                                  shinyWidgets::pickerInput(inputId="dataset_from_sql_medication_class",
+                                                                            label="Treatment class column",
+                                                                            choices=c("[not defined]"),
+                                                                            selected="[not defined]")),
 
                                               hr(),
 
@@ -1586,6 +1587,18 @@ server <- function(input, output, session) {
   outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
   #outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
+
+  onStart <- function()
+  {
+    onStop(function()
+    {
+      # Disconnect any open database connections...
+      if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
+      {
+        try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
+      }
+    })
+  }
 
   # The plotting function:
   .renderPlot <- function()
@@ -2675,6 +2688,8 @@ server <- function(input, output, session) {
     updateSelectInput(session, "cma_to_compute", selected=.GlobalEnv$.plotting.params$cma.class);
     updateSelectInput(session, "patient", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$ID);
 
+    updateSelectInput(session, "compute_cma_patient_by_id", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$all.IDs[1]);
+
     #if( is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname) ) shinyjs::hide(id="dose_is_defined") else shinyjs::show(id="dose_is_defined");
     output$is_dose_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
     output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
@@ -2967,16 +2982,25 @@ server <- function(input, output, session) {
         return (invisible(NULL));
       }
 
+      n.vals.to.show <-3;
       x <- names(d);
+      x.info <- vapply(1:ncol(d),
+                       function(i) paste0("(",
+                                          class(d[,i]),
+                                          ": ",
+                                          paste0(d[1:min(n.vals.to.show,nrow(d)),i],collapse=", "),
+                                          if(nrow(d)>n.vals.to.show) "...",
+                                          ")"),
+                       character(1));
 
       # Required columns:
-      updateSelectInput(session, "dataset_from_file_patient_id",     choices=x, selected=head(x,1));
-      updateSelectInput(session, "dataset_from_file_event_date",     choices=x, selected=head(x,2));
-      updateSelectInput(session, "dataset_from_file_event_duration", choices=x, selected=head(x,3));
+      shinyWidgets::updatePickerInput(session, "dataset_from_file_patient_id",     choices=x, selected=x[1], choicesOpt=list(subtext=x.info));
+      shinyWidgets::updatePickerInput(session, "dataset_from_file_event_date",     choices=x, selected=x[2], choicesOpt=list(subtext=x.info));
+      shinyWidgets::updatePickerInput(session, "dataset_from_file_event_duration", choices=x, selected=x[3], choicesOpt=list(subtext=x.info));
 
       # Optional columns (possibly used by CMA5+):
-      updateSelectInput(session, "dataset_from_file_medication_class", choices=c("[not defined]", x), selected="[not defined]");
-      updateSelectInput(session, "dataset_from_file_daily_dose",       choices=c("[not defined]", x), selected="[not defined]");
+      shinyWidgets::updatePickerInput(session, "dataset_from_file_medication_class", choices=c("[not defined]", x), selected="[not defined]", choicesOpt=list(subtext=c("",x.info)));
+      shinyWidgets::updatePickerInput(session, "dataset_from_file_daily_dose",       choices=c("[not defined]", x), selected="[not defined]", choicesOpt=list(subtext=c("",x.info)));
 
       # set the dataset and various parameters used to read it:
       .GlobalEnv$.plotting.params$.fromfile.dataset <- d;
@@ -3166,7 +3190,11 @@ server <- function(input, output, session) {
       .GlobalEnv$.plotting.params$.db.connection <- d;
 
       # Update the list of tables/views:
-      updateSelectInput(session, "dataset_from_sql_table", choices=unique(d.tables.columns$table), selected=head(unique(d.tables.columns$table),1));
+      x <- aggregate(column ~ nrow + table, d.tables.columns, length);
+      shinyWidgets::updatePickerInput(session, "dataset_from_sql_table",
+                                      choices=as.character(x$table),
+                                      selected=as.character(x$table)[1],
+                                      choicesOpt=list(subtext=paste0(x$nrow," x ",x$column)));
 
       # Update UI:
       output$is_database_connected <- reactive({TRUE});
@@ -3285,12 +3313,13 @@ server <- function(input, output, session) {
 
       # Update them:
       column.names <- as.character(.GlobalEnv$.plotting.params$.db.connection.tables$column[s]);
-      updateSelectInput(session, "dataset_from_sql_patient_id", choices=column.names, selected=column.names[1]);
-      updateSelectInput(session, "dataset_from_sql_event_date", choices=column.names, selected=column.names[2]);
-      updateSelectInput(session, "dataset_from_sql_event_duration", choices=column.names, selected=column.names[3]);
+      column.info <- paste0("(",.GlobalEnv$.plotting.params$.db.connection.tables$type[s],")");
+      shinyWidgets::updatePickerInput(session, "dataset_from_sql_patient_id", choices=column.names, selected=column.names[1], choicesOpt=list(subtext=column.info));
+      shinyWidgets::updatePickerInput(session, "dataset_from_sql_event_date", choices=column.names, selected=column.names[2], choicesOpt=list(subtext=column.info));
+      shinyWidgets::updatePickerInput(session, "dataset_from_sql_event_duration", choices=column.names, selected=column.names[3], choicesOpt=list(subtext=column.info));
 
-      updateSelectInput(session, "dataset_from_sql_daily_dose", choices=c("[not defined]", column.names), selected="[not defined]");
-      updateSelectInput(session, "dataset_from_sql_medication_class", choices=c("[not defined]", column.names), selected="[not defined]");
+      shinyWidgets::updatePickerInput(session, "dataset_from_sql_daily_dose", choices=c("[not defined]", column.names), selected="[not defined]", choicesOpt=list(subtext=c("",column.info)));
+      shinyWidgets::updatePickerInput(session, "dataset_from_sql_medication_class", choices=c("[not defined]", column.names), selected="[not defined]", choicesOpt=list(subtext=c("",column.info)));
     }
   })
 
@@ -3869,7 +3898,6 @@ server <- function(input, output, session) {
       }
     }
   )
-
 }
 
 
