@@ -34,6 +34,7 @@
 #' @import haven
 #' @import DBI
 #' @import RMariaDB
+#' @import RSQLite
 NULL
 
 
@@ -1205,8 +1206,18 @@ ui <- fluidPage(
                                             div(title=HTML('Required: connection to SQL database (please note that the credentials are <b>not</b> stored! What RDBMS/SQL server type/vendor/solution to connect to?'),
                                                 selectInput(inputId="dataset_from_sql_server_type",
                                                             label="What RDBMS solution?",
-                                                            choices=c("MySQL/MariaDB"),
-                                                            selected="MySQL/MariaDB")),
+                                                            choices=c("SQLite",
+                                                                      "MySQL/MariaDB"),
+                                                            selected="SQLite")),
+
+                                            conditionalPanel(
+                                              condition="(input.dataset_from_sql_server_type == 'SQLite')",
+
+                                              div(title=HTML('This is intended as an example of using SQL with SQLite, and uses an in-memory "med_events" database that contains the example dataset included in the package.\nFor security reasons, we do not allow at this time the use of a user-given SQLite database, but this is easy to do.\nDespite its limitations, SQLite could be a fully working solution in specific scenarios involving, for example, local applications or a pre-defined databasestored in a file on the server.'),
+                                                  shinyjs::disabled(textInput(inputId="dataset_from_sqlite_database_name",
+                                                                              label=HTML("Database name <span style='color: red'>(fixed example 'med_events')</span>"),
+                                                                              value=c("med_events"))))
+                                            ),
 
                                             conditionalPanel(
                                               condition="(input.dataset_from_sql_server_type == 'MySQL/MariaDB')",
@@ -1861,22 +1872,22 @@ server <- function(input, output, session) {
                   "<p><b>Authors:</b> ",descr$Author,"</p>",
                   "<p><b>Maintainer:</b> ",descr$Maintainer,"</p>",
                   "<p align='justify'>",descr$Description,"</p>",
-                  "<p><b>Website:</b> <a href='",descr$URL,"'>",descr$URL,"</a></p>",
+                  "<p><b>Website:</b> <a href='",descr$URL,"' target='_blank'>",descr$URL,"</a></p>",
                   "<p><b>Released under:</b> ",descr$License,"</p>",
                   "<p><b>Citation:</b></p>",format(citation(package="AdhereR.devel"),style="html"),
                   "<hr/>",
-                  "<p>For more info <b>online</b> please visit the project's <a href='http://www.adherer.eu'>homepage</a> (<a href='http://www.adherer.eu'>www.adherer.eu</a>) and its source code repository on <a href='https://github.com/ddediu/AdhereR'>GitHub</a> (<a href='https://github.com/ddediu/AdhereR'>github.com/ddediu/AdhereR</a>). ",
-                  "The official releases are hosted on <a href='https://cran.r-project.org/package=AdhereR'>CRAN</a> (<a href='https://cran.r-project.org/package=AdhereR'>https://cran.r-project.org/package=AdhereR</a>).",
+                  "<p>For more info <b>online</b> please visit the project's <a href='http://www.adherer.eu' target='_blank'>homepage</a> (<a href='http://www.adherer.eu' target='_blank'>www.adherer.eu</a>) and its source code repository on <a href='https://github.com/ddediu/AdhereR' target='_blank'>GitHub</a> (<a href='https://github.com/ddediu/AdhereR' target='_blank'>github.com/ddediu/AdhereR</a>). ",
+                  "The official releases are hosted on <a href='https://cran.r-project.org/package=AdhereR' target='_blank'>CRAN</a> (<a href='https://cran.r-project.org/package=AdhereR' target='_blank'>https://cran.r-project.org/package=AdhereR</a>).",
                   "<p><b>Offline</b> help is available within R (and RStudio):</p>",
                   "<ul>",
                   "<li>running <code>help(package='AdhereR')</code> in the R cosole displayes the <i>main documentation</i> for the package with links to detailed help for particular topics;</li>",
                   "<li>running <code>help('CMA0')</code> (or the equivalent <code>?CMA0</code>) in the R cosole displayes the <i>detailed documentation</i> the particular topic (here, CMA0); in RStudio, selecting the keyword ('CMA0') in the script editor and pressing <code>F1</code> has the same effect. Please note that to obtain help for <i>overloaded</i> functions (such as <code>plot</code>) for, say, sliding windows, one must use the fully qualified function name (here, <code>?plot.CMA_sliding_window</code>);</li>",
                   "<li>the various <i>vignettes</i> contain a lot of information about selected topics. To list all available vignettes for AdhereR, run <code>browseVignettes(package='AdhereR')</code> in the R console. Currently, the main vignettes concern:</li>",
                   "<ul>",
-                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html'>AdhereR: Adherence to Medications</a></i> gives an overview of what AdhereR can do;</li>",
-                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/calling-AdhereR-from-python3.html'>Calling AdhereR from Python 3</a></i> described a mechanism that allows AdhereR to be used from other programming languages and platofrms than R (in particular, from Python 3);</li>",
-                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_with_databases.pdf'>Using AdhereR with various database technologies for processing very large datasets</a></i> described how to use AdhereR to process data stored in 'classic' SQL Relational Databases Management Systems (RDBMSs) or in Apache's Hadoop;</li>",
-                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_interctive_plots.html'>Interactive plotting with Shiny</a></i> is probably the most relevant here.</li>",
+                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html' target='_blank'>AdhereR: Adherence to Medications</a></i> gives an overview of what AdhereR can do;</li>",
+                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/calling-AdhereR-from-python3.html' target='_blank'>Calling AdhereR from Python 3</a></i> described a mechanism that allows AdhereR to be used from other programming languages and platofrms than R (in particular, from Python 3);</li>",
+                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_with_databases.pdf' target='_blank'>Using AdhereR with various database technologies for processing very large datasets</a></i> described how to use AdhereR to process data stored in 'classic' SQL Relational Databases Management Systems (RDBMSs) or in Apache's Hadoop;</li>",
+                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_interctive_plots.html' target='_blank'>Interactive plotting with Shiny</a></i> is probably the most relevant here.</li>",
                   "</ul>",
                   "</ul>",
                   "</div>");
@@ -3092,7 +3103,125 @@ server <- function(input, output, session) {
       output$is_database_connected <- reactive({FALSE}); # update UI
     }
 
-    if( input$dataset_from_sql_server_type == "MySQL/MariaDB" )
+    if( input$dataset_from_sql_server_type == "SQLite" )
+    {
+      d <- NULL; res <- NULL;
+      if( input$dataset_from_sqlite_database_name == "med_events" )
+      {
+        # Create this one on-the-fly in memory:
+        res <- tryCatch(d <- DBI::dbConnect(RSQLite::SQLite(), ":memory:"),
+                        error=function(e) e, warning=function(w) w);
+        if( is.null(d) || inherits(res, "error") )
+        {
+          # Some error occured!
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div("Can't create the example in-memory SQLite database: this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+          return (invisible(NULL));
+        } else
+        {
+          if( inherits(res, "warning") )
+          {
+            showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                  div("Creating the example in-memory SQLite database seems ok, but when connecting I got some warnings:\n"), div(as.character(res, style="color: blue;")),
+                                  footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+          }
+        }
+
+        # Put the data in:
+        tmp <- med.events; tmp$DATE <- as.character(as.Date(tmp$DATE,format="%m/%d/%Y"),format="%Y-%m-%d"); # make sure the dates are in the YYYY-MM-DD SQL format
+        res <- tryCatch(DBI::dbWriteTable(d, "med_events", tmp, overwrite=TRUE),
+                        error=function(e) e, warning=function(w) w);
+        if( is.null(d) || inherits(res, "error") )
+        {
+          # Some error occured!
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div("Can't put med.events in the example in-memory SQLite database: this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+          return (invisible(NULL));
+        } else
+        {
+          if( inherits(res, "warning") )
+          {
+            showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                  div("Putting med.events in the example in-memory SQLite database seems ok, but when connecting I got some warnings:\n"), div(as.character(res, style="color: blue;")),
+                                  footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+          }
+        }
+      } else
+      {
+        # Simply connect to the table:
+        res <- tryCatch(d <- DBI::con <- dbConnect(RSQLite::SQLite(), input$dataset_from_sqlite_database_name),
+                        error=function(e) e, warning=function(w) w);
+        if( is.null(d) || inherits(res, "error") )
+        {
+          # Some error occured!
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div("Can't access the SQLite database: this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+          return (invisible(NULL));
+        } else
+        {
+          if( inherits(res, "warning") )
+          {
+            showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                  div("Accessing the SQLite database seems ok, but when connecting I got some warnings:\n"), div(as.character(res, style="color: blue;")),
+                                  footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+          }
+        }
+      }
+      # Fetch the tables:
+      db_tables <- NULL;
+      res <- tryCatch(db_tables <- DBI::dbListTables(d),
+                      error=function(e) e, warning=function(w) w);
+      if( is.null(db_tables) || inherits(res, "error") )
+      {
+        # Some error occured!
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("Can't read tables from the SQL server: this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        removeModal();
+        return (invisible(NULL));
+      } else
+      {
+        if( inherits(res, "warning") )
+        {
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("Could read tables from SQL server, but I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        }
+      }
+
+      # Build a list of columns for each table:
+      d.tables.columns <- do.call(rbind, lapply(db_tables, function(s)
+      {
+        x <- NULL;
+        try(x <- DBI::dbGetQuery(d, paste0("PRAGMA table_info(",s,");")), silent=TRUE);
+        if( !is.null(x) && inherits(x, "data.frame") )
+        {
+          n <- NULL;
+          try(n <- DBI::dbGetQuery(d, paste0("SELECT COUNT(*) FROM ",s,";")), silent=TRUE);
+          if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
+          {
+            # Error retreiving the number of rows:
+            n <- NA;
+          } else
+          {
+            n <- as.numeric(n[1,1]);
+          }
+          return (data.frame("table"=s,
+                             "nrow"=n,
+                             "column"=x$name,
+                             "type"=x$type,
+                             "null"=(x$notnull == 0),
+                             "key"=(x$pk != 0)));
+        } else
+        {
+          return (NULL);
+        }
+      }));
+
+    } else if( input$dataset_from_sql_server_type == "MySQL/MariaDB" )
     {
       d <- NULL;
       showModal(modalDialog("Connecting to SQL database...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL))
@@ -3147,61 +3276,61 @@ server <- function(input, output, session) {
 
       # Build a list of columns for each table:
       d.tables.columns <- do.call(rbind, lapply(db_tables, function(s)
+      {
+        x <- NULL;
+        try(x <- DBI::dbGetQuery(d, paste0("SHOW COLUMNS FROM ",s,";")), silent=TRUE);
+        if( !is.null(x) && inherits(x, "data.frame") )
         {
-          x <- NULL;
-          try(x <- DBI::dbGetQuery(d, paste0("SHOW COLUMNS FROM ",s,";")), silent=TRUE);
-          if( !is.null(x) && inherits(x, "data.frame") )
+          n <- NULL;
+          try(n <- DBI::dbGetQuery(d, paste0("SELECT COUNT(*) FROM ",s,";")), silent=TRUE);
+          if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
           {
-            n <- NULL;
-            try(n <- DBI::dbGetQuery(d, paste0("SELECT COUNT(*) FROM ",s,";")), silent=TRUE);
-            if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
-            {
-              # Error retreiving the number of rows:
-              n <- NA;
-            } else
-            {
-              n <- as.numeric(n[1,1]);
-            }
-            return (data.frame("table"=s,
-                               "nrow"=n,
-                               "column"=x$Field,
-                               "type"=x$Type,
-                               "null"=x$Null,
-                               "key"=x$Key));
+            # Error retreiving the number of rows:
+            n <- NA;
           } else
           {
-            return (NULL);
+            n <- as.numeric(n[1,1]);
           }
-        }));
+          return (data.frame("table"=s,
+                             "nrow"=n,
+                             "column"=x$Field,
+                             "type"=x$Type,
+                             "null"=x$Null,
+                             "key"=x$Key));
+        } else
+        {
+          return (NULL);
+        }
+      }));
 
       removeModal();
-
-      if( is.null(d.tables.columns) )
-      {
-        # Some error occured!
-        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              div("Could not fetch any info from the database!", style="color: red;"),
-                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return (invisible(NULL));
-      }
-
-      # Set it as the current SQL databse:
-      .GlobalEnv$.plotting.params$.db.connection.tables <- d.tables.columns;
-      .GlobalEnv$.plotting.params$.db.connection <- d;
-
-      # Update the list of tables/views:
-      x <- aggregate(column ~ nrow + table, d.tables.columns, length);
-      shinyWidgets::updatePickerInput(session, "dataset_from_sql_table",
-                                      choices=as.character(x$table),
-                                      selected=as.character(x$table)[1],
-                                      choicesOpt=list(subtext=paste0(x$nrow," x ",x$column)));
-
-      # Update UI:
-      output$is_database_connected <- reactive({TRUE});
-
-      # Show the info:
-      .show.db.info();
     }
+
+    if( is.null(d.tables.columns) )
+    {
+      # Some error occured!
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("Could not fetch any info from the database!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return (invisible(NULL));
+    }
+
+    # Set it as the current SQL databse:
+    .GlobalEnv$.plotting.params$.db.connection.tables <- d.tables.columns;
+    .GlobalEnv$.plotting.params$.db.connection <- d;
+
+    # Update the list of tables/views:
+    x <- aggregate(column ~ nrow + table, d.tables.columns, length);
+    shinyWidgets::updatePickerInput(session, "dataset_from_sql_table",
+                                    choices=as.character(x$table),
+                                    selected=as.character(x$table)[1],
+                                    choicesOpt=list(subtext=paste0(x$nrow," x ",x$column)));
+
+    # Update UI:
+    output$is_database_connected <- reactive({TRUE});
+
+    # Show the info:
+    .show.db.info();
   })
 
   # Disconnect from database:
@@ -3336,23 +3465,38 @@ server <- function(input, output, session) {
         return (invisible(NULL));
     }
 
-    # Checks:
+    # Check and load:
     .validate.and.load.dataset(.GlobalEnv$.plotting.params$.db.connection,
-                               get.colnames.fnc=function(d)
+                               get.colnames.fnc=
+                                 if(input$dataset_from_sql_server_type == "SQLite")
                                  {
-                                   if( is.null(d) || !DBI::dbIsValid(d) ){ warning("Connection to database lost!"); return (NULL); }
-                                   x <- NULL;
-                                   try(x <- DBI::dbGetQuery(d, paste0("SHOW COLUMNS FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,";")), silent=TRUE);
-                                   if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (as.character(x$Field)) else { warning("Cannot fetch DB column names!"); return (NULL); }
+                                   function(d)
+                                   {
+                                     if( is.null(d) || !DBI::dbIsValid(d) ){ warning("Connection to database lost!"); return (NULL); }
+                                     x <- NULL;
+                                     try(x <- DBI::dbGetQuery(d, paste0("PRAGMA table_info(",.GlobalEnv$.plotting.params$.db.connection.selected.table,");")), silent=TRUE);
+                                     if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (as.character(x$name)) else { warning("Cannot fetch DB column names!"); return (NULL); }
+                                   }
+                                 } else if(input$dataset_from_sql_server_type == "MySQL/MariaDB")
+                                 {
+                                   function(d)
+                                   {
+                                     if( is.null(d) || !DBI::dbIsValid(d) ){ warning("Connection to database lost!"); return (NULL); }
+                                     x <- NULL;
+                                     try(x <- DBI::dbGetQuery(d, paste0("SHOW COLUMNS FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,";")), silent=TRUE);
+                                     if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (as.character(x$Field)) else { warning("Cannot fetch DB column names!"); return (NULL); }
+                                   }
                                  },
-                               get.patients.fnc=function(d, idcol)
+                               get.patients.fnc=
+                                 function(d, idcol)
                                  {
                                    if( is.null(d) || !DBI::dbIsValid(d) ){ warning("Connection to database lost!"); return (NULL); }
                                    x <- NULL;
                                    try(x <- DBI::dbGetQuery(d, paste0("SELECT DISTINCT ",idcol," FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,";")), silent=TRUE);
                                    if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (x[,1]) else { warning("Cannot fetch patients from DB!"); return (NULL); }
                                  },
-                               get.data.for.patients.fnc=function(patientid, d, idcol)
+                               get.data.for.patients.fnc=
+                                 function(patientid, d, idcol)
                                  {
                                    if( is.null(d) || !DBI::dbIsValid(d) ){ warning("Connection to database lost!"); return (NULL); }
                                    x <- NULL;
