@@ -1885,9 +1885,9 @@ server <- function(input, output, session) {
                   "<li>the various <i>vignettes</i> contain a lot of information about selected topics. To list all available vignettes for AdhereR, run <code>browseVignettes(package='AdhereR')</code> in the R console. Currently, the main vignettes concern:</li>",
                   "<ul>",
                   "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html' target='_blank'>AdhereR: Adherence to Medications</a></i> gives an overview of what AdhereR can do;</li>",
-                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/calling-AdhereR-from-python3.html' target='_blank'>Calling AdhereR from Python 3</a></i> described a mechanism that allows AdhereR to be used from other programming languages and platofrms than R (in particular, from Python 3);</li>",
+                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/calling-AdhereR-from-python3.html' target='_blank'>Calling AdhereR from Python 3</a></i> describes a mechanism that allows AdhereR to be used from programming languages and platforms other than R (in particular, from Python 3);</li>",
                   "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_with_databases.pdf' target='_blank'>Using AdhereR with various database technologies for processing very large datasets</a></i> described how to use AdhereR to process data stored in 'classic' SQL Relational Databases Management Systems (RDBMSs) or in Apache's Hadoop;</li>",
-                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_interctive_plots.html' target='_blank'>Interactive plotting with Shiny</a></i> is probably the most relevant here.</li>",
+                  "<li><i><b><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_interctive_plots.html' target='_blank'>Interactive plotting with Shiny</a></b></i> is probably the most relevant here.</li>",
                   "</ul>",
                   "</ul>",
                   "</div>");

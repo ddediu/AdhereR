@@ -18,7 +18,10 @@ The solution is to pass an extra argument: `tools::compactPDF([PDF_FILE_NAME], g
 
 ## Make sure to install vignettes from `RStudio`
 
-As described [here](https://yihui.name/knitr/demo/vignette/), by default `devtools` do not install the vignettes; for that one should run `devtools::install(build_vignettes = TRUE)`.
+As described [here](https://yihui.name/knitr/demo/vignette/), by default `devtools` do not install the vignettes; for that one should run 
+```
+devtools::install(build_vignettes = TRUE)
+```
 
 
 ## HTML vignettes too big
