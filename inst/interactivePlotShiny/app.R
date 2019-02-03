@@ -1215,7 +1215,7 @@ ui <- fluidPage(
 
                                               div(title=HTML('This is intended as an example of using SQL with SQLite, and uses an in-memory "med_events" database that contains the example dataset included in the package.\nFor security reasons, we do not allow at this time the use of a user-given SQLite database, but this is easy to do.\nDespite its limitations, SQLite could be a fully working solution in specific scenarios involving, for example, local applications or a pre-defined databasestored in a file on the server.'),
                                                   shinyjs::disabled(textInput(inputId="dataset_from_sqlite_database_name",
-                                                                              label=HTML("Database name <span style='color: red'>(fixed example 'med_events')</span>"),
+                                                                              label=HTML("Database name <span style='color: red'>(fixed example)</span>"),
                                                                               value=c("med_events"))))
                                             ),
 
