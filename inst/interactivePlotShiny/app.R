@@ -1448,7 +1448,7 @@ ui <- fluidPage(
                     div(id="container", title="Various messages (in blue), warnings (in green) and errors (in red) generated during plotting...",
                         span(" Messages:", style="color:DarkBlue; font-weight: bold;"),
                         span(htmlOutput(outputId = "messages")),
-                        style="height: 2em; resize: none; overflow: auto")
+                        style="height: 4em; resize: none; overflow: auto")
              ),
 
              # The actual plot ----
@@ -3099,9 +3099,9 @@ server <- function(input, output, session) {
     if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
     {
       try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
-      .GlobalEnv$.plotting.params$.db.connection <- NULL;
-      output$is_database_connected <- reactive({FALSE}); # update UI
     }
+    .GlobalEnv$.plotting.params$.db.connection <- NULL;
+    output$is_database_connected <- reactive({FALSE}); # update UI
 
     if( input$dataset_from_sql_server_type == "SQLite" )
     {
@@ -3340,9 +3340,9 @@ server <- function(input, output, session) {
     {
       try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
       .GlobalEnv$.plotting.params$.db.connection <- NULL;
-      # Update UI:
-      output$is_database_connected <- reactive({FALSE});
     }
+    # Update UI:
+    output$is_database_connected <- reactive({FALSE});
   })
 
   # Peek at the database:
@@ -3676,12 +3676,12 @@ server <- function(input, output, session) {
                             ),
                           footer = tagList(span(title="Close this dialog box",
                                                actionButton(inputId="close_compute_cma_dialog", label="Close", icon=icon("remove", lib="glyphicon"))),
-                                           span(title="Start the computation",
-                                                actionButton(inputId="start_computation_now", label="Start computation!", icon=icon("play", lib="glyphicon"))),
-                                           span(title="Stop the computation",
-                                                shinyjs::disabled(actionButton(inputId="cancel_cma_computation", label="Stop computation!", icon=icon("stop", lib="glyphicon")))),
+                                           span(title="Start computation...",
+                                                actionButton(inputId="start_computation_now", label="Start!", icon=icon("play", lib="glyphicon"))),
+                                           span(title="Stop computation...",
+                                                shinyjs::disabled(actionButton(inputId="cancel_cma_computation", label="Stop!", icon=icon("stop", lib="glyphicon")))),
                                            span(title="Save the results to a TAB-separated (no quotes) CSV file...",
-                                                shinyjs::disabled(downloadButton(outputId="save_cma_computation_results", label="Save results...", icon=icon("floppy-save", lib="glyphicon"))))
+                                                shinyjs::disabled(downloadButton(outputId="save_cma_computation_results", label="Save results (as TSV)", icon=icon("floppy-save", lib="glyphicon"))))
                                           )));
 
   })
