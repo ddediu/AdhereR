@@ -1286,6 +1286,12 @@ ui <- fluidPage(
                                                                             choices=c("[none]"),
                                                                             selected="[none]")),
 
+                                              div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".\nFor SQL, the standard format is %Y-%m-%d (i.e., YYYY-MM-DD).',
+                                                  textInput(inputId="dataset_from_sql_event_format",
+                                                            label="Date format",
+                                                            value="%Y-%m-%d",
+                                                            placeholder="%Y-%m-%d")),
+
                                               div(title='Required: select the name of the column containing the event dates (please note the the format is the standard SQL YYYY-MM-DD)',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_sql_event_date",
                                                                             label="Event date column",
@@ -3510,7 +3516,7 @@ server <- function(input, output, session) {
                                event.duration.colname=input$dataset_from_sql_event_duration,
                                event.daily.dose.colname=input$dataset_from_sql_daily_dose,
                                medication.class.colname=input$dataset_from_sql_medication_class,
-                               date.format="%Y-%m-%d");
+                               date.format=input$dataset_from_sql_event_format);
 
      # Let the world know this:
     .GlobalEnv$.plotting.params$.dataset.type <- "SQL database";
