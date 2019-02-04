@@ -9055,7 +9055,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   use.system.browser=FALSE, # if shiny backend, use the system browser?
                                   get.colnames.fnc=function(d) names(d),
                                   get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
-                                  get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
+                                  get.data.for.patients.fnc=function(patientid, d, idcol, cols=NA, maxrows=NA) d[ d[[idcol]] %in% patientid, ],
                                   ...
 )
 {
@@ -9557,7 +9557,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                         use.system.browser=FALSE, # by default, don't necessarily use the system browser
                                         get.colnames.fnc=function(d) names(d),
                                         get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
-                                        get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
+                                        get.data.for.patients.fnc=function(patientid, d, idcol, cols=NA, maxrows=NA) d[ d[[idcol]] %in% patientid, ],
                                         ...
 )
 {
@@ -9716,7 +9716,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                             # Data accessor functions:
                             get.colnames.fnc=function(d) names(d),
                             get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
-                            get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
+                            get.data.for.patients.fnc=function(patientid, d, idcol, cols=NA, maxrows=NA) d[ d[[idcol]] %in% patientid, ],
 
                             # Plot the results or only compute the CMA and return it:
                             compute.cma.only=FALSE

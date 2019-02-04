@@ -20,8 +20,8 @@ plot_interactive_cma(data = NULL, ID = NULL, cma.class = c("simple",
   "rstudio")[1], use.system.browser = FALSE,
   get.colnames.fnc = function(d) names(d),
   get.patients.fnc = function(d, idcol) unique(d[[idcol]]),
-  get.data.for.patients.fnc = function(patientid, d, idcol) d[d[[idcol]]
-  \%in\% patientid, ], ...)
+  get.data.for.patients.fnc = function(patientid, d, idcol, cols = NA,
+  maxrows = NA) d[d[[idcol]] \%in\% patientid, ], ...)
 }
 \arguments{
 \item{data}{Usually a \emph{\code{data.frame}} containing the events (prescribing

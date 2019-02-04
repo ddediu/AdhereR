@@ -1717,107 +1717,109 @@ server <- function(input, output, session) {
     #                 " patients from those you selected (totalling ",n.events.per.patient[n]," events)!\n"));
     #}
 
-    .GlobalEnv$.plotting.params$.plotting.fnc(data=.GlobalEnv$.plotting.params$data,
-                                              ID.colname=.GlobalEnv$.plotting.params$ID.colname,
-                                              event.date.colname=.GlobalEnv$.plotting.params$event.date.colname,
-                                              event.duration.colname=.GlobalEnv$.plotting.params$event.duration.colname,
-                                              event.daily.dose.colname=.GlobalEnv$.plotting.params$event.daily.dose.colname,
-                                              medication.class.colname=.GlobalEnv$.plotting.params$medication.class.colname,
-                                              date.format=.GlobalEnv$.plotting.params$date.format,
+    try(res <- .GlobalEnv$.plotting.params$.plotting.fnc(data=.GlobalEnv$.plotting.params$data,
+                                                         ID.colname=.GlobalEnv$.plotting.params$ID.colname,
+                                                         event.date.colname=.GlobalEnv$.plotting.params$event.date.colname,
+                                                         event.duration.colname=.GlobalEnv$.plotting.params$event.duration.colname,
+                                                         event.daily.dose.colname=.GlobalEnv$.plotting.params$event.daily.dose.colname,
+                                                         medication.class.colname=.GlobalEnv$.plotting.params$medication.class.colname,
+                                                         date.format=.GlobalEnv$.plotting.params$date.format,
 
-                                              ID=patients.to.plot,
-                                              cma=ifelse(input$cma_class == "simple",
-                                                         input$cma_to_compute,
-                                                         input$cma_class),
-                                              cma.to.apply=ifelse(input$cma_class == "simple",
-                                                                  "none",
-                                                                  ifelse(input$cma_to_compute_within_complex == "CMA0", "CMA1", input$cma_to_compute_within_complex)), # don't use CMA0 for complex CMAs
-                                              #carryover.within.obs.window=FALSE,
-                                              #carryover.into.obs.window=FALSE,
-                                              carry.only.for.same.medication=input$carry_only_for_same_medication,
-                                              consider.dosage.change=input$consider_dosage_change,
-                                              followup.window.start=ifelse(input$followup_window_start_unit== "calendar date",
-                                                                           as.Date(input$followup_window_start_date, format="%Y-%m-%d"),
-                                                                           as.numeric(input$followup_window_start_no_units)),
-                                              followup.window.start.unit=ifelse(input$followup_window_start_unit== "calendar date",
-                                                                                "days",
-                                                                                input$followup_window_start_unit),
-                                              followup.window.duration=as.numeric(input$followup_window_duration),
-                                              followup.window.duration.unit=input$followup_window_duration_unit,
-                                              observation.window.start=ifelse(input$observation_window_start_unit== "calendar date",
-                                                                              as.Date(input$observation_window_start_date, format="%Y-%m-%d"),
-                                                                              as.numeric(input$observation_window_start_no_units)),
-                                              observation.window.start.unit=ifelse(input$observation_window_start_unit== "calendar date",
-                                                                                   "days",
-                                                                                   input$observation_window_start_unit),
-                                              observation.window.duration=as.numeric(input$observation_window_duration),
-                                              observation.window.duration.unit=input$observation_window_duration_unit,
-                                              medication.change.means.new.treatment.episode=input$medication_change_means_new_treatment_episode,
-                                              dosage.change.means.new.treatment.episode=input$dosage_change_means_new_treatment_episode,
-                                              maximum.permissible.gap=as.numeric(input$maximum_permissible_gap),
-                                              maximum.permissible.gap.unit=input$maximum_permissible_gap_unit,
-                                              sliding.window.start=as.numeric(input$sliding_window_start),
-                                              sliding.window.start.unit=input$sliding_window_start_unit,
-                                              sliding.window.duration=as.numeric(input$sliding_window_duration),
-                                              sliding.window.duration.unit=input$sliding_window_duration_unit,
-                                              sliding.window.step.duration=as.numeric(input$sliding_window_step_duration),
-                                              sliding.window.step.unit=input$sliding_window_step_unit,
-                                              sliding.window.no.steps=ifelse(input$sliding_window_step_choice == "number of steps" ,as.numeric(input$sliding_window_no_steps), NA),
-                                              plot.CMA.as.histogram=ifelse(input$cma_class == "sliding window",
-                                                                           !input$plot_CMA_as_histogram_sliding_window,
-                                                                           !input$plot_CMA_as_histogram_episodes),
-                                              align.all.patients=input$plot_align_all_patients,
-                                              align.first.event.at.zero=input$plot_align_first_event_at_zero,
-                                              show.legend=input$show_legend, legend.x=input$legend_x, legend.y=input$legend_y, legend.bkg.opacity=input$legend_bkg_opacity,
-                                              legend.cex=input$legend_cex, legend.cex.title=input$legend_cex_title,
-                                              duration=ifelse(input$duration==0, NA, input$duration), # duration to plot
-                                              show.period=ifelse(length(input$patient) > 1 && input$plot_align_all_patients, "days", input$show_period), period.in.days=input$period_in_days, # period
-                                              bw.plot=input$bw_plot, # grayscale plotting
-                                              #show.cma=input$show_cma,
-                                              col.na=input$col_na,
-                                              unspecified.category.label=input$unspecified_category_label,
-                                              col.cats=list("rainbow"       =grDevices::rainbow,
-                                                            "heat.colors"   =grDevices::heat.colors,
-                                                            "terrain.colors"=grDevices::terrain.colors,
-                                                            "topo.colors"   =grDevices::topo.colors,
-                                                            "cm.colors"     =grDevices::cm.colors,
-                                                            "magma"         =viridisLite::magma,
-                                                            "inferno"       =viridisLite::inferno,
-                                                            "plasma"        =viridisLite::plasma,
-                                                            "viridis"       =viridisLite::viridis,
-                                                            "cividis"       =viridisLite::cividis)[[input$col_cats]],
-                                              lty.event=input$lty_event, lwd.event=input$lwd_event, pch.start.event=as.numeric(input$pch_start_event), pch.end.event=as.numeric(input$pch_end_event),
-                                              col.continuation=input$col_continuation, lty.continuation=input$lty_continuation, lwd.continuation=input$lwd_continuation,
-                                              cex=input$cex, cex.axis=input$cex_axis, cex.lab=input$cex_lab,
-                                              highlight.followup.window=input$highlight_followup_window, followup.window.col=input$followup_window_col,
-                                              highlight.observation.window=input$highlight_observation_window, observation.window.col=input$observation_window_col,
-                                              observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
-                                              observation.window.opacity=input$observation_window_opacity,
-                                              show.real.obs.window.start=input$show_real_obs_window_start,
-                                              real.obs.window.density=input$real_obs_window_density, real.obs.window.angle=input$real_obs_window_angle,
-                                              print.CMA=input$print_cma, CMA.cex=input$cma_cex,
-                                              plot.CMA=input$plot_cma, CMA.plot.ratio=input$cma_plot_ratio / 100.0,
-                                              CMA.plot.col=input$cma_plot_col, CMA.plot.border=input$cma_plot_border, CMA.plot.bkg=input$cma_plot_bkg, CMA.plot.text=input$cma_plot_text,
-                                              show.event.intervals=input$show_event_intervals,
-                                              print.dose=input$print_dose,
-                                              cex.dose=input$cex_dose,
-                                              print.dose.outline.col=input$print_dose_outline_col,
-                                              print.dose.centered=input$print_dose_centered,
-                                              plot.dose=input$plot_dose,
-                                              lwd.event.max.dose=input$lwd_event_max_dose,
-                                              plot.dose.lwd.across.medication.classes=input$plot_dose_lwd_across_medication_classes,
-                                              min.plot.size.in.characters.horiz=input$min_plot_size_in_characters_horiz,
-                                              min.plot.size.in.characters.vert=input$min_plot_size_in_characters_vert,
-                                              get.colnames.fnc=.GlobalEnv$.plotting.params$get.colnames.fnc,
-                                              get.patients.fnc=.GlobalEnv$.plotting.params$get.patients.fnc,
-                                              get.data.for.patients.fnc=.GlobalEnv$.plotting.params$get.data.for.patients.fnc
-    )
+                                                         ID=patients.to.plot,
+                                                         cma=ifelse(input$cma_class == "simple",
+                                                                    input$cma_to_compute,
+                                                                    input$cma_class),
+                                                         cma.to.apply=ifelse(input$cma_class == "simple",
+                                                                             "none",
+                                                                             ifelse(input$cma_to_compute_within_complex == "CMA0", "CMA1", input$cma_to_compute_within_complex)), # don't use CMA0 for complex CMAs
+                                                         #carryover.within.obs.window=FALSE,
+                                                         #carryover.into.obs.window=FALSE,
+                                                         carry.only.for.same.medication=input$carry_only_for_same_medication,
+                                                         consider.dosage.change=input$consider_dosage_change,
+                                                         followup.window.start=ifelse(input$followup_window_start_unit== "calendar date",
+                                                                                      as.Date(input$followup_window_start_date, format="%Y-%m-%d"),
+                                                                                      as.numeric(input$followup_window_start_no_units)),
+                                                         followup.window.start.unit=ifelse(input$followup_window_start_unit== "calendar date",
+                                                                                           "days",
+                                                                                           input$followup_window_start_unit),
+                                                         followup.window.duration=as.numeric(input$followup_window_duration),
+                                                         followup.window.duration.unit=input$followup_window_duration_unit,
+                                                         observation.window.start=ifelse(input$observation_window_start_unit== "calendar date",
+                                                                                         as.Date(input$observation_window_start_date, format="%Y-%m-%d"),
+                                                                                         as.numeric(input$observation_window_start_no_units)),
+                                                         observation.window.start.unit=ifelse(input$observation_window_start_unit== "calendar date",
+                                                                                              "days",
+                                                                                              input$observation_window_start_unit),
+                                                         observation.window.duration=as.numeric(input$observation_window_duration),
+                                                         observation.window.duration.unit=input$observation_window_duration_unit,
+                                                         medication.change.means.new.treatment.episode=input$medication_change_means_new_treatment_episode,
+                                                         dosage.change.means.new.treatment.episode=input$dosage_change_means_new_treatment_episode,
+                                                         maximum.permissible.gap=as.numeric(input$maximum_permissible_gap),
+                                                         maximum.permissible.gap.unit=input$maximum_permissible_gap_unit,
+                                                         sliding.window.start=as.numeric(input$sliding_window_start),
+                                                         sliding.window.start.unit=input$sliding_window_start_unit,
+                                                         sliding.window.duration=as.numeric(input$sliding_window_duration),
+                                                         sliding.window.duration.unit=input$sliding_window_duration_unit,
+                                                         sliding.window.step.duration=as.numeric(input$sliding_window_step_duration),
+                                                         sliding.window.step.unit=input$sliding_window_step_unit,
+                                                         sliding.window.no.steps=ifelse(input$sliding_window_step_choice == "number of steps" ,as.numeric(input$sliding_window_no_steps), NA),
+                                                         plot.CMA.as.histogram=ifelse(input$cma_class == "sliding window",
+                                                                                      !input$plot_CMA_as_histogram_sliding_window,
+                                                                                      !input$plot_CMA_as_histogram_episodes),
+                                                         align.all.patients=input$plot_align_all_patients,
+                                                         align.first.event.at.zero=input$plot_align_first_event_at_zero,
+                                                         show.legend=input$show_legend, legend.x=input$legend_x, legend.y=input$legend_y, legend.bkg.opacity=input$legend_bkg_opacity,
+                                                         legend.cex=input$legend_cex, legend.cex.title=input$legend_cex_title,
+                                                         duration=ifelse(input$duration==0, NA, input$duration), # duration to plot
+                                                         show.period=ifelse(length(input$patient) > 1 && input$plot_align_all_patients, "days", input$show_period), period.in.days=input$period_in_days, # period
+                                                         bw.plot=input$bw_plot, # grayscale plotting
+                                                         #show.cma=input$show_cma,
+                                                         col.na=input$col_na,
+                                                         unspecified.category.label=input$unspecified_category_label,
+                                                         col.cats=list("rainbow"       =grDevices::rainbow,
+                                                                       "heat.colors"   =grDevices::heat.colors,
+                                                                       "terrain.colors"=grDevices::terrain.colors,
+                                                                       "topo.colors"   =grDevices::topo.colors,
+                                                                       "cm.colors"     =grDevices::cm.colors,
+                                                                       "magma"         =viridisLite::magma,
+                                                                       "inferno"       =viridisLite::inferno,
+                                                                       "plasma"        =viridisLite::plasma,
+                                                                       "viridis"       =viridisLite::viridis,
+                                                                       "cividis"       =viridisLite::cividis)[[input$col_cats]],
+                                                         lty.event=input$lty_event, lwd.event=input$lwd_event, pch.start.event=as.numeric(input$pch_start_event), pch.end.event=as.numeric(input$pch_end_event),
+                                                         col.continuation=input$col_continuation, lty.continuation=input$lty_continuation, lwd.continuation=input$lwd_continuation,
+                                                         cex=input$cex, cex.axis=input$cex_axis, cex.lab=input$cex_lab,
+                                                         highlight.followup.window=input$highlight_followup_window, followup.window.col=input$followup_window_col,
+                                                         highlight.observation.window=input$highlight_observation_window, observation.window.col=input$observation_window_col,
+                                                         observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
+                                                         observation.window.opacity=input$observation_window_opacity,
+                                                         show.real.obs.window.start=input$show_real_obs_window_start,
+                                                         real.obs.window.density=input$real_obs_window_density, real.obs.window.angle=input$real_obs_window_angle,
+                                                         print.CMA=input$print_cma, CMA.cex=input$cma_cex,
+                                                         plot.CMA=input$plot_cma, CMA.plot.ratio=input$cma_plot_ratio / 100.0,
+                                                         CMA.plot.col=input$cma_plot_col, CMA.plot.border=input$cma_plot_border, CMA.plot.bkg=input$cma_plot_bkg, CMA.plot.text=input$cma_plot_text,
+                                                         show.event.intervals=input$show_event_intervals,
+                                                         print.dose=input$print_dose,
+                                                         cex.dose=input$cex_dose,
+                                                         print.dose.outline.col=input$print_dose_outline_col,
+                                                         print.dose.centered=input$print_dose_centered,
+                                                         plot.dose=input$plot_dose,
+                                                         lwd.event.max.dose=input$lwd_event_max_dose,
+                                                         plot.dose.lwd.across.medication.classes=input$plot_dose_lwd_across_medication_classes,
+                                                         min.plot.size.in.characters.horiz=input$min_plot_size_in_characters_horiz,
+                                                         min.plot.size.in.characters.vert=input$min_plot_size_in_characters_vert,
+                                                         get.colnames.fnc=.GlobalEnv$.plotting.params$get.colnames.fnc,
+                                                         get.patients.fnc=.GlobalEnv$.plotting.params$get.patients.fnc,
+                                                         get.data.for.patients.fnc=.GlobalEnv$.plotting.params$get.data.for.patients.fnc
+    ), silent=FALSE);
+
+    return (res);
   }
 
   # Do the ploting:
   output$distPlot <- renderPlot({
 
-      rv$toggle.me; # make the plot care about forced updated to the UI (for example, when chainging the dataset)
+      rv$toggle.me; # make the plot aware of forced updates to the UI (for example, when chainging the dataset)
 
       msgs <- ""; # the output messages
       res <- NULL; # the result of plotting
@@ -2747,7 +2749,7 @@ server <- function(input, output, session) {
     .validate.and.load.dataset(.GlobalEnv$.plotting.params$.inmemory.dataset,
                                get.colnames.fnc=function(d) names(d),
                                get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
-                               get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
+                               get.data.for.patients.fnc=function(patientid, d, idcol, cols=NA, maxrows=NA) d[ d[[idcol]] %in% patientid, ],
                                ID.colname=input$dataset_from_memory_patient_id,
                                event.date.colname=input$dataset_from_memory_event_date,
                                event.duration.colname=input$dataset_from_memory_event_duration,
@@ -3158,7 +3160,7 @@ server <- function(input, output, session) {
     .validate.and.load.dataset(.GlobalEnv$.plotting.params$.fromfile.dataset,
                                get.colnames.fnc=function(d) names(d),
                                get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
-                               get.data.for.patients.fnc=function(patientid, d, idcol) d[ d[[idcol]] %in% patientid, ],
+                               get.data.for.patients.fnc=function(patientid, d, idcol, cols=NA, maxrows=NA) d[ d[[idcol]] %in% patientid, ],
                                ID.colname=input$dataset_from_file_patient_id,
                                event.date.colname=input$dataset_from_file_event_date,
                                event.duration.colname=input$dataset_from_file_event_duration,
@@ -3180,6 +3182,7 @@ server <- function(input, output, session) {
     {
       try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
     }
+    updateSelectInput(session, inputId="dataset_from_sql_table", choices="[none]", selected="[none]");
     .GlobalEnv$.plotting.params$.db.connection <- NULL;
     output$is_database_connected <- reactive({FALSE}); # update UI
 
@@ -3189,7 +3192,7 @@ server <- function(input, output, session) {
       if( input$dataset_from_sqlite_database_name == "med_events" )
       {
         # Create this one on-the-fly in memory:
-        res <- tryCatch(d <- DBI::dbConnect(RSQLite::SQLite(), ":memory:"),
+        res <- tryCatch(d <- DBI::dbConnect(RSQLite::SQLite(), ":memory:", bigint="numeric"),
                         error=function(e) e, warning=function(w) w);
         if( is.null(d) || inherits(res, "error") )
         {
@@ -3289,12 +3292,23 @@ server <- function(input, output, session) {
           {
             n <- as.numeric(n[1,1]);
           }
+          # Get first X values for each column:
+          fr <- NULL;
+          try(fr <- DBI::dbGetQuery(d, paste0("SELECT * FROM ",s," LIMIT 3;")), silent=TRUE);
+          if( is.null(fr) || !inherits(fr, "data.frame") || nrow(fr) < 1 || ncol(fr) != nrow(x) )
+          {
+            fr <- rep(nrow(x),"");
+          } else
+          {
+            fr <- vapply(1:ncol(fr), function(i) paste0(as.character(fr[,i]),collapse=", "), character(1));
+          }
           return (data.frame("table"=s,
                              "nrow"=n,
                              "column"=x$name,
                              "type"=x$type,
                              "null"=(x$notnull == 0),
-                             "key"=(x$pk != 0)));
+                             "key"=(x$pk != 0),
+                             "firstvals"=fr));
         } else
         {
           return (NULL);
@@ -3306,12 +3320,13 @@ server <- function(input, output, session) {
       d <- NULL;
       showModal(modalDialog("Connecting to SQL database...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL))
       res <- tryCatch(d <- DBI::dbConnect(RMariaDB::MariaDB(), # works also for MySQL
-                                               user=input$dataset_from_sql_username, # the username
-                                               password=input$dataset_from_sql_password, # and password
-                                               dbname=if( input$dataset_from_sql_database_name == "[none]" ) NULL else input$dataset_from_sql_database_name, # which database
-                                               host=if( input$dataset_from_sql_server_host == "[none]" ) NULL else input$dataset_from_sql_server_host, # on which host
-                                               port=input$dataset_from_sql_server_port # the TCP/IP port
-                                              ),
+                                          user=input$dataset_from_sql_username, # the username
+                                          password=input$dataset_from_sql_password, # and password
+                                          dbname=if( input$dataset_from_sql_database_name == "[none]" ) NULL else input$dataset_from_sql_database_name, # which database
+                                          host=if( input$dataset_from_sql_server_host == "[none]" ) NULL else input$dataset_from_sql_server_host, # on which host
+                                          port=input$dataset_from_sql_server_port, # the TCP/IP port
+                                          bigint="numeric" # force bigint to numeric to avoid weird problems down the line
+                                         ),
                       error=function(e) e, warning=function(w) w);
       removeModal();
       if( is.null(d) || inherits(res, "error") )
@@ -3358,10 +3373,12 @@ server <- function(input, output, session) {
       d.tables.columns <- do.call(rbind, lapply(db_tables, function(s)
       {
         x <- NULL;
+        # Get columns:
         try(x <- DBI::dbGetQuery(d, paste0("SHOW COLUMNS FROM ",s,";")), silent=TRUE);
         if( !is.null(x) && inherits(x, "data.frame") )
         {
           n <- NULL;
+          # Get number of rows:
           try(n <- DBI::dbGetQuery(d, paste0("SELECT COUNT(*) FROM ",s,";")), silent=TRUE);
           if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
           {
@@ -3371,12 +3388,24 @@ server <- function(input, output, session) {
           {
             n <- as.numeric(n[1,1]);
           }
+          # Get first X values for each column:
+          fr <- NULL;
+          try(fr <- DBI::dbGetQuery(d, paste0("SELECT * FROM ",s," LIMIT 3;")), silent=TRUE);
+          if( is.null(fr) || !inherits(fr, "data.frame") || nrow(fr) < 1 || ncol(fr) != nrow(x) )
+          {
+            fr <- rep(nrow(x),"");
+          } else
+          {
+            fr <- vapply(1:ncol(fr), function(i) paste0(as.character(fr[,i]),collapse=", "), character(1));
+          }
+
           return (data.frame("table"=s,
                              "nrow"=n,
                              "column"=x$Field,
                              "type"=x$Type,
                              "null"=x$Null,
-                             "key"=x$Key));
+                             "key"=x$Key,
+                             "firstvals"=fr));
         } else
         {
           return (NULL);
@@ -3422,6 +3451,7 @@ server <- function(input, output, session) {
       .GlobalEnv$.plotting.params$.db.connection <- NULL;
     }
     # Update UI:
+    updateSelectInput(session, inputId="dataset_from_sql_table", choices="[none]", selected="[none]");
     output$is_database_connected <- reactive({FALSE});
   })
 
@@ -3475,7 +3505,7 @@ server <- function(input, output, session) {
                                           #       JOIN patients
                                           #       ON patients.id = event_patients.patient_id;</pre>",
                                           "<br/><hl/><br/>",
-                                          "We list below, for each <b style='color: DarkBlue'>table</b>, the <b style='color: blue'>columns</b> [with their <span style='color: green'>types</span> and other <i>relevant info</i>]:<br/>",
+                                          "We list below, for each <b style='color: DarkBlue'>table</b>, the <b style='color: blue'>columns</b> [with their <span style='color: green'>types</span> and other <i>relevant info</i>], possibly followed by the first few values:<br/>",
                                           "<ul>",
                                           paste0(vapply(unique(.GlobalEnv$.plotting.params$.db.connection.tables$table), function(table_name)
                                           {
@@ -3489,6 +3519,7 @@ server <- function(input, output, session) {
                                                                                          " [<span style='color: green'>", .GlobalEnv$.plotting.params$.db.connection.tables$type[i], "</span>",
                                                                                          if( .GlobalEnv$.plotting.params$.db.connection.tables$key[i] == "PRI" ) ", <i>primary key</i>",
                                                                                          "]",
+                                                                                         " ",.GlobalEnv$.plotting.params$.db.connection.tables$firstvals[i],
                                                                                          "</li>"),
                                                                    character(1)), collapse="\n"),
                                                      "</ul>",
@@ -3522,7 +3553,7 @@ server <- function(input, output, session) {
 
       # Update them:
       column.names <- as.character(.GlobalEnv$.plotting.params$.db.connection.tables$column[s]);
-      column.info <- paste0("(",.GlobalEnv$.plotting.params$.db.connection.tables$type[s],")");
+      column.info <- paste0("(",.GlobalEnv$.plotting.params$.db.connection.tables$type[s],": ",.GlobalEnv$.plotting.params$.db.connection.tables$firstvals[s],")");
       shinyWidgets::updatePickerInput(session, "dataset_from_sql_patient_id", choices=column.names, selected=column.names[1], choicesOpt=list(subtext=column.info));
       shinyWidgets::updatePickerInput(session, "dataset_from_sql_event_date", choices=column.names, selected=column.names[2], choicesOpt=list(subtext=column.info));
       shinyWidgets::updatePickerInput(session, "dataset_from_sql_event_duration", choices=column.names, selected=column.names[3], choicesOpt=list(subtext=column.info));
@@ -3576,13 +3607,18 @@ server <- function(input, output, session) {
                                    if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (x[,1]) else { warning("Cannot fetch patients from DB!"); return (NULL); }
                                  },
                                get.data.for.patients.fnc=
-                                 function(patientid, d, idcol)
+                                 function(patientid, d, idcol, cols=NA, maxrows=NA)
                                  {
                                    if( is.null(d) || !DBI::dbIsValid(d) ){ warning("Connection to database lost!"); return (NULL); }
                                    x <- NULL;
-                                   try(x <- DBI::dbGetQuery(d, paste0("SELECT * FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,
+                                   try(x <- DBI::dbGetQuery(d, paste0("SELECT ",
+                                                                      if(is.na(cols)) "*" else paste0(cols,collapse=","),
+                                                                      " FROM ",.GlobalEnv$.plotting.params$.db.connection.selected.table,
                                                                       " WHERE ",idcol,
-                                                                      " IN (",paste0(patientid,collapse=","),");")), silent=TRUE);
+                                                                      " IN (",paste0(patientid,collapse=","),")",
+                                                                      if(!is.na(maxrows)) paste0("LIMIT ",maxrows),
+                                                                      ";")),
+                                       silent=TRUE);
                                    if( !is.null(x) && inherits(x, "data.frame") && nrow(x) > 0 ) return (x) else { warning("Cannot fetch data for patient(s) from DB!"); return (NULL); }
                                  },
                                ID.colname=input$dataset_from_sql_patient_id,
