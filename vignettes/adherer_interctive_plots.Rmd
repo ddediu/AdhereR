@@ -82,7 +82,7 @@ Alternatively, the app may be made available on a **remote server**, such as on 
 The App's UI has several main elements which can be seen below.
 Most UI elements have **tooltips** that show up on hovering the mouse over the element and that offer specific information (but please note that these tooltips might need some time before shogin up).
 
-![**Overview of the User Interface.** Screenshot of some of the main UI elements (dotted black ellipses or rectangles identified with black numbers). **1** is a button that opens a box giving information about the App. **2** is a button that exist the App cleanly (i.e., stops and disconnects the session). **3** is the main plotting area which displays the current plot. **4** shows some of the UI elements controlling the plot (element 4) size. **5** is the area where various parameters can be modified. **6** opens UI elements specific for saving the current plot to file. **7** shows the `R` code that can be used to generate the current plot. **8** gives access to UI controls that allow the computation of the current CMA for many more patients and saving the results to file. **9** displays messages, warnings or errors that might have been geenrated while constructing the current plot.](shiny-overview.jpg)
+![**Overview of the User Interface.** Screenshot (App is running in Firefox on macOS 10.13) of some of the main UI elements (dotted black ellipses or rectangles identified with black numbers). **1** is a button that opens a box giving information about the App. **2** is a button that exist the App cleanly (i.e., stops and disconnects the session). **3** is the main plotting area which displays the current plot. **4** shows some of the UI elements controlling the plot (element 4) size. **5** is the area where various parameters can be modified. **6** opens UI elements specific for saving the current plot to file. **7** shows the `R` code that can be used to generate the current plot. **8** gives access to UI controls that allow the computation of the current CMA for many more patients and saving the results to file. **9** displays messages, warnings or errors that might have been geenrated while constructing the current plot.](shiny-overview.jpg)
 
 
 ### *About* the App
@@ -108,6 +108,13 @@ For example, here, the informational message <span style='color: blue;'>Plotting
 
 Elements **4** in the overview figure allow the control of the horizontal and vertical dimensions of the plot **3** either coupled (i.e., keeping the current width--to-height ratio), when the **Keep ratio** switch is **ON**, or independently of each other, when the switch is **OFF** (in which case a new slider controlling the plot height appears).
 The interaction with the slider(s) can be done either with mouse or with the arror keys.
+
+Please note that there is a minimum size requirement for a plot to be displayed, otherwise an error of the type
+
+<span style='color: red;'>Plotting area is too small (it must be at least 10 x 0.5 characters per event, but now it is only 31.1 x 0.5)!</span>
+
+is thrown, in which case either the plotting area needs to be increased using the **Plot width** (and, if visible, **Plot height**) slider(s), or the number of patients or the duration to be shown need to be reduced.
+Alternatively, the <b style='color: darkblue'>Advanced</b> main section (see Section **Setting *parameters*** for details) can be used to decrease these minimum requirements (but this not recommended in most cases).
 
 
 ### *Saving* the current plot to file
@@ -281,7 +288,66 @@ These two ways of selecting patients should be flexible enough for cover most ca
 
 After patients have been selected, the user can press the **Compute CMA** button (UI element **12**) to access a specialised dialog box (see figure below) where the CMA computation can be started, its progress monitored, or stopped, and from where the results can be exported to file.
 
-![**Selecting patients *individually* for the computation of CMA.**](shiny-computecma-dialog.jpg)
+![**Starting, stopping and watchin the progress of CMA computation for several patients.** The list of patients is given in UI element **16**, and the progress of the computation is tracked by theprogress bar and individual success report (UI elements **17**). The button **Save results (as TSV)** allows the user to select a file where the results will be exported as a TAB-separated CSV file.](shiny-computecma-dialog.jpg)
+
+
+### Setting *parameters*
+
+The left-hand panel has two tabs: *Params* and *Data*, and we are focusing here on *Params*, which contains various parameters customising the computed CMA and the plotting of the results.
+UI element **5** in the overview figure shows part of this panel, but the following principles apply:
+
+  - the top **Dataset info** button gives access to information about the current data source such as its name, type, structure and the five important columns:
+
+![**Basic information about the current dataset.** Here, `med.events`, showing also the five important columns.](shiny-infodataset.jpg)
+
+  - there are several *main sections* with <b style='color: darkblue'>dark blue bold headings</b>
+  - the contents of most of main sections can be hidden (by default, marked by the "...") or visible, the two states being toggled by clicking the mouse (the only exception is the first main section, <b style='color: darkblue'>General settings</b>, whose contents is always visible)
+  - some main sections may appear or disappear depending on other circumstances, such as the type of CMA selected (e.g., <b style='color: darkblue'>Define episodes</b> exists only for *CMA per episodes*) or the optional columns being defined (e.g., <b style='color: darkblue'>Show dose</b> exists only if the daily dose column ws defined).
+  
+We will now go through all main sections one by one.
+
+
+#### <b style='color: darkblue'>General settings</b>
+
+The <b style='color: darkblue'>General settings</b> main section is always visible and allows the selection of:
+
+  - **CMA type**: the type of CMA to compute, which can be (please see [Dima & Dediu, 2017](#Ref-Dima2017), and the vignette [AdhereR: Adherence to Medications](https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html) for more details):
+  
+    - **simple**: one of the "simple" CMAs, currently `CMA0` tot `CMA9`,
+    - **per episode**: computes one of the "simple" CMAs repeatedly for each treatment episode,
+    - **sliding window**: computes one of the "simple" CMAs repeatedly for a set of sliding windows
+    
+  - **CMA to compute**: the "simple" CMA to compute, either by itself (for **CMA type** == **simple**) or iteratively (for the other two "complex" types); please note that by defintion `CMA0` cannot be used with "complex" CMAs (which explains why it cannot be selected in these cases)
+  
+  - **Patient(s) to plot**: the list of patient IDs, selected from a drop-down list (which allows multiple selections) containing all the patient IDs in the current data source (at least one patient must be selected, otherwise an error is generated)
+  
+Depending on these selections the plot may change or various types of errors or warnings may be thrown.
+
+
+#### <b style='color: darkblue'>Follow-up window (FUW)</b> and <b style='color: darkblue'>Observation window (OW)</b>
+
+These two main sectios are very similar and allow the definition of the follow-up (FUW) and observation (OW) windows by specifying:
+
+  - their **start**: this can be either:
+  
+     - the number of **units** (days, weeks, months or years) relative to the first event (for FUW) and to the start of the FUW (for OW), or
+     - an absolute **calendar date**
+     
+  - and their **duration** as a number of **units** (days, weeks, months or years).
+
+
+#### <b style='color: darkblue'>Carry over</b>
+
+This main section is shown only for `CMA5` to `CMA9` and concerns the way carry over is considered:
+
+  - **For same treat.only**: only for the treatment class or across classes
+  - **Consider dosage changes**: should dosage changes be considered when computing the carry over?
+
+
+
+## References
+
+<a name="Ref-Dima2017"></a>Dima A.L., Dediu D. (2017) [Computation of adherence to medication and visualization of medication histories in R with *AdhereR*: Towards transparent and reproducible use of electronic healthcare data](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0174426). *PLoS ONE* **12**(4): e0174426. [doi:10.1371/journal.pone.0174426](https://doi.org/10.1371/journal.pone.0174426).
 
 
 

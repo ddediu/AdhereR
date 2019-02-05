@@ -198,7 +198,6 @@ ui <- fluidPage(
                                                                 ## If follow-up window unit is "column in dataset"
                                                                 #conditionalPanel(
                                                                 #  condition = "(input.followup_window_start_unit == 'column in dataset')",
-                                                                #              # Select an actual date ----
                                                                 #              selectInput(inputId="followup_window_start_column",
                                                                 #                        label="Follow-up wnd. start",
                                                                 #                        choices=names(.GlobalEnv$.plotting.params$data),
@@ -286,17 +285,17 @@ ui <- fluidPage(
                                             # carry_only_for_same_medication, consider_dosage_change
                                             conditionalPanel(
                                               condition = "((input.cma_class == 'simple' &&
-                       (input.cma_to_compute == 'CMA5' ||
-                        input.cma_to_compute == 'CMA6' ||
-                        input.cma_to_compute == 'CMA7' ||
-                        input.cma_to_compute == 'CMA8' ||
-                        input.cma_to_compute == 'CMA9')) ||
-                      (input.cma_class != 'simple' &&
-                       (input.cma_to_compute_within_complex == 'CMA5' ||
-                        input.cma_to_compute_within_complex == 'CMA6' ||
-                        input.cma_to_compute_within_complex == 'CMA7' ||
-                        input.cma_to_compute_within_complex == 'CMA8' ||
-                        input.cma_to_compute_within_complex == 'CMA9')))",
+                                                             (input.cma_to_compute == 'CMA5' ||
+                                                              input.cma_to_compute == 'CMA6' ||
+                                                              input.cma_to_compute == 'CMA7' ||
+                                                              input.cma_to_compute == 'CMA8' ||
+                                                              input.cma_to_compute == 'CMA9')) ||
+                                                            (input.cma_class != 'simple' &&
+                                                             (input.cma_to_compute_within_complex == 'CMA5' ||
+                                                              input.cma_to_compute_within_complex == 'CMA6' ||
+                                                              input.cma_to_compute_within_complex == 'CMA7' ||
+                                                              input.cma_to_compute_within_complex == 'CMA8' ||
+                                                              input.cma_to_compute_within_complex == 'CMA9')))",
 
                                               div(id='cma_plus_section', style="cursor: pointer;",
                                                   span(title='What type of carry over to consider?', h4("Carry over"), style="color:DarkBlue"),
