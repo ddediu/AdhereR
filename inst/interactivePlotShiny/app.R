@@ -38,7 +38,7 @@
 NULL
 
 
-# Various symbols for lines and dots as images:
+# Symbols for lines and dots as images ----
 line.types <- c("blank"   ="symbols/lty-blank.png",
                 "solid"   ="symbols/lty-solid.png",
                 "dashed"  ="symbols/lty-dashed.png",
@@ -482,7 +482,7 @@ ui <- fluidPage(
                                                                 # Duration:
                                                                 div(title='The duration to plot (in days), or 0 to determine it from the data',
                                                                     numericInput(inputId="duration",
-                                                                                 label="Duration",
+                                                                                 label="Duration (in days)",
                                                                                  value=0, min=0, max=NA, step=90)),
 
                                                                 # Period:
@@ -697,7 +697,7 @@ ui <- fluidPage(
                                                                   # The colour palette for treatment types:
                                                                   conditionalPanel(
                                                                     condition="output.is_treat_class_defined",
-                                                                    div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on category order.',
+                                                                    div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on the alphabetic ordering of the category names.',
                                                                         selectInput(inputId="col_cats",
                                                                                     label="Treatment palette",
                                                                                     choices=c("rainbow", "heat.colors", "terrain.colors", "topo.colors", "cm.colors", "magma", "inferno", "plasma", "viridis", "cividis"),
@@ -738,6 +738,7 @@ ui <- fluidPage(
                                                                     numericInput(inputId="lwd_event",
                                                                                  label="Event line width",
                                                                                  value=2, min=0, max=NA, step=1)),
+
                                                                 div(title='Event start symbol (most commonly used)...',
                                                                     #selectInput(inputId="pch_start_event",
                                                                     #            label="Event start",
@@ -848,6 +849,7 @@ ui <- fluidPage(
                                                                                                                                              "' width=50 height=10/>",
                                                                                                                                              names(line.types[i]))))),
                                                                                                 selected="dotted")),
+
                                                                   div(title='The line width of continuation lines connecting consecutive events',
                                                                       numericInput(inputId="lwd_continuation",
                                                                                    label="Cont. line width",
