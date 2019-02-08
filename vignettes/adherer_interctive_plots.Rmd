@@ -39,12 +39,12 @@ The app's interface uses *standard controls and paradigms*, ensuring a similar u
 
 ## Launching the app
 
-**Locally**, the app can be launched from a normal `R` session (including from within `RStudio`)) or script with a single command; of course, the latest version of `AdhereR` must be *installed* on the system (using, for example, `install.packages("AdhereR", dep=TRUE)` or `RStudio`'s *Tools* → *Install Packages...* menu; or, in case it is already installed, updated using `update.packages()` or `RStudio`'s *Tools* → *Check for Package Updates...* menu), and *loaded* in the current session (using, for example, `library(AdhereR)` or `require(AdhereR)`).
+**Locally**, the app can be launched from a normal `R` session (including from within `RStudio`) or script with a single command; of course, the latest version of `AdhereR` must be *installed* on the system (using, for example, `install.packages("AdhereR", dep=TRUE)` or `RStudio`'s *Tools* → *Install Packages...* menu; or, in case it is already installed, updated using `update.packages()` or `RStudio`'s *Tools* → *Check for Package Updates...* menu), and *loaded* in the current session (using, for example, `library(AdhereR)` or `require(AdhereR)`).
 With these prerequisites in order, the app can be launched without any parameters with
 ```{r eval=FALSE}
 plot_interactive_cma()
 ```
-or, if so desired, by specifying a data source and the important column names and optionally the desired `CMA` (see below for explanations), as in the following exmaple, where we use `CMA0` (i.e., the raw data) from the sample dataset `med.events` (see its structure in the **Table** below) included with the `AdhereR` package:
+or, if so desired, by specifying a data source and the important column names and optionally the desired `CMA`, as in the following example, where we use `CMA0` (i.e., the raw data) from the sample dataset `med.events` (see its structure in the **Table** below) included with the `AdhereR` package:
 ```{r eval=FALSE}
 plot_interactive_cma(data=med.events, # included sample dataset
                      cma.class="simple", # simple cma, defaults to CMA0
@@ -75,6 +75,8 @@ plot_interactive_cma(data=med.events, # included sample dataset
 Table: The structure of the sample dataset `med.events` included in the `AdhereR` package. We shows the rows 23 to 33 (out of a total of 1080 rows), each row representing one *event* which is characterised **at the minimum** by: the *patient* it refers to (identified by the patient's unique ID in column `PATIENT_ID`), the *date* it happened (in column `DATE`, recorded in a uniform format, here MM/DD/YYYY), its *duration* in days (in column `DURATION`); **optionally** we can also have info concerning the prescribed daily quantity or *dose* (column `PERDAY`) and the class or type of treatment (column `CATEGORY`). We will use this dataset throughout this vignette.
 
 Alternatively, the app may be made available on a **remote server**, such as on <https://www.shinyapps.io/>, in which case it can be accessed simply by pointing the web browser to the app's internet address. 
+
+Please note that launching the App with no parameters, opens with a different screen (see the [**Selecting/changing the *data source***](#ui-datasource) section for details).
 
 
 ## The App's User Interface (UI) {#ui-overview}
@@ -464,7 +466,7 @@ This section controls several advanced settings:
   - **Min plot size (horiz.)** and **Min plot size (vert.)**: the minimum plotting size (in characters) required for the whole duration to be plotted (horizontally) and for each event/episode/sliding window (vertically)
 
 
-### Selecting/changing the *data source*
+### Selecting/changing the *data source* {#ui-datasource}
 
 If the interactive App was *started with a given data source* passed through the parameters to the `plot_interactive_cma(...)` arguments, this data source (if valid and well-defined) is automatically used, but it can be changed at any time (as desribed below). 
 However, if the App was starting *without any data source* (i.e., `plot_interactive_cma()`), the user is forced to select a valid data source before being able to plot anything.
@@ -484,7 +486,7 @@ The type of data source can be done with with list **Datasource type** at the to
 We will go now through each of these types of data sources in turn.
   
   
-#### Data **already in memory**
+#### Data **already in memory** {#ui-inmemory}
 
 This is, in some respects, the simplest type of data source.
 When selected, the tab looks like:
@@ -506,11 +508,62 @@ If the dataset is not the desired one, it can be replaced with anything else usi
 Pleae note that, at this time, the dataset is *not* selected to be used for plotting: this is an explicit action done by pressing the **Validate & use!** button at the bottom, which does perform various checks (such as that each column is used at most once and that the types more or less fit the expected type and format, among others) and, if ok, makes this dataset the one to be used for plotting.
   
   
-#### **load from file**
+#### **Load from file**
 
-In contrast to the previous one, this is probably the most frequently used case.
+This is a very useful case, where the data is stored in an external file.
+When selecting *load from file* in the **Datasource type** list, the panel becomes:
 
+![**Loading a dataset from file.**](shiny-data-fromfile.jpg)
 
+The App supports loading data from several file formats:
+
+  - **Comma/TAB-separated (.csv; .tsv; .txt)**: this is the default format and referes to a class of open and flexible file formats where tabular data is stored as rows of values separated by a pre-defined delimiter; the best knowen are [Comma-Separated Values (CSV)](https://en.wikipedia.org/wiki/Comma-separated_values) and [TAB-Separated Values (TSV)](https://en.wikipedia.org/wiki/Tab-separated_values) formats, but the App allows a lot of flexibility by defining:
+  
+    - the **Field separator** can be: the *[`TAB`]* character (\\t), the *comma* (,), one or more *whitespaces*, the *semicolon* (;) or the *colon* (:)
+    - the individual values can be quoted (or not) using the **Quote character**: *[none]* (no quoting of values), *single quotes* (') or *double quotes* (")
+    - the **Decimal point** character: *dot* (.) or *comma* (,)
+    - the **Missing data symbols**: a free text listing (within double quotes and separated by commas) the symbol(s) to be interpreted as *missing data* (by default, "NA")
+    - if the 1^st^ row of the file represents the header (containing the column names) or not (**Header 1^st^ row**)
+    
+  - **Serialized R object (.rds)**: this loads data (such as objects derived from `data.frame`) previously exported from `R` using `readRDS()` (usually as ".rds")
+  - **Open Document Spreadsheet (.ods)** and **Microsoft Excel (.xls; .xlsx)** loads data from these widespread formats, used by office suites such as [LibreOffice](https://www.libreoffice.org/)/[OpenOffice](https://www.openoffice.org/)'s `Calc` and [Micrsoft Office](https://www.office.com/)'s `Excel` programs, among others; for both these formats, the user can specify the particular sheet to be loaded for files contaning more than one (**Which sheet to load?**)
+  - **SPSS (.sav; .por)**, **SAS Transport data file (.xpt)**, **SAS sas7bdat data file (.sas7bdat)** and **Stata (.dta)**: these are file formats exported by the popular statistical platforms [IBM `SPSS`](https://www.ibm.com/analytics/spss-statistics-software), [`SAS`](https://www.sas.com) and [`Stata`](https://www.stata.com/)
+
+Please note that while **Comma/TAB-separated (.csv; .tsv; .txt)**, **Serialized R object (.rds)** and **Open Document Spreadsheet (.ods)** should be imported without issues, for the others there might limitations and fringe cases.
+
+After the file format has been selected, the user can use the **Load from file** control (its **Selecte** button) to browse for the desired file and upload it.
+Basic checks might be peformed and a file mght be rejected, but if the loading was successful, a new set of UI elements becomes visible.
+These elements are virtually identical to those used for [in-memory datasets](#ui-inmemory).
+  
+  
+#### Use an **SQL database**
+
+This allows the access to data stored in standard [Relational Database Management Systems (RDBMS's)](https://en.wikipedia.org/wiki/Relational_database_management_system) which use the [Structured Query Language (SQL)](https://en.wikipedia.org/wiki/SQL) -- for more info about the facilities offered by `AdhereR`, please see the [Using AdhereR with various database technologies for processing very large datasets](https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_with_databases.pdf) vignette.
+
+Currently, the App supports [`SQLite`](https://sqlite.org/index.html), a small engine designed to be embedded in larger applications and which stored the data in normal files, and [`MySQL`](https://www.mysql.com/)/[`MariaDB`](https://mariadb.org/), which are widely-used, full-featured free and open-source RDBMSs.
+
+While **SQLite** is inteneded only as a demo of the App's capabilities and uses an in-memory database with a single table that contains a verbatim copy of the `med.events` example dataset, **MySQL/MariaDB** allows the use of actual databases, local or over the internet.
+Except for the selection of the database, the UI for the two is identical, so we will only discuss here the **MySQL/MariaDB** case
+
+We can connect to a local or remote server, and we can (optinally) define the following:
+
+  - **Host name/address**: the fully qualified host name or IP address of the server (if *[none]* or *localhost*, the database is stored on the local machine)
+  - **TCP/IP port number**: the port number (*0* for default)
+  - **Database name**: the name of the database
+  - **Username** and **Password**: the username and password for accessing the database (the password is hidden using *)
+
+![**Inputting the info needed to connect to a remote MySQL server.** We use here a MySQL database contaning the `med.events` sample dataset hosted on the internet.](shiny-data-sql-mysql.jpg)
+
+When clicking the **Connect!** button, the App attempts to connect the server, authenticate and access the desired database: if everything's ok, it fetches basic information over all the tables/views in the database (avoiding thus unnecessary traffic) and displayes it:
+
+![**Basic information about an SQL database.** This shows, for each table/view in the database, the columns with their name, type and first few values. The same info is accessible by clicking on the **Peek at database...** button.](shiny-data-sql-mysql-peek.jpg)
+
+New UI elements become visible, most being virtually identical to those used for loading from file and [in-memory datasets](#ui-inmemory), but the specific ones being:
+
+  - the **Disconnect!** button; this disconnects from the database cleanly (not required by nice to do)
+  - **Which table/view** lists the tables and views in the database, also showing for each the number of rows and columns
+
+![**UI elements for using an SQL database.**](shiny-data-sql-mysql-columns.jpg)
 
 
 ## References
