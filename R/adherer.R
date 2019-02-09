@@ -3149,7 +3149,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         cex.lab=cex.lab);
 
   # The patient axis and CMA plots:
-  if( plot.CMA && !is.null(getCMA(cma)) )
+  if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
   {
     # Maximum achieved CMA:
     adh.max <- max(c(getCMA(cma)$CMA, 1.0),na.rm=TRUE);
@@ -3171,7 +3171,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     draw.gray.band <- !draw.gray.band;
 
     # The participant CMA plot:
-    if( plot.CMA && !is.null(getCMA(cma)) )
+    if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
     {
       adh <- getCMA(cma)[x,"CMA"];
       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(min(adh,adh.max)), mean(s)+1, col=CMA.plot.col, border=NA);
@@ -3235,7 +3235,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       }
     }
   }
-  if( plot.CMA && !is.null(getCMA(cma)) )
+  if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
   {
     # Mark the drawing area:
     if( adh.max > 1.0 )
@@ -7783,17 +7783,17 @@ print.CMA_per_episode <- function(x,                                     # the C
     s <- which(cma$data[,cma$ID.colname] == p);
     x <- which(cmas[cma$ID.colname] == p);
     pid <- p;
-    mtext( pid, 2, line=0.5, at=y.cur+length(s)/2+ifelse(plot.CMA && !is.null(getCMA(cma)),length(x),0)/2, las=2, cex=cex.axis );
+    mtext( pid, 2, line=0.5, at=y.cur+length(s)/2+ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,length(x),0)/2, las=2, cex=cex.axis );
 
     # The alternating gray bands:
     if( draw.gray.band )
-      rect( 0-1, y.cur-0.5, duration.total+1, y.cur+length(s)+ifelse(plot.CMA && !is.null(getCMA(cma)),length(x),0)-0.5, col=gray(0.95), border=NA );
+      rect( 0-1, y.cur-0.5, duration.total+1, y.cur+length(s)+ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,length(x),0)-0.5, col=gray(0.95), border=NA );
     draw.gray.band <- !draw.gray.band;
 
     # The participant CMA plot:
-    if( plot.CMA && !is.null(getCMA(cma)) )
+    if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
     {
-      y.mean <- y.cur+length(s)/2+ifelse(plot.CMA && !is.null(getCMA(cma)),length(x),0)/2;
+      y.mean <- y.cur+length(s)/2+length(x)/2;
       segments(.rescale.xcoord.for.CMA.plot(0), y.mean-2, .rescale.xcoord.for.CMA.plot(1), y.mean-2, lty="solid", col=CMA.plot.col);
       segments(.rescale.xcoord.for.CMA.plot(0), y.mean+2, .rescale.xcoord.for.CMA.plot(1), y.mean+2, lty="solid", col=CMA.plot.col);
       adh <- na.omit(getCMA(cma)[x,"CMA"]);
@@ -7910,9 +7910,9 @@ print.CMA_per_episode <- function(x,                                     # the C
            col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
     }
 
-    y.cur <- y.cur + length(s) + ifelse(plot.CMA && !is.null(getCMA(cma)),length(x),0);
+    y.cur <- y.cur + length(s) + ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,length(x),0);
   }
-  if( plot.CMA && !is.null(getCMA(cma)) )
+  if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
   {
     # Mark the drawing area:
     #rect(.rescale.xcoord.for.CMA.plot(0), par("usr")[3], .rescale.xcoord.for.CMA.plot(1.0), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
@@ -7989,7 +7989,7 @@ print.CMA_per_episode <- function(x,                                     # the C
       {
         # Now the patient is changing:
         # Draw its subperiods:
-        if( plot.CMA && !is.null(getCMA(cma)) )
+        if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
         {
           s <- which(cmas[,cma$ID.colname] == cma$data[i,cma$ID.colname]);
           if( length(s) > 0 )
@@ -8018,7 +8018,7 @@ print.CMA_per_episode <- function(x,                                     # the C
     }
   }
   # Draw the last participant's subperiods:
-  if( plot.CMA && !is.null(getCMA(cma)) )
+  if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
   {
     s <- which(cmas[,cma$ID.colname] == cma$data[i,cma$ID.colname]);
     if( length(s) > 0 )
