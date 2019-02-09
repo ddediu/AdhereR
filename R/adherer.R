@@ -3988,8 +3988,8 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' (default), "top", or a \emph{numeric} value.
 #' @param legend.bkg.opacity A \emph{number} between 0.0 and 1.0 specifying the
 #' opacity of the legend background.
-#' @param cex,cex.axis,cex.lab \emph{numeric} values specifying the \code{cex}
-#' of the various types of text.
+#' @param cex,cex.axis,cex.lab,legend.cex,legend.cex.title,CMA.cex \emph{numeric}
+#' values specifying the \code{cex} of the various types of text.
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
@@ -4016,8 +4016,9 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' @param followup.window.col The follow-up window's colour.
 #' @param highlight.observation.window \emph{Logical}, should the observation
 #' window be plotted?
-#' @param observation.window.col,observation.window.density,observation.window.angle Attributes of the observation window
-#' (colour, shading density and angle).
+#' @param observation.window.col,observation.window.density,observation.window.angle,observation.window.opacity
+#' Attributes of the observation window (colour, shading density, angle and
+#' opacity).
 #' @param show.real.obs.window.start,real.obs.window.density,real.obs.window.angle For some CMAs, the observation window might
 #' be adjusted, in which case should it be plotted and with that attributes?
 #' @param print.dose \emph{Logical}, should the daily dose be printed as text?
@@ -8234,6 +8235,11 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' Finally, the y-axis shows the patient ID and possibly the CMA estimate as
 #' well.
 #'
+#' Any not explicitely defined arguments are passed to the simple CMA estimation
+#' and plotting function; therefore, for more info about possible estimation
+#' parameters plese see the help for the appropriate simple CMA, and for possible
+#' aesthetic tweaks, please see the help for their plotting.
+#'
 #' @param x A \emph{\code{CMA0}} or derived object, representing the CMA to
 #' plot
 #' @param patients.to.plot A vector of \emph{strings} containing the list of
@@ -8298,7 +8304,13 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' (colour, shading density and angle).
 #' @param show.real.obs.window.start,real.obs.window.density,real.obs.window.angle For some CMAs, the observation window
 #' might be adjusted, in which case should it be plotted and with that attributes?
-#' @param ... other possible parameters
+#' @param ... other parameters (to be passed to the estimation and plotting of
+#' the simple CMA)
+#'
+#' @seealso See the simple CMA estimation \code{\link[AdhereR]{CMA1}}
+#' to \code{\link[AdhereR]{CMA9}} and plotting \code{\link[AdhereR]{plot.CMA1}}
+#' functions for extra parameters.
+#'
 #' @examples
 #' \dontrun{
 #' cmaW <- CMA_sliding_window(CMA=CMA1,

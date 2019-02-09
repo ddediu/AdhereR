@@ -92,8 +92,8 @@ drawn (or 0 for no grid).}
 \item{legend.bkg.opacity}{A \emph{number} between 0.0 and 1.0 specifying the
 opacity of the legend background.}
 
-\item{cex, cex.axis, cex.lab}{\emph{numeric} values specifying the \code{cex}
-of the various types of text.}
+\item{cex, cex.axis, cex.lab, legend.cex, legend.cex.title, CMA.cex}{\emph{numeric}
+values specifying the \code{cex} of the various types of text.}
 
 \item{show.cma}{\emph{Logical}, should the CMA type be shown in the title?}
 
@@ -132,8 +132,8 @@ be plotted?}
 \item{highlight.observation.window}{\emph{Logical}, should the observation
 window be plotted?}
 
-\item{observation.window.col, observation.window.density, observation.window.angle}{Attributes of the observation window
-(colour, shading density and angle).}
+\item{observation.window.col, observation.window.density, observation.window.angle, observation.window.opacity}{Attributes of the observation window (colour, shading density, angle and
+opacity).}
 
 \item{show.real.obs.window.start, real.obs.window.density, real.obs.window.angle}{For some CMAs, the observation window might
 be adjusted, in which case should it be plotted and with that attributes?}

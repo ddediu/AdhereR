@@ -16,6 +16,12 @@
 
   - `plot.CMA0` ignored grascale plotting for OW and FUW
   
+  - legend now is resized depending on the various legend font sizes and not on the global font sized
+  
+  - better handling of font sizes of 0 (now forced transparently to 0.01)
+  
+  - better handling of 0% for the CMA estimate plot for CMA1+, per episode and sliding windows
+  
   - small bugs fixed in `compute_event_durations()`
   
   - better handling of messages, warnings and error during plotting

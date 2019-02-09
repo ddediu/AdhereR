@@ -32,7 +32,8 @@
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
 plot}
 
-\item{...}{other possible parameters}
+\item{...}{other parameters (to be passed to the estimation and plotting of
+the simple CMA)}
 
 \item{patients.to.plot}{A vector of \emph{strings} containing the list of
 patient IDs to plot (a subset of those in the \code{cma} object), or
@@ -168,6 +169,11 @@ of patients.
 
 Finally, the y-axis shows the patient ID and possibly the CMA estimate as
 well.
+
+Any not explicitely defined arguments are passed to the simple CMA estimation
+and plotting function; therefore, for more info about possible estimation
+parameters plese see the help for the appropriate simple CMA, and for possible
+aesthetic tweaks, please see the help for their plotting.
 }
 \examples{
 \dontrun{
@@ -208,4 +214,9 @@ cmaE <- CMA_per_episode(CMA=CMA1,
                         date.format="\%m/\%d/\%Y"
                        );
 plot(cmaE, patients.to.plot=c("1","2"));}
+}
+\seealso{
+See the simple CMA estimation \code{\link[AdhereR]{CMA1}}
+to \code{\link[AdhereR]{CMA9}} and plotting \code{\link[AdhereR]{plot.CMA1}}
+functions for extra parameters.
 }
