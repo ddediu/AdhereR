@@ -1946,7 +1946,7 @@ server <- function(input, output, session) {
   observeEvent(input$about_button,
   {
     # Get most of the relevant info from the DESCRIPTION file:
-    descr <- utils::packageDescription("AdhereR.devel");
+    descr <- utils::packageDescription("AdhereR");
     msg <- paste0("<img src='adherer-logo.png', align = 'left', style='font-size: x-large; font-weight: bold; height: 2em; vertical-align: baseline;'/>",
                   "<div style='width: 1em; display: inline-block;'/>",
                   "<hr/>",
@@ -1957,7 +1957,7 @@ server <- function(input, output, session) {
                   "<p align='justify'>",descr$Description,"</p>",
                   "<p><b>Website:</b> <a href='",descr$URL,"' target='_blank'>",descr$URL,"</a></p>",
                   "<p><b>Released under:</b> ",descr$License,"</p>",
-                  "<p><b>Citation:</b></p>",format(citation(package="AdhereR.devel"),style="html"),
+                  "<p><b>Citation:</b></p>",format(citation(package="AdhereR"),style="html"),
                   "<hr/>",
                   "<p>For more info <b>online</b> please visit the project's <a href='http://www.adherer.eu' target='_blank'>homepage</a> (<a href='http://www.adherer.eu' target='_blank'>www.adherer.eu</a>) and its source code repository on <a href='https://github.com/ddediu/AdhereR' target='_blank'>GitHub</a> (<a href='https://github.com/ddediu/AdhereR' target='_blank'>github.com/ddediu/AdhereR</a>). ",
                   "The official releases are hosted on <a href='https://cran.r-project.org/package=AdhereR' target='_blank'>CRAN</a> (<a href='https://cran.r-project.org/package=AdhereR' target='_blank'>https://cran.r-project.org/package=AdhereR</a>).",
@@ -2253,7 +2253,7 @@ server <- function(input, output, session) {
                                                      highlight::highlight(parse.output=parse(text=r_code),
                                                                           renderer=highlight::renderer_html(document=TRUE,
                                                                                                             stylesheet=file.path(system.file('interactivePlotShiny',
-                                                                                                                                             package='AdhereR.devel'),
+                                                                                                                                             package='AdhereR'),
                                                                                                                                  "r-code-highlight.css")),
                                                                           show_line_numbers=FALSE,
                                                                           output=NULL),
@@ -3235,7 +3235,7 @@ server <- function(input, output, session) {
       } else
       {
         # Simply connect to the table:
-        res <- tryCatch(d <- DBI::con <- dbConnect(RSQLite::SQLite(), input$dataset_from_sqlite_database_name),
+        res <- tryCatch(d <- DBI::dbConnect(RSQLite::SQLite(), input$dataset_from_sqlite_database_name),
                         error=function(e) e, warning=function(w) w);
         if( is.null(d) || inherits(res, "error") )
         {
@@ -3778,7 +3778,7 @@ server <- function(input, output, session) {
                                   HTML(" button in the main window (please ignore the plotting code).<br/>")),
                               hr(),
                               div(HTML(paste0("We are using ",R.version.string,
-                                              " and AdhereR version ",descr <- utils::packageDescription("AdhereR.devel")$Version,
+                                              " and AdhereR version ",descr <- utils::packageDescription("AdhereR")$Version,
                                               " on ",r.ver.info$running,"."))),
                               hr(),
                               shinyWidgets::progressBar(id="cma_computation_progress",

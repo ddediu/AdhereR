@@ -24,6 +24,20 @@
 #' @import stats
 #' @import data.table
 #' @import utils
+#' @importFrom shinyjs useShinyjs extendShinyjs hidden disabled toggle onclick js enable disable
+#' @importFrom shinyWidgets materialSwitch pickerInput updatePickerInput progressBar updateProgressBar
+#' @importFrom DBI dbConnect dbDisconnect dbWriteTable dbListTables dbGetQuery dbIsValid
+#' @importFrom RMariaDB MariaDB
+#' @importFrom RSQLite SQLite
+#' @import V8
+#' @importFrom clipr clipr_available write_clip
+#' @importFrom colourpicker colourInput
+#' @importFrom haven read_spss read_xpt read_sas read_stata
+#' @importFrom highlight highlight renderer_html
+#' @import knitr
+#' @importFrom readODS read_ods
+#' @importFrom readxl read_excel
+#' @importFrom viridisLite magma inferno plasma viridis cividis
 NULL
 
 # Declare some variables as global to avoid NOTEs during package building:
@@ -658,6 +672,11 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
 #' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
 #' referes to a single event.
+#' @param min.plot.size.in.characters.horiz,min.plot.size.in.characters.vert
+#' \emph{Numeric}, the minimum size of the plotting surface in characters;
+#' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+#' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+#' referes to a single event.
 #' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
 #' to plot.
 #' @param ... other possible parameters
@@ -697,10 +716,10 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       col.na="lightgray",                    # color for mising data
                       highlight.followup.window=TRUE, followup.window.col="green",
                       highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
-                      events=NULL,                           # if given, must be a data.frame with events per patient
-                      events.ID.colname=NA, events.start.colname=NA, events.end.colname=NA, # if events is given, these columns must be in there
-                      events.date.format=NA,                 # if NA, use the same date.format as the CMA object x
-                      col.events=adjustcolor("gray20",alpha.f=0.5), # if events is given, plot them using this color
+                      #events=NULL,                           # if given, must be a data.frame with events per patient
+                      #events.ID.colname=NA, events.start.colname=NA, events.end.colname=NA, # if events is given, these columns must be in there
+                      #events.date.format=NA,                 # if NA, use the same date.format as the CMA object x
+                      #col.events=adjustcolor("gray20",alpha.f=0.5), # if events is given, plot them using this color
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       print.CMA=TRUE,                        # print CMA next to the participant's ID?
                       plot.CMA=TRUE,                         # plot the CMA next to the participant ID?
@@ -718,59 +737,59 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     return (invisible(NULL));
   }
 
-  if( !is.null(events) )
-  {
-    # Check the events: this should be a data.frame with valid events.ID.colname, events.start.colname, events.end.colname
-    if( !inherits(events, "data.frame") || nrow(events) < 1 || ncol(events) < 3 )
-    {
-      warning(paste0("Events must be a non-empty data.frame with at least three columns!\n"));
-      return (invisible(NULL));
-    }
-    if( inherits(events, "data.table") ) events <- as.data.frame(events); # guard against inconsistencies between data.table and data.frame in how they handle d[,i]
-    if( is.na(events.ID.colname) || !(events.ID.colname %in% names(events)) )
-    {
-      warning(paste0("The events.ID.colname '",events.ID.colname,"' must be given and must be present in events!\n"));
-      return (invisible(NULL));
-    }
-    if( is.na(events.start.colname) || !(events.start.colname %in% names(events)) )
-    {
-      warning(paste0("The events.ID.colname '",events.start.colname,"' must be given and must be present in events!\n"));
-      return (invisible(NULL));
-    }
-    if( is.na(events.end.colname) || !(events.end.colname %in% names(events)) )
-    {
-      warning(paste0("The events.ID.colname '",events.end.colname,"' must be given and must be present in events!\n"));
-      return (invisible(NULL));
-    }
-    # Convert the date columns to Date:
-    if( is.na(events.date.format) ) events.date.format <- cma$date.format;
-    if( !inherits(events[,events.start.colname], "Date") )
-    {
-      if( is.na(events.date.format) || is.null(events.date.format) || length(events.date.format) != 1 || !is.character(events.date.format) )
-      {
-        warning(paste0("The event date format must be a single string: cannot continue plotting!\n"));
-        return (invisible(NULL));
-      }
-      if( anyNA(events[,events.start.colname] <- as.Date(events[,events.start.colname],format=events.date.format)) )
-      {
-        warning(paste0("Not all entries in the event start date \"",events.start.colname,"\" column are valid dates or conform to the date format \"",events.date.format,"\"; first issue occurs on row ",min(which(is.na(events[,events.start.colname]))),": cannot continue plotting!\n"));
-        return (invisible(NULL));
-      }
-    }
-    if( !inherits(events[,events.end.colname], "Date") )
-    {
-      if( is.na(events.date.format) || is.null(events.date.format) || length(events.date.format) != 1 || !is.character(events.date.format) )
-      {
-        warning(paste0("The event date format must be a single string: cannot continue plotting!\n"));
-        return (invisible(NULL));
-      }
-      if( anyNA(events[,events.end.colname] <- as.Date(events[,events.end.colname],format=events.date.format)) )
-      {
-        warning(paste0("Not all entries in the event start date \"",events.end.colname,"\" column are valid dates or conform to the date format \"",events.date.format,"\"; first issue occurs on row ",min(which(is.na(events[,events.end.colname]))),": cannot continue plotting!\n"));
-        return (invisible(NULL));
-      }
-    }
-  }
+  # if( !is.null(events) )
+  # {
+  #   # Check the events: this should be a data.frame with valid events.ID.colname, events.start.colname, events.end.colname
+  #   if( !inherits(events, "data.frame") || nrow(events) < 1 || ncol(events) < 3 )
+  #   {
+  #     warning(paste0("Events must be a non-empty data.frame with at least three columns!\n"));
+  #     return (invisible(NULL));
+  #   }
+  #   if( inherits(events, "data.table") ) events <- as.data.frame(events); # guard against inconsistencies between data.table and data.frame in how they handle d[,i]
+  #   if( is.na(events.ID.colname) || !(events.ID.colname %in% names(events)) )
+  #   {
+  #     warning(paste0("The events.ID.colname '",events.ID.colname,"' must be given and must be present in events!\n"));
+  #     return (invisible(NULL));
+  #   }
+  #   if( is.na(events.start.colname) || !(events.start.colname %in% names(events)) )
+  #   {
+  #     warning(paste0("The events.ID.colname '",events.start.colname,"' must be given and must be present in events!\n"));
+  #     return (invisible(NULL));
+  #   }
+  #   if( is.na(events.end.colname) || !(events.end.colname %in% names(events)) )
+  #   {
+  #     warning(paste0("The events.ID.colname '",events.end.colname,"' must be given and must be present in events!\n"));
+  #     return (invisible(NULL));
+  #   }
+  #   # Convert the date columns to Date:
+  #   if( is.na(events.date.format) ) events.date.format <- cma$date.format;
+  #   if( !inherits(events[,events.start.colname], "Date") )
+  #   {
+  #     if( is.na(events.date.format) || is.null(events.date.format) || length(events.date.format) != 1 || !is.character(events.date.format) )
+  #     {
+  #       warning(paste0("The event date format must be a single string: cannot continue plotting!\n"));
+  #       return (invisible(NULL));
+  #     }
+  #     if( anyNA(events[,events.start.colname] <- as.Date(events[,events.start.colname],format=events.date.format)) )
+  #     {
+  #       warning(paste0("Not all entries in the event start date \"",events.start.colname,"\" column are valid dates or conform to the date format \"",events.date.format,"\"; first issue occurs on row ",min(which(is.na(events[,events.start.colname]))),": cannot continue plotting!\n"));
+  #       return (invisible(NULL));
+  #     }
+  #   }
+  #   if( !inherits(events[,events.end.colname], "Date") )
+  #   {
+  #     if( is.na(events.date.format) || is.null(events.date.format) || length(events.date.format) != 1 || !is.character(events.date.format) )
+  #     {
+  #       warning(paste0("The event date format must be a single string: cannot continue plotting!\n"));
+  #       return (invisible(NULL));
+  #     }
+  #     if( anyNA(events[,events.end.colname] <- as.Date(events[,events.end.colname],format=events.date.format)) )
+  #     {
+  #       warning(paste0("Not all entries in the event start date \"",events.end.colname,"\" column are valid dates or conform to the date format \"",events.date.format,"\"; first issue occurs on row ",min(which(is.na(events[,events.end.colname]))),": cannot continue plotting!\n"));
+  #       return (invisible(NULL));
+  #     }
+  #   }
+  # }
 
   if( inherits(cma$data, "data.table") ) cma$data <- as.data.frame(cma$data); # guard against inconsistencies between data.table and data.frame in how they handle d[,i]
 
@@ -1154,15 +1173,15 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
       text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s), labels=sprintf("%.1f%%",adh*100), col="darkblue", cex=cex.axis);
     }
 
-    # The participant events:
-    if( !is.null(events) && !is.null(events.for.p <- events[ events[,events.ID.colname] == p, ]) && nrow(events.for.p) > 0 )
-    {
-      rect(adh.plot.space[2]+as.numeric(difftime(events.for.p[,events.start.colname], earliest.date, "days")),
-           min(s)-0.5,
-           adh.plot.space[2]+as.numeric(difftime(events.for.p[,events.end.colname], earliest.date, "days")),
-           max(s)+0.5,
-           border=col.events, col=col.events, lwd=1, density=20, angle=-60);
-    }
+    # # The participant events:
+    # if( !is.null(events) && !is.null(events.for.p <- events[ events[,events.ID.colname] == p, ]) && nrow(events.for.p) > 0 )
+    # {
+    #   rect(adh.plot.space[2]+as.numeric(difftime(events.for.p[,events.start.colname], earliest.date, "days")),
+    #        min(s)-0.5,
+    #        adh.plot.space[2]+as.numeric(difftime(events.for.p[,events.end.colname], earliest.date, "days")),
+    #        max(s)+0.5,
+    #        border=col.events, col=col.events, lwd=1, density=20, angle=-60);
+    # }
 
     # The follow-up and observation windows:
     s <- which(cma$data[,cma$ID.colname] == p);
@@ -1366,7 +1385,7 @@ getCMA.CMA0 <- function(x)
     if( !suppress.warnings ) warning("start.date to '.add.time.interval.to.date' must be a Date() object.\n");
     return (NA);
   }
-  if( !is.numeric(time.interval) || time.interval < 0 )
+  if( !is.numeric(time.interval) || any(time.interval < 0) )
   {
     if( !suppress.warnings ) warning("time.interval to '.add.time.interval.to.date' must be a positive integer.\n");
     return (NA);
@@ -4037,7 +4056,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? and, if so, place the first event as the horizintal 0?
                       show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                       period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
-                      show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
+                      show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       show.cma=TRUE,                         # show the CMA type
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
@@ -4045,19 +4064,20 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       show.event.intervals=TRUE,             # show the actual rpescription intervals
                       col.na="lightgray",                    # color for mising data
-                      print.CMA=TRUE,                  # print CMA next to the participant ID?
+                      #col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
+                      print.CMA=TRUE, CMA.cex=0.50,           # print CMA next to the participant's ID?
                       plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
                       CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
                       CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                       highlight.followup.window=TRUE, followup.window.col="green",
-                      highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
+                      highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                       show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
                       print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                       plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                       max.patients.to.plot=100               # maximum number of patients to plot
-                     )
+)
 .plot.CMA1plus(cma=x,
                patients.to.plot=patients.to.plot,
                duration=duration,
@@ -4069,29 +4089,45 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                legend.x=legend.x,
                legend.y=legend.y,
                legend.bkg.opacity=legend.bkg.opacity,
-               cex=cex, cex.axis=cex.axis, cex.lab=cex.lab,
+               legend.cex=legend.cex,
+               legend.cex.title=legend.cex.title,
+               cex=cex,
+               cex.axis=cex.axis,
+               cex.lab=cex.lab,
                show.cma=show.cma,
                col.cats=col.cats,
                unspecified.category.label=unspecified.category.label,
-               lty.event=lty.event, lwd.event=lwd.event, pch.start.event=pch.start.event, pch.end.event=pch.end.event,
+               lty.event=lty.event,
+               lwd.event=lwd.event,
+               pch.start.event=pch.start.event,
+               pch.end.event=pch.end.event,
                show.event.intervals=show.event.intervals,
                col.na=col.na,
                print.CMA=print.CMA,
+               CMA.cex=CMA.cex,
                plot.CMA=plot.CMA,
                CMA.plot.ratio=CMA.plot.ratio,
                CMA.plot.col=CMA.plot.col,
                CMA.plot.border=CMA.plot.border,
                CMA.plot.bkg=CMA.plot.bkg,
                CMA.plot.text=CMA.plot.text,
-               highlight.followup.window=highlight.followup.window, followup.window.col=followup.window.col,
+               highlight.followup.window=highlight.followup.window,
+               followup.window.col=followup.window.col,
                highlight.observation.window=highlight.observation.window,
                observation.window.col=observation.window.col,
                observation.window.density=observation.window.density,
                observation.window.angle=observation.window.angle,
+               observation.window.opacity=observation.window.opacity,
                show.real.obs.window.start=show.real.obs.window.start,
-               real.obs.window.density=real.obs.window.density, real.obs.window.angle=real.obs.window.angle,
-               print.dose=print.dose, cex.dose=cex.dose, print.dose.outline.col=print.dose.outline.col, print.dose.centered=print.dose.centered,
-               plot.dose=plot.dose, lwd.event.max.dose,
+               real.obs.window.density=real.obs.window.density,
+               real.obs.window.angle=real.obs.window.angle,
+               print.dose=print.dose,
+               cex.dose=cex.dose,
+               print.dose.outline.col=print.dose.outline.col,
+               print.dose.centered=print.dose.centered,
+               plot.dose=plot.dose,
+               lwd.event.max.dose=lwd.event.max.dose,
+               plot.dose.lwd.across.medication.classes=plot.dose.lwd.across.medication.classes,
                bw.plot=bw.plot,
                min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
                min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
@@ -9932,7 +9968,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   # make sure they are deleted on exit from shiny:
   on.exit(rm(list=c(".plotting.params"), envir=.GlobalEnv));
 
-  shiny.app.launcher <- system.file('interactivePlotShiny', package='AdhereR.devel');
+  shiny.app.launcher <- system.file('interactivePlotShiny', package='AdhereR');
 
   # call shiny:
   if( use.system.browser )

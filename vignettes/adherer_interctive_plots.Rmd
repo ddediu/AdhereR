@@ -23,18 +23,18 @@ knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg");
 
 ## Introduction
 
-[`AdhereR`](https://cran.r-project.org/package=AdhereR) is an [`R`](https://www.r-project.org/) package that implements, in an open and standardised manner, various methods linked to the estimation of *adherence to treatment* from a variety of data sources and formats (please see the other vignettes in the package, by involving, for example `browseVignettes(package="AdhereR")` or visiting the package's site on [CRAN](https://cran.r-project.org/package=AdhereR)).
-One of the main aims of the package is to allow users to produce high quality, publication-ready and highly customisable *graphical representations* of both the patterns in the raw data and of the various estimates of adherence.
-This can be normally achieved from an `R` session or script using the `plot()` function applied to an estimated `CMA` object (the raw patterns are plotted by creating a basic `CMA0` object), as detailed in the [AdhereR: Adherence to Medications](https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html) vignette.
-However, while allowing for a very fine-grained control over the resulting plots, this requires a certain level of familiarity with `R` (loading the source data, creating the appropriate `CMA` object, invoking the `plot()` function with the desired parameters, and the export of the resulting plot in the desired format at the quality and with the other desired characterstics), on the one hand, and the process is rather cumbersome when the user wants to explore and understand the data, or to try various types of plotting in search for the optimal visualisation, on the other.
+[`AdhereR`](https://cran.r-project.org/package=AdhereR) is an [`R`](https://www.r-project.org/) package that implements, in an open and standardized manner, various methods linked to the estimation of *adherence to treatment* from a variety of data sources and formats (please see the other vignettes in the package, by involving, for example `browseVignettes(package="AdhereR")` or by visiting the package's site on [CRAN](https://cran.r-project.org/package=AdhereR)).
+One of the main aims of the package is to allow users to produce high quality, publication-ready and highly customizable *graphical representations* of both the patterns in the raw data and of the various estimates of adherence.
+This can be normally achieved from an `R` session or script using the `plot()` function applied to an estimated `CMA` object (the raw patterns are plotted by creating a basic `CMA0` object), as detailed in the [AdhereR: Adherence to Medications](https://cran.r-project.org/package=AdhereR/vignettes/AdhereR-overview.html) vignette.
+However, while allowing for a very fine-grained control over the resulting plots, this requires a certain level of familiarity with `R` (loading the source data, creating the appropriate `CMA` object, invoking the `plot()` function with the desired parameters, and the export of the resulting plot in the desired format at the quality and with the other desired characteristics), on the one hand, and the process is rather cumbersome when the user wants to explore and understand the data, or to try various types of plotting in search for the optimal visualization, on the other.
 
-These reasons prompted us to develop a *fully interactive user interface* that should hide the "gory details" of data loading, `CMA` computation and `plot()` invokation under an intuitive and easy to use point-and-click interface, while allowing fast exploration and constomisation of the plots.
+These reasons prompted us to develop a *fully interactive user interface* that should hide the "gory details" of data loading, `CMA` computation and `plot()` invocation under an intuitive and easy to use point-and-click interface, while allowing fast exploration and customization of the plots.
 
 
 ## Overview
 
-We use [`Shiny`](https://shiny.rstudio.com/), which allows us to build a *self-contained app* that can be run locally or remotely inside a standard *web browser* (such as [Firefox](https://www.mozilla.org/en-US/firefox/), [Google Chrome](https://www.google.com/chrome/), [Safari](https://www.apple.com/lae/safari/), [Internet Explorer](http://microsoft.com/ie), [Edge](https://www.microsoft.com/en-us/windows/microsoft-edge) or [Opera](https://www.opera.com/)) on multiple *Operating Systems* (such as [Microsoft Windows](https://www.microsoft.com/en-us/windows), Apple's [macOS](https://www.apple.com/lae/macos) and [iOS](https://www.apple.com/lae/ios), Google's [Android](https://www.android.com/), and several flavours of Linux -- e.g., [Debian](https://www.debian.org/), [Ubuntu](https://www.ubuntu.com/), [Fedora](https://getfedora.org/en/), [RedHat](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux), [CentOS](https://www.centos.org/), [Arch](https://www.archlinux.org/)... -- and BSD -- e.g., [FreeBSD](https://www.freebsd.org/) or [TrueOS](https://www.trueos.org/)) and *devices* ranging from desktop and laptop computers to mobile phones and tablets.
-The app's interface uses *standard controls and paradigms*, ensuring a similar user experince across browsers, platforms and devices.
+We use [`Shiny`](https://shiny.rstudio.com/), which allows us to build a *self-contained app* that can be run locally or remotely inside a standard *web browser* (such as [Firefox](https://www.mozilla.org/en-US/firefox/), [Google Chrome](https://www.google.com/chrome/), [Safari](https://www.apple.com/lae/safari/), [Internet Explorer](http://microsoft.com/ie), [Edge](https://www.microsoft.com/en-us/windows/microsoft-edge) or [Opera](https://www.opera.com/)) on multiple *Operating Systems* (such as [Microsoft Windows](https://www.microsoft.com/en-us/windows), Apple's [macOS](https://www.apple.com/lae/macos) and [iOS](https://www.apple.com/lae/ios), Google's [Android](https://www.android.com/), and several flavors of Linux -- e.g., [Debian](https://www.debian.org/), [Ubuntu](https://www.ubuntu.com/), [Fedora](https://getfedora.org/en/), [RedHat](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux), [CentOS](https://www.centos.org/), [Arch](https://www.archlinux.org/)... -- and BSD -- e.g., [FreeBSD](https://www.freebsd.org/) or [TrueOS](https://www.trueos.org/)) and *devices* ranging from desktop and laptop computers to mobile phones and tablets.
+The app's interface uses *standard controls and paradigms*, ensuring a similar user experience across browsers, platforms and devices.
 
 
 ## Launching the app
@@ -72,7 +72,7 @@ plot_interactive_cma(data=med.events, # included sample dataset
 |          2|05/08/2037 |      4|medB     |       60|
 |          3|04/13/2042 |      4|medA     |       50|
 
-Table: The structure of the sample dataset `med.events` included in the `AdhereR` package. We shows the rows 23 to 33 (out of a total of 1080 rows), each row representing one *event* which is characterised **at the minimum** by: the *patient* it refers to (identified by the patient's unique ID in column `PATIENT_ID`), the *date* it happened (in column `DATE`, recorded in a uniform format, here MM/DD/YYYY), its *duration* in days (in column `DURATION`); **optionally** we can also have info concerning the prescribed daily quantity or *dose* (column `PERDAY`) and the class or type of treatment (column `CATEGORY`). We will use this dataset throughout this vignette.
+Table: The structure of the sample dataset `med.events` included in the `AdhereR` package. We shows the rows 23 to 33 (out of a total of 1080 rows), each row representing one *event* which is characterized **at the minimum** by: the *patient* it refers to (identified by the patient's unique ID in column `PATIENT_ID`), the *date* it happened (in column `DATE`, recorded in a uniform format, here MM/DD/YYYY), its *duration* in days (in column `DURATION`); **optionally** we can also have info concerning the prescribed daily quantity or *dose* (column `PERDAY`) and the class or type of treatment (column `CATEGORY`). We will use this dataset throughout this vignette.
 
 Alternatively, the app may be made available on a **remote server**, such as on <https://www.shinyapps.io/>, in which case it can be accessed simply by pointing the web browser to the app's internet address. 
 
@@ -82,7 +82,7 @@ Please note that launching the App with no parameters, opens with a different sc
 ## The App's User Interface (UI) {#ui-overview}
 
 The App's UI has several main elements which can be seen below.
-Most UI elements have **tooltips** that show up on hovering the mouse over the element and that offer specific information (but please note that these tooltips might need some time before shogin up).
+Most UI elements have **tooltips** that show up on hovering the mouse over the element and that offer specific information (but please note that these tooltips might need some time before showing up).
 
 ![**Overview of the User Interface.** Screenshot (App is running in Firefox on macOS 10.13) of some of the main UI elements (dotted black ellipses or rectangles identified with black numbers). **1** is a button that opens a box giving information about the App. **2** is a button that exist the App cleanly (i.e., stops and disconnects the session). **3** is the main plotting area which displays the current plot. **4** shows some of the UI elements controlling the plot (element 4) size. **5** is the area where various parameters can be modified. **6** opens UI elements specific for saving the current plot to file. **7** shows the `R` code that can be used to generate the current plot. **8** gives access to UI controls that allow the computation of the current CMA for many more patients and saving the results to file. **9** displays messages, warnings or errors that might have been geenrated while constructing the current plot.](shiny-overview.jpg)
 
@@ -95,21 +95,21 @@ Clicking on the **About** button (element **1** in [the overview figure](#ui-ove
 ### Cleanly *exiting* the App
 
 It is recommended to cleanly exit the App by clicking the **Exit...** button (element **2** in [the overview figure](#ui-overview)), as simply closing the browser will *not* normally also stop the `R` process running in the background.
-Please note that currently, exiting the App will not also close the brower window or tab in which the App was running...
+Please note that currently, exiting the App will not also close the browser window or tab in which the App was running...
 
 
 ### The *plotting area* (and the *messages*)
 
-The current plot is displayed in the UI element **3** (in [the overview figure](#ui-overview)), a *canvas* that can be resized using the UI elements **4** in [the overview figure](#ui-overview) (see also below) and which, when too big, can be scrolled horizontally and vertically at will.
-This canvas is currently *passive* in the sense that it simply displayes a plot which which interaction is possible only using the other elementes of the UI, but almost all aspects of this plot can be tweaked using controls from the *left-hand side vertical panel* (element **5** in [the overview figure](#ui-overview); see details below).
+The current plot is displayed in the UI element **3** (in [the overview figure](#ui-overview)), a *canvas* that can be re-sized using the UI elements **4** in [the overview figure](#ui-overview) (see also below) and which, when too big, can be scrolled horizontally and vertically at will.
+This canvas is currently *passive* in the sense that it simply displays a plot which which interaction is possible only using the other elements of the UI, but almost all aspects of this plot can be tweaked using controls from the *left-hand side vertical panel* (element **5** in [the overview figure](#ui-overview); see details below).
 
-While the interpretation of these plots should be relatively intuitive, it is nevertheless detailed in the [AdhereR: Adherence to Medications](https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html) vignette.
+While the interpretation of these plots should be relatively intuitive, it is nevertheless detailed in the [AdhereR: Adherence to Medications](https://cran.r-project.org/package=AdhereR/vignettes/AdhereR-overview.html) vignette.
 
-Element **9** in [the overview figure](#ui-overview) displays most of the <span style='color: blue;'>information messages</span>, <span style='color: green;'>warnings</span> and <span style='color: red;'>errors</span> generated during the plotting process (please note that currently some messages, warnings and errors migth not be captured and only shown in the `R` console).
-For example, here, the informational message <span style='color: blue;'>Plotting patient ID '1' with CMA 'CMA9' Plotting patient ID '2' with CMA 'CMA9'</span> measn that the computation and plotting of `CMA9` for patients with IDs `1` and `2` was successfull.
+Element **9** in [the overview figure](#ui-overview) displays most of the <span style='color: blue;'>information messages</span>, <span style='color: green;'>warnings</span> and <span style='color: red;'>errors</span> generated during the plotting process (please note that currently some messages, warnings and errors might not be captured and only shown in the `R` console).
+For example, here, the informational message <span style='color: blue;'>Plotting patient ID '1' with CMA 'CMA9' Plotting patient ID '2' with CMA 'CMA9'</span> means that the computation and plotting of `CMA9` for patients with IDs `1` and `2` was successful.
 
 Elements **4** in [the overview figure](#ui-overview) allow the control of the horizontal and vertical dimensions of the plot **3** either coupled (i.e., keeping the current width--to-height ratio), when the **Keep ratio** switch is **ON**, or independently of each other, when the switch is **OFF** (in which case a new slider controlling the plot height appears).
-The interaction with the slider(s) can be done either with mouse or with the arror keys.
+The interaction with the slider(s) can be done either with mouse or with the arrow keys.
 
 Please note that there is a minimum size requirement for a plot to be displayed, otherwise an error of the type
 
@@ -132,7 +132,7 @@ These new UI elements (**10**) allow:
   - the type of image, currently *jpg* (JPEG), *png* (PNG), *tiff* (TIFF), *eps* (Encapsulated Postscript) and *pdf* (PDF) -- usually TIFF and EPS are accepted for publication
   - at a given *resultion* in dots-per-inch (DPI) -- used only by the raster formats JPEG, PNG and TIFF (usually a minimum of 300 DPI are needed for publication).
   
-By pressing the **Save plot** button, the user can select the location and filename (relative to the local machine) under which the plot will be exported.
+By pressing the **Save plot** button, the user can select the location and file name (relative to the local machine) under which the plot will be exported.
 
 
 ### Viewing, copying and using the *`R` code* that would produce the current plot
@@ -262,7 +262,7 @@ if( !is.null(cma) ) # if the CMA was computed ok
 }
 ```
 
-This code is pretty much ready to be run, except for some issues that might surround accessing the actual data used for plotting: the user is reminded of these throuhg the <span style="color: yellow; background-color: red; font-weight: bold; font-style: italic;">yellow-on-red bold italic</span> highlighting of `DATA` (not shown in the code listing above).
+This code is pretty much ready to be run, except for some issues that might surround accessing the actual data used for plotting: the user is reminded of these through the <span style="color: yellow; background-color: red; font-weight: bold; font-style: italic;">yellow-on-red bold italic</span> highlighting of `DATA` (not shown in the code listing above).
 In a nutshell (for details, see below), if (a) the user interactively uses the App to load or connect to a data source (such as an external file or an SQL database), then the identity of this data source is known (the file name or the database location), but if (b) the data source was passed to the `plot_interactive_cma()` function as the `data` argument, the App cannot know how this data source was named (and this "name" might not even exist if, for example, the data was created on-the-fly while calling the `plot_interactive_cma()` function).
 Wickedly, even in case (a), it is generally unsafe to assume that the data source will stay the same (or will be accessible in the same way) in the future.
 Thus, while we provide as much info about the data source used to produce the current plot as possible, we also warn the user to be careful when running this code!
@@ -272,30 +272,30 @@ Thus, while we provide as much info about the data source used to produce the cu
 
 By switching the UI element **8** (in [the overview figure](#ui-overview)) **Compute CMA for several patients...** to **ON**, the user unlocks a new set of UI elements that allow the computation of the currently defined `CMA` for more patients and the export of the results to an external file.
 
-First, it is important to highlight that the App is *not* intended for heavy computations, which explains why we are currently limiting this CMA computation to at most **100 patients**, at most **5000 events** across all patients (if more patients or events are selected, the computation will be done for only the first 100 and 5000, respectively) and for at most **5 minutes** of running time (after which the computation is atumatically stopped).
-If seriously heavy computation is needed, we recommend the use of the appropriate `CMA()` functions from and `R` session or script, which allow many types of parallel processing and the use of several types of data sources with very fine-grained control, as described in the vignettes [AdhereR: Adherence to Medications](https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html) and [Using AdhereR with various database technologies for processing very large datasets](https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_with_databases.pdf).
+First, it is important to highlight that the App is *not* intended for heavy computations, which explains why we are currently limiting this CMA computation to at most **100 patients**, at most **5000 events** across all patients (if more patients or events are selected, the computation will be done for only the first 100 and 5000, respectively) and for at most **5 minutes** of running time (after which the computation is automatically stopped).
+If seriously heavy computation is needed, we recommend the use of the appropriate `CMA()` functions from and `R` session or script, which allow many types of parallel processing and the use of several types of data sources with very fine-grained control, as described in the vignettes [AdhereR: Adherence to Medications](https://cran.r-project.org/package=AdhereR/vignettes/AdhereR-overview.html) and [Using AdhereR with various database technologies for processing very large datasets](https://cran.r-project.org/package=AdhereR/vignettes/adherer_with_databases.pdf).
 The `R` code needed to compute the current CMA can be accessed through the **Show R code** button (UI element **7**).
 
 The patients for which the computation of the CMA is to be performed can be done in two main ways:
 
-  a. by **individually** selecting patients by their IDs, through a multiple selection combobox (element **11** in the figure below):
+  a. by **individually** selecting patients by their IDs, through a multiple selection dropdown list (element **11** in the figure below):
   
 ![**Selecting patients *individually* for the computation of CMA.**](shiny-computecma-individually.jpg)
 
-  b. by selecting a continuous **range** of patients using two sliders (element **15** in the figure below) which define a set of *positions* in a list (element **14** in the figure below); this list can contain the patient IDs in their original order in the data source, or can have them sorted ascendingly or descendingly by ID (element **13** in the figure below).
+  b. by selecting a continuous **range** of patients using two sliders (element **15** in the figure below) which define a set of *positions* in a list (element **14** in the figure below); this list can contain the patient IDs in their original order in the data source, or can have them sorted in ascending or descending order by ID (element **13** in the figure below).
 
 ![**Selecting patients *by range* of positions in a list for the computation of CMA.** In this example, we ordered the patients descreasingly by ID (using the combobox **13**), resulting in a mapping of positions (#) to ID as shown in the list **14**, where patient with ID "100" is on psition 1, patient "99" on position 2, etc. The sliders **15** define the range of positions (#) 3 to 24, which means that we selected patients with IDs "98", "97", "96" ... "78" and "77".](shiny-computecma-range.jpg)
 
 These two ways of selecting patients should be flexible enough for cover most cases of (semi-)interactive use; for more patients and/or the selection of patients based on more complex criteria, we suggest the use of the `R` code in a script.
 
-After patients have been selected, the user can press the **Compute CMA** button (UI element **12**) to access a specialised dialog box (see figure below) where the CMA computation can be started, its progress monitored, or stopped, and from where the results can be exported to file.
+After patients have been selected, the user can press the **Compute CMA** button (UI element **12**) to access a specialized dialog box (see figure below) where the CMA computation can be started, its progress monitored, or stopped, and from where the results can be exported to file.
 
 ![**Starting, stopping and watchin the progress of CMA computation for several patients.** The list of patients is given in UI element **16**, and the progress of the computation is tracked by theprogress bar and individual success report (UI elements **17**). The button **Save results (as TSV)** allows the user to select a file where the results will be exported as a TAB-separated CSV file.](shiny-computecma-dialog.jpg)
 
 
 ### Setting *parameters*
 
-The left-hand panel has two tabs: *Params* and *Data*, and we are focusing here on *Params*, which contains various parameters customising the computed CMA and the plotting of the results.
+The left-hand panel has two tabs: *Params* and *Data*, and we are focusing here on *Params*, which contains various parameters customizing the computed CMA and the plotting of the results.
 UI element **5** in [the overview figure](#ui-overview) shows part of this panel, but the following principles apply:
 
   - the top **Dataset info** button gives access to information about the current data source such as its name, type, structure and the five important columns:
@@ -307,7 +307,7 @@ UI element **5** in [the overview figure](#ui-overview) shows part of this panel
   
 ![**Folding and unfolding the contents of a section.** The section <b style='color: darkblue'>Follow-up window (FUW)</b> with content folded (hidden) on the left, and unfolded (visible) on the right.](shiny-foldsections.jpg)
 
-  - some sections may appear or disappear depending on other circumstances, such as the type of CMA selected (e.g., <b style='color: darkblue'>Define episodes</b> exists only for *CMA per episodes*) or the optional columns being defined (e.g., <b style='color: darkblue'>Show dose</b> exists only if the daily dose column ws defined).
+  - some sections may appear or disappear depending on other circumstances, such as the type of CMA selected (e.g., <b style='color: darkblue'>Define episodes</b> exists only for *CMA per episodes*) or the optional columns being defined (e.g., <b style='color: darkblue'>Show dose</b> exists only if the daily dose column was defined).
   
 We will now go through all sections one by one.
 
@@ -316,13 +316,13 @@ We will now go through all sections one by one.
 
 The <b style='color: darkblue'>General settings</b> section is always visible and allows the selection of:
 
-  - **CMA type**: the type of CMA to compute, which can be (please see [Dima & Dediu, 2017](#Ref-Dima2017), and the vignette [AdhereR: Adherence to Medications](https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html) for more details):
+  - **CMA type**: the type of CMA to compute, which can be (please see [Dima & Dediu, 2017](#Ref-Dima2017), and the vignette [AdhereR: Adherence to Medications](https://cran.r-project.org/package=AdhereR/vignettes/AdhereR-overview.html) for more details):
   
     - **simple**: one of the "simple" CMAs, currently `CMA0` tot `CMA9`,
     - **per episode**: computes one of the "simple" CMAs repeatedly for each treatment episode,
     - **sliding window**: computes one of the "simple" CMAs repeatedly for a set of sliding windows
     
-  - **CMA to compute**: the "simple" CMA to compute, either by itself (for **CMA type** == **simple**) or iteratively (for the other two "complex" types); please note that by defintion `CMA0` cannot be used with "complex" CMAs (which explains why it cannot be selected in these cases)
+  - **CMA to compute**: the "simple" CMA to compute, either by itself (for **CMA type** == **simple**) or iteratively (for the other two "complex" types); please note that by definition `CMA0` cannot be used with "complex" CMAs (which explains why it cannot be selected in these cases)
   
   - **Patient(s) to plot**: the list of patient IDs, selected from a drop-down list (which allows multiple selections) containing all the patient IDs in the current data source (at least one patient must be selected, otherwise an error is generated)
   
@@ -331,7 +331,7 @@ Depending on these selections the plot may change or various types of errors or 
 
 #### <b style='color: darkblue'>Follow-up window (FUW)</b> and <b style='color: darkblue'>Observation window (OW)</b>
 
-These two sectios are very similar and allow the definition of the follow-up (FUW) and observation (OW) windows by specifying:
+These two sections are very similar and allow the definition of the follow-up (FUW) and observation (OW) windows by specifying:
 
   - their **start**: this can be either:
   
@@ -389,8 +389,8 @@ This section is shown only if there's more than one patient selected, and contro
 
 This section controls the amount of temporal information displayed (on the horizontal axis):
 
-  - **Duration (in days)**: the periond to show (in days); this is independent of the length of the FUW, OW or the events actually displayed and can be used to zoom-in or zoom-out; if `0` it is autmatically computed so as all the events in the plot are shown
-  - **Show period as**: if "days", it displayes on the horizontal axis the number of days since the first plotted event on the horizontal axis; if "dates", it displayes the actual calendar dates
+  - **Duration (in days)**: the period to show (in days); this is independent of the length of the FUW, OW or the events actually displayed and can be used to zoom-in or zoom-out; if `0` it is automatically computed so as all the events in the plot are shown
+  - **Show period as**: if "days", it displays on the horizontal axis the number of days since the first plotted event on the horizontal axis; if "dates", it displays the actual calendar dates
   -- **Period (in days)**: the interval (in days) at which info is shown on the horizontal axis and vertical dashed lines are drawn on the plot
 
 
@@ -404,7 +404,7 @@ This section is shown for all CMAs except `CMA0` and controls how the CMA estima
 
 #### <b style='color: darkblue'>Show dose</b>
 
-This section is shown only a *daily dose* column is defined for the current data seource and controls how the dose is visually shown (if at all):
+This section is shown only a *daily dose* column is defined for the current data source and controls how the dose is visually shown (if at all):
 
   - **Print it?**: print the dosage (i.e., the actual numeric values) next to each event; if so:
   
@@ -439,8 +439,8 @@ This section controls many aspects of the visual presentation of the plots, incl
 
   - **Grayscale?**: when **ON**, it makes the plots use only shades of gray (and hides many other controls in this section), but when **OFF**, it allows various colors to be used
   - **Missing data color**: the colors of missing data
-  - **Unspec. cat. label**: the lable to use for an unspecified treatment class (free text)
-  - **Treatment palette**: shown only if the *treatment class* column was defined, allows the selection of a *color palette* from which particular colors for the actual treatment classes will be picked[^2]; currently the available palettes are: *rainbow*, *heat.colors*, *terrain.colors*, *topo.colors*, *cm.colors*, *magma*, *inferno*, *plasma*, *viridis*, *cividis* (the last two are colour-bliend-friendly[^3])
+  - **Unspec. cat. label**: the label to use for an unspecified treatment class (free text)
+  - **Treatment palette**: shown only if the *treatment class* column was defined, allows the selection of a *color palette* from which particular colors for the actual treatment classes will be picked[^2]; currently the available palettes are: *rainbow*, *heat.colors*, *terrain.colors*, *topo.colors*, *cm.colors*, *magma*, *inferno*, *plasma*, *viridis*, *cividis* (the last two are color-blind-friendly[^3])
   - **Event line style**: controls the line style for plotting the events, and can be:
   
 ![**The possible line styles** used for the event lines.](shiny-linestyles.jpg)
@@ -468,9 +468,9 @@ This section controls several advanced settings:
 
 ### Selecting/changing the *data source* {#ui-datasource}
 
-If the interactive App was *started with a given data source* passed through the parameters to the `plot_interactive_cma(...)` arguments, this data source (if valid and well-defined) is automatically used, but it can be changed at any time (as desribed below). 
+If the interactive App was *started with a given data source* passed through the parameters to the `plot_interactive_cma(...)` arguments, this data source (if valid and well-defined) is automatically used, but it can be changed at any time (as described below). 
 However, if the App was starting *without any data source* (i.e., `plot_interactive_cma()`), the user is forced to select a valid data source before being able to plot anything.
-The actual processes of selecting an intial data source or chaning it later are identical, so we discuss here the case of no initial data source: when `plot_interactive_cma()` was invoked, the App is opened withut any plotting and messagin area at all and the **Data** tab in the left-hand panel is automatically selected and the **Params** tab contains only a warning message:
+The actual processes of selecting an initial data source or changing it later are identical, so we discuss here the case of no initial data source: when `plot_interactive_cma()` was invoked, the App is opened without any plotting and messaging area at all and the **Data** tab in the left-hand panel is automatically selected and the **Params** tab contains only a warning message:
 
 ![**Starting the App with no data source.** The highlighted panel on the left (UI element **18**) is now open at the **Data** tab, which allows the interactive selection of various types of data sources.](shiny-data-empty.jpg)
 
@@ -478,7 +478,7 @@ The actual processes of selecting an intial data source or chaning it later are 
 
 The **Data** panel allows us to interactively select and change on-the-fly the data set to be used; currently, this can be:
 
-  - a data set **already in memory** -- basically, an object derived from `data.frame` (this includes, thus, things such as `data.tables`) that is already in the *global environment* of the current `R` session (pleasee see for example, [here](http://adv-r.had.co.nz/Environments.html), for details about environments, but our purposes here, this contains the "stuff" currently loaded in `R`'s memory),
+  - a data set **already in memory** -- basically, an object derived from `data.frame` (this includes, thus, things such as `data.tables`) that is already in the *global environment* of the current `R` session (please see for example, [here](http://adv-r.had.co.nz/Environments.html), for details about environments, but our purposes here, this contains the "stuff" currently loaded in `R`'s memory),
   - data stored in a (local) **file** -- the App can handle various file format, ranging from the ubiquitous Comma-Separated Values (CSV) to Excel, OpenDocument, SPSS, Stat and SAS files (within limits), or
   - a live connection to an **SQL database** -- the SQL server may be local or remote and, currently, can be [SQLite](https://www.sqlite.org/index.html) or [MySQL](https://www.mysql.com/)/[MariaDB](https://mariadb.org/) (but more relational database technologies/providers can be relatively easily added).
   
@@ -505,7 +505,7 @@ If the dataset is not the desired one, it can be replaced with anything else usi
 
 ![**Selecting the "important" columns -- here, the one contaning the Patient IDs -- from the *in-memory* dataset `med.events`.** Please note that the list give extra summary info about the columns in the dataset (namely, its name, type, and first few values). The App automatically maps the first three columns in the dataset to the first three required columns (**Patient ID column**, **Event date column** and **Event duration column**) but this is most probably wrong and no type checks are done at this time. The "optional" columns (**Daily dose column** and **Treatment class column** may be left undefined by selecting the *[not defined]* value. **Date format** is different, being a free text field where the format of the dates in the dates column must be defined (please see, for example [here](https://www.statmethods.net/input/dates.html), for how this format looks like).](shiny-data-inmemory-selectcolumns.jpg)
 
-Pleae note that, at this time, the dataset is *not* selected to be used for plotting: this is an explicit action done by pressing the **Validate & use!** button at the bottom, which does perform various checks (such as that each column is used at most once and that the types more or less fit the expected type and format, among others) and, if ok, makes this dataset the one to be used for plotting.
+Please note that, at this time, the dataset is *not* selected to be used for plotting: this is an explicit action done by pressing the **Validate & use!** button at the bottom, which does perform various checks (such as that each column is used at most once and that the types more or less fit the expected type and format, among others) and, if OK, makes this dataset the one to be used for plotting.
   
   
 #### **Load from file**
@@ -517,7 +517,7 @@ When selecting *load from file* in the **Datasource type** list, the panel becom
 
 The App supports loading data from several file formats:
 
-  - **Comma/TAB-separated (.csv; .tsv; .txt)**: this is the default format and referes to a class of open and flexible file formats where tabular data is stored as rows of values separated by a pre-defined delimiter; the best knowen are [Comma-Separated Values (CSV)](https://en.wikipedia.org/wiki/Comma-separated_values) and [TAB-Separated Values (TSV)](https://en.wikipedia.org/wiki/Tab-separated_values) formats, but the App allows a lot of flexibility by defining:
+  - **Comma/TAB-separated (.csv; .tsv; .txt)**: this is the default format and refers to a class of open and flexible file formats where tabular data is stored as rows of values separated by a pre-defined delimiter; the best known are [Comma-Separated Values (CSV)](https://en.wikipedia.org/wiki/Comma-separated_values) and [TAB-Separated Values (TSV)](https://en.wikipedia.org/wiki/Tab-separated_values) formats, but the App allows a lot of flexibility by defining:
   
     - the **Field separator** can be: the *[`TAB`]* character (\\t), the *comma* (,), one or more *whitespaces*, the *semicolon* (;) or the *colon* (:)
     - the individual values can be quoted (or not) using the **Quote character**: *[none]* (no quoting of values), *single quotes* (') or *double quotes* (")
@@ -526,26 +526,26 @@ The App supports loading data from several file formats:
     - if the 1^st^ row of the file represents the header (containing the column names) or not (**Header 1^st^ row**)
     
   - **Serialized R object (.rds)**: this loads data (such as objects derived from `data.frame`) previously exported from `R` using `readRDS()` (usually as ".rds")
-  - **Open Document Spreadsheet (.ods)** and **Microsoft Excel (.xls; .xlsx)** loads data from these widespread formats, used by office suites such as [LibreOffice](https://www.libreoffice.org/)/[OpenOffice](https://www.openoffice.org/)'s `Calc` and [Micrsoft Office](https://www.office.com/)'s `Excel` programs, among others; for both these formats, the user can specify the particular sheet to be loaded for files contaning more than one (**Which sheet to load?**)
+  - **Open Document Spreadsheet (.ods)** and **Microsoft Excel (.xls; .xlsx)** loads data from these widespread formats, used by office suites such as [LibreOffice](https://www.libreoffice.org/)/[OpenOffice](https://www.openoffice.org/)'s `Calc` and [Micrsoft Office](https://www.office.com/)'s `Excel` programs, among others; for both these formats, the user can specify the particular sheet to be loaded for files containing more than one (**Which sheet to load?**)
   - **SPSS (.sav; .por)**, **SAS Transport data file (.xpt)**, **SAS sas7bdat data file (.sas7bdat)** and **Stata (.dta)**: these are file formats exported by the popular statistical platforms [IBM `SPSS`](https://www.ibm.com/analytics/spss-statistics-software), [`SAS`](https://www.sas.com) and [`Stata`](https://www.stata.com/)
 
 Please note that while **Comma/TAB-separated (.csv; .tsv; .txt)**, **Serialized R object (.rds)** and **Open Document Spreadsheet (.ods)** should be imported without issues, for the others there might limitations and fringe cases.
 
 After the file format has been selected, the user can use the **Load from file** control (its **Selecte** button) to browse for the desired file and upload it.
-Basic checks might be peformed and a file mght be rejected, but if the loading was successful, a new set of UI elements becomes visible.
+Basic checks might be performed and a file might be rejected, but if the loading was successful, a new set of UI elements becomes visible.
 These elements are virtually identical to those used for [in-memory datasets](#ui-inmemory).
   
   
 #### Use an **SQL database**
 
-This allows the access to data stored in standard [Relational Database Management Systems (RDBMS's)](https://en.wikipedia.org/wiki/Relational_database_management_system) which use the [Structured Query Language (SQL)](https://en.wikipedia.org/wiki/SQL) -- for more info about the facilities offered by `AdhereR`, please see the [Using AdhereR with various database technologies for processing very large datasets](https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_with_databases.pdf) vignette.
+This allows the access to data stored in standard [Relational Database Management Systems (RDBMS's)](https://en.wikipedia.org/wiki/Relational_database_management_system) which use the [Structured Query Language (SQL)](https://en.wikipedia.org/wiki/SQL) -- for more info about the facilities offered by `AdhereR`, please see the [Using AdhereR with various database technologies for processing very large datasets](https://cran.r-project.org/package=AdhereR/vignettes/adherer_with_databases.pdf) vignette.
 
 Currently, the App supports [`SQLite`](https://sqlite.org/index.html), a small engine designed to be embedded in larger applications and which stored the data in normal files, and [`MySQL`](https://www.mysql.com/)/[`MariaDB`](https://mariadb.org/), which are widely-used, full-featured free and open-source RDBMSs.
 
-While **SQLite** is inteneded only as a demo of the App's capabilities and uses an in-memory database with a single table that contains a verbatim copy of the `med.events` example dataset, **MySQL/MariaDB** allows the use of actual databases, local or over the internet.
+While **SQLite** is intended only as a demo of the App's capabilities and uses an in-memory database with a single table that contains a verbatim copy of the `med.events` example dataset, **MySQL/MariaDB** allows the use of actual databases, local or over the internet.
 Except for the selection of the database, the UI for the two is identical, so we will only discuss here the **MySQL/MariaDB** case
 
-We can connect to a local or remote server, and we can (optinally) define the following:
+We can connect to a local or remote server, and we can (optionally) define the following:
 
   - **Host name/address**: the fully qualified host name or IP address of the server (if *[none]* or *localhost*, the database is stored on the local machine)
   - **TCP/IP port number**: the port number (*0* for default)
@@ -554,7 +554,7 @@ We can connect to a local or remote server, and we can (optinally) define the fo
 
 ![**Inputting the info needed to connect to a remote MySQL server.** We use here a MySQL database contaning the `med.events` sample dataset hosted on the internet.](shiny-data-sql-mysql.jpg)
 
-When clicking the **Connect!** button, the App attempts to connect the server, authenticate and access the desired database: if everything's ok, it fetches basic information over all the tables/views in the database (avoiding thus unnecessary traffic) and displayes it:
+When clicking the **Connect!** button, the App attempts to connect the server, authenticate and access the desired database: if everything's OK, it fetches basic information over all the tables/views in the database (avoiding thus unnecessary traffic) and displays it:
 
 ![**Basic information about an SQL database.** This shows, for each table/view in the database, the columns with their name, type and first few values. The same info is accessible by clicking on the **Peek at database...** button.](shiny-data-sql-mysql-peek.jpg)
 
@@ -576,7 +576,7 @@ New UI elements become visible, most being virtually identical to those used for
 
 [^2]: We have decided against directly mapping each class to a particular color and, instead, automatically mapping them using a palette, because this accommodates more flexibly a varying number (or grouping) of classes; the mapping classes → colors is based on the *alphabetic order* of the class names.
 
-[^3]: See for example [here](https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html) for a comparison and discussion.
+[^3]: See for example [here](https://cran.r-project.org/package=viridis/vignettes/intro-to-viridis.html) for a comparison and discussion.
 
 
 

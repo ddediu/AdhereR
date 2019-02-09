@@ -1,3 +1,27 @@
+# AdhereR 0.4
+  
+## New features
+
+  - major improvements to the interactive Shiny plotting, now a fully self-contained point-and-click user interface/App for plotting and estimating CMA from a variety of data sources
+  
+  - new vignette *AdhereR: Interactive plotting (and more) with Shiny* added for explaining the new Shiny App
+
+  - now can plot dose as text and/or line width
+  
+  - show a warning if the user calls CMA functions with arguments that are ignored by that particular CMA (useful to make the user aware that, for example, carry-over will not be considered by `CMA1` and then wonder why asking for it didn't change anything)
+  
+  - various plotting improvements (axis lables, vertical lines, legend customisation, font sizes, customisable OW transparency, better computation of minimum size requirements)
+
+## Bug fixes
+
+  - `plot.CMA0` ignored grascale plotting for OW and FUW
+  
+  - small bugs fixed in `compute_event_durations()`
+  
+  - better handling of messages, warnings and error during plotting
+  
+  - uniformisation of plotting between all types of CMA
+
 # AdhereR 0.3.1
 
 ## Bug fixes

@@ -5,7 +5,7 @@ knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg");
 
 ## ---- echo=TRUE, results='asis'------------------------------------------
 # Load the AdhereR library:
-library(AdhereR.devel);
+library(AdhereR);
 
 # Select the two patients with IDs 37 and 76 from the built-in dataset "med.events":
 ExamplePats <- med.events[med.events$PATIENT_ID %in% c(37, 76), ];
