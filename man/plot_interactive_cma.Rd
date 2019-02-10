@@ -138,6 +138,7 @@ listing the column names, all the patient IDs, and for retreiving the actual
 data for a (set of) patient ID(s). A fully worked example is described in
 the vignette detailing the access to standard databases storaging the
 patient information.
+For more info please see the online vignette \url{https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html}.
 }
 \examples{
 \dontrun{
@@ -147,4 +148,7 @@ plot_interactive_cma(med.events,
                      event.duration.colname="DURATION",
                      event.daily.dose.colname="PERDAY",
                      medication.class.colname="CATEGORY");}
+}
+\seealso{
+The online vignette \url{https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html}.
 }

@@ -4295,6 +4295,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' \url{http://doi.org/10.1186/1472-6963-12-155}.
 #'
 #' @examples
+#' \dontrun{
 #' cma2 <- CMA2(data=med.events,
 #'              ID.colname="PATIENT_ID",
 #'              event.date.colname="DATE",
@@ -4312,7 +4313,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #'              observation.window.start=30,
 #'              observation.window.duration=365,
 #'              date.format="%m/%d/%Y"
-#'             );
+#'             );}
 #' @export
 CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   # Important columns in the data
@@ -9008,6 +9009,7 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #' data for a (set of) patient ID(s). A fully worked example is described in
 #' the vignette detailing the access to standard databases storaging the
 #' patient information.
+#' For more info please see the online vignette \url{https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html}.
 #'
 #' @param data Usually a \emph{\code{data.frame}} containing the events (prescribing
 #' or dispensing) used to compute the CMA. Must contain, at a minimum, the patient
@@ -9076,6 +9078,9 @@ plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
 #' the list of all patient IDs. Must be overridden when the data source is not
 #' derived from a \code{data.frame}.
 #' @param ... Extra arguments.
+#'
+#' @seealso The online vignette \url{https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html}.
+#'
 #' @return Nothing
 #' @examples
 #' \dontrun{
