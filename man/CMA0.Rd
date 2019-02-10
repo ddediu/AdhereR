@@ -8,12 +8,17 @@ CMA0(data = NULL, ID.colname = NA, event.date.colname = NA,
   event.duration.colname = NA, event.daily.dose.colname = NA,
   medication.class.colname = NA, carryover.within.obs.window = NA,
   carryover.into.obs.window = NA, carry.only.for.same.medication = NA,
-  consider.dosage.change = NA, followup.window.start = NA,
-  followup.window.start.unit = NA, followup.window.duration = NA,
-  followup.window.duration.unit = NA, observation.window.start = NA,
-  observation.window.start.unit = NA, observation.window.duration = NA,
-  observation.window.duration.unit = NA, date.format = "\%m/\%d/\%Y",
-  summary = "Base CMA object", suppress.warnings = FALSE, ...)
+  consider.dosage.change = NA, followup.window.start = 0,
+  followup.window.start.unit = c("days", "weeks", "months", "years")[1],
+  followup.window.duration = 365 * 2,
+  followup.window.duration.unit = c("days", "weeks", "months",
+  "years")[1], observation.window.start = 0,
+  observation.window.start.unit = c("days", "weeks", "months",
+  "years")[1], observation.window.duration = 365 * 2,
+  observation.window.duration.unit = c("days", "weeks", "months",
+  "years")[1], date.format = "\%m/\%d/\%Y",
+  summary = "Base CMA object", suppress.warnings = FALSE,
+  arguments.that.should.not.be.defined = NULL, ...)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the medication events
@@ -94,6 +99,10 @@ only the dates given as strings and not as \code{Date} objects).}
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{arguments.that.should.not.be.defined}{a \emph{list} of argument names
+and pre-defined valuesfor which a warning should be thrown if passed to the
+function.}
 
 \item{...}{other possible parameters}
 }

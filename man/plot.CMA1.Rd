@@ -16,23 +16,25 @@
   align.all.patients = FALSE, align.first.event.at.zero = TRUE,
   show.period = c("dates", "days")[2], period.in.days = 90,
   show.legend = TRUE, legend.x = "right", legend.y = "bottom",
-  legend.bkg.opacity = 0.5, cex = 1, cex.axis = 0.75, cex.lab = 1,
-  show.cma = TRUE, col.cats = rainbow,
-  unspecified.category.label = "drug", lty.event = "solid",
-  lwd.event = 2, pch.start.event = 15, pch.end.event = 16,
-  show.event.intervals = TRUE, col.na = "lightgray",
-  print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1,
-  CMA.plot.col = "lightgreen", CMA.plot.border = "darkgreen",
-  CMA.plot.bkg = "aquamarine", CMA.plot.text = CMA.plot.border,
-  highlight.followup.window = TRUE, followup.window.col = "green",
-  highlight.observation.window = TRUE,
+  legend.bkg.opacity = 0.5, legend.cex = 0.75, legend.cex.title = 1,
+  cex = 1, cex.axis = 0.75, cex.lab = 1, show.cma = TRUE,
+  col.cats = rainbow, unspecified.category.label = "drug",
+  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
+  pch.end.event = 16, show.event.intervals = TRUE,
+  col.na = "lightgray", print.CMA = TRUE, CMA.cex = 0.5,
+  plot.CMA = TRUE, CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
+  CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
+  CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
+  followup.window.col = "green", highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
-  observation.window.angle = -30, show.real.obs.window.start = TRUE,
-  real.obs.window.density = 35, real.obs.window.angle = 30,
-  print.dose = FALSE, cex.dose = 0.75,
+  observation.window.angle = -30, observation.window.opacity = 0.3,
+  show.real.obs.window.start = TRUE, real.obs.window.density = 35,
+  real.obs.window.angle = 30, print.dose = FALSE, cex.dose = 0.75,
   print.dose.outline.col = "white", print.dose.centered = FALSE,
   plot.dose = FALSE, lwd.event.max.dose = 8,
-  plot.dose.lwd.across.medication.classes = FALSE, bw.plot = FALSE)
+  plot.dose.lwd.across.medication.classes = FALSE, bw.plot = FALSE,
+  min.plot.size.in.characters.horiz = 10,
+  min.plot.size.in.characters.vert = 0.5, max.patients.to.plot = 100)
 
 \method{plot}{CMA2}(...)
 
@@ -77,7 +79,7 @@ the beginning; if \code{align.all.patients == TRUE}, \code{show.period} is
 taken as "days".}
 
 \item{period.in.days}{The \emph{number} of days at which the regular grid is
-drawn.}
+drawn (or 0 for no grid).}
 
 \item{show.legend}{\emph{Logical}, should the legend be drawn?}
 
@@ -90,8 +92,8 @@ drawn.}
 \item{legend.bkg.opacity}{A \emph{number} between 0.0 and 1.0 specifying the
 opacity of the legend background.}
 
-\item{cex, cex.axis, cex.lab}{\emph{numeric} values specifying the \code{cex}
-of the various types of text.}
+\item{cex, cex.axis, cex.lab, legend.cex, legend.cex.title, CMA.cex}{\emph{numeric}
+values specifying the \code{cex} of the various types of text.}
 
 \item{show.cma}{\emph{Logical}, should the CMA type be shown in the title?}
 
@@ -130,8 +132,8 @@ be plotted?}
 \item{highlight.observation.window}{\emph{Logical}, should the observation
 window be plotted?}
 
-\item{observation.window.col, observation.window.density, observation.window.angle}{Attributes of the observation window
-(colour, shading density and angle).}
+\item{observation.window.col, observation.window.density, observation.window.angle, observation.window.opacity}{Attributes of the observation window (colour, shading density, angle and
+opacity).}
 
 \item{show.real.obs.window.start, real.obs.window.density, real.obs.window.angle}{For some CMAs, the observation window might
 be adjusted, in which case should it be plotted and with that attributes?}
@@ -160,6 +162,14 @@ relative only to its medication class.}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
+
+\item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
+horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+referes to a single event.}
+
+\item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
+to plot.}
 }
 \description{
 Plots the event data and estimated CMA encapsulated in objects derived from

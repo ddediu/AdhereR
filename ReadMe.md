@@ -21,7 +21,7 @@ For what is new in each release, please see the `NEWS.md` file.
 Copyright (by period, in alphabetical order by family name; please see individual files for details) (C):
 
   - 2015-2018: Alexandra Dima, Dan Dediu
-  - 2018: Samuel Allemann, Alexandra Dima, Dan Dediu
+  - 2018-2019: Samuel Allemann, Alexandra Dima, Dan Dediu
 
 -----
 

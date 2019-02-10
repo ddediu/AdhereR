@@ -170,7 +170,7 @@ test_that("all medications for one patient are processed", {
                                                                  NA,
                                                                  "2057-05-12",
                                                                  "2057-02-26",
-                                                                 "2057-04-02",
+                                                                 "2057-03-04",
                                                                  "2057-10-05",
                                                                  "2057-12-10",
                                                                  "2057-03-03",
@@ -262,9 +262,9 @@ test_that("all dispensing events for one patient are processed", {
                                           return.data.table = TRUE)
 
   expect_equal(dim(test_results), c(111,14)) #correct number of lines
-  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 3), 3255.214) #correct sum of durations
+  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 3), 3269.214) #correct sum of durations
   expect_equal(round(min(test_results$DURATION, na.rm=TRUE), 0), 10) #correct minimum of durations
-  expect_equal(round(mean(test_results$DURATION, na.rm=TRUE), 4), 31.9139) #correct mean of durations
+  expect_equal(round(mean(test_results$DURATION, na.rm=TRUE), 4), 32.0511) #correct mean of durations
   expect_equal(round(max(test_results$DURATION, na.rm=TRUE), 0), 120) #correct maximum of durations
 })
 
@@ -289,7 +289,7 @@ test_that("events are processed without hospitalizations", {
                                           suppress.warnings = FALSE,
                                           return.data.table = TRUE)
   expect_equal(max(test_results$HOSP.DURATION, na.rm = T), 0) #hospital duration
-  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 0), 3255) #correct sum of durations
+  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 0), 3269) #correct sum of durations
 })
 
 # Test with force.init.presc = FALSE
@@ -364,7 +364,7 @@ test_that("consideration of dosage changes can be turned off", {
                                            suppress.warnings = FALSE,
                                            return.data.table = TRUE)
   expect_equal(dim(test_results1), c(111,13))
-  expect_equal(round(sum(test_results1$DURATION, na.rm=TRUE),0), 3275) #correct sum of durations
+  expect_equal(round(sum(test_results1$DURATION, na.rm=TRUE),0), 3289) #correct sum of durations
 })
 
 # Test with trt.interruption = discard
@@ -388,7 +388,7 @@ test_that("consideration of dosage changes can be turned off", {
                                            suppress.warnings = FALSE,
                                            return.data.table = TRUE)
 
-  expect_equal(round(sum(test_results1$DURATION, na.rm=TRUE),0), 3255) #correct sum of durations
+  expect_equal(round(sum(test_results1$DURATION, na.rm=TRUE),0), 3269) #correct sum of durations
 })
 
 # Test with trt.interruption = carryover
@@ -412,5 +412,5 @@ test_that("consideration of dosage changes can be turned off", {
                                            suppress.warnings = FALSE,
                                            return.data.table = TRUE)
 
-  expect_equal(round(sum(test_results1$DURATION, na.rm=TRUE),0), 3272) #correct sum of durations
+  expect_equal(round(sum(test_results1$DURATION, na.rm=TRUE),0), 3286) #correct sum of durations
 })

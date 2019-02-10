@@ -25,7 +25,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
                   "DURATION", "HOSP.DURATION",
                   "DAILY.DOSE", "TOTAL.DOSE",
                   "DISP.START", "DISP.END",
-                  "cum.duration", ".episode", ".out", ".hosp", "time.to.initialization", "first.disp", "first.presc",
+                  "cum.duration", ".episode", ".out", ".hosp", "time.to.initiation", "first.disp", "first.presc",
                   "debug.mode"));
 
 
@@ -154,33 +154,32 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' hospitalizations with the exact column names \emph{\code{DATE.IN}} and
 #' \emph{\code{DATE.OUT}}.
 #' @param ID.colname A \emph{string}, the name of the column in \code{disp.data},
-#' \code{presc.data}, and \code{hosp.data} containing the unique patient ID, or
-#' \code{NA} if not defined.
+#' \code{presc.data}, and \code{hosp.data} containing the unique patient ID.
 #' @param presc.date.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the prescription date (in the format given in
-#' the \code{date.format} parameter), or \code{NA} if not defined.
+#' the \code{date.format} parameter).
 #' @param disp.date.colname A \emph{string}, the name of the column in
 #' \code{disp.data} containing the dispensing date (in the format given in
-#' the \code{date.format} parameter), or \code{NA} if not defined.
+#' the \code{date.format} parameter).
 #' @param date.format A \emph{string} giving the format of the dates used in
 #' the \code{data} and the other parameters; see the \code{format} parameters
 #' of the \code{\link[base]{as.Date}} function for details (NB, this concerns
 #' only the dates given as strings and not as \code{Date} objects).
 #' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
 #' name(s) of the column(s) in \code{disp.data} and \code{presc.data} containing
-#' the classes/types/groups of medication, or \code{NA} if not defined.
+#' the classes/types/groups of medication.
 #' @param total.dose.colname A \emph{string}, the name of the column in
 #' \code{disp.data} containing the total dispensed dose as \code{numeric} (e.g.
-#' \code{500} for 10 tablets of 50 mg), or \code{NA} if not defined.
+#' \code{500} for 10 tablets of 50 mg).
 #' @param presc.daily.dose.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the daily prescribed dose as \code{numeric} (e.g.
-#' \code{50} for 50 mg once per day, or 25 for 50 mg once ever 2 days), or \code{NA}
-#' if not defined.
+#' \code{50} for 50 mg once per day, or 25 for 50 mg once ever 2 days).
 #' @param presc.duration.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the duration of the prescription as \code{numeric}
 #' or \code{NA} if duration is unknown.
 #' @param visit.colname A \emph{string}, the name of the column in
-#' \code{presc.data} containing the number of the visit, or \code{NA} if not defined.
+#' \code{presc.data} containing the number of the visit or a new column name if the
+#' prescribing data does not contain such a column.
 #' @param force.init.presc \emph{Logical}. If \code{TRUE} advance the date of the
 #' first prescription event to the date of the first dispensing event, if the first
 #' prescription event is after the first dispensing event for a specific medication.
@@ -260,15 +259,15 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 compute_event_durations <- function(disp.data = NULL,
                                     presc.data = NULL,
                                     hosp.data = NULL,
-                                    ID.colname = NA,
-                                    presc.date.colname = NA,
-                                    disp.date.colname = NA,
+                                    ID.colname,
+                                    presc.date.colname,
+                                    disp.date.colname,
                                     date.format = "%d.%m.%Y",
-                                    medication.class.colnames = NA,
-                                    total.dose.colname = NA,
-                                    presc.daily.dose.colname = NA,
-                                    presc.duration.colname = NA,
-                                    visit.colname = NA,
+                                    medication.class.colnames,
+                                    total.dose.colname,
+                                    presc.daily.dose.colname,
+                                    presc.duration.colname,
+                                    visit.colname,
                                     force.init.presc = FALSE,
                                     force.presc.renew = FALSE,
                                     split.on.dosage.change = TRUE,
@@ -400,7 +399,6 @@ compute_event_durations <- function(disp.data = NULL,
       process_dispensing_events <- function(event)
       {
         if(exists("debug.mode") && debug.mode==TRUE) print(paste("Event:", event));
-
         ## !Important: We assume that the prescribed dose can be accomodated with the dispensed medication
 
         #subset data to event
@@ -593,7 +591,7 @@ compute_event_durations <- function(disp.data = NULL,
               # check various parameters to decide wheter to stop or continue
 
               # check if end of supply is before end of episode OR last row of prescription episodes is reached
-              if( disp.end.date.i < end.episode | episode == tail(episodes,1) )
+              if( disp.end.date.i < end.episode | episode == last(episodes) )
               {
                 stop <- 1;
               } else {
@@ -738,15 +736,15 @@ compute_event_durations <- function(disp.data = NULL,
       med_presc[, `:=` (START.PRESC = get(presc.date.colname), # set prescription date as start date
                         END.PRESC = get(presc.date.colname))]; # set end date to prescription date ...
 
-      # connect episodes with limited durations with following episodes if they have the same dosage and matching end- and start dates.
       med_presc[,END.PRESC := shift(END.PRESC, type = "lead")]; # ... and shift end dates up by one
 
       # adjust end date if prescription duration is provided and change start date of following prescriptions
-      med_presc[!is.na(get(presc.duration.colname)), END.PRESC := DATE.PRESC + get(presc.duration.colname)];
-      end.limited.presc <- head(med_presc,-1)[!is.na(get(presc.duration.colname))]$END.PRESC; #don't include last prescription episode
-      med_presc[shift(!is.na(get(presc.duration.colname)), type = "lag"), START.PRESC := end.limited.presc];
+      med_presc[!is.na(get(presc.duration.colname)) & ((DATE.PRESC + get(presc.duration.colname)) <= END.PRESC | is.na(END.PRESC)), END.PRESC := DATE.PRESC + get(presc.duration.colname)]; # only if prescription ends before the current end prescription date!
+      end.limited.presc <- head(med_presc,-1)[!is.na(get(presc.duration.colname)) & ((DATE.PRESC + get(presc.duration.colname)) <= END.PRESC | is.na(END.PRESC))]$END.PRESC; #don't include last prescription episode
+      med_presc[shift(!is.na(get(presc.duration.colname)), type = "lag") & shift((DATE.PRESC + get(presc.duration.colname)) <= END.PRESC, type = "lag"), START.PRESC := end.limited.presc];
       med_presc[DATE.PRESC>START.PRESC & get(presc.daily.dose.colname) != 0,START.PRESC:=DATE.PRESC];
 
+      # combine episodes with set durations with previous episodes of same dosage but unrestricted duration
       med_presc[shift(get(presc.daily.dose.colname),type="lag")==get(presc.daily.dose.colname) & !is.na(shift(get(presc.duration.colname),type="lag")) & shift(END.PRESC, type = "lag") == START.PRESC, .episode := as.integer(.episode-1)];
 
       # fill in start and end dates by group
@@ -774,6 +772,7 @@ compute_event_durations <- function(disp.data = NULL,
       med_presc[,.episode := rleidv(med_presc, cols = c("START.PRESC", "END.PRESC"))];
 
       # add treatment interruptions
+
       med_presc <- rbind(med_presc,med_presc[shift(START.PRESC,type = "lead")!=END.PRESC][,c(presc.daily.dose.colname, "START.PRESC", ".episode") := list(0, END.PRESC, 0)]);
       setorder(med_presc, START.PRESC, END.PRESC);
       end.trt.interruptions <- med_presc[shift(END.PRESC,type = "lag")!=START.PRESC]$START.PRESC;
@@ -790,6 +789,7 @@ compute_event_durations <- function(disp.data = NULL,
           med_presc[1, START.PRESC := first_disp];
         }
       }
+
 
       ## calculate medication events for "simple" events not extending over multiple episodes or affected by hospitalizations
       # add prescription events to dispensing events
@@ -1034,7 +1034,7 @@ compute_event_durations <- function(disp.data = NULL,
 #'  of medication, as given by the  \code{medication.class.colnames} parameter.
 #'  \item \code{first.presc} the date of the first prescription event.
 #'  \item \code{first.disp} the date of the first dispensing event.
-#'  \item \code{time.to.initialization} the difference in days between the first
+#'  \item \code{time.to.initiation} the difference in days between the first
 #'  dispensing date and the  first prescription date.
 #' }
 #' @examples
@@ -1118,9 +1118,9 @@ time_to_initiation <- function(presc.data = NULL,
 
   dt_t2i <- merge(first_presc, first_disp, by = c(ID.colname, medication.class.colnames), all = TRUE);
 
-  dt_t2i[,time.to.initialization := as.numeric(first.disp-first.presc)];
+  dt_t2i[,time.to.initiation := as.numeric(first.disp-first.presc)];
 
-  # key by ID, medication class, and dispensing daste
+  # key by ID, medication class, and dispensing date
   setkeyv(dt_t2i, cols = c(ID.colname, medication.class.colnames, "first.disp"));
 
   if( !return.data.table )
