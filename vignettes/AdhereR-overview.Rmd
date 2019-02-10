@@ -116,7 +116,7 @@ Patient `76` had a more variable pattern, including medication, daily dosage and
 
 ```{r, echo=TRUE, results='asis'}
 # Load the AdhereR library:
-library(AdhereR.devel);
+library(AdhereR);
 
 # Select the two patients with IDs 37 and 76 from the built-in dataset "med.events":
 ExamplePats <- med.events[med.events$PATIENT_ID %in% c(37, 76), ];
@@ -653,24 +653,7 @@ During the exploratory phases of data analysis, it is sometimes extremely useful
 We have implemented such interactive plotting of medication histories and (simple and iterative) CMA estimates within [`RStudio`](https://www.rstudio.com) and outside it (using [`Shiny`](https://shiny.rstudio.com/); this is the default as it very flexible and independent of running `AdhereR` within `RStudio`) through the `plot_interactive_cma()` function. 
 This function is generic and interactive, and the most important argument is the dataset on which the plotting should be done.
 
-After the function was called, the user can select a patient (from a drop-down list of unique patient identifiers present in the dataset), a simple CMA (1 to 9), and can also change various parameters concerning to the FUW, OW, the particular simple CMA, the treatment episodes, or the sliding windows, as appropriate. 
-The effects of these choices are visualized in real time (see [Figure 14](#Figure-14) for a screenshot), but depending on the complexity of the computation and on the hardware, this might be more or less instantaneous.
-An example is given below (please note that you must run this code within `RStudio` and manually select the various parameters as shown in the screenshot in [Figure 14](#Figure-14)):
-
-```{r, echo=TRUE, eval=FALSE}
-# Interactive plotting of CMA per-treatment-episode
-# Please run only within RStudio!
-plot_interactive_cma(data=ExamplePats,
-                     cma.class="per episode",
-                     ID.colname="PATIENT_ID",
-                     event.date.colname="DATE",
-                     event.duration.colname="DURATION",
-                     event.daily.dose.colname="PERDAY",
-                     medication.class.colname="CATEGORY",
-                     date.format="%m/%d/%Y");
-```
-
-![<a name="Figure-14"></a>**Figure 14.** Interactive plotting within `RStudio` (screenshot).](./interactive-plotting.jpg "Interactive plotting (screenshot)")
+For more info, please see the vignette [AdhereR: Interactive plotting (and more) with Shiny](https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html) (please note that due to size resrictions, this vignette is not available offline).
 
 
 ## Computing event duration from prescription, dispensing, and hospitalization data

@@ -561,7 +561,7 @@ ui <- fluidPage(
                                                                   conditionalPanel(
                                                                     condition="input.print_dose",
 
-                                                                    div(title='Relative font size',
+                                                                    div(title='Relative font size (please note that a size of 0 is autmatically forced to 0.01)',
                                                                         numericInput(inputId="cex_dose",
                                                                                      label="Font size",
                                                                                      value=0.75, min=0.0, max=NA, step=0.25)),
@@ -633,12 +633,12 @@ ui <- fluidPage(
                                                                                   choices=c("bottom", "top"),
                                                                                   selected="bottom")),
 
-                                                                  div(title='Relative font size of legend title',
+                                                                  div(title='Relative font size of legend title (please note that a size of 0 is autmatically forced to 0.01)',
                                                                       numericInput(inputId="legend_cex_title",
                                                                                    label="Title font size",
                                                                                    value=1.0, min=0.0, max=NA, step=0.25)),
 
-                                                                  div(title='Relative font size of legend text and symbols',
+                                                                  div(title='Relative font size of legend text and symbols (please note that a size of 0 is autmatically forced to 0.01)',
                                                                       numericInput(inputId="legend_cex",
                                                                                    label="Text font size",
                                                                                    value=0.75, min=0.0, max=NA, step=0.25)),
@@ -876,15 +876,15 @@ ui <- fluidPage(
                                                                 # Font sizes:
                                                                 div(title='Font sizes',
                                                                     span(p("Font sizes"), style="color:RoyalBlue; font-weight: bold;")),
-                                                                div(title='Relative font size of general plotting text',
+                                                                div(title='Relative font size of general plotting text (please note that a size of 0 is autmatically forced to 0.01)',
                                                                     numericInput(inputId="cex",
                                                                                  label="General font size",
                                                                                  value=1.0, min=0.0, max=NA, step=0.25)),
-                                                                div(title='Relative font size of axis text',
+                                                                div(title='Relative font size of axis text (please note that a size of 0 is autmatically forced to 0.01)',
                                                                     numericInput(inputId="cex_axis",
                                                                                  label="Axis font size",
                                                                                  value=0.75, min=0.0, max=NA, step=0.25)),
-                                                                div(title='Relative font size of axis labels text',
+                                                                div(title='Relative font size of axis labels text (please note that a size of 0 is autmatically forced to 0.01)',
                                                                     numericInput(inputId="cex_lab",
                                                                                  label="Axis labels font size",
                                                                                  value=1.0, min=0.0, max=NA, step=0.25)),
@@ -979,7 +979,7 @@ ui <- fluidPage(
                                                                   conditionalPanel(
                                                                     condition="input.plot_cma",
 
-                                                                    div(title='Relative font size of CMA estimate for per episode and sliding windows',
+                                                                    div(title='Relative font size of CMA estimate for per episode and sliding windows (please note that a size of 0 is autmatically forced to 0.01)',
                                                                         numericInput(inputId="cma_cex",
                                                                                      label="CMA font size",
                                                                                      value=0.5, min=0.0, max=NA, step=0.25)),
@@ -1718,6 +1718,7 @@ server <- function(input, output, session) {
     #                 " patients from those you selected (totalling ",n.events.per.patient[n]," events)!\n"));
     #}
 
+    res <- NULL;
     try(res <- .GlobalEnv$.plotting.params$.plotting.fnc(data=.GlobalEnv$.plotting.params$data,
                                                          ID.colname=.GlobalEnv$.plotting.params$ID.colname,
                                                          event.date.colname=.GlobalEnv$.plotting.params$event.date.colname,
@@ -1770,7 +1771,7 @@ server <- function(input, output, session) {
                                                          align.all.patients=input$plot_align_all_patients,
                                                          align.first.event.at.zero=input$plot_align_first_event_at_zero,
                                                          show.legend=input$show_legend, legend.x=input$legend_x, legend.y=input$legend_y, legend.bkg.opacity=input$legend_bkg_opacity,
-                                                         legend.cex=input$legend_cex, legend.cex.title=input$legend_cex_title,
+                                                         legend.cex=max(0.01,input$legend_cex), legend.cex.title=max(0.01,input$legend_cex_title),
                                                          duration=ifelse(input$duration==0, NA, input$duration), # duration to plot
                                                          show.period=ifelse(length(input$patient) > 1 && input$plot_align_all_patients, "days", input$show_period), period.in.days=input$period_in_days, # period
                                                          bw.plot=input$bw_plot, # grayscale plotting
@@ -1789,19 +1790,19 @@ server <- function(input, output, session) {
                                                                        "cividis"       =viridisLite::cividis)[[input$col_cats]],
                                                          lty.event=input$lty_event, lwd.event=input$lwd_event, pch.start.event=as.numeric(input$pch_start_event), pch.end.event=as.numeric(input$pch_end_event),
                                                          col.continuation=input$col_continuation, lty.continuation=input$lty_continuation, lwd.continuation=input$lwd_continuation,
-                                                         cex=input$cex, cex.axis=input$cex_axis, cex.lab=input$cex_lab,
+                                                         cex=max(0.01,input$cex), cex.axis=max(0.01,input$cex_axis), cex.lab=max(0.01,input$cex_lab),
                                                          highlight.followup.window=input$highlight_followup_window, followup.window.col=input$followup_window_col,
                                                          highlight.observation.window=input$highlight_observation_window, observation.window.col=input$observation_window_col,
                                                          observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
                                                          observation.window.opacity=input$observation_window_opacity,
                                                          show.real.obs.window.start=input$show_real_obs_window_start,
                                                          real.obs.window.density=input$real_obs_window_density, real.obs.window.angle=input$real_obs_window_angle,
-                                                         print.CMA=input$print_cma, CMA.cex=input$cma_cex,
+                                                         print.CMA=input$print_cma, CMA.cex=max(0.01,input$cma_cex),
                                                          plot.CMA=input$plot_cma, CMA.plot.ratio=input$cma_plot_ratio / 100.0,
                                                          CMA.plot.col=input$cma_plot_col, CMA.plot.border=input$cma_plot_border, CMA.plot.bkg=input$cma_plot_bkg, CMA.plot.text=input$cma_plot_text,
                                                          show.event.intervals=input$show_event_intervals,
                                                          print.dose=input$print_dose,
-                                                         cex.dose=input$cex_dose,
+                                                         cex.dose=max(0.01,input$cex_dose),
                                                          print.dose.outline.col=input$print_dose_outline_col,
                                                          print.dose.centered=input$print_dose_centered,
                                                          plot.dose=input$plot_dose,
@@ -1946,7 +1947,7 @@ server <- function(input, output, session) {
   observeEvent(input$about_button,
   {
     # Get most of the relevant info from the DESCRIPTION file:
-    descr <- utils::packageDescription("AdhereR.devel");
+    descr <- utils::packageDescription("AdhereR");
     msg <- paste0("<img src='adherer-logo.png', align = 'left', style='font-size: x-large; font-weight: bold; height: 2em; vertical-align: baseline;'/>",
                   "<div style='width: 1em; display: inline-block;'/>",
                   "<hr/>",
@@ -1957,7 +1958,7 @@ server <- function(input, output, session) {
                   "<p align='justify'>",descr$Description,"</p>",
                   "<p><b>Website:</b> <a href='",descr$URL,"' target='_blank'>",descr$URL,"</a></p>",
                   "<p><b>Released under:</b> ",descr$License,"</p>",
-                  "<p><b>Citation:</b></p>",format(citation(package="AdhereR.devel"),style="html"),
+                  "<p><b>Citation:</b></p>",format(citation(package="AdhereR"),style="html"),
                   "<hr/>",
                   "<p>For more info <b>online</b> please visit the project's <a href='http://www.adherer.eu' target='_blank'>homepage</a> (<a href='http://www.adherer.eu' target='_blank'>www.adherer.eu</a>) and its source code repository on <a href='https://github.com/ddediu/AdhereR' target='_blank'>GitHub</a> (<a href='https://github.com/ddediu/AdhereR' target='_blank'>github.com/ddediu/AdhereR</a>). ",
                   "The official releases are hosted on <a href='https://cran.r-project.org/package=AdhereR' target='_blank'>CRAN</a> (<a href='https://cran.r-project.org/package=AdhereR' target='_blank'>https://cran.r-project.org/package=AdhereR</a>).",
@@ -1970,7 +1971,7 @@ server <- function(input, output, session) {
                   "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html' target='_blank'>AdhereR: Adherence to Medications</a></i> gives an overview of what AdhereR can do;</li>",
                   "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/calling-AdhereR-from-python3.html' target='_blank'>Calling AdhereR from Python 3</a></i> describes a mechanism that allows AdhereR to be used from programming languages and platforms other than R (in particular, from Python 3);</li>",
                   "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_with_databases.pdf' target='_blank'>Using AdhereR with various database technologies for processing very large datasets</a></i> described how to use AdhereR to process data stored in 'classic' SQL Relational Databases Management Systems (RDBMSs) or in Apache's Hadoop;</li>",
-                  "<li><i><b><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_interctive_plots.html' target='_blank'>Interactive plotting with Shiny</a></b></i> is probably the most relevant here.</li>",
+                  "<li><i><b><a href='https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html' target='_blank'>AdhereR: Interactive plotting (and more) with Shiny</a></b></i> is probably the most relevant here.</li>",
                   "</ul>",
                   "</ul>",
                   "</div>");
@@ -2191,8 +2192,8 @@ server <- function(input, output, session) {
                      "legend.x"=ifelse( is.numeric(input$legend_x), input$legend_x, paste0('"',input$legend_x,'"')),
                      "legend.y"=ifelse( is.numeric(input$legend_y), input$legend_y, paste0('"',input$legend_y,'"')),
                      "legend.bkg.opacity"=input$legend_bkg_opacity,
-                     "legend.cex"=input$legend_cex,
-                     "legend.cex.title"=input$legend_cex_title,
+                     "legend.cex"=max(0.01,input$legend_cex),
+                     "legend.cex.title"=max(0.01,input$legend_cex_title),
                      "duration"=ifelse(input$duration==0, NA, input$duration),
                      "show.period"=ifelse(length(input$patient) > 1 && input$plot_align_all_patients, '"days"', paste0('"',input$show_period,'"')),
                      "period.in.days"=input$period_in_days,
@@ -2208,9 +2209,9 @@ server <- function(input, output, session) {
                      "col.continuation"=paste0('"',input$col_continuation,'"'),
                      "lty.continuation"=paste0('"',input$lty_continuation,'"'),
                      "lwd.continuation"=input$lwd_continuation,
-                     "cex"=input$cex,
-                     "cex.axis"=input$cex_axis,
-                     "cex.lab"=input$cex_lab,
+                     "cex"=max(0.01,input$cex),
+                     "cex.axis"=max(0.01,input$cex_axis),
+                     "cex.lab"=max(0.01,input$cex_lab),
                      "highlight.followup.window"=input$highlight_followup_window,
                      "followup.window.col"=paste0('"',input$followup_window_col,'"'),
                      "highlight.observation.window"=input$highlight_observation_window,
@@ -2222,7 +2223,7 @@ server <- function(input, output, session) {
                      "real.obs.window.density"=input$real_obs_window_density,
                      "real.obs.window.angle"=input$real_obs_window_angle,
                      "print.CMA"=input$print_cma,
-                     "CMA.cex"=input$cma_cex,
+                     "CMA.cex"=max(0.01,input$cma_cex),
                      "plot.CMA"=input$plot_cma,
                      "CMA.plot.ratio"=input$cma_plot_ratio / 100.0,
                      "CMA.plot.col"=paste0('"',input$cma_plot_col,'"'),
@@ -2232,7 +2233,7 @@ server <- function(input, output, session) {
                      "plot.CMA.as.histogram"=ifelse(input$cma_class=="sliding window", !input$plot_CMA_as_histogram_sliding_window, !input$plot_CMA_as_histogram_episodes),
                      "show.event.intervals"=input$show_event_intervals,
                      "print.dose"=input$print_dose,
-                     "cex.dose"=input$cex.dose,
+                     "cex.dose"=max(0.01,input$cex.dose),
                      "print.dose.outline.col"=paste0('"',input$print_dose_outline_col,'"'),
                      "print.dose.centered"=input$print_dose_centered,
                      "plot.dose"=input$plot_dose,
@@ -2253,7 +2254,7 @@ server <- function(input, output, session) {
                                                      highlight::highlight(parse.output=parse(text=r_code),
                                                                           renderer=highlight::renderer_html(document=TRUE,
                                                                                                             stylesheet=file.path(system.file('interactivePlotShiny',
-                                                                                                                                             package='AdhereR.devel'),
+                                                                                                                                             package='AdhereR'),
                                                                                                                                  "r-code-highlight.css")),
                                                                           show_line_numbers=FALSE,
                                                                           output=NULL),
@@ -3235,7 +3236,7 @@ server <- function(input, output, session) {
       } else
       {
         # Simply connect to the table:
-        res <- tryCatch(d <- DBI::con <- dbConnect(RSQLite::SQLite(), input$dataset_from_sqlite_database_name),
+        res <- tryCatch(d <- DBI::dbConnect(RSQLite::SQLite(), input$dataset_from_sqlite_database_name),
                         error=function(e) e, warning=function(w) w);
         if( is.null(d) || inherits(res, "error") )
         {
@@ -3778,7 +3779,7 @@ server <- function(input, output, session) {
                                   HTML(" button in the main window (please ignore the plotting code).<br/>")),
                               hr(),
                               div(HTML(paste0("We are using ",R.version.string,
-                                              " and AdhereR version ",descr <- utils::packageDescription("AdhereR.devel")$Version,
+                                              " and AdhereR version ",descr <- utils::packageDescription("AdhereR")$Version,
                                               " on ",r.ver.info$running,"."))),
                               hr(),
                               shinyWidgets::progressBar(id="cma_computation_progress",

@@ -21,11 +21,8 @@
   highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
   observation.window.angle = -30, observation.window.opacity = 0.3,
-  events = NULL, events.ID.colname = NA, events.start.colname = NA,
-  events.end.colname = NA, events.date.format = NA,
-  col.events = adjustcolor("gray20", alpha.f = 0.5), bw.plot = FALSE,
-  print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1,
-  min.plot.size.in.characters.horiz = 10,
+  bw.plot = FALSE, print.CMA = TRUE, plot.CMA = TRUE,
+  CMA.plot.ratio = 0.1, min.plot.size.in.characters.horiz = 10,
   min.plot.size.in.characters.vert = 0.5, max.patients.to.plot = 100)
 }
 \arguments{
@@ -126,6 +123,11 @@ graphically?}
 \item{CMA.plot.ratio}{A \emph{number}, the proportion of the total horizontal
 plot space to be allocated to the CMA plot.
 \emph{Numeric}, the minimum size of the plotting surface in characters;
+horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+referes to a single event.}
+
+\item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
 horizontally (min.plot.size.in.characters.horiz) referes to the the whole
 duration of the events to plot; vertically (min.plot.size.in.characters.vert)
 referes to a single event.}

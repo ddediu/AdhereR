@@ -1,6 +1,6 @@
 # `AdhereR`: an `R` package for computing adherence to medications and for visualising medication histories
 
-[![Build Status](https://travis-ci.org/ddediu/AdhereR.svg?branch=for-release)](https://travis-ci.org/ddediu/AdhereR)
+[![Build Status](https://travis-ci.org/ddediu/AdhereR.svg?branch=master)](https://travis-ci.org/ddediu/AdhereR)
 
 This is a package for the [`R`](https://www.r-project.org) open-source statistical environment implementing various ways of computing adherence to medications and visualisations of medication histories, both interactive (intended for data exploration) and high quality (intended for publication).
 
@@ -21,7 +21,7 @@ For what is new in each release, please see the `NEWS.md` file.
 Copyright (by period, in alphabetical order by family name; please see individual files for details) (C):
 
   - 2015-2018: Alexandra Dima, Dan Dediu
-  - 2018: Samuel Allemann, Alexandra Dima, Dan Dediu
+  - 2018-2019: Samuel Allemann, Alexandra Dima, Dan Dediu
 
 -----
 
