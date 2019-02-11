@@ -67,6 +67,49 @@ point.types <- c("plus"=3,
                  "two triangles"=11);
 
 
+if( is.null(.GlobalEnv$.plotting.params) )
+{
+  # Ok, seem we've been launched directly as a "normal" Shiny app:
+  # make sure things are set to the their default in the .plotting.params global list:
+  .GlobalEnv$.plotting.params <- list("data"=NULL,
+                                      "cma.class"="simple",
+                                      "ID.colname"=NA,
+                                      "event.date.colname"=NA,
+                                      "event.duration.colname"=NA,
+                                      "event.daily.dose.colname"=NA,
+                                      "medication.class.colname"=NA,
+                                      "date.format"=NA,
+                                      "align.all.patients"=FALSE,
+                                      "align.first.event.at.zero"=FALSE,
+                                      "ID"="[not defined]", "all.IDs"=c("[not defined]"),
+                                      "max.number.patients.to.plot"=10, "max.number.events.to.plot"=500,
+                                      "max.number.patients.to.compute"=100, "max.number.events.to.compute"=5000, "max.running.time.in.minutes.to.compute"=5,
+                                      ".patients.to.compute"=NULL,
+                                      "print.full.params"=FALSE,
+                                      "get.colnames.fnc"=NULL,
+                                      "get.patients.fnc"=NULL,
+                                      "get.data.for.patients.fnc"=NULL,
+                                      ".plotting.fnc"=AdhereR:::.plotting.fnc.shiny,
+                                      ".dataset.type"=NA,
+                                      ".dataset.comes.from.function.arguments"=FALSE,
+                                      ".dataset.name"=NA,
+                                      ".inmemory.dataset"=NULL,
+                                      ".fromfile.dataset"=NULL,
+                                      ".fromfile.dataset.filetype"=NULL,
+                                      ".fromfile.dataset.header"=NULL,
+                                      ".fromfile.dataset.sep"=NULL,
+                                      ".fromfile.dataset.quote"=NULL,
+                                      ".fromfile.dataset.dec"=NULL,
+                                      ".fromfile.dataset.strip.white"=NULL,
+                                      ".fromfile.dataset.na.strings"=NULL,
+                                      ".fromfile.dataset.sheet"=NULL,
+                                      ".db.connection.tables"=NULL,
+                                      ".db.connection.selected.table"=NULL,
+                                      ".db.connection"=NULL
+  );
+}
+
+
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
 
@@ -544,7 +587,7 @@ ui <- fluidPage(
 
                                             # Dose ----
                                             conditionalPanel(
-                                              condition="output.is_dose_defined",
+                                              condition="output.is_dose_defined && (input.cma_class == 'per episode' || input.cma_class == 'sliding window' || (input.cma_class == 'simple' && (input.cma_to_compute == 'CMA0' || input.cma_to_compute == 'CMA5' || input.cma_to_compute == 'CMA6' || input.cma_to_compute == 'CMA7' || input.cma_to_compute == 'CMA8' || input.cma_to_compute == 'CMA9')))",
 
                                               div(id='dose_section', style="cursor: pointer;",
                                                   span(title='Show dose', h4("Show dose"), style="color:DarkBlue"),
@@ -1658,10 +1701,12 @@ ui <- fluidPage(
 
 
 # The server logic ----
-server <- function(input, output, session) {
+server <- function(input, output, session)
+{
 
   # Reactive value to allow UI updating on dataset changes:
   rv <- reactiveValues(toggle.me = FALSE);
+
   # Show/hide UI elements based on various conditions:
   output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)});
   outputOptions(output, "is_dataset_defined", suspendWhenHidden = FALSE);
@@ -1679,18 +1724,6 @@ server <- function(input, output, session) {
   outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
   #outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
-
-  onStart <- function()
-  {
-    onStop(function()
-    {
-      # Disconnect any open database connections...
-      if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
-      {
-        try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
-      }
-    })
-  }
 
   # The plotting function:
   .renderPlot <- function()
@@ -3690,15 +3723,15 @@ server <- function(input, output, session) {
   {
     tmp <- data.frame("#"=  1:length(.GlobalEnv$.plotting.params$all.IDs),
                       "ID"= if( input$compute_cma_patient_by_group_sorting == "by ID (↑)" )
-                            {
-                              sort(.GlobalEnv$.plotting.params$all.IDs, decreasing=FALSE)
-                            } else if( input$compute_cma_patient_by_group_sorting == "by ID (↓)" )
-                            {
-                              sort(.GlobalEnv$.plotting.params$all.IDs, decreasing=TRUE)
-                            } else
-                            {
-                              .GlobalEnv$.plotting.params$all.IDs
-                            },
+                      {
+                        sort(.GlobalEnv$.plotting.params$all.IDs, decreasing=FALSE)
+                      } else if( input$compute_cma_patient_by_group_sorting == "by ID (↓)" )
+                      {
+                        sort(.GlobalEnv$.plotting.params$all.IDs, decreasing=TRUE)
+                      } else
+                      {
+                        .GlobalEnv$.plotting.params$all.IDs
+                      },
                       check.names=FALSE);
 
     .GlobalEnv$.plotting.params$.patients.to.compute <- tmp;
@@ -4164,5 +4197,28 @@ server <- function(input, output, session) {
 
 
 # call shiny
-shinyApp(ui = ui, server = server)
+shinyApp(ui=ui,
+         server=server,
+         onStart=function() # thing to do on start-up:
+         {
+
+           # Such as setting-up things for the end :)
+           onStop(function()
+           {
+             # Disconnect any open database connections...
+             if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
+             {
+               try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
+             }
+
+             # Clean the .GlobalEnv$.plotting.params object:
+             if( !is.null(.GlobalEnv$.plotting.params) )
+             {
+               .GlobalEnv$.plotting.params <- NULL;
+               collected.results <<- NULL;
+               cma.computation.progress.log.text <<- NULL;
+             }
+           })
+         }
+)
 

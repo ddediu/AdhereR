@@ -12,7 +12,7 @@
 
 <meta name="author" content="Dan Dediu ddediu@gmail.com" />
 
-<meta name="date" content="2019-02-10" />
+<meta name="date" content="2019-02-11" />
 
 <title>AdhereR: Interactive plotting (and more) with Shiny</title>
 
@@ -92,7 +92,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 
 <h1 class="title toc-ignore">AdhereR: Interactive plotting (and more) with Shiny</h1>
 <h4 class="author"><em>Dan Dediu <a href="mailto:ddediu@gmail.com">ddediu@gmail.com</a></em></h4>
-<h4 class="date"><em>2019-02-10</em></h4>
+<h4 class="date"><em>2019-02-11</em></h4>
 
 
 <div id="TOC">
@@ -247,6 +247,7 @@ code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Inf
 </tr>
 </tbody>
 </table>
+<p>The app can also be launched in the “standard way” using <code>runApp()</code> or <code>RStudio</code>’s <strong><span style="color: green">▶︎</span> Run app</strong> button.</p>
 <p>Alternatively, the app may be made available on a <strong>remote server</strong>, such as on <a href="https://www.shinyapps.io/" class="uri">https://www.shinyapps.io/</a>, in which case it can be accessed simply by pointing the web browser to the app’s internet address.</p>
 <p>Please note that launching the App with no parameters, opens with a different screen (see the <a href="#ui-datasource"><strong>Selecting/changing the <em>data source</em></strong></a> section for details).</p>
 </div>
@@ -460,7 +461,7 @@ cma &lt;-<span class="st"> </span><span class="kw">CMA9</span>(<span class="dt">
 <p class="caption"><strong>Folding and unfolding the contents of a section.</strong> The section <b style="color: darkblue">Follow-up window (FUW)</b> with content folded (hidden) on the left, and unfolded (visible) on the right.</p>
 </div>
 <ul>
-<li>some sections may appear or disappear depending on other circumstances, such as the type of CMA selected (e.g., <b style="color: darkblue">Define episodes</b> exists only for <em>CMA per episodes</em>) or the optional columns being defined (e.g., <b style="color: darkblue">Show dose</b> exists only if the daily dose column was defined).</li>
+<li>some sections may appear or disappear depending on other circumstances, such as the type of CMA selected (e.g., <b style="color: darkblue">Define episodes</b> exists only for <em>CMA per episodes</em>) or the optional columns being defined (e.g., <b style="color: darkblue">Show dose</b> exists only if the daily dose column was defined and only for <code>CMA0</code>, <code>CMA5-9</code>, <em>per episodes</em>, and <em>sliding windows</em>).</li>
 </ul>
 <p>We will now go through all sections one by one.</p>
 <div id="general-settings" class="section level4">
@@ -556,7 +557,7 @@ cma &lt;-<span class="st"> </span><span class="kw">CMA9</span>(<span class="dt">
 </div>
 <div id="show-dose" class="section level4">
 <h4><b style="color: darkblue">Show dose</b></h4>
-<p>This section is shown only a <em>daily dose</em> column is defined for the current data source and controls how the dose is visually shown (if at all):</p>
+<p>This section is shown only a <em>daily dose</em> column is defined for the current data source, and only for <code>CMA0</code>, <code>CMA5</code>–<code>CMA9</code>, <em>per episodes</em>, and <em>sliding windows</em> (<code>CMA1</code>–<code>CMA4</code> by definition are unaware of dose and treatment categories) and controls how the dose is visually shown (if at all):</p>
 <ul>
 <li><p><strong>Print it?</strong>: print the dosage (i.e., the actual numeric values) next to each event; if so:</p>
 <ul>

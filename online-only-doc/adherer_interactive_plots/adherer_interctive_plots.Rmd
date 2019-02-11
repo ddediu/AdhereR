@@ -74,6 +74,8 @@ plot_interactive_cma(data=med.events, # included sample dataset
 
 Table: The structure of the sample dataset `med.events` included in the `AdhereR` package. We shows the rows 23 to 33 (out of a total of 1080 rows), each row representing one *event* which is characterized **at the minimum** by: the *patient* it refers to (identified by the patient's unique ID in column `PATIENT_ID`), the *date* it happened (in column `DATE`, recorded in a uniform format, here MM/DD/YYYY), its *duration* in days (in column `DURATION`); **optionally** we can also have info concerning the prescribed daily quantity or *dose* (column `PERDAY`) and the class or type of treatment (column `CATEGORY`). We will use this dataset throughout this vignette.
 
+The app can also be launched in the "standard way" using `runApp()` or `RStudio`'s **<span style='color: green'>▶︎</span> Run app** button.
+
 Alternatively, the app may be made available on a **remote server**, such as on <https://www.shinyapps.io/>, in which case it can be accessed simply by pointing the web browser to the app's internet address. 
 
 Please note that launching the App with no parameters, opens with a different screen (see the [**Selecting/changing the *data source***](#ui-datasource) section for details).
@@ -307,7 +309,7 @@ UI element **5** in [the overview figure](#ui-overview) shows part of this panel
   
 ![**Folding and unfolding the contents of a section.** The section <b style='color: darkblue'>Follow-up window (FUW)</b> with content folded (hidden) on the left, and unfolded (visible) on the right.](shiny-foldsections.jpg)
 
-  - some sections may appear or disappear depending on other circumstances, such as the type of CMA selected (e.g., <b style='color: darkblue'>Define episodes</b> exists only for *CMA per episodes*) or the optional columns being defined (e.g., <b style='color: darkblue'>Show dose</b> exists only if the daily dose column was defined).
+  - some sections may appear or disappear depending on other circumstances, such as the type of CMA selected (e.g., <b style='color: darkblue'>Define episodes</b> exists only for *CMA per episodes*) or the optional columns being defined (e.g., <b style='color: darkblue'>Show dose</b> exists only if the daily dose column was defined and only for `CMA0`, `CMA5-9`, *per episodes*, and *sliding windows*).
   
 We will now go through all sections one by one.
 
@@ -404,7 +406,7 @@ This section is shown for all CMAs except `CMA0` and controls how the CMA estima
 
 #### <b style='color: darkblue'>Show dose</b>
 
-This section is shown only a *daily dose* column is defined for the current data source and controls how the dose is visually shown (if at all):
+This section is shown only a *daily dose* column is defined for the current data source, and only for `CMA0`, `CMA5`--`CMA9`, *per episodes*, and *sliding windows* (`CMA1`--`CMA4` by definition are unaware of dose and treatment categories) and controls how the dose is visually shown (if at all):
 
   - **Print it?**: print the dosage (i.e., the actual numeric values) next to each event; if so:
   

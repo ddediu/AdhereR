@@ -9,11 +9,11 @@
   period.in.days = 90, show.legend = TRUE, legend.x = "right",
   legend.y = "bottom", legend.bkg.opacity = 0.5, legend.cex = 0.75,
   legend.cex.title = 1, cex = 1, cex.axis = 0.75, cex.lab = 1,
-  col.cats = rainbow, lty.event = "solid", lwd.event = 2,
-  pch.start.event = 15, pch.end.event = 16, print.dose = FALSE,
-  cex.dose = 0.75, print.dose.outline.col = "white",
-  print.dose.centered = FALSE, plot.dose = FALSE,
-  lwd.event.max.dose = 8,
+  col.cats = rainbow, unspecified.category.label = "drug",
+  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
+  pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
+  print.dose.outline.col = "white", print.dose.centered = FALSE,
+  plot.dose = FALSE, lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
   col.continuation = "black", lty.continuation = "dotted",
   lwd.continuation = 1, col.na = "lightgray",
@@ -69,6 +69,9 @@ specifying the cex of the various types of text.}
 colour or the colour palette used to plot the different medication; by
 default \code{rainbow}, but we recommend, whenever possible, a
 colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.}
+
+\item{unspecified.category.label}{A \emph{string} giving the name of the
+unspecified (generic) medication category.}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
