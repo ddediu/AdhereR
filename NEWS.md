@@ -1,3 +1,13 @@
+# AdhereR 0.4.1
+
+## Bug fixes
+
+  - Shiny App: don't show print and plot dose UI for CMA1-CMA4 (these don't care about dose)
+  
+  - Shiny App: refactor it so it can be started independently from outside the package (allowing it, for example, to be hosted on https://www.shinyapps.io/)
+  
+  - plotting CMA1+ and complex: fix crash when no treatment column was defined but there was a dose column
+
 # AdhereR 0.4
   
 ## New features
