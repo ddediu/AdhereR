@@ -67,6 +67,7 @@ point.types <- c("plus"=3,
                  "two triangles"=11);
 
 
+# Make sure the data structured needed by the Shiny plot are correctly initialized even if the App was launched from outside AdhereR:
 if( is.null(.GlobalEnv$.plotting.params) )
 {
   # Ok, seem we've been launched directly as a "normal" Shiny app:
@@ -107,6 +108,9 @@ if( is.null(.GlobalEnv$.plotting.params) )
                                       ".db.connection.selected.table"=NULL,
                                       ".db.connection"=NULL
   );
+
+  # Make sure the med.events data is loaded as well:
+  data("medevents", package="AdhereR");
 }
 
 
@@ -3247,7 +3251,7 @@ server <- function(input, output, session)
         }
 
         # Put the data in:
-        tmp <- med.events; tmp$DATE <- as.character(as.Date(tmp$DATE,format="%m/%d/%Y"),format="%Y-%m-%d"); # make sure the dates are in the YYYY-MM-DD SQL format
+        tmp <- AdhereR::med.events; tmp$DATE <- as.character(as.Date(tmp$DATE,format="%m/%d/%Y"),format="%Y-%m-%d"); # make sure the dates are in the YYYY-MM-DD SQL format
         res <- tryCatch(DBI::dbWriteTable(d, "med_events", tmp, overwrite=TRUE),
                         error=function(e) e, warning=function(w) w);
         if( is.null(d) || inherits(res, "error") )
