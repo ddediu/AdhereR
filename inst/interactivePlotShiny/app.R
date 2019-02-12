@@ -21,6 +21,7 @@
 
 
 #library(shiny)
+#' @import AdhereR
 #' @import shiny
 #' @import colourpicker
 #' @import viridisLite
@@ -67,53 +68,6 @@ point.types <- c("plus"=3,
                  "two triangles"=11);
 
 
-# Make sure the data structured needed by the Shiny plot are correctly initialized even if the App was launched from outside AdhereR:
-if( is.null(.GlobalEnv$.plotting.params) )
-{
-  # Ok, seem we've been launched directly as a "normal" Shiny app:
-  # make sure things are set to the their default in the .plotting.params global list:
-  .GlobalEnv$.plotting.params <- list("data"=NULL,
-                                      "cma.class"="simple",
-                                      "ID.colname"=NA,
-                                      "event.date.colname"=NA,
-                                      "event.duration.colname"=NA,
-                                      "event.daily.dose.colname"=NA,
-                                      "medication.class.colname"=NA,
-                                      "date.format"=NA,
-                                      "align.all.patients"=FALSE,
-                                      "align.first.event.at.zero"=FALSE,
-                                      "ID"="[not defined]", "all.IDs"=c("[not defined]"),
-                                      "max.number.patients.to.plot"=10, "max.number.events.to.plot"=500,
-                                      "max.number.patients.to.compute"=100, "max.number.events.to.compute"=5000, "max.running.time.in.minutes.to.compute"=5,
-                                      ".patients.to.compute"=NULL,
-                                      "print.full.params"=FALSE,
-                                      "get.colnames.fnc"=NULL,
-                                      "get.patients.fnc"=NULL,
-                                      "get.data.for.patients.fnc"=NULL,
-                                      ".plotting.fnc"=AdhereR:::.plotting.fnc.shiny,
-                                      ".dataset.type"=NA,
-                                      ".dataset.comes.from.function.arguments"=FALSE,
-                                      ".dataset.name"=NA,
-                                      ".inmemory.dataset"=NULL,
-                                      ".fromfile.dataset"=NULL,
-                                      ".fromfile.dataset.filetype"=NULL,
-                                      ".fromfile.dataset.header"=NULL,
-                                      ".fromfile.dataset.sep"=NULL,
-                                      ".fromfile.dataset.quote"=NULL,
-                                      ".fromfile.dataset.dec"=NULL,
-                                      ".fromfile.dataset.strip.white"=NULL,
-                                      ".fromfile.dataset.na.strings"=NULL,
-                                      ".fromfile.dataset.sheet"=NULL,
-                                      ".db.connection.tables"=NULL,
-                                      ".db.connection.selected.table"=NULL,
-                                      ".db.connection"=NULL
-  );
-
-  # Make sure the med.events data is loaded as well:
-  data("medevents", package="AdhereR");
-}
-
-
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
 
@@ -148,7 +102,8 @@ ui <- fluidPage(
     column(3,
 
            # PARAMS TAB ----
-           tabsetPanel(id="sidebar-tabpanel",
+           shinyjs::hidden(div(id="sidebar_tabpanel_container", # start with these hidden...
+             tabsetPanel(id="sidebar-tabpanel",
                        tabPanel("Params", value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
                                 conditionalPanel(
                                   condition="!(output.is_dataset_defined)",
@@ -1265,7 +1220,7 @@ ui <- fluidPage(
 
                                             conditionalPanel(
                                               #condition="(typeof(input.dataset_from_file_filename) != 'undefined') && (input.dataset_from_file_filename != null)",
-                                              condition="(output.is_file_loaded)",
+                                              condition="(output.is_file_loaded == true)",
 
                                               div(title="Click here to peek at the selected dataset...",
                                                   actionButton("dataset_from_file_peek_button", label="Peek at file...", icon=icon("eye-open", lib="glyphicon"))),
@@ -1380,7 +1335,7 @@ ui <- fluidPage(
                                                 style="padding-bottom: 10px;"),
 
                                             conditionalPanel(
-                                              condition="(output.is_database_connected)",
+                                              condition="(output.is_database_connected == true)",
 
                                               div(title='Disconnect from datadase (not really necessary, as the disconnection is automatic when closing the application, but nice to do))',
                                                   actionButton(inputId="dataset_from_sql_button_disconnect",
@@ -1456,15 +1411,20 @@ ui <- fluidPage(
                                 )
                        )
 
-           )),
+           )))),
 
 
     # OUTPUT PANEL ----
     #mainPanel(
     column(9,
 
+           #shinyjs::hidden(checkboxInput(inputId="output_panel_container_show", label="", value=FALSE)),
+           shinyjs::hidden(div(id="output_panel_container", # start with these hidden...
+           #conditionalPanel(
+           #  condition="(input.output_panel_container_show == true)",
+
            conditionalPanel(
-             condition="(output.is_dataset_defined)",
+             condition="(output.is_dataset_defined == true)",
 
              # Plot dimensions ----
              column(3,
@@ -1699,7 +1659,7 @@ ui <- fluidPage(
                  span(" tab to select a valid datesource!")))
            )
 
-    )
+    )))#)
   )
 )
 
@@ -1707,9 +1667,62 @@ ui <- fluidPage(
 # The server logic ----
 server <- function(input, output, session)
 {
+  isolate({showModal(modalDialog("Adherer", title=div(icon("hourglass", lib="glyphicon"), "Please wait while initializing the App..."), easyClose=FALSE, footer=NULL))})
 
   # Reactive value to allow UI updating on dataset changes:
   rv <- reactiveValues(toggle.me = FALSE);
+
+  isolate(
+    {
+      # Initialisation for a directly-launched Shiny App or for a new session:
+      if( is.null(.GlobalEnv$.plotting.params) ||
+          (is.logical(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments) &&
+           !is.na(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments) &&
+           !.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments) )
+      {
+        # Ok, seem we've been launched directly as a "normal" Shiny app:
+        # make sure things are set to the their default in the .plotting.params global list:
+        .GlobalEnv$.plotting.params <- list("data"=NULL,
+                                            "cma.class"="simple",
+                                            "ID.colname"=NA,
+                                            "event.date.colname"=NA,
+                                            "event.duration.colname"=NA,
+                                            "event.daily.dose.colname"=NA,
+                                            "medication.class.colname"=NA,
+                                            "date.format"=NA,
+                                            "align.all.patients"=FALSE,
+                                            "align.first.event.at.zero"=FALSE,
+                                            "ID"="[not defined]", "all.IDs"=c("[not defined]"),
+                                            "max.number.patients.to.plot"=10, "max.number.events.to.plot"=500,
+                                            "max.number.patients.to.compute"=100, "max.number.events.to.compute"=5000, "max.running.time.in.minutes.to.compute"=5,
+                                            ".patients.to.compute"=NULL,
+                                            "print.full.params"=FALSE,
+                                            "get.colnames.fnc"=NULL,
+                                            "get.patients.fnc"=NULL,
+                                            "get.data.for.patients.fnc"=NULL,
+                                            ".plotting.fnc"=AdhereR:::.plotting.fnc.shiny,
+                                            ".dataset.type"=NA,
+                                            ".dataset.comes.from.function.arguments"=FALSE,
+                                            ".dataset.name"=NA,
+                                            ".inmemory.dataset"=NULL,
+                                            ".fromfile.dataset"=NULL,
+                                            ".fromfile.dataset.filetype"=NULL,
+                                            ".fromfile.dataset.header"=NULL,
+                                            ".fromfile.dataset.sep"=NULL,
+                                            ".fromfile.dataset.quote"=NULL,
+                                            ".fromfile.dataset.dec"=NULL,
+                                            ".fromfile.dataset.strip.white"=NULL,
+                                            ".fromfile.dataset.na.strings"=NULL,
+                                            ".fromfile.dataset.sheet"=NULL,
+                                            ".db.connection.tables"=NULL,
+                                            ".db.connection.selected.table"=NULL,
+                                            ".db.connection"=NULL
+        );
+
+        # Make sure the med.events data is loaded as well:
+        data("medevents", package="AdhereR");
+      }
+    })
 
   # Show/hide UI elements based on various conditions:
   output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)});
@@ -1721,13 +1734,29 @@ server <- function(input, output, session)
   output$is_database_connected <- reactive({!is.null(.GlobalEnv$.plotting.params$.db.connection)});
   outputOptions(output, "is_database_connected", suspendWhenHidden = FALSE);
 
-  output$is_dose_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
+  output$is_dose_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
   outputOptions(output, "is_dose_defined", suspendWhenHidden = FALSE);
 
-  output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
+  output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
   outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
   #outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
+
+  # Clean up stuff when session ended:
+  session$onSessionEnded(function()
+  {
+    # Disconnect any open database connections...
+    if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
+    {
+      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
+    }
+
+    # Clean up stuff from the previous session:
+    .GlobalEnv$.plotting.params <- NULL;
+    collected.results <<- NULL;
+    cma.computation.progress.log.text <<- NULL;
+  })
+
 
   # The plotting function:
   .renderPlot <- function()
@@ -2721,13 +2750,13 @@ server <- function(input, output, session)
 
     # Even more complex check: try to compute CMA0 on the first patient:
     test.cma <- NULL;
-    test.res <- tryCatch(test.cma <- CMA0(data=get.data.for.patients.fnc(all.IDs[1], d, ID.colname),
-                                          ID.colname=ID.colname,
-                                          event.date.colname=event.date.colname,
-                                          event.duration.colname=event.duration.colname,
-                                          event.daily.dose.colname=event.daily.dose.colname,
-                                          medication.class.colname=medication.class.colname,
-                                          date.format=date.format),
+    test.res <- tryCatch(test.cma <- AdhereR::CMA0(data=get.data.for.patients.fnc(all.IDs[1], d, ID.colname),
+                                                   ID.colname=ID.colname,
+                                                   event.date.colname=event.date.colname,
+                                                   event.duration.colname=event.duration.colname,
+                                                   event.daily.dose.colname=event.daily.dose.colname,
+                                                   medication.class.colname=medication.class.colname,
+                                                   date.format=date.format),
                          error=function(e) e, warning=function(w) w);
     if( is.null(test.cma) || inherits(test.res, "error") )
     {
@@ -2823,8 +2852,8 @@ server <- function(input, output, session)
     updateSelectInput(session, "compute_cma_patient_by_id", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$all.IDs[1]);
 
     #if( is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname) ) shinyjs::hide(id="dose_is_defined") else shinyjs::show(id="dose_is_defined");
-    output$is_dose_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
-    output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
+    output$is_dose_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
+    output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
 
     rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not change any UI elements)
     output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)}); # now a dataset is defined!
@@ -3725,6 +3754,10 @@ server <- function(input, output, session)
   # Update the patient IDs table:
   .update.patients.IDs.table <- function(reset.slider=TRUE)
   {
+    if( is.null(.GlobalEnv$.plotting.params$all.IDs) || length(.GlobalEnv$.plotting.params$all.IDs) < 1 )
+    {
+      .GlobalEnv$.plotting.params$all.IDs <- c("[not defined]");
+    }
     tmp <- data.frame("#"=  1:length(.GlobalEnv$.plotting.params$all.IDs),
                       "ID"= if( input$compute_cma_patient_by_group_sorting == "by ID (↑)" )
                       {
@@ -4197,32 +4230,20 @@ server <- function(input, output, session)
       }
     }
   )
+
+  # Make sure the UI is properly updated for ech new session:
+  isolate(
+  {
+    .force.update.UI();
+    removeModal();
+    shinyjs::show(id="sidebar_tabpanel_container");
+    #updateCheckboxInput(session, inputId="output_panel_container_show", value=TRUE);
+    shinyjs::show(id="output_panel_container");
+  })
+
 }
 
 
 # call shiny
-shinyApp(ui=ui,
-         server=server,
-         onStart=function() # thing to do on start-up:
-         {
-
-           # Such as setting-up things for the end :)
-           onStop(function()
-           {
-             # Disconnect any open database connections...
-             if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
-             {
-               try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
-             }
-
-             # Clean the .GlobalEnv$.plotting.params object:
-             if( !is.null(.GlobalEnv$.plotting.params) )
-             {
-               .GlobalEnv$.plotting.params <- NULL;
-               collected.results <<- NULL;
-               cma.computation.progress.log.text <<- NULL;
-             }
-           })
-         }
-)
+shinyApp(ui=ui, server=server);
 
