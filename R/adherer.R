@@ -9721,6 +9721,116 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     cat("\n");
   }
 
+
+  # Do we need to recompute the CMA?
+  recompute.CMA <- TRUE;
+  # Check if anything really changed from the last time
+  # (all the relevant stuff is stored in .GlobalEnv$.plotting.params$.recompute.CMA.old.params (which can be NULL or not defined the first time):
+  if( compute.cma.only )
+  {
+    # Explicit computation of CMAs (not not for plotting): don't alter the saved parameter values or the cached CMA:
+    recompute.CMA <- TRUE;
+  } else if( # if not defined at all:
+             is.null(pp <- .GlobalEnv$.plotting.params$.recompute.CMA.old.params) || # (and cache .GlobalEnv$.plotting.params$.recompute.CMA.old.params as "pp" for later use)
+             # otherwise chaeck if anything meaningful has changed:
+             # check if the data or any of its important attributed have changed:
+             (!identical(pp$data, data) ||
+              !identical(pp$ID.colname, ID.colname) ||
+              !identical(pp$event.date.colname, event.date.colname) ||
+              !identical(pp$event.duration.colname, event.duration.colname) ||
+              !identical(pp$event.daily.dose.colname, event.daily.dose.colname) ||
+              !identical(pp$medication.class.colname, medication.class.colname) ||
+              !identical(pp$date.format, date.format) ||
+              !identical(pp$get.colnames.fnc, get.colnames.fnc) ||
+              !identical(pp$get.patients.fnc, get.patients.fnc) ||
+              !identical(pp$get.data.for.patients.fnc, get.data.for.patients.fnc)) ||
+             # check if the patients have changed:
+             (!identical(pp$ID, ID)) ||
+             # check if CMA or any of their relevant parameters have changed:
+             (!identical(pp$cma, cma) ||
+              (cma == "per episode" && # per episode specifically
+               (!identical(pp$cma.to.apply, cma.to.apply) ||
+                !identical(pp$medication.change.means.new.treatment.episode, medication.change.means.new.treatment.episode) ||
+                !identical(pp$dosage.change.means.new.treatment.episode, dosage.change.means.new.treatment.episode) ||
+                !identical(pp$maximum.permissible.gap.unit, maximum.permissible.gap.unit))) ||
+              (cma == "siding window" && # sliding window specifically
+               (!identical(pp$cma.to.apply, cma.to.apply) ||
+                !identical(pp$sliding.window.start, sliding.window.start) ||
+                !identical(pp$sliding.window.start.unit, sliding.window.start.unit) ||
+                !identical(pp$sliding.window.duration, sliding.window.duration) ||
+                !identical(pp$sliding.window.duration.unit, sliding.window.duration.unit) ||
+                !identical(pp$sliding.window.step.duration, sliding.window.step.duration) ||
+                !identical(pp$sliding.window.step.unit, sliding.window.step.unit) ||
+                !identical(pp$sliding.window.no.steps, sliding.window.no.steps))) ||
+              (!identical(pp$carryover.within.obs.window, carryover.within.obs.window) ||
+               !identical(pp$carryover.into.obs.window, carryover.into.obs.window) ||
+               !identical(pp$carry.only.for.same.medication, carry.only.for.same.medication) ||
+               !identical(pp$consider.dosage.change, consider.dosage.change))) ||
+             # check if the FUW or OW have changed:
+             (!identical(pp$followup.window.start, followup.window.start) ||
+              !identical(pp$followup.window.start.unit, followup.window.start.unit) ||
+              !identical(pp$followup.window.duration, followup.window.duration) ||
+              !identical(pp$followup.window.duration.unit, followup.window.duration.unit) ||
+              !identical(pp$observation.window.start, observation.window.start) ||
+              !identical(pp$observation.window.start.unit, observation.window.start.unit) ||
+              !identical(pp$observation.window.duration, observation.window.duration) ||
+              !identical(pp$observation.window.duration.unit, observation.window.duration.unit))
+  )
+  {
+    # Create this structure :
+    recompute.CMA <- TRUE;
+    .GlobalEnv$.plotting.params$.recompute.CMA.old.params <- list( # changes to these params force the recomputation of the CMA (the CMA itself is cached in this structure as well
+        "cached.CMA"=NULL, "cached.CMA.messages"=NULL, # the previously computed CMA and associated messages (if any)
+        # The data:
+        "data"=data,
+        # Important columns in the data:
+        "ID.colname"=ID.colname,
+        "event.date.colname"=event.date.colname,
+        "event.duration.colname"=event.duration.colname,
+        "event.daily.dose.colname"=event.daily.dose.colname,
+        "medication.class.colname"=medication.class.colname,
+        # Date format:
+        "date.format"=date.format,
+        # The IDs and CMAs:
+        "ID"=ID,
+        "cma"=cma,
+        "cma.to.apply"=cma.to.apply,
+        # Various types medhods of computing gaps:
+        "carryover.within.obs.window"=carryover.within.obs.window,
+        "carryover.into.obs.window"=carryover.into.obs.window,
+        "carry.only.for.same.medication"=carry.only.for.same.medication,
+        "consider.dosage.change"=consider.dosage.change,
+        # The follow-up window:
+        "followup.window.start"=followup.window.start,
+        "followup.window.start.unit"=followup.window.start.unit,
+        "followup.window.duration"=followup.window.duration,
+        "followup.window.duration.unit"=followup.window.duration.unit,
+        # The observation window:
+        "observation.window.start"=observation.window.start,
+        "observation.window.start.unit"=observation.window.start.unit,
+        "observation.window.duration"=observation.window.duration,
+        "observation.window.duration.unit"=observation.window.duration.unit,
+        # Treatment episodes:
+        "medication.change.means.new.treatment.episode"=medication.change.means.new.treatment.episode,
+        "dosage.change.means.new.treatment.episode"=dosage.change.means.new.treatment.episode,
+        "maximum.permissible.gap.unit"=maximum.permissible.gap.unit,
+        # Sliding window
+        "sliding.window.start"=sliding.window.start,
+        "sliding.window.start.unit"=sliding.window.start.unit,
+        "sliding.window.duration"=sliding.window.duration,
+        "sliding.window.duration.unit"=sliding.window.duration.unit,
+        "sliding.window.step.duration"=sliding.window.step.duration,
+        "sliding.window.step.unit"=sliding.window.step.unit,
+        "sliding.window.no.steps"=sliding.window.no.steps,
+        # Data accessor functions:
+        "get.colnames.fnc"=get.colnames.fnc,
+        "get.patients.fnc"=get.patients.fnc,
+        "get.data.for.patients.fnc"=get.data.for.patients.fnc
+      );
+    pp <- .GlobalEnv$.plotting.params$.recompute.CMA.old.params; #make sure it's easier to access with a shorter name
+  }
+
+
   # Preconditions (and data extraction):
   if( is.null(ID) ||
       is.null(data <- get.data.for.patients.fnc(ID, data, ID.colname)) || # extract the data for these IDs
@@ -9737,56 +9847,72 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   }
 
   # Compute the CMA:
-  cma.fnc <- switch(cma,
-                    "CMA1" = CMA1,
-                    "CMA2" = CMA2,
-                    "CMA3" = CMA3,
-                    "CMA4" = CMA4,
-                    "CMA5" = CMA5,
-                    "CMA6" = CMA6,
-                    "CMA7" = CMA7,
-                    "CMA8" = CMA8,
-                    "CMA9" = CMA9,
-                    "per episode" = CMA_per_episode,
-                    "sliding window" = CMA_sliding_window,
-                    CMA0); # by default, fall back to CMA0
-  # Try to catch errors and warnings for nice displaying:
-  results <- NULL;
-  full.results <- tryCatch( results <- cma.fnc( data,
-                                                CMA=cma.to.apply,
-                                                ID.colname=ID.colname,
-                                                event.date.colname=event.date.colname,
-                                                event.duration.colname=event.duration.colname,
-                                                event.daily.dose.colname=event.daily.dose.colname,
-                                                medication.class.colname=medication.class.colname,
-                                                date.format=date.format,
-                                                carryover.within.obs.window=carryover.within.obs.window,
-                                                carryover.into.obs.window=carryover.into.obs.window,
-                                                carry.only.for.same.medication=carry.only.for.same.medication,
-                                                consider.dosage.change=consider.dosage.change,
-                                                followup.window.start=followup.window.start,
-                                                followup.window.start.unit=followup.window.start.unit,
-                                                followup.window.duration=followup.window.duration,
-                                                followup.window.duration.unit=followup.window.duration.unit,
-                                                observation.window.start=observation.window.start,
-                                                observation.window.start.unit=observation.window.start.unit,
-                                                observation.window.duration=observation.window.duration,
-                                                observation.window.duration.unit=observation.window.duration.unit,
-                                                medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
-                                                dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
-                                                maximum.permissible.gap=maximum.permissible.gap,
-                                                maximum.permissible.gap.unit=maximum.permissible.gap.unit,
-                                                sliding.window.start=sliding.window.start,
-                                                sliding.window.start.unit=sliding.window.start.unit,
-                                                sliding.window.duration=sliding.window.duration,
-                                                sliding.window.duration.unit=sliding.window.duration.unit,
-                                                sliding.window.step.duration=sliding.window.step.duration,
-                                                sliding.window.step.unit=sliding.window.step.unit,
-                                                sliding.window.no.steps=sliding.window.no.steps,
-                                                arguments.that.should.not.be.defined=NULL # avoid spurious warnings about overridden arguments
-  ),
-  error  =function(e) return(list(results=results,error=conditionMessage(e))),
-  warning=function(w) return(list(results=results,warning=conditionMessage(w))));
+  if( recompute.CMA )
+  {
+    cma.fnc <- switch(cma,
+                      "CMA1" = CMA1,
+                      "CMA2" = CMA2,
+                      "CMA3" = CMA3,
+                      "CMA4" = CMA4,
+                      "CMA5" = CMA5,
+                      "CMA6" = CMA6,
+                      "CMA7" = CMA7,
+                      "CMA8" = CMA8,
+                      "CMA9" = CMA9,
+                      "per episode" = CMA_per_episode,
+                      "sliding window" = CMA_sliding_window,
+                      CMA0); # by default, fall back to CMA0
+    # Try to catch errors and warnings for nice displaying:
+    results <- NULL;
+    full.results <- tryCatch( results <- cma.fnc( data,
+                                                  CMA=cma.to.apply,
+                                                  ID.colname=ID.colname,
+                                                  event.date.colname=event.date.colname,
+                                                  event.duration.colname=event.duration.colname,
+                                                  event.daily.dose.colname=event.daily.dose.colname,
+                                                  medication.class.colname=medication.class.colname,
+                                                  date.format=date.format,
+                                                  carryover.within.obs.window=carryover.within.obs.window,
+                                                  carryover.into.obs.window=carryover.into.obs.window,
+                                                  carry.only.for.same.medication=carry.only.for.same.medication,
+                                                  consider.dosage.change=consider.dosage.change,
+                                                  followup.window.start=followup.window.start,
+                                                  followup.window.start.unit=followup.window.start.unit,
+                                                  followup.window.duration=followup.window.duration,
+                                                  followup.window.duration.unit=followup.window.duration.unit,
+                                                  observation.window.start=observation.window.start,
+                                                  observation.window.start.unit=observation.window.start.unit,
+                                                  observation.window.duration=observation.window.duration,
+                                                  observation.window.duration.unit=observation.window.duration.unit,
+                                                  medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                                  dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
+                                                  maximum.permissible.gap=maximum.permissible.gap,
+                                                  maximum.permissible.gap.unit=maximum.permissible.gap.unit,
+                                                  sliding.window.start=sliding.window.start,
+                                                  sliding.window.start.unit=sliding.window.start.unit,
+                                                  sliding.window.duration=sliding.window.duration,
+                                                  sliding.window.duration.unit=sliding.window.duration.unit,
+                                                  sliding.window.step.duration=sliding.window.step.duration,
+                                                  sliding.window.step.unit=sliding.window.step.unit,
+                                                  sliding.window.no.steps=sliding.window.no.steps,
+                                                  arguments.that.should.not.be.defined=NULL # avoid spurious warnings about overridden arguments
+    ),
+    error  =function(e) return(list(results=results,error=conditionMessage(e))),
+    warning=function(w) return(list(results=results,warning=conditionMessage(w))));
+
+    if( !compute.cma.only )
+    {
+      # Cache this new cma (and the associated messages, if any):
+      pp$cached.CMA <- results;
+      pp$cached.CMA.messages <- full.results;
+    }
+  } else
+  {
+    # Restore these from the case:
+    results <- pp$cached.CMA;
+    full.results <- pp$cached.CMA.messages;
+  }
+
   if( is.null(results) )
   {
     if( compute.cma.only )
