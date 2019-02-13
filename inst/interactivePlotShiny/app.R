@@ -2053,6 +2053,7 @@ server <- function(input, output, session)
 
 
   # Show r code:
+  r_code <- ""; # must be global because we need to access it form other functions as well (and it's not a big object anyway)
   observeEvent(input$show_r_code,
   {
     if( is.na(.GlobalEnv$.plotting.params$.dataset.type) )
@@ -2136,9 +2137,9 @@ server <- function(input, output, session)
                                                                       paste0("DATA <- haven::read_sas(\"",.GlobalEnv$.plotting.params$.dataset.name,"\");\n"),
                                                                     "Stata (.dta)"=
                                                                       paste0("DATA <- haven::read_stata(\"",.GlobalEnv$.plotting.params$.dataset.name,"\");\n"),
-                                                                    "NULL; # please make sure you load this file manually!!!"),
+                                                                    "NULL; # please make sure you load this file manually!!!\n"),
                                                              "\n"),
-                                       "SQL database"=paste0("# a connection to the SQL database '",.GlobalEnv$.plotting.params$.dataset.name,"'")),
+                                       "SQL database"=paste0("a connection to the SQL database\n# '",.GlobalEnv$.plotting.params$.dataset.name,"'\n")),
                         "");
       r_code <<- paste0(r_code, "# These data has ", length(.GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)), " columns, ",
                                 "and contains info for ", length(unique(.GlobalEnv$.plotting.params$get.patients.fnc(.GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname))), " patients.\n");
