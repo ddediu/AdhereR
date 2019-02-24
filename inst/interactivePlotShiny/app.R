@@ -1037,12 +1037,12 @@ ui <- fluidPage(
                                                                 div(title='The minimum horizontal plot size (in characters, for the whole duration to plot)',
                                                                     numericInput(inputId="min_plot_size_in_characters_horiz",
                                                                                  label="Min plot size (horiz.)",
-                                                                                 value=10, min=0, max=NA, step=1.0)),
+                                                                                 value=0, min=0, max=NA, step=1.0)), # should be 10
 
                                                                 div(title='The minimum vertical plot size (in characters, per event)',
                                                                     numericInput(inputId="min_plot_size_in_characters_vert",
                                                                                  label="Min plot size (vert.)",
-                                                                                 value=0.5, min=0.0, max=NA, step=0.25))
+                                                                                 value=0.0, min=0.0, max=NA, step=0.25)) # should be 0.5
                                             )),
 
 
