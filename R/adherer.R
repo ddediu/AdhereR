@@ -7648,6 +7648,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                                print.CMA=TRUE, CMA.cex=0.50, # print CMA next to the participant's ID?
                                plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
                                plot.CMA.as.histogram=TRUE,      # plot CMA as a histogram or as a density plot?
+                               plot.partial.CMAs.as=c("stacked", "overlapping", "timeseries", "none")[1], # how to plot the "partial" (i.e., intervals/episodes) CMAs?
                                CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
                                CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                                highlight.followup.window=TRUE, followup.window.col="green",
@@ -7858,10 +7859,18 @@ print.CMA_per_episode <- function(x,                                     # the C
     rotate.id.labels <- 0;
   }
 
+  # Vertical space needed for showing the partial CMAs:
+  vert.space.cmas <- 0 +
+    ifelse(plot.CMA && !is.null(getCMA(cma)),
+           nrow(cmas) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
+             1 * length(patids) * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+             5 * length(patids) * as.numeric("timeseries" %in% plot.partial.CMAs.as),
+           0);
+
   # The actual plotting:
   if(inherits(msg <- try(plot( 0, 1,
                                xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
-                               ylim=c(0,nrow(cma$data)+ifelse(plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0)+1), yaxs="i", type="n",
+                               ylim=c(0,nrow(cma$data)+vert.space.cmas+1), yaxs="i", type="n",
                                axes=FALSE,
                                xlab="", ylab="" ),
                          silent=TRUE),
@@ -7943,7 +7952,20 @@ print.CMA_per_episode <- function(x,                                     # the C
 
     # The alternating gray bands:
     if( draw.gray.band )
-      rect( 0-1, y.cur-0.5, duration.total+1, y.cur+length(s)+ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,length(x),0)-0.5, col=gray(0.95), border=NA );
+    {
+      rect( 0-1,
+            y.cur-0.5,
+            duration.total+1,
+            y.cur +
+              length(s) +
+              ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
+                     length(x) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
+                       1 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+                       5 * as.numeric("timeseries" %in% plot.partial.CMAs.as),
+                     0) -
+              0.5,
+            col=gray(0.95), border=NA );
+    }
     draw.gray.band <- !draw.gray.band;
 
     # The participant CMA plot:
@@ -8066,7 +8088,13 @@ print.CMA_per_episode <- function(x,                                     # the C
            col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
     }
 
-    y.cur <- y.cur + length(s) + ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,length(x),0);
+    y.cur <- y.cur +
+      length(s) +
+      ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
+           length(x) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
+             1 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+             5 * as.numeric("timeseries" %in% plot.partial.CMAs.as),
+           0);
   }
   if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
   {
@@ -8150,22 +8178,80 @@ print.CMA_per_episode <- function(x,                                     # the C
           s <- which(cmas[,cma$ID.colname] == cma$data[i,cma$ID.colname]);
           if( length(s) > 0 )
           {
-            for( j in 1:length(s) )
+            # There's stuff to plot:
+            if( "stacked" %in% plot.partial.CMAs.as )
             {
-              start <- as.numeric(cmas$start[s[j]] - earliest.date);
-              end <- as.numeric(cmas$end[s[j]] - earliest.date);
-              rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.90, border=gray(0.7), col="white");
-              if( !is.na(cmas$CMA[s[j]]) )
+              # Show subperiods as stacked:
+              for( j in 1:length(s) )
               {
-                h <- start + (end - start)*max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
-                rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10,
-                      adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
-                if( print.CMA && char.height.CMA <= 0.80 )
+                start <- as.numeric(cmas$start[s[j]] - earliest.date);
+                end <- as.numeric(cmas$end[s[j]] - earliest.date);
+                rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.90, border=gray(0.7), col="white");
+                if( !is.na(cmas$CMA[s[j]]) )
                 {
-                  text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                  h <- start + (end - start)*max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
+                  rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10,
+                        adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
+                  if( print.CMA && char.height.CMA <= 0.80 )
+                  {
+                    text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                  }
+                }
+                y.cur <- y.cur+1;
+              }
+            }
+
+            if( "overlapping" %in% plot.partial.CMAs.as )
+            {
+              # Show subperiods as overlapping segments:
+              for( j in 1:length(s) )
+              {
+                start <- as.numeric(cmas$start[s[j]] - earliest.date);
+                end <- as.numeric(cmas$end[s[j]] - earliest.date);
+                #arrows(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, code=3, length=0.1, col="black");
+                #segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, col=gray(0.3));
+                if( !is.na(cmas$CMA[s[j]]) )
+                {
+                  v <- max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
+                  h <- start + (end - start)*v;
+                  segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, col=gray(0.3));
+                  segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
+                  segments(adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
+                  #rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5-v/2,
+                  #      adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5+v/2,
+                  #      border=gray(0.1), col=NA);
+                  #rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10,
+                  #      adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
+                  if( print.CMA && char.height.CMA <= 0.80 )
+                  {
+                    text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                  }
                 }
               }
               y.cur <- y.cur+1;
+            }
+
+            if( "timeseries" %in% plot.partial.CMAs.as )
+            {
+              # Show subperiods as overlapping segments:
+              for( j in 1:length(s) )
+              {
+                start <- as.numeric(cmas$start[s[j]] - earliest.date);
+                end <- as.numeric(cmas$end[s[j]] - earliest.date);
+                if( !is.na(cmas$CMA[s[j]]) )
+                {
+                  v <- max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
+                  h <- start + (end - start)*v;
+                  segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, col=gray(0.3));
+                  segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
+                  segments(adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
+                  if( print.CMA && char.height.CMA <= 0.80 )
+                  {
+                    text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                  }
+                }
+              }
+              y.cur <- y.cur+5;
             }
           }
         }
@@ -8179,21 +8265,78 @@ print.CMA_per_episode <- function(x,                                     # the C
     s <- which(cmas[,cma$ID.colname] == cma$data[i,cma$ID.colname]);
     if( length(s) > 0 )
     {
-      for( j in 1:length(s) )
+      if( "stacked" %in% plot.partial.CMAs.as )
       {
-        start <- as.numeric(cmas$start[s[j]] - earliest.date);
-        end <- as.numeric(cmas$end[s[j]] - earliest.date);
-        rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.90, border=gray(0.7), col="white");
-        if( !is.na(cmas$CMA[s[j]]) )
+        # Show subperiods as stacked:
+        for( j in 1:length(s) )
         {
-          h <- start + (end - start)*max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
-          rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
-          if( print.CMA && char.height.CMA <= .80 )
+          start <- as.numeric(cmas$start[s[j]] - earliest.date);
+          end <- as.numeric(cmas$end[s[j]] - earliest.date);
+          rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.90, border=gray(0.7), col="white");
+          if( !is.na(cmas$CMA[s[j]]) )
           {
-            text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+            h <- start + (end - start)*max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
+            rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
+            if( print.CMA && char.height.CMA <= .80 )
+            {
+              text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+            }
           }
+          y.cur <- y.cur+1;
         }
-        y.cur <- y.cur+1;
+
+        if( "overlapping" %in% plot.partial.CMAs.as )
+        {
+          # Show subperiods as overlapping segments:
+          for( j in 1:length(s) )
+          {
+            start <- as.numeric(cmas$start[s[j]] - earliest.date);
+            end <- as.numeric(cmas$end[s[j]] - earliest.date);
+            #arrows(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, code=3, length=0.1, col="black");
+            #segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, col=gray(0.3));
+            if( !is.na(cmas$CMA[s[j]]) )
+            {
+              v <- max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
+              h <- start + (end - start)*v;
+              segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, col=gray(0.3));
+              segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
+              segments(adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
+              #rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5-v/2,
+              #      adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5+v/2,
+              #      border=gray(0.1), col=NA);
+              #rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10,
+              #      adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
+              if( print.CMA && char.height.CMA <= 0.80 )
+              {
+                text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+              }
+            }
+          }
+          y.cur <- y.cur+1;
+        }
+
+        if( "timeseries" %in% plot.partial.CMAs.as )
+        {
+          # Show subperiods as overlapping segments:
+          for( j in 1:length(s) )
+          {
+            start <- as.numeric(cmas$start[s[j]] - earliest.date);
+            end <- as.numeric(cmas$end[s[j]] - earliest.date);
+            if( !is.na(cmas$CMA[s[j]]) )
+            {
+              v <- max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
+              h <- start + (end - start)*v;
+              segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, col=gray(0.3));
+              segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
+              segments(adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
+              if( print.CMA && char.height.CMA <= 0.80 )
+              {
+                text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+              }
+            }
+          }
+          y.cur <- y.cur+5;
+        }
       }
     }
   }
