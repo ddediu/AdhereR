@@ -1096,9 +1096,10 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
         xlab=ifelse(show.period=="dates","date","days"),
         #ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
         cex.lab=cex.lab);
-  #print(-new.left.margin);
-  text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("000", cex=cex.axis)),
-       (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE, pos=2);
+  #browser();
+  #text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(strwidth(id.labels$string, cex=cex.axis),na.rm=TRUE)) + strwidth("0000", cex=cex.axis)),
+  #     (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE);
+  mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3);
 
   curpat <- TRUE;
   for( i in 1:nrow(cma$data) )
@@ -1263,10 +1264,14 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     # text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days), par("usr")[3] - max(nchar(axis.labels))/2 * cos(30*pi/180), # cos needs radians
     #      labels=axis.labels,
     #      cex=cex.axis, srt=30, pos=1, xpd=TRUE);
-    text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
-         par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)), # cos needs radians
+    #text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
+         # par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
+         # labels=axis.labels,
+         # cex=cex.axis, srt=30, pos=1, xpd=TRUE);
+    text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days),
+         par("usr")[3],
          labels=axis.labels,
-         cex=cex.axis, srt=30, pos=1, xpd=TRUE);
+         cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
   }
 
   # The legend:
@@ -3234,8 +3239,9 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         xlab=ifelse(show.period=="dates","date","days"),
         #ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
         cex.lab=cex.lab);
-  text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("000", cex=cex.axis)),
-       (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE, pos=2);
+  #text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("0000", cex=cex.axis)),
+  #     (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE);
+  mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3);
 
   # The patient axis and CMA plots:
   if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
@@ -3469,7 +3475,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
              par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
              labels=axis.labels,
-             cex=cex.axis, srt=30, pos=1, xpd=TRUE);
+             cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
         abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
         abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
     } else
@@ -3487,7 +3493,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
             text(adh.plot.space[2]+xpos - strwidth(axis.labels, cex=cex.axis)/2,
                  par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
                  labels=axis.labels,
-                 cex=cex.axis, srt=30, pos=1, xpd=TRUE);
+                 cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
             abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
             abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
         } else
@@ -3500,7 +3506,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
             text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
                  par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
                  labels=axis.labels,
-                 cex=cex.axis, srt=30, pos=1, xpd=TRUE);
+                 cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
             abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
             abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
         }
@@ -7905,8 +7911,9 @@ print.CMA_per_episode <- function(x,                                     # the C
         xlab=ifelse(show.period=="dates","date","days"),
         #ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
         cex.lab=cex.lab);
-  text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("000", cex=cex.axis)),
-       (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE, pos=2);
+  #text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("0000", cex=cex.axis)),
+  #     (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE);
+  mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3);
 
   # The patient axis and CMA plots:
   if( plot.CMA && !is.null(getCMA(cma)) )
@@ -8204,7 +8211,7 @@ print.CMA_per_episode <- function(x,                                     # the C
         text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
              par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
              labels=axis.labels,
-             cex=cex.axis, srt=30, pos=1, xpd=TRUE);
+             cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
         abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
         abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
     } else
@@ -8222,7 +8229,7 @@ print.CMA_per_episode <- function(x,                                     # the C
             text(adh.plot.space[2]+xpos - strwidth(axis.labels, cex=cex.axis)/2,
                  par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
                  labels=axis.labels,
-                 cex=cex.axis, srt=30, pos=1, xpd=TRUE);
+                 cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
             abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
             abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
         } else
@@ -8235,7 +8242,7 @@ print.CMA_per_episode <- function(x,                                     # the C
             text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
                  par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
                  labels=axis.labels,
-                 cex=cex.axis, srt=30, pos=1, xpd=TRUE);
+                 cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
             abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
             abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
         }
