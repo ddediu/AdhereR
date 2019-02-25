@@ -1020,6 +1020,36 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   adh.plot.space <- c(0, ifelse( print.CMA && !is.null(getCMA(cma)), duration*CMA.plot.ratio, 0) );
   duration.total <- duration + adh.plot.space[2];
 
+  # Save the graphical params and restore them later:
+  old.par <- par(no.readonly=TRUE);
+
+  # Make sure there's enough space to actually plot the patient IDs on the y-axis:
+  id.labels <- do.call(rbind,lapply(as.character(patids), # for each patient ID, compute the string dimensions in inches
+                                    function(p)
+                                    {
+                                      # The participant axis text:
+                                      s <- which(cma$data[,cma$ID.colname] == p);
+                                      pid <- ifelse( print.CMA && !is.null(getCMA(cma)) && length(x<-which(getCMA(cma)[cma$ID.colname] == p))==1,
+                                                     paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)),
+                                                     p);
+                                      data.frame("ID"=p, "string"=pid, "width"=strwidth(pid, units="inches", cex=cex.axis), "height"=strheight(pid, units="inches", cex=cex.axis));
+                                    }));
+  y.label <- data.frame("string"=(tmp <- ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient")), # soace needed for the label as well (in inches)
+                        "width"=strwidth(tmp, units="inches", cex=cex.lab), "height"=strheight(tmp, units="inches", cex=cex.lab));
+  left.margin <- (cur.mai <- par("mai"))[2]; # left margin in inches (and cache the current margins too)
+  # If there's enough space as it is, don't do anything:
+  if( left.margin < (y.label$height + max(id.labels$width,na.rm=TRUE)) ) # remeber that the y.label is vertical
+  {
+    # Well, there isn't so:
+    rotate.id.labels <- 30; # rotate the labels (in degrees)
+    new.left.margin <- (y.label$height + (cos(rotate.id.labels*pi/180) * max(id.labels$width,na.rm=TRUE)) + strwidth("0000", units="inches", cex=cex.axis)); # ask for enough space
+    par(mai=c(cur.mai[1], new.left.margin, cur.mai[3], cur.mai[4]));
+  } else
+  {
+    # Seems to fit, so don't do anything:
+    rotate.id.labels <- 0;
+  }
+
   # The actual plotting:
   if(inherits(msg <- try(plot( 0, 1,
                                xlim=c(0-5,duration.total+5), # padding with 5 days on both sides to better see the follow-up window, etc.
@@ -1031,6 +1061,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   {
     # Some error occured when creatig the plot...
     cat(msg);
+    par(old.par); # restore graphical params
     return (invisible(NULL));
   }
 
@@ -1055,6 +1086,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     #         x1=c(par("usr")[2], par("usr")[2]),
     #         y1=c(par("usr")[4], par("usr")[3]),
     #         col="red", lwd=3);
+    par(old.par); # restore graphical params
     return (invisible(NULL));
   }
 
@@ -1062,8 +1094,11 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   box();
   title(main=ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
         xlab=ifelse(show.period=="dates","date","days"),
-        ylab=ifelse(print.CMA && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
+        #ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
         cex.lab=cex.lab);
+  #print(-new.left.margin);
+  text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("000", cex=cex.axis)),
+       (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE, pos=2);
 
   curpat <- TRUE;
   for( i in 1:nrow(cma$data) )
@@ -1164,8 +1199,17 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
   {
     # The participant axis text:
     s <- which(cma$data[,cma$ID.colname] == p);
-    pid <- ifelse( print.CMA && !is.null(getCMA(cma)) && length(x<-which(getCMA(cma)[cma$ID.colname] == p))==1, paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)), p);
-    mtext( pid, 2, line=0.5, at=mean(s), las=2, cex=cex.axis );
+    #pid <- ifelse( print.CMA && !is.null(getCMA(cma)) && length(x<-which(getCMA(cma)[cma$ID.colname] == p))==1, paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)), p);
+    pid <- id.labels$string[ id.labels$ID == p ];
+    if( rotate.id.labels > 0 )
+    {
+      # Rotate the labels:
+      text(par("usr")[1], mean(s), pid, cex=cex.axis, srt=rotate.id.labels, pos=2, xpd=TRUE );
+    } else
+    {
+      # Don't rotate the labels:
+      mtext( pid, 2, line=0.5, at=mean(s), las=2, cex=cex.axis );
+    }
 
     # The participant CMA plot:
     if( print.CMA && !is.null(getCMA(cma)) )
@@ -1216,7 +1260,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     {
       axis.labels <- as.character(round(seq(0,endperiod,by=period.in.days),1));
     }
-    text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+    text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days), par("usr")[3] - max(nchar(axis.labels))/2 * cos(30*pi/180), # cos needs radians
          labels=axis.labels,
          cex=cex.axis, srt=30, pos=1, xpd=TRUE);
   }
@@ -1325,12 +1369,15 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     {
       legend.y <- par("usr")[3] + legend.char.height;
     }
-    invisible(.legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"])));
+    ret.val <- .legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
   }
   else
   {
-    invisible(c("width"=NA, "height"=NA));
+    ret.val <- c("width"=NA, "height"=NA);
   }
+
+  par(old.par); # restore graphical params
+  return (invisible(ret.val));
 }
 
 #' Access the actual CMA estimate from a CMA object.
@@ -3103,6 +3150,37 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   adh.plot.space <- c(0, ifelse( plot.CMA && !is.null(getCMA(cma)), duration*CMA.plot.ratio, 0) );
   duration.total <- duration + adh.plot.space[2];
 
+  # Save the graphical params and restore them later:
+  old.par <- par(no.readonly=TRUE);
+
+  # Make sure there's enough space to actually plot the patient IDs on the y-axis:
+  id.labels <- do.call(rbind,lapply(as.character(patids), # for each patient ID, compute the string dimensions in inches
+                                    function(p)
+                                    {
+                                      # The participant axis text:
+                                      s <- which(cma$event.info[,cma$ID.colname] == p);
+                                      x <- which(getCMA(cma)[cma$ID.colname] == p);
+                                      pid <- ifelse( print.CMA && !is.null(getCMA(cma)) && length(x)==1 && !is.na(getCMA(cma)[x,"CMA"]),
+                                                     paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)),
+                                                     p);
+                                      data.frame("ID"=p, "string"=pid, "width"=strwidth(pid, units="inches", cex=cex.axis), "height"=strheight(pid, units="inches", cex=cex.axis));
+                                    }));
+  y.label <- data.frame("string"=(tmp <- ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient")), # soace needed for the label as well (in inches)
+                        "width"=strwidth(tmp, units="inches", cex=cex.lab), "height"=strheight(tmp, units="inches", cex=cex.lab));
+  left.margin <- (cur.mai <- par("mai"))[2]; # left margin in inches (and cache the current margins too)
+  # If there's enough space as it is, don't do anything:
+  if( left.margin < (y.label$height + max(id.labels$width,na.rm=TRUE)) ) # remeber that the y.label is vertical
+  {
+    # Well, there isn't so:
+    rotate.id.labels <- 30; # rotate the labels (in degrees)
+    new.left.margin <- (y.label$height + (cos(rotate.id.labels*pi/180) * max(id.labels$width,na.rm=TRUE)) + strwidth("0000", units="inches", cex=cex.axis)); # ask for enough space
+    par(mai=c(cur.mai[1], new.left.margin, cur.mai[3], cur.mai[4]));
+  } else
+  {
+    # Seems to fit, so don't do anything:
+    rotate.id.labels <- 0;
+  }
+
   # The actual plotting:
   if(inherits(msg <- try(plot( 0, 1,
                                xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
@@ -3114,6 +3192,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   {
     # Some error occured when creatig the plot...
     cat(msg);
+    par(old.par); # restore graphical params
     return (invisible(NULL));
   }
 
@@ -3140,6 +3219,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     #         x1=c(par("usr")[2], par("usr")[2]),
     #         y1=c(par("usr")[4], par("usr")[3]),
     #         col="red", lwd=3);
+    par(old.par); # restore graphical params
     return (invisible(NULL));
   }
 
@@ -3148,8 +3228,10 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   title(main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
                     ifelse(show.cma,paste0(" (",class(cma)[1],")"),"")),
         xlab=ifelse(show.period=="dates","date","days"),
-        ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
+        #ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
         cex.lab=cex.lab);
+  text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("000", cex=cex.axis)),
+       (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE, pos=2);
 
   # The patient axis and CMA plots:
   if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
@@ -3165,8 +3247,17 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     # The participant axis text:
     s <- which(cma$event.info[,cma$ID.colname] == p);
     x <- which(getCMA(cma)[cma$ID.colname] == p);
-    pid <- ifelse( print.CMA && !is.null(getCMA(cma)) && length(x)==1 && !is.na(getCMA(cma)[x,"CMA"]), paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)), p);
-    mtext( pid, 2, line=0.5, at=mean(s), las=2, cex=cex.axis );
+    #pid <- ifelse( print.CMA && !is.null(getCMA(cma)) && length(x)==1 && !is.na(getCMA(cma)[x,"CMA"]), paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)), p);
+    pid <- id.labels$string[ id.labels$ID == p ];
+    if( rotate.id.labels > 0 )
+    {
+      # Rotate the labels:
+      text(par("usr")[1], mean(s), pid, cex=cex.axis, srt=rotate.id.labels, pos=2, xpd=TRUE );
+    } else
+    {
+      # Don't rotate the labels:
+      mtext( pid, 2, line=0.5, at=mean(s), las=2, cex=cex.axis );
+    }
 
     # The alternating gray bands:
     if( draw.gray.band )
@@ -3530,12 +3621,15 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     {
       legend.y <- par("usr")[3] + legend.char.height;
     }
-    invisible(.legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"])));
+    ret.val <- .legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
   }
   else
   {
-    invisible(c("width"=NA, "height"=NA));
+    ret.val <- c("width"=NA, "height"=NA);
   }
+
+  par(old.par); # restore graphical params
+  return (invisible(ret.val));
 }
 
 
@@ -7722,6 +7816,35 @@ print.CMA_per_episode <- function(x,                                     # the C
   adh.plot.space <- c(0, ifelse( plot.CMA && !is.null(getCMA(cma)), duration*CMA.plot.ratio, 0) );
   duration.total <- duration + adh.plot.space[2];
 
+  # Save the graphical params and restore them later:
+  old.par <- par(no.readonly=TRUE);
+
+  # Make sure there's enough space to actually plot the patient IDs on the y-axis:
+  id.labels <- do.call(rbind,lapply(as.character(patids), # for each patient ID, compute the string dimensions in inches
+                                    function(p)
+                                    {
+                                      # The participant axis text:
+                                      s <- which(cma$event.info[,cma$ID.colname] == p);
+                                      x <- which(getCMA(cma)[cma$ID.colname] == p);
+                                      pid <- p;
+                                      data.frame("ID"=p, "string"=pid, "width"=strwidth(pid, units="inches", cex=cex.axis), "height"=strheight(pid, units="inches", cex=cex.axis));
+                                    }));
+  y.label <- data.frame("string"=(tmp <- ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient")), # space needed for the label as well (in inches)
+                        "width"=strwidth(tmp, units="inches", cex=cex.lab), "height"=strheight(tmp, units="inches", cex=cex.lab));
+  left.margin <- (cur.mai <- par("mai"))[2]; # left margin in inches (and cache the current margins too)
+  # If there's enough space as it is, don't do anything:
+  if( left.margin < (y.label$height + max(id.labels$width,na.rm=TRUE)) ) # remeber that the y.label is vertical
+  {
+    # Well, there isn't so:
+    rotate.id.labels <- 30; # rotate the labels (in degrees)
+    new.left.margin <- (y.label$height + (cos(rotate.id.labels*pi/180) * max(id.labels$width,na.rm=TRUE)) + strwidth("0000", units="inches", cex=cex.axis)); # ask for enough space
+    par(mai=c(cur.mai[1], new.left.margin, cur.mai[3], cur.mai[4]));
+  } else
+  {
+    # Seems to fit, so don't do anything:
+    rotate.id.labels <- 0;
+  }
+
   # The actual plotting:
   if(inherits(msg <- try(plot( 0, 1,
                                xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
@@ -7733,6 +7856,7 @@ print.CMA_per_episode <- function(x,                                     # the C
   {
     # Some error occured when creatig the plot...
     cat(msg);
+    par(old.par); # restore graphical params
     return (invisible(NULL));
   }
 
@@ -7759,6 +7883,7 @@ print.CMA_per_episode <- function(x,                                     # the C
     #         x1=c(par("usr")[2], par("usr")[2]),
     #         y1=c(par("usr")[4], par("usr")[3]),
     #         col="red", lwd=3);
+    par(old.par); # restore graphical params
     return (invisible(NULL));
   }
 
@@ -7771,8 +7896,10 @@ print.CMA_per_episode <- function(x,                                     # the C
                                                   "CMA_per_episode"="per episode"),
                                            " (",cma$computed.CMA,")"),"")),
         xlab=ifelse(show.period=="dates","date","days"),
-        ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
+        #ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
         cex.lab=cex.lab);
+  text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("000", cex=cex.axis)),
+       (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE, pos=2);
 
   # The patient axis and CMA plots:
   if( plot.CMA && !is.null(getCMA(cma)) )
@@ -7790,7 +7917,15 @@ print.CMA_per_episode <- function(x,                                     # the C
     s <- which(cma$data[,cma$ID.colname] == p);
     x <- which(cmas[cma$ID.colname] == p);
     pid <- p;
-    mtext( pid, 2, line=0.5, at=y.cur+length(s)/2+ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,length(x),0)/2, las=2, cex=cex.axis );
+    if( rotate.id.labels > 0 )
+    {
+      # Rotate the labels:
+      text(par("usr")[1], y.cur+length(s)/2+ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,length(x),0)/2, pid, cex=cex.axis, srt=rotate.id.labels, pos=2, xpd=TRUE );
+    } else
+    {
+      # Don't rotate the labels:
+      mtext( pid, 2, line=0.5, at=y.cur+length(s)/2+ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,length(x),0)/2, las=2, cex=cex.axis );
+    }
 
     # The alternating gray bands:
     if( draw.gray.band )
@@ -8188,12 +8323,15 @@ print.CMA_per_episode <- function(x,                                     # the C
     {
       legend.y <- par("usr")[3] + legend.char.height;
     }
-    invisible(.legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"])));
+    ret.val <- .legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
   }
   else
   {
-    invisible(c("width"=NA, "height"=NA));
+    ret.val <- c("width"=NA, "height"=NA);
   }
+
+  par(old.par); # restore graphical params
+  return (invisible(ret.val));
 }
 
 
