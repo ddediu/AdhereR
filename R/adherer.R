@@ -7649,12 +7649,14 @@ print.CMA_per_episode <- function(x,                                     # the C
                                plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
                                plot.CMA.as.histogram=TRUE,      # plot CMA as a histogram or as a density plot?
                                plot.partial.CMAs.as=c("stacked", "overlapping", "timeseries", "none")[1], # how to plot the "partial" (i.e., intervals/episodes) CMAs?
+                               plot.partial.CMAs.as.timeseries.vspace=7, # how much vertical space to reserve for the timeseries plot (in character lines)
+                               plot.partial.CMAs.as.timeseries.col.dot="darkblue", plot.partial.CMAs.as.timeseries.col.interval="gray70", plot.partial.CMAs.as.timeseries.col.text="firebrick",
                                CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
                                CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                                highlight.followup.window=TRUE, followup.window.col="green",
                                highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                                bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                               min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
+                               min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.25, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                                max.patients.to.plot=100,        # maximum number of patients to plot
                                ...
 )
@@ -7860,11 +7862,18 @@ print.CMA_per_episode <- function(x,                                     # the C
   }
 
   # Vertical space needed for showing the partial CMAs:
+  if( ("timeseries" %in% plot.partial.CMAs.as) && (plot.partial.CMAs.as.timeseries.vspace < 5) )
+  {
+    warning(paste0("The minimum vertical space for the timeseries plots (plot.partial.CMAs.as.timeseries.vspace) is 5 lines, but it currently is only ",
+                   plot.partial.CMAs.as.timeseries.vspace,
+                   ": skipping timeseries plots...\n"));
+    plot.partial.CMAs.as <- plot.partial.CMAs.as[ plot.partial.CMAs.as != "timeseries" ];
+  }
   vert.space.cmas <- 0 +
     ifelse(plot.CMA && !is.null(getCMA(cma)),
            nrow(cmas) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
              1 * length(patids) * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
-             5 * length(patids) * as.numeric("timeseries" %in% plot.partial.CMAs.as),
+             plot.partial.CMAs.as.timeseries.vspace * length(patids) * as.numeric("timeseries" %in% plot.partial.CMAs.as),
            0);
 
   # The actual plotting:
@@ -7961,7 +7970,7 @@ print.CMA_per_episode <- function(x,                                     # the C
               ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
                      length(x) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
                        1 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
-                       5 * as.numeric("timeseries" %in% plot.partial.CMAs.as),
+                       plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
                      0) -
               0.5,
             col=gray(0.95), border=NA );
@@ -8093,7 +8102,7 @@ print.CMA_per_episode <- function(x,                                     # the C
       ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
            length(x) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
              1 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
-             5 * as.numeric("timeseries" %in% plot.partial.CMAs.as),
+             plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
            0);
   }
   if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
@@ -8233,25 +8242,29 @@ print.CMA_per_episode <- function(x,                                     # the C
 
             if( "timeseries" %in% plot.partial.CMAs.as )
             {
-              # Show subperiods as overlapping segments:
-              for( j in 1:length(s) )
+              # Show subperiods as a time series
+              ppts <- do.call(rbind,lapply(s, function(x)
               {
-                start <- as.numeric(cmas$start[s[j]] - earliest.date);
-                end <- as.numeric(cmas$end[s[j]] - earliest.date);
-                if( !is.na(cmas$CMA[s[j]]) )
-                {
-                  v <- max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
-                  h <- start + (end - start)*v;
-                  segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, col=gray(0.3));
-                  segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
-                  segments(adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
-                  if( print.CMA && char.height.CMA <= 0.80 )
-                  {
-                    text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
-                  }
-                }
-              }
-              y.cur <- y.cur+5;
+                start <- as.numeric(cmas$start[x] - earliest.date);
+                end <- as.numeric(cmas$end[x] - earliest.date);
+                data.frame("x"=(start+end)/2, "y"=cmas$CMA[x], "start"=start, "end"=end, "text"=sprintf("%.0f",100*cmas$CMA[x]));
+              }));
+              ppts$x.plot <- (adh.plot.space[2] + correct.earliest.followup.window + ppts$x);
+              ppts$y.norm <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-2) * (ppts$y - min(ppts$y,na.rm=TRUE))/(max(ppts$y,na.rm=TRUE) - min(ppts$y,na.rm=TRUE)));
+              segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm,
+                       adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm,
+                       col=plot.partial.CMAs.as.timeseries.col.interval);
+              segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm - 0.2,
+                       adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm + 0.2,
+                       col=plot.partial.CMAs.as.timeseries.col.interval);
+              segments(adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm - 0.2,
+                       adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm + 0.2,
+                       col=plot.partial.CMAs.as.timeseries.col.interval);
+              points(ppts$x.plot, ppts$y.norm, col=plot.partial.CMAs.as.timeseries.col.dot, cex=CMA.cex, type="o", pch=1, lty="solid");
+              #if( print.CMA && char.height.CMA <= 0.80 )
+                text(ppts$x.plot, ppts$y.norm, ppts$text, adj=c(0.5,-0.5), cex=CMA.cex, col=plot.partial.CMAs.as.timeseries.col.text);
+
+              y.cur <- y.cur + plot.partial.CMAs.as.timeseries.vspace;
             }
           }
         }
@@ -8335,7 +8348,7 @@ print.CMA_per_episode <- function(x,                                     # the C
               }
             }
           }
-          y.cur <- y.cur+5;
+          y.cur <- y.cur + plot.partial.CMAs.as.timeseries.vspace;
         }
       }
     }
