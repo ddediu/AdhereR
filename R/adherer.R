@@ -1260,7 +1260,11 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
     {
       axis.labels <- as.character(round(seq(0,endperiod,by=period.in.days),1));
     }
-    text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days), par("usr")[3] - max(nchar(axis.labels))/2 * cos(30*pi/180), # cos needs radians
+    # text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days), par("usr")[3] - max(nchar(axis.labels))/2 * cos(30*pi/180), # cos needs radians
+    #      labels=axis.labels,
+    #      cex=cex.axis, srt=30, pos=1, xpd=TRUE);
+    text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
+         par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)), # cos needs radians
          labels=axis.labels,
          cex=cex.axis, srt=30, pos=1, xpd=TRUE);
   }
@@ -3462,7 +3466,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         #      las=3, cex.axis=cex.axis);
         axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
         axis.labels <- as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format);
-        text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+        text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
+             par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
              labels=axis.labels,
              cex=cex.axis, srt=30, pos=1, xpd=TRUE);
         abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
@@ -3479,7 +3484,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
             #      las=3, cex.axis=cex.axis);
             axis( 1, at=adh.plot.space[2]+xpos, labels=FALSE);
             axis.labels <- as.character(round(xpos-correct.earliest.followup.window,1));
-            text(adh.plot.space[2]+xpos, par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+            text(adh.plot.space[2]+xpos - strwidth(axis.labels, cex=cex.axis)/2,
+                 par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
                  labels=axis.labels,
                  cex=cex.axis, srt=30, pos=1, xpd=TRUE);
             abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
@@ -3491,7 +3497,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
             #      las=3, cex.axis=cex.axis);
             axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
             axis.labels <- as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1));
-            text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+            text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
+                 par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
                  labels=axis.labels,
                  cex=cex.axis, srt=30, pos=1, xpd=TRUE);
             abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
@@ -8194,7 +8201,8 @@ print.CMA_per_episode <- function(x,                                     # the C
         #      las=3, cex.axis=cex.axis);
         axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
         axis.labels <- as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format);
-        text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+        text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
+             par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
              labels=axis.labels,
              cex=cex.axis, srt=30, pos=1, xpd=TRUE);
         abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
@@ -8211,7 +8219,8 @@ print.CMA_per_episode <- function(x,                                     # the C
             #      las=3, cex.axis=cex.axis);
             axis( 1, at=adh.plot.space[2]+xpos, labels=FALSE);
             axis.labels <- as.character(round(xpos-correct.earliest.followup.window,1));
-            text(adh.plot.space[2]+xpos, par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+            text(adh.plot.space[2]+xpos - strwidth(axis.labels, cex=cex.axis)/2,
+                 par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
                  labels=axis.labels,
                  cex=cex.axis, srt=30, pos=1, xpd=TRUE);
             abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
@@ -8223,7 +8232,8 @@ print.CMA_per_episode <- function(x,                                     # the C
             #      las=3, cex.axis=cex.axis);
             axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
             axis.labels <- as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1));
-            text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), par("usr")[3] - 0.5 - max(nchar(axis.labels))/2 * cos(30),
+            text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
+                 par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
                  labels=axis.labels,
                  cex=cex.axis, srt=30, pos=1, xpd=TRUE);
             abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
