@@ -7886,8 +7886,8 @@ print.CMA_per_episode <- function(x,                                     # the C
   }
   vert.space.cmas <- 0 +
     ifelse(plot.CMA && !is.null(getCMA(cma)),
-           nrow(cmas) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-             2 * length(patids) * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+           (nrow(cmas)+length(patids)) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
+             3 * length(patids) * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
              plot.partial.CMAs.as.timeseries.vspace * length(patids) * as.numeric("timeseries" %in% plot.partial.CMAs.as),
            0);
 
@@ -7983,8 +7983,8 @@ print.CMA_per_episode <- function(x,                                     # the C
             y.cur +
               length(s) +
               ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
-                     length(x) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-                       2 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+                     (length(x)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
+                       3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
                        plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
                      0) -
               0.5,
@@ -8101,22 +8101,30 @@ print.CMA_per_episode <- function(x,                                     # the C
 
     # The follow-up and observation windows:
     if( highlight.followup.window )
-      rect(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.25,
-           adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)+0.25,
+    {
+      # rect(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.25,
+      #      adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)+0.25,
+      #      col=NA, border=followup.window.col, lty="dashed", lwd=2);
+      rect(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.5,
+           adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)-0.5,
            col=NA, border=followup.window.col, lty="dashed", lwd=2);
+    }
     if( highlight.observation.window )
     {
       # The given observation window:
-      rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.25,
-           adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)+0.25,
+      # rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.25,
+      #      adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)+0.25,
+      #      col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
+      rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.5,
+           adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)-0.5,
            col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
     }
 
     y.cur <- y.cur +
       length(s) +
       ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
-           length(x) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-             2 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+           (length(x)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
+             3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
              plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
            0);
   }
@@ -8221,6 +8229,7 @@ print.CMA_per_episode <- function(x,                                     # the C
               }
               y.cur <- y.cur+1;
             }
+            y.cur <- y.cur+1;
           }
 
           if( "overlapping" %in% plot.partial.CMAs.as )
@@ -8276,7 +8285,7 @@ print.CMA_per_episode <- function(x,                                     # the C
             }
 
             # Advance to next patient:
-            y.cur <- y.cur+2;
+            y.cur <- y.cur+3;
           }
 
           if( "timeseries" %in% plot.partial.CMAs.as )
@@ -8330,7 +8339,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                        adh.plot.space[2] + correct.earliest.followup.window + max(ppts$end,na.rm=TRUE), y.cur + 0.5,
                        lty="solid", col="black"); # horizontal axis
               segments(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), y.cur + 0.5,
-                       adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), y.cur + plot.partial.CMAs.as.timeseries.vspace - 0.5,
+                       adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
                        lty="solid", col="black"); # vertical axis
               segments(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), min(ppts$y.norm,na.rm=TRUE),
                        adh.plot.space[2] + correct.earliest.followup.window + max(ppts$end,na.rm=TRUE), min(ppts$y.norm,na.rm=TRUE),
