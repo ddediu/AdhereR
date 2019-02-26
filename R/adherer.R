@@ -3472,8 +3472,12 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         #      las=3, cex.axis=cex.axis);
         axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
         axis.labels <- as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format);
-        text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
-             par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
+        # text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
+        #      par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
+        #      labels=axis.labels,
+        #      cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
+        text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
+             par("usr")[3],
              labels=axis.labels,
              cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
         abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
@@ -3490,8 +3494,12 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
             #      las=3, cex.axis=cex.axis);
             axis( 1, at=adh.plot.space[2]+xpos, labels=FALSE);
             axis.labels <- as.character(round(xpos-correct.earliest.followup.window,1));
-            text(adh.plot.space[2]+xpos - strwidth(axis.labels, cex=cex.axis)/2,
-                 par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
+            # text(adh.plot.space[2]+xpos - strwidth(axis.labels, cex=cex.axis)/2,
+            #      par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
+            #      labels=axis.labels,
+            #      cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
+            text(adh.plot.space[2]+xpos,
+                 par("usr")[3],
                  labels=axis.labels,
                  cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
             abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
@@ -3503,8 +3511,12 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
             #      las=3, cex.axis=cex.axis);
             axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
             axis.labels <- as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1));
-            text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
-                 par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
+            # text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
+            #      par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
+            #      labels=axis.labels,
+            #      cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
+            text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
+                 par("usr")[3],
                  labels=axis.labels,
                  cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
             abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
@@ -7652,6 +7664,8 @@ print.CMA_per_episode <- function(x,                                     # the C
                                plot.partial.CMAs.as.timeseries.vspace=7, # how much vertical space to reserve for the timeseries plot (in character lines)
                                plot.partial.CMAs.as.timeseries.start.from.zero=TRUE, #show the vertical axis start at 0 or at the minimum actual value (if positive)?
                                plot.partial.CMAs.as.timeseries.col.dot="darkblue", plot.partial.CMAs.as.timeseries.col.interval="gray70", plot.partial.CMAs.as.timeseries.col.text="firebrick", # setting any of these to NA results in them not being plotted
+                               plot.partial.CMAs.as.overlapping.alternate=TRUE, # should successive intervals be plotted low/high?
+                               plot.partial.CMAs.as.overlapping.col.interval="gray70", plot.partial.CMAs.as.overlapping.col.text="firebrick", # setting any of these to NA results in them not being plotted
                                CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
                                CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                                highlight.followup.window=TRUE, followup.window.col="green",
@@ -7873,7 +7887,7 @@ print.CMA_per_episode <- function(x,                                     # the C
   vert.space.cmas <- 0 +
     ifelse(plot.CMA && !is.null(getCMA(cma)),
            nrow(cmas) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-             1 * length(patids) * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+             2 * length(patids) * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
              plot.partial.CMAs.as.timeseries.vspace * length(patids) * as.numeric("timeseries" %in% plot.partial.CMAs.as),
            0);
 
@@ -7970,7 +7984,7 @@ print.CMA_per_episode <- function(x,                                     # the C
               length(s) +
               ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
                      length(x) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-                       1 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+                       2 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
                        plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
                      0) -
               0.5,
@@ -8102,7 +8116,7 @@ print.CMA_per_episode <- function(x,                                     # the C
       length(s) +
       ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
            length(x) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-             1 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+             2 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
              plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
            0);
   }
@@ -8202,7 +8216,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                       adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
                 if( print.CMA && char.height.CMA <= 0.80 )
                 {
-                  text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                  text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.0f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
                 }
               }
               y.cur <- y.cur+1;
@@ -8212,31 +8226,57 @@ print.CMA_per_episode <- function(x,                                     # the C
           if( "overlapping" %in% plot.partial.CMAs.as )
           {
             # Show subperiods as overlapping segments:
-            for( j in 1:length(s) )
+            ppts <- do.call(rbind,lapply(s, function(x)
             {
-              start <- as.numeric(cmas$start[s[j]] - earliest.date);
-              end <- as.numeric(cmas$end[s[j]] - earliest.date);
-              #arrows(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, code=3, length=0.1, col="black");
-              #segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, col=gray(0.3));
-              if( !is.na(cmas$CMA[s[j]]) )
+              start <- as.numeric(cmas$start[x] - earliest.date);
+              end <- as.numeric(cmas$end[x] - earliest.date);
+              data.frame("x"=(start+end)/2, "y"=cmas$CMA[x], "start"=start, "end"=end, "text"=sprintf("%.0f%%",100*cmas$CMA[x]));
+            }));
+            if( all(is.na(ppts$y)) )
+            {
+              # All are missing:
+              text(adh.plot.space[2] + correct.earliest.followup.window + (min(ppts$start,na.rm=TRUE) + max(ppts$end,na.rm=TRUE))/2,
+                   y.cur + 1,
+                   "Missing data only", cex=CMA.cex, col=plot.partial.CMAs.as.overlapping.col.text);
+            } else
+            {
+              # There's at least one non-NA, so plot it:
+              ppts$x.plot <- (adh.plot.space[2] + correct.earliest.followup.window + ppts$x);
+              min.y <- min(ppts$y,na.rm=TRUE);
+              if( !((range.y <- (max(ppts$y,na.rm=TRUE) - min.y)) > 0) )
               {
-                v <- max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
-                h <- start + (end - start)*v;
-                segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.50, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.50, col=gray(0.3));
-                segments(adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
-                segments(adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5-v/2, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5+v/2, col=gray(0.3));
-                #rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.5-v/2,
-                #      adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.5+v/2,
-                #      border=gray(0.1), col=NA);
-                #rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10,
-                #      adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
-                if( print.CMA && char.height.CMA <= 0.80 )
+                range.y <- 1; # avoid division by 0 if there's only one value
+              }
+              ppts$y.norm <- (ppts$y - min.y)/range.y;
+
+              if( !is.na(plot.partial.CMAs.as.overlapping.col.interval) )
+              {
+                if( plot.partial.CMAs.as.overlapping.alternate )
                 {
-                  text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.1f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                  v <- rep(c(0,1), nrow(ppts))[1:nrow(ppts)]; # alternate between low (0) and high (1) -- not the best way but works fine
+                } else
+                {
+                  v <- rep(0,nrow(ppts)); # all segments are drawn low (0)
                 }
+                segments(adh.plot.space[2]+ppts$start+correct.earliest.followup.window, y.cur+0.5+v,
+                         adh.plot.space[2]+ppts$end+correct.earliest.followup.window, y.cur+0.5+v,
+                         col=plot.partial.CMAs.as.overlapping.col.interval);
+                segments(adh.plot.space[2]+ppts$start+correct.earliest.followup.window, y.cur+0.5+v,
+                         adh.plot.space[2]+ppts$start+correct.earliest.followup.window, y.cur+0.5+v+(ppts$y.norm * -(v*2-1)), # -(v*2-1) maps 0 to 1 and 1 to -1
+                         col=plot.partial.CMAs.as.overlapping.col.interval);
+                segments(adh.plot.space[2]+ppts$end+correct.earliest.followup.window, y.cur+0.5+v,
+                         adh.plot.space[2]+ppts$end+correct.earliest.followup.window, y.cur+0.5+v+(ppts$y.norm * -(v*2-1)),
+                         col=plot.partial.CMAs.as.overlapping.col.interval);
+              }
+              if( print.CMA && char.height.CMA <= 0.80 && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
+              {
+                text( adh.plot.space[2]+ppts$x+correct.earliest.followup.window, y.cur+1.0,
+                      ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.overlapping.col.text);
               }
             }
-            y.cur <- y.cur+1;
+
+            # Advance to next patient:
+            y.cur <- y.cur+2;
           }
 
           if( "timeseries" %in% plot.partial.CMAs.as )
@@ -9967,6 +10007,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 plot.partial.CMAs.as.timeseries.col.dot="darkblue",
                                 plot.partial.CMAs.as.timeseries.col.interval="gray70",
                                 plot.partial.CMAs.as.timeseries.col.text="firebrick",
+                                plot.partial.CMAs.as.overlapping.col.interval="gray70",
+                                plot.partial.CMAs.as.overlapping.col.text="firebrick",
 
                                 # Dose:
                                 print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE,
@@ -10262,6 +10304,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            plot.partial.CMAs.as.timeseries.col.dot=plot.partial.CMAs.as.timeseries.col.dot,
            plot.partial.CMAs.as.timeseries.col.interval=plot.partial.CMAs.as.timeseries.col.interval,
            plot.partial.CMAs.as.timeseries.col.text=plot.partial.CMAs.as.timeseries.col.text,
+           plot.partial.CMAs.as.overlapping.col.interval=plot.partial.CMAs.as.overlapping.col.interval,
+           plot.partial.CMAs.as.overlapping.col.text=plot.partial.CMAs.as.overlapping.col.text,
            min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
            show.period=show.period, period.in.days=period.in.days,
            plot.CMA.as.histogram=plot.CMA.as.histogram,
