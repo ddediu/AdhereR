@@ -7648,7 +7648,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                                print.CMA=TRUE, CMA.cex=0.50, # print CMA next to the participant's ID?
                                plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
                                plot.CMA.as.histogram=TRUE,      # plot CMA as a histogram or as a density plot?
-                               plot.partial.CMAs.as=c("stacked", "overlapping", "timeseries", "none")[1], # how to plot the "partial" (i.e., intervals/episodes) CMAs?
+                               plot.partial.CMAs.as=c("stacked", "overlapping", "timeseries")[1], # how to plot the "partial" (i.e., intervals/episodes) CMAs (NULL for none)?
                                plot.partial.CMAs.as.timeseries.vspace=7, # how much vertical space to reserve for the timeseries plot (in character lines)
                                plot.partial.CMAs.as.timeseries.start.from.zero=TRUE, #show the vertical axis start at 0 or at the minimum actual value (if positive)?
                                plot.partial.CMAs.as.timeseries.col.dot="darkblue", plot.partial.CMAs.as.timeseries.col.interval="gray70", plot.partial.CMAs.as.timeseries.col.text="firebrick", # setting any of these to NA results in them not being plotted
@@ -8246,7 +8246,7 @@ print.CMA_per_episode <- function(x,                                     # the C
             {
               start <- as.numeric(cmas$start[x] - earliest.date);
               end <- as.numeric(cmas$end[x] - earliest.date);
-              data.frame("x"=(start+end)/2, "y"=cmas$CMA[x], "start"=start, "end"=end, "text"=sprintf("%.0f",100*cmas$CMA[x]));
+              data.frame("x"=(start+end)/2, "y"=cmas$CMA[x], "start"=start, "end"=end, "text"=sprintf("%.0f%%",100*cmas$CMA[x]));
             }));
             if( all(is.na(ppts$y)) )
             {
@@ -9961,6 +9961,12 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 show.event.intervals=TRUE,
                                 print.CMA=TRUE, CMA.cex=0.50,
                                 plot.CMA=TRUE, CMA.plot.ratio=0.10, CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text="darkgreen",
+                                plot.partial.CMAs.as=c("stacked"),
+                                plot.partial.CMAs.as.timeseries.vspace=7,
+                                plot.partial.CMAs.as.timeseries.start.from.zero=TRUE,
+                                plot.partial.CMAs.as.timeseries.col.dot="darkblue",
+                                plot.partial.CMAs.as.timeseries.col.interval="gray70",
+                                plot.partial.CMAs.as.timeseries.col.text="firebrick",
 
                                 # Dose:
                                 print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE,
@@ -10250,6 +10256,12 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            show.event.intervals=show.event.intervals,
            print.CMA=print.CMA, CMA.cex=CMA.cex,
            plot.CMA=plot.CMA, CMA.plot.ratio=CMA.plot.ratio, CMA.plot.col=CMA.plot.col, CMA.plot.border=CMA.plot.border, CMA.plot.bkg=CMA.plot.bkg, CMA.plot.text=CMA.plot.text,
+           plot.partial.CMAs.as=plot.partial.CMAs.as,
+           plot.partial.CMAs.as.timeseries.vspace=plot.partial.CMAs.as.timeseries.vspace,
+           plot.partial.CMAs.as.timeseries.start.from.zero=plot.partial.CMAs.as.timeseries.start.from.zero,
+           plot.partial.CMAs.as.timeseries.col.dot=plot.partial.CMAs.as.timeseries.col.dot,
+           plot.partial.CMAs.as.timeseries.col.interval=plot.partial.CMAs.as.timeseries.col.interval,
+           plot.partial.CMAs.as.timeseries.col.text=plot.partial.CMAs.as.timeseries.col.text,
            min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
            show.period=show.period, period.in.days=period.in.days,
            plot.CMA.as.histogram=plot.CMA.as.histogram,

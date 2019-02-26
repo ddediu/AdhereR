@@ -539,6 +539,26 @@ ui <- fluidPage(
                                                                                                    label="Plot CMA?",
                                                                                                    value=TRUE, status="primary", right=TRUE)),
 
+                                                                  conditionalPanel(
+                                                                    condition="input.cma_class != 'simple' && input.plot_cma",
+
+                                                                    div(title='Show the "partial" CMA estimates as stacked bars?',
+                                                                        shinyWidgets::materialSwitch(inputId="plot_cma_stacked",
+                                                                                                     label="... as stacked bars?",
+                                                                                                     value=TRUE, status="primary", right=TRUE)),
+
+                                                                    div(title='Show the "partial" CMA estimates as overlapping segments?',
+                                                                        shinyWidgets::materialSwitch(inputId="plot_cma_overlapping",
+                                                                                                     label="... as overlapping lines?",
+                                                                                                     value=FALSE, status="primary", right=TRUE)),
+
+                                                                    div(title='Show the "partial" CMA estimates as time series?',
+                                                                        shinyWidgets::materialSwitch(inputId="plot_cma_timeseries",
+                                                                                                     label="... as time series?",
+                                                                                                     value=FALSE, status="primary", right=TRUE))
+
+                                                                  ),
+
                                                                   hr()
                                               ))
                                             ),
@@ -1018,7 +1038,61 @@ ui <- fluidPage(
                                                                       div(title='The color of the CMA plot text',
                                                                           colourpicker::colourInput(inputId="cma_plot_text",
                                                                                                     label="CMA text color",
-                                                                                                    value="darkgreen"))
+                                                                                                    value="darkgreen")),
+
+                                                                      conditionalPanel(
+                                                                        condition="input.cma_class != 'simple'",
+
+                                                                        conditionalPanel(
+                                                                          condition="input.plot_cma_timeseries",
+
+                                                                          hr(),
+
+                                                                          div(title='The vertical space (in text lines) taken by the time series plot of the "partial" CMAs',
+                                                                              numericInput(inputId="cma_as_timeseries_vspace",
+                                                                                           label="Time series vertical space",
+                                                                                           value=7, min=5, max=NA, step=1)),
+
+                                                                          div(title='Should the vertical axis of the time series plot start at 0 or at the minimum actually observed value?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_start_from_zero",
+                                                                                                           label="Start plot from 0?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+
+                                                                          div(title='Show time series values as points and lines?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_dots",
+                                                                                                           label="Show dots and lines?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+                                                                          conditionalPanel(
+                                                                            condition="input.cma_as_timeseries_show_dots",
+                                                                            div(title='The color of the time series dots and lines',
+                                                                                colourpicker::colourInput(inputId="cma_as_timeseries_color_dots",
+                                                                                                          label="Dots and lines color",
+                                                                                                          value="#422CD1"))), # dark blue
+
+                                                                          div(title='Show time series interval?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_interval",
+                                                                                                           label="Show intervals?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+                                                                          conditionalPanel(
+                                                                            condition="input.cma_as_timeseries_show_interval",
+                                                                            div(title='The color of the time series intervals',
+                                                                                colourpicker::colourInput(inputId="cma_as_timeseries_color_intervals",
+                                                                                                          label="Intervals color",
+                                                                                                          value="gray70"))),
+
+                                                                          div(title='Show time series text?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_text",
+                                                                                                           label="Show text values?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+                                                                          conditionalPanel(
+                                                                            condition="input.cma_as_timeseries_show_text",
+                                                                            div(title='The color of the time series text values',
+                                                                                colourpicker::colourInput(inputId="cma_as_timeseries_color_text",
+                                                                                                          label="Text values color",
+                                                                                                          value="firebrick")))
+
+                                                                        )
+                                                                      )
                                                                     ),
 
                                                                     hr()
@@ -1866,6 +1940,14 @@ server <- function(input, output, session)
                                                          print.CMA=input$print_cma, CMA.cex=max(0.01,input$cma_cex),
                                                          plot.CMA=input$plot_cma, CMA.plot.ratio=input$cma_plot_ratio / 100.0,
                                                          CMA.plot.col=input$cma_plot_col, CMA.plot.border=input$cma_plot_border, CMA.plot.bkg=input$cma_plot_bkg, CMA.plot.text=input$cma_plot_text,
+                                                         plot.partial.CMAs.as=c(if(input$plot_cma_stacked){"stacked"}else{NULL},
+                                                                                if(input$plot_cma_overlapping){"overlapping"}else{NULL},
+                                                                                if(input$plot_cma_timeseries){"timeseries"}else{NULL}),
+                                                         plot.partial.CMAs.as.timeseries.vspace=input$cma_as_timeseries_vspace,
+                                                         plot.partial.CMAs.as.timeseries.start.from.zero=input$cma_as_timeseries_start_from_zero,
+                                                         plot.partial.CMAs.as.timeseries.col.dot=if(!input$cma_as_timeseries_show_dots){NA}else{input$cma_as_timeseries_color_dots},
+                                                         plot.partial.CMAs.as.timeseries.col.interval=if(!input$cma_as_timeseries_show_interval){NA}else{input$cma_as_timeseries_color_intervals},
+                                                         plot.partial.CMAs.as.timeseries.col.text=if(!input$cma_as_timeseries_show_text){NA}else{input$cma_as_timeseries_color_text},
                                                          show.event.intervals=input$show_event_intervals,
                                                          print.dose=input$print_dose,
                                                          cex.dose=max(0.01,input$cex_dose),
