@@ -3192,7 +3192,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 
   # The actual plotting:
   if(inherits(msg <- try(plot( 0, 1,
-                               xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
+                               #xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
+                               xlim=c(0-5,duration.total+5), xaxs="i", # pad with 5 days to improve plotting
                                ylim=c(0,nrow(cma$event.info)+1), yaxs="i", type="n",
                                axes=FALSE,
                                xlab="", ylab=""),
@@ -7893,7 +7894,8 @@ print.CMA_per_episode <- function(x,                                     # the C
 
   # The actual plotting:
   if(inherits(msg <- try(plot( 0, 1,
-                               xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
+                               #xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
+                               xlim=c(0-5,duration.total+5), xaxs="i", # pad to improve plotting
                                ylim=c(0,nrow(cma$data)+vert.space.cmas+1), yaxs="i", type="n",
                                axes=FALSE,
                                xlab="", ylab="" ),
