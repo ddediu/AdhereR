@@ -1054,7 +1054,7 @@ ui <- fluidPage(
                                                                           div(title='The vertical space (in text lines) taken by the time series plot of the "partial" CMAs',
                                                                               numericInput(inputId="cma_as_timeseries_vspace",
                                                                                            label="Time series vertical space",
-                                                                                           value=7, min=5, max=NA, step=1)),
+                                                                                           value=10, min=5, max=NA, step=1)),
 
                                                                           div(title='Should the vertical axis of the time series plot start at 0 or at the minimum actually observed value?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_start_from_zero",
@@ -1081,7 +1081,7 @@ ui <- fluidPage(
                                                                             div(title='The color of the time series intervals',
                                                                                 colourpicker::colourInput(inputId="cma_as_timeseries_color_intervals",
                                                                                                           label="Intervals color",
-                                                                                                          value="gray70"))),
+                                                                                                          value="blue"))),
 
                                                                           div(title='Show time series text?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_text",
@@ -1982,7 +1982,7 @@ server <- function(input, output, session)
                                                          plot.partial.CMAs.as.timeseries.start.from.zero=input$cma_as_timeseries_start_from_zero,
                                                          plot.partial.CMAs.as.timeseries.col.dot=if(!input$cma_as_timeseries_show_dots){NA}else{input$cma_as_timeseries_color_dots},
                                                          plot.partial.CMAs.as.timeseries.col.interval=if(!input$cma_as_timeseries_show_interval){NA}else{input$cma_as_timeseries_color_intervals},
-                                                         plot.partial.CMAs.as.timeseries.col.text=if(!input$cma_as_overlapping_show_text){NA}else{input$cma_as_overlapping_color_text},
+                                                         plot.partial.CMAs.as.timeseries.col.text=if(!input$cma_as_timeseries_show_text){NA}else{input$cma_as_timeseries_color_text},
                                                          plot.partial.CMAs.as.overlapping.col.interval=if(!input$cma_as_overlapping_show_interval){NA}else{input$cma_as_overlapping_color_intervals},
                                                          plot.partial.CMAs.as.overlapping.col.text=if(!input$cma_as_overlapping_show_text){NA}else{input$cma_as_overlapping_color_text},
                                                          show.event.intervals=input$show_event_intervals,
