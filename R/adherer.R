@@ -91,6 +91,61 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
 "med.events"
 
 
+# Check if the defined medication groups have issues:
+# Returns TRUE if everything's ok, FALSE otherwise (and if suppress.warnings==FALSE, generate a warning message explaining the issue):
+.check.medication.groups <- function(medication.groups, # the medication groups as named a list of vectors of medication classed (or NULL if nt given)
+                                     list.of.medication.classes=NULL, # the actual full list of all possible medication classes (or NULL if not given)
+                                     suppress.warnings=FALSE)
+{
+  if( is.null(medication.groups) )
+  {
+    # by definition, there's nothing wrong with NULL
+    return (TRUE);
+  }
+
+  if( !inherits(medication.groups, "list") )
+  {
+    if( !suppress.warnings ) warning("The medication groups must be a list!\n");
+    return (FALSE);
+  }
+
+  if( length(names(medication.groups)) != length(medication.groups) || any(duplicated(names(medication.groups))) || ("" %in% names(medication.groups)) )
+  {
+    if( !suppress.warnings ) warning("The medication groups must be a named list with unique and non-empty names!\n");
+    return (FALSE);
+  }
+
+  if( !all(vapply(medication.groups, function(x) (inherits(x,"character") || inherits(x,"factor")), logical(1))) )
+  {
+    if( !suppress.warnings ) warning("The members of the medication groups must vectors of charcters (or factors)!\n");
+    return (FALSE);
+  }
+
+  if( any(is.na(v <- unlist(medication.groups))) || any(duplicated(v)) )
+  {
+    if( !suppress.warnings ) warning("The vectors in the medication groups must not contain NAs and their values must appear only once!\n");
+    return (FALSE);
+  }
+
+  if( !is.null(list.of.medication.classes) )
+  {
+    # The list of all possible medication classes is given
+    if( !inherits(list.of.medication.classes, "character") || !inherits(list.of.medication.classes, "factor") )
+    {
+      if( !suppress.warnings ) warning("The list of all possible medication classes, if given, must be a vector of characters (or factors)!\n");
+      return (FALSE);
+    }
+
+    if( length((x <- setdiff(v, list.of.medication.classes))) > 0 )
+    {
+      if( !suppress.warnings ) warning(paste0("There are ",length(x)," medication classes given in the groups that are not in the list of all possible medication classes!\n"));
+      return (FALSE);
+    }
+  }
+
+  # All seems fine:
+  return (TRUE);
+}
 
 
 #' CMA0 constructor.
@@ -119,6 +174,11 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the classes/types/groups of medication, or \code{NA}
 #' if not defined.
+#' @param medication.groups A \emph{named list of vectors} of medication
+#' class names (e.g., \code{list("G1"=c("A","B"), "G2"=c("C","D","E"))}.
+#' The group names must be unique and not empty. Class names that are not
+#' included in the list are considered to be their own group (by extension,
+#' \code{NULL} means that each class is its own group).
 #' @param carryover.within.obs.window \emph{Logical}, if \code{TRUE} consider
 #' the carry-over within the observation window, or \code{NA} if not defined.
 #' @param carryover.into.obs.window \emph{Logical}, if \code{TRUE} consider the
@@ -246,6 +306,8 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  event.duration.colname=NA, # the event duration in days (NA = undefined)
                  event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                  medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
+                 # Groups of medication classes:
+                 medication.groups=NULL, # a named list of vectors of medication class names; e.g., list("G1"=c("A","B"), "G2"=c("C","D","E")); class names not included in the list are considered to be their own group (by extension, NULL considers each class as its own group)
                  # Various types medhods of computing gaps:
                  carryover.within.obs.window=NA, # if TRUE consider the carry-over within the observation window (NA = undefined)
                  carryover.into.obs.window=NA, # if TRUE consider the carry-over from before the starting date of the observation window (NA = undefined)
@@ -397,6 +459,12 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
       if( !suppress.warnings ) warning("The observation window duration unit is not recognized!\n")
       return (NULL);
     }
+    if( !.check.medication.groups(medication.groups,
+                                  list.of.medication.classes=if(!is.na(medication.class.colname)) {as.character(unique(data[,medication.class.colname]))} else {NULL},
+                                  suppress.warnings=suppress.warnings) )
+    {
+      return (NULL);
+    }
 
     # Arguments that should not have been passed:
     if( !suppress.warnings && !is.null(arguments.that.should.not.be.defined) )
@@ -423,6 +491,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  "event.duration.colname"=event.duration.colname,
                  "event.daily.dose.colname"=event.daily.dose.colname,
                  "medication.class.colname"=medication.class.colname,
+                 "medication.groups"=medication.groups,
                  "carryover.within.obs.window"=carryover.within.obs.window,
                  "carryover.into.obs.window"=carryover.into.obs.window,
                  "carry.only.for.same.medication"=carry.only.for.same.medication,
