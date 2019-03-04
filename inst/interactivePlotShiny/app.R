@@ -1086,17 +1086,41 @@ ui <- fluidPage(
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_interval",
                                                                                                            label="Show intervals?",
                                                                                                            value=TRUE, status="primary", right=TRUE)),
+
                                                                           conditionalPanel(
                                                                             condition="input.cma_as_timeseries_show_interval",
+
+                                                                            div(title='Which way to show the intervals?',
+                                                                                selectInput(inputId="cma_as_timeseries_show_interval_type",
+                                                                                            label="Show intervals as",
+                                                                                            choices=c("none", "segments", "arrows", "lines", "rectangles"),
+                                                                                            selected="segments")),
+
                                                                             div(title='The color of the time series intervals',
                                                                                 colourpicker::colourInput(inputId="cma_as_timeseries_color_intervals",
                                                                                                           label="Intervals color",
-                                                                                                          value="blue"))),
+                                                                                                          value="blue")),
+
+                                                                            conditionalPanel(
+                                                                              condition="input.cma_as_timeseries_show_interval_type == 'segments' || input.cma_as_timeseries_show_interval_type == 'arrows' || input.cma_as_timeseries_show_interval_type == 'lines'",
+                                                                              div(title='Line width',
+                                                                                  numericInput(inputId="cma_as_timeseries_lwd_intervals",
+                                                                                               label="Intervals line width",
+                                                                                               value=1.0, min=0.01, max=NA, step=0.25))),
+
+                                                                            conditionalPanel(
+                                                                              condition="input.cma_as_timeseries_show_interval_type == 'rectangles'",
+                                                                              div(title='Rectangle transparency (0=fully transparent to 1=fully opaque)',
+                                                                                  sliderInput(inputId="cma_as_timeseries_alpha_intervals",
+                                                                                              label="Intervals transparency",
+                                                                                              value=0.25, min=0.00, max=1.00, step=0.05)))
+                                                                          ),
 
                                                                           div(title='Show time series text?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_text",
                                                                                                            label="Show text values?",
                                                                                                            value=TRUE, status="primary", right=TRUE)),
+
                                                                           conditionalPanel(
                                                                             condition="input.cma_as_timeseries_show_text",
                                                                             div(title='The color of the time series text values',
@@ -1991,6 +2015,9 @@ server <- function(input, output, session)
                                                          plot.partial.CMAs.as.timeseries.vspace=input$cma_as_timeseries_vspace,
                                                          plot.partial.CMAs.as.timeseries.start.from.zero=input$cma_as_timeseries_start_from_zero,
                                                          plot.partial.CMAs.as.timeseries.col.dot=if(!input$cma_as_timeseries_show_dots){NA}else{input$cma_as_timeseries_color_dots},
+                                                         plot.partial.CMAs.as.timeseries.interval.type=input$cma_as_timeseries_show_interval_type,
+                                                         plot.partial.CMAs.as.timeseries.lwd.interval=input$cma_as_timeseries_lwd_intervals,
+                                                         plot.partial.CMAs.as.timeseries.alpha.interval=input$cma_as_timeseries_alpha_intervals,
                                                          plot.partial.CMAs.as.timeseries.col.interval=if(!input$cma_as_timeseries_show_interval){NA}else{input$cma_as_timeseries_color_intervals},
                                                          plot.partial.CMAs.as.timeseries.col.text=if(!input$cma_as_timeseries_show_text){NA}else{input$cma_as_timeseries_color_text},
                                                          plot.partial.CMAs.as.timeseries.show.0perc=input$cma_as_timeseries_show_0perc,

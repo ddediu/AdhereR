@@ -7784,6 +7784,9 @@ print.CMA_per_episode <- function(x,                                     # the C
                                plot.partial.CMAs.as.timeseries.vspace=7, # how much vertical space to reserve for the timeseries plot (in character lines)
                                plot.partial.CMAs.as.timeseries.start.from.zero=TRUE, #show the vertical axis start at 0 or at the minimum actual value (if positive)?
                                plot.partial.CMAs.as.timeseries.col.dot="darkblue", plot.partial.CMAs.as.timeseries.col.interval="gray70", plot.partial.CMAs.as.timeseries.col.text="firebrick", # setting any of these to NA results in them not being plotted
+                               plot.partial.CMAs.as.timeseries.interval.type=c("none", "segments", "arrows", "lines", "rectangles")[2], # how to show the covered intervals
+                               plot.partial.CMAs.as.timeseries.lwd.interval=1, # line width for some types of intervals
+                               plot.partial.CMAs.as.timeseries.alpha.interval=0.25, # the transparency of the intervales (when drawn as rectangles)
                                plot.partial.CMAs.as.timeseries.show.0perc=TRUE, plot.partial.CMAs.as.timeseries.show.100perc=FALSE, #show the 0% and 100% lines?
                                plot.partial.CMAs.as.overlapping.alternate=TRUE, # should successive intervals be plotted low/high?
                                plot.partial.CMAs.as.overlapping.col.interval="gray70", plot.partial.CMAs.as.overlapping.col.text="firebrick", # setting any of these to NA results in them not being plotted
@@ -8445,15 +8448,48 @@ print.CMA_per_episode <- function(x,                                     # the C
               # The intervals:
               if( !is.na(plot.partial.CMAs.as.timeseries.col.interval) )
               {
-                segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm,
-                         adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm,
-                         col=plot.partial.CMAs.as.timeseries.col.interval);
-                segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm - 0.2,
-                         adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm + 0.2,
-                         col=plot.partial.CMAs.as.timeseries.col.interval);
-                segments(adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm - 0.2,
-                         adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm + 0.2,
-                         col=plot.partial.CMAs.as.timeseries.col.interval);
+                if( plot.partial.CMAs.as.timeseries.interval.type == "none" )
+                {
+                  # Nothing to plot
+                } else if( plot.partial.CMAs.as.timeseries.interval.type %in% c("segments", "arrows", "lines") )
+                {
+                  # The lines:
+                  segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm,
+                           adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm,
+                           col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                  if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
+                  {
+                    # The segment endings:
+                    segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm - 0.2,
+                             adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm + 0.2,
+                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                    segments(adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm - 0.2,
+                             adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm + 0.2,
+                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                  } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
+                  {
+                    # The arrow endings:
+                    segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window + char.width/2, ppts$y.norm - char.height/2,
+                             adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm,
+                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                    segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window + char.width/2, ppts$y.norm + char.height/2,
+                             adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm,
+                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                    segments(adh.plot.space[2] + ppts$end + correct.earliest.followup.window - char.width/2, ppts$y.norm - char.height/2,
+                             adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm,
+                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                    segments(adh.plot.space[2] + ppts$end + correct.earliest.followup.window - char.width/2, ppts$y.norm + char.height/2,
+                             adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm,
+                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                  }
+                } else if( plot.partial.CMAs.as.timeseries.interval.type == "rectangles" )
+                {
+                  # As semi-transparent rectangles:
+                  rect(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, y.cur + 0.5,
+                       adh.plot.space[2] + ppts$end + correct.earliest.followup.window, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                       col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
+                       border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
+                }
               }
 
               # The axes:
@@ -10158,6 +10194,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 plot.partial.CMAs.as.timeseries.vspace=7,
                                 plot.partial.CMAs.as.timeseries.start.from.zero=TRUE,
                                 plot.partial.CMAs.as.timeseries.col.dot="darkblue",
+                                plot.partial.CMAs.as.timeseries.interval.type=c("none", "segments", "arrows", "lines", "rectangles")[2],
+                                plot.partial.CMAs.as.timeseries.lwd.interval=1,
+                                plot.partial.CMAs.as.timeseries.alpha.interval=0.25,
                                 plot.partial.CMAs.as.timeseries.col.interval="gray70",
                                 plot.partial.CMAs.as.timeseries.col.text="firebrick",
                                 plot.partial.CMAs.as.timeseries.show.0perc=TRUE,
@@ -10457,6 +10496,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            plot.partial.CMAs.as.timeseries.vspace=plot.partial.CMAs.as.timeseries.vspace,
            plot.partial.CMAs.as.timeseries.start.from.zero=plot.partial.CMAs.as.timeseries.start.from.zero,
            plot.partial.CMAs.as.timeseries.col.dot=plot.partial.CMAs.as.timeseries.col.dot,
+           plot.partial.CMAs.as.timeseries.interval.type=plot.partial.CMAs.as.timeseries.interval.type,
+           plot.partial.CMAs.as.timeseries.lwd.interval=plot.partial.CMAs.as.timeseries.lwd.interval,
+           plot.partial.CMAs.as.timeseries.alpha.interval=plot.partial.CMAs.as.timeseries.alpha.interval,
            plot.partial.CMAs.as.timeseries.col.interval=plot.partial.CMAs.as.timeseries.col.interval,
            plot.partial.CMAs.as.timeseries.col.text=plot.partial.CMAs.as.timeseries.col.text,
            plot.partial.CMAs.as.timeseries.show.0perc=plot.partial.CMAs.as.timeseries.show.0perc,
