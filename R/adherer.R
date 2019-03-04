@@ -91,9 +91,9 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
 "med.events"
 
 
-# Check if the defined medication groups have issues:
-# Returns TRUE if everything's ok, FALSE otherwise (and if suppress.warnings==FALSE, generate a warning message explaining the issue):
-.check.medication.groups <- function(medication.groups, # the medication groups as named a list of vectors of medication classed (or NULL if nt given)
+# Check if the defined medication groups have issues
+# Returns TRUE if everything's ok, or FALSE otherwise (and if suppress.warnings==FALSE, generate a warning message explaining the issue):
+.check.medication.groups <- function(medication.groups, # the medication groups as a named list of vectors of medication classed (or NULL if nt given)
                                      list.of.medication.classes=NULL, # the actual full list of all possible medication classes (or NULL if not given)
                                      suppress.warnings=FALSE)
 {
@@ -109,11 +109,11 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
     return (FALSE);
   }
 
-  if( length(names(medication.groups)) != length(medication.groups) || any(duplicated(names(medication.groups))) || ("" %in% names(medication.groups)) )
-  {
-    if( !suppress.warnings ) warning("The medication groups must be a named list with unique and non-empty names!\n");
-    return (FALSE);
-  }
+  #if( length(names(medication.groups)) != length(medication.groups) || any(duplicated(names(medication.groups))) || ("" %in% names(medication.groups)) )
+  #{
+  #  if( !suppress.warnings ) warning("The medication groups must be a named list with unique and non-empty names!\n");
+  #  return (FALSE);
+  #}
 
   if( !all(vapply(medication.groups, function(x) (inherits(x,"character") || inherits(x,"factor")), logical(1))) )
   {
@@ -130,7 +130,7 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
   if( !is.null(list.of.medication.classes) )
   {
     # The list of all possible medication classes is given
-    if( !inherits(list.of.medication.classes, "character") || !inherits(list.of.medication.classes, "factor") )
+    if( !(inherits(list.of.medication.classes, "character") || inherits(list.of.medication.classes, "factor")) )
     {
       if( !suppress.warnings ) warning("The list of all possible medication classes, if given, must be a vector of characters (or factors)!\n");
       return (FALSE);
@@ -145,6 +145,43 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
 
   # All seems fine:
   return (TRUE);
+}
+
+# Fill in the medication groups and return them as a data.frame in the long format (or NULL, if there are issues):
+.fill.medication.groups <- function(medication.groups, # the medication groups as a named list of vectors of medication classed (or NULL if nt given)
+                                    list.of.medication.classes=NULL, # the actual full list of all possible medication classes (or NULL if not given)
+                                    suppress.warnings=FALSE,
+                                    already.checked=FALSE) # were the conditions already checked (speed-up by avoiding superfluous checks)?
+{
+  if( !already.checked &&
+      !.check.medication.groups(medication.groups, list.of.medication.classes, suppress.warnings) )
+  {
+    # Some error:
+    return (NULL);
+  }
+
+  if( is.null(medication.groups) && is.null(list.of.medication.classes) )
+  {
+    # No info to use for fill-in the data.frame:
+    return (NULL);
+  }
+
+  # The data.frame containing the groups:
+  ret.val <- do.call(rbind, lapply(seq_along(medication.groups), function(i)
+    {
+      n <- names(medication.groups)[i]; v <- medication.groups[[i]];
+      if( is.null(n) || n == "" ) n <- paste0(as.character(v),collapse="+");
+      data.frame("group"=n, "class"=v);
+    }));
+  tmp <- setdiff(as.character(list.of.medication.classes), as.character(ret.val$class));
+  if( length(tmp) > 0 )
+  {
+    ret.val <- rbind(ret.val, data.frame("group"=tmp, "class"=tmp));
+  }
+  ret.val$group <- as.character(ret.val$group); ret.val$class <- as.character(ret.val$class);
+  ret.val <- ret.val[ order(ret.val$group, ret.val$class), ];
+
+  return (ret.val);
 }
 
 
@@ -174,9 +211,11 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the classes/types/groups of medication, or \code{NA}
 #' if not defined.
-#' @param medication.groups A \emph{named list of vectors} of medication
-#' class names (e.g., \code{list("G1"=c("A","B"), "G2"=c("C","D","E"))}.
-#' The group names must be unique and not empty. Class names that are not
+#' @param medication.groups A \emph{list of vectors} of vectors of medication
+#' class names; if (some of) these vectors are named, these names will be used
+#' the names of the classes, otherwise automatic names will be generated by
+#' concatenating their contents separated by "+". One examle could be,
+#' \code{list(c("A","B"), "G2"=c("C","D","E"))}. Class names that are not
 #' included in the list are considered to be their own group (by extension,
 #' \code{NULL} means that each class is its own group).
 #' @param carryover.within.obs.window \emph{Logical}, if \code{TRUE} consider
@@ -491,7 +530,10 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  "event.duration.colname"=event.duration.colname,
                  "event.daily.dose.colname"=event.daily.dose.colname,
                  "medication.class.colname"=medication.class.colname,
-                 "medication.groups"=medication.groups,
+                 "medication.groups"=.fill.medication.groups(medication.groups,
+                                                             list.of.medication.classes=if(!is.na(medication.class.colname)) {as.character(unique(data[,medication.class.colname]))} else {NULL},
+                                                             suppress.warnings=TRUE,
+                                                             already.checked=TRUE),
                  "carryover.within.obs.window"=carryover.within.obs.window,
                  "carryover.into.obs.window"=carryover.into.obs.window,
                  "carry.only.for.same.medication"=carry.only.for.same.medication,
@@ -598,6 +640,13 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
             if( p == "CMA" )
             {
               cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
+            } else if( p == "medication.groups" )
+            {
+              if( !is.null(cma[[p]]) )
+              {
+                tmp <- cma[[p]]; tmp <- tmp[ order(tmp$group, tmp$class), ];
+                cat(paste0("    ",p," =  [ ",paste0(vapply(unique(tmp$group), function(s) paste0(s," (",paste0("'",tmp$class[tmp$group==s],"'",collapse=", "),") "), character(1)),collapse=", "),"]\n"));
+              }
             } else if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
             {
               cat(paste0("    ",p," = ",cma[[p]],"\n"));
