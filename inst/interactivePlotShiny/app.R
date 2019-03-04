@@ -1056,6 +1056,16 @@ ui <- fluidPage(
                                                                                            label="Time series vertical space",
                                                                                            value=10, min=5, max=NA, step=1)),
 
+                                                                          div(title='Show the 0% mark?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_0perc",
+                                                                                                           label="Show 0% mark?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+
+                                                                          div(title='Show the 100% mark?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_100perc",
+                                                                                                           label="Show 100% mark?",
+                                                                                                           value=FALSE, status="primary", right=TRUE)),
+
                                                                           div(title='Should the vertical axis of the time series plot start at 0 or at the minimum actually observed value?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_start_from_zero",
                                                                                                            label="Start plot from 0?",
@@ -1983,6 +1993,8 @@ server <- function(input, output, session)
                                                          plot.partial.CMAs.as.timeseries.col.dot=if(!input$cma_as_timeseries_show_dots){NA}else{input$cma_as_timeseries_color_dots},
                                                          plot.partial.CMAs.as.timeseries.col.interval=if(!input$cma_as_timeseries_show_interval){NA}else{input$cma_as_timeseries_color_intervals},
                                                          plot.partial.CMAs.as.timeseries.col.text=if(!input$cma_as_timeseries_show_text){NA}else{input$cma_as_timeseries_color_text},
+                                                         plot.partial.CMAs.as.timeseries.show.0perc=input$cma_as_timeseries_show_0perc,
+                                                         plot.partial.CMAs.as.timeseries.show.100perc=input$cma_as_timeseries_show_100perc,
                                                          plot.partial.CMAs.as.overlapping.col.interval=if(!input$cma_as_overlapping_show_interval){NA}else{input$cma_as_overlapping_color_intervals},
                                                          plot.partial.CMAs.as.overlapping.col.text=if(!input$cma_as_overlapping_show_text){NA}else{input$cma_as_overlapping_color_text},
                                                          show.event.intervals=input$show_event_intervals,
