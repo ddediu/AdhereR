@@ -7781,6 +7781,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                                plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
                                plot.CMA.as.histogram=TRUE,      # plot CMA as a histogram or as a density plot?
                                plot.partial.CMAs.as=c("stacked", "overlapping", "timeseries")[1], # how to plot the "partial" (i.e., intervals/episodes) CMAs (NULL for none)?
+                               plot.partial.CMAs.as.stacked.col.bars="gray90", plot.partial.CMAs.as.stacked.col.border="gray30", plot.partial.CMAs.as.stacked.col.text="black",
                                plot.partial.CMAs.as.timeseries.vspace=7, # how much vertical space to reserve for the timeseries plot (in character lines)
                                plot.partial.CMAs.as.timeseries.start.from.zero=TRUE, #show the vertical axis start at 0 or at the minimum actual value (if positive)?
                                plot.partial.CMAs.as.timeseries.col.dot="darkblue", plot.partial.CMAs.as.timeseries.col.interval="gray70", plot.partial.CMAs.as.timeseries.col.text="firebrick", # setting any of these to NA results in them not being plotted
@@ -8346,10 +8347,13 @@ print.CMA_per_episode <- function(x,                                     # the C
               {
                 h <- start + (end - start)*max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
                 rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10,
-                      adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90, border=gray(0.3), col=gray(0.9));
+                      adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90,
+                      border=plot.partial.CMAs.as.stacked.col.border,
+                      col=plot.partial.CMAs.as.stacked.col.bars);
                 if( print.CMA && char.height.CMA <= 0.80 )
                 {
-                  text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5, sprintf("%.0f%%",100*cmas$CMA[s[j]]), cex=CMA.cex);
+                  text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5,
+                        sprintf("%.0f%%",100*cmas$CMA[s[j]]), cex=CMA.cex, col=plot.partial.CMAs.as.stacked.col.text);
                 }
               }
               y.cur <- y.cur+1;
@@ -10191,6 +10195,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 print.CMA=TRUE, CMA.cex=0.50,
                                 plot.CMA=TRUE, CMA.plot.ratio=0.10, CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text="darkgreen",
                                 plot.partial.CMAs.as=c("stacked"),
+                                plot.partial.CMAs.as.stacked.col.bars="gray90",
+                                plot.partial.CMAs.as.stacked.col.border="gray30",
+                                plot.partial.CMAs.as.stacked.col.text="black",
                                 plot.partial.CMAs.as.timeseries.vspace=7,
                                 plot.partial.CMAs.as.timeseries.start.from.zero=TRUE,
                                 plot.partial.CMAs.as.timeseries.col.dot="darkblue",
@@ -10493,6 +10500,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            print.CMA=print.CMA, CMA.cex=CMA.cex,
            plot.CMA=plot.CMA, CMA.plot.ratio=CMA.plot.ratio, CMA.plot.col=CMA.plot.col, CMA.plot.border=CMA.plot.border, CMA.plot.bkg=CMA.plot.bkg, CMA.plot.text=CMA.plot.text,
            plot.partial.CMAs.as=plot.partial.CMAs.as,
+           plot.partial.CMAs.as.stacked.col.bars=plot.partial.CMAs.as.stacked.col.bars,
+           plot.partial.CMAs.as.stacked.col.border=plot.partial.CMAs.as.stacked.col.border,
+           plot.partial.CMAs.as.stacked.col.text=plot.partial.CMAs.as.stacked.col.text,
            plot.partial.CMAs.as.timeseries.vspace=plot.partial.CMAs.as.timeseries.vspace,
            plot.partial.CMAs.as.timeseries.start.from.zero=plot.partial.CMAs.as.timeseries.start.from.zero,
            plot.partial.CMAs.as.timeseries.col.dot=plot.partial.CMAs.as.timeseries.col.dot,

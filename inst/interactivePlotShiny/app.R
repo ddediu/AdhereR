@@ -1160,7 +1160,32 @@ ui <- fluidPage(
                                                                                                           label="Text values color",
                                                                                                           value="firebrick")))
 
+                                                                        ),
+
+                                                                        conditionalPanel(
+                                                                          condition="input.plot_cma_stacked",
+
+                                                                          hr(),
+
+                                                                          div(title='Plotting the "partial" CMAs as stacked bars...',
+                                                                              span(p("Showing CMAs as stacked bars"), style="color:RoyalBlue; font-weight: italic;")),
+
+                                                                          div(title='The color of the bar',
+                                                                              colourpicker::colourInput(inputId="plot_partial_cmas_as_stacked_col_bars",
+                                                                                                        label="Bar color",
+                                                                                                        value="gray90")),
+
+                                                                          div(title='The color of the border',
+                                                                              colourpicker::colourInput(inputId="plot_partial_cmas_as_stacked_col_border",
+                                                                                                        label="Border color",
+                                                                                                        value="gray30")),
+                                                                          div(title='The color of the text',
+                                                                              colourpicker::colourInput(inputId="plot_partial_cmas_as_stacked_col_text",
+                                                                                                        label="text color",
+                                                                                                        value="black"))
+
                                                                         )
+
                                                                       )
                                                                     ),
 
@@ -2012,6 +2037,9 @@ server <- function(input, output, session)
                                                          plot.partial.CMAs.as=c(if(input$plot_cma_stacked){"stacked"}else{NULL},
                                                                                 if(input$plot_cma_overlapping){"overlapping"}else{NULL},
                                                                                 if(input$plot_cma_timeseries){"timeseries"}else{NULL}),
+                                                         plot.partial.CMAs.as.stacked.col.bars=input$plot_partial_cmas_as_stacked_col_bars,
+                                                         plot.partial.CMAs.as.stacked.col.border=input$plot_partial_cmas_as_stacked_col_border,
+                                                         plot.partial.CMAs.as.stacked.col.text=input$plot_partial_cmas_as_stacked_col_text,
                                                          plot.partial.CMAs.as.timeseries.vspace=input$cma_as_timeseries_vspace,
                                                          plot.partial.CMAs.as.timeseries.start.from.zero=input$cma_as_timeseries_start_from_zero,
                                                          plot.partial.CMAs.as.timeseries.col.dot=if(!input$cma_as_timeseries_show_dots){NA}else{input$cma_as_timeseries_color_dots},
