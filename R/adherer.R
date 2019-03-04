@@ -7769,6 +7769,9 @@ print.CMA_per_episode <- function(x,                                     # the C
                                show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
                                cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                                show.cma=TRUE,                         # show the CMA type
+                               xlab=c("dates"="Date", "days"="Days"), # Vector of x labels to show for the two types of periods, or a single value for both, or NULL for nothing
+                               ylab=c("withoutCMA"="patient", "withCMA"="patient (& CMA)"), # Vector of y labels to show without and with CMA estimates, or a single value for both, or NULL ofr nonthing
+                               title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nonthing
                                col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                unspecified.category.label="drug",     # the label of the unspecified category of medication
                                medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
@@ -7985,7 +7988,9 @@ print.CMA_per_episode <- function(x,                                     # the C
                                       pid <- p;
                                       data.frame("ID"=p, "string"=pid, "width"=strwidth(pid, units="inches", cex=cex.axis), "height"=strheight(pid, units="inches", cex=cex.axis));
                                     }));
-  y.label <- data.frame("string"=(tmp <- ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient")), # space needed for the label as well (in inches)
+  y.label <- data.frame("string"=(tmp <- ifelse(is.null(ylab),"",
+                                                ifelse(length(ylab)==1,ylab,
+                                                       ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),ylab["withCMA"],ylab["withoutCMA"])))), # space needed for the label (in inches)
                         "width"=strwidth(tmp, units="inches", cex=cex.lab), "height"=strheight(tmp, units="inches", cex=cex.lab));
   left.margin <- (cur.mai <- par("mai"))[2]; # left margin in inches (and cache the current margins too)
   # If there's enough space as it is, don't do anything:
@@ -8061,13 +8066,17 @@ print.CMA_per_episode <- function(x,                                     # the C
 
   # Continue plotting:
   box();
-  title(main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
-                    ifelse(show.cma,paste0(" ",
-                                           switch(class(cma)[1],
-                                                  "CMA_sliding_window"="sliding window",
-                                                  "CMA_per_episode"="per episode"),
-                                           " (",cma$computed.CMA,")"),"")),
-        xlab=ifelse(show.period=="dates","date","days"),
+  title(main=paste0(ifelse(is.null(title),"",
+                           ifelse(length(title)==1,title,
+                                  ifelse(align.all.patients, title["aligned"], title["notaligned"]))),
+                    ifelse(!is.null(title) && show.cma,
+                           paste0(" ",
+                                  switch(class(cma)[1],
+                                         "CMA_sliding_window"="sliding window",
+                                         "CMA_per_episode"="per episode"),
+                                  " (",cma$computed.CMA,")"),"")),
+        xlab=ifelse(is.null(xlab),"",
+                    ifelse(length(xlab)==1,xlab, xlab[show.period])),
         #ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
         cex.lab=cex.lab);
   #text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("0000", cex=cex.axis)),
@@ -10177,6 +10186,11 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 # Legend:
                                 show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend
 
+                                # Labels and title:
+                                xlab=c("dates"="Date", "days"="Days"),
+                                ylab=c("withoutCMA"="patient", "withCMA"="patient (& CMA)"),
+                                title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"),
+
                                 # Duration and period:
                                 duration=NA, # duration to plot
                                 show.period=c("dates","days")[2], period.in.days=90, # period on the x axis
@@ -10518,6 +10532,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
            show.period=show.period, period.in.days=period.in.days,
            plot.CMA.as.histogram=plot.CMA.as.histogram,
+           xlab=xlab,
+           ylab=ylab,
+           title=title,
            align.all.patients=align.all.patients,
            align.first.event.at.zero=align.first.event.at.zero,
            print.dose=print.dose, cex.dose=cex.dose, print.dose.outline.col=print.dose.outline.col, print.dose.centered=print.dose.centered,

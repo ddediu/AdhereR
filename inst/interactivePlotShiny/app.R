@@ -991,6 +991,27 @@ ui <- fluidPage(
                                                                   hr()
                                                                 ),
 
+                                                                # Axis labels & title
+                                                                div(title='Axis labels and title',
+                                                                    span(p("Axis labels and title"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                div(title='Show to main title?',
+                                                                    shinyWidgets::materialSwitch(inputId="show_plot_title",
+                                                                                                 label="Show title?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
+
+                                                                div(title='Show to x axis label?',
+                                                                    shinyWidgets::materialSwitch(inputId="show_xlab",
+                                                                                                 label="Show x label?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
+
+                                                                div(title='Show to y axis label?',
+                                                                    shinyWidgets::materialSwitch(inputId="show_ylab",
+                                                                                                 label="Show y label?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
+                                                                hr(),
+
+
                                                                 # CMA estimate aesthetics:
                                                                 conditionalPanel(
                                                                   condition="(input.cma_class == 'per episode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
@@ -2060,6 +2081,9 @@ server <- function(input, output, session)
                                                          plot.dose=input$plot_dose,
                                                          lwd.event.max.dose=input$lwd_event_max_dose,
                                                          plot.dose.lwd.across.medication.classes=input$plot_dose_lwd_across_medication_classes,
+                                                         xlab=if(input$show_xlab) {c("dates"="Date", "days"="Days")} else {NULL},
+                                                         ylab=if(input$show_ylab) {c("withoutCMA"="patient", "withCMA"="patient (& CMA)")} else {NULL},
+                                                         title=if(input$show_plot_title) {c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns")} else {NULL},
                                                          min.plot.size.in.characters.horiz=input$min_plot_size_in_characters_horiz,
                                                          min.plot.size.in.characters.vert=input$min_plot_size_in_characters_vert,
                                                          get.colnames.fnc=.GlobalEnv$.plotting.params$get.colnames.fnc,
