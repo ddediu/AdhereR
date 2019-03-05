@@ -209,6 +209,7 @@ estimate (much) bigger than 1.0 (100\%)
 event.
 }
 \examples{
+\dontrun{
 cma2 <- CMA2(data=med.events,
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -226,7 +227,7 @@ cma4 <- CMA4(data=med.events,
              observation.window.start=30,
              observation.window.duration=365,
              date.format="\%m/\%d/\%Y"
-            );
+            );}
 }
 \seealso{
 CMAs 1 to 8 are defined in:

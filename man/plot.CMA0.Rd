@@ -9,11 +9,11 @@
   period.in.days = 90, show.legend = TRUE, legend.x = "right",
   legend.y = "bottom", legend.bkg.opacity = 0.5, legend.cex = 0.75,
   legend.cex.title = 1, cex = 1, cex.axis = 0.75, cex.lab = 1,
-  col.cats = rainbow, lty.event = "solid", lwd.event = 2,
-  pch.start.event = 15, pch.end.event = 16, print.dose = FALSE,
-  cex.dose = 0.75, print.dose.outline.col = "white",
-  print.dose.centered = FALSE, plot.dose = FALSE,
-  lwd.event.max.dose = 8,
+  col.cats = rainbow, unspecified.category.label = "drug",
+  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
+  pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
+  print.dose.outline.col = "white", print.dose.centered = FALSE,
+  plot.dose = FALSE, lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
   col.continuation = "black", lty.continuation = "dotted",
   lwd.continuation = 1, col.na = "lightgray",
@@ -21,11 +21,8 @@
   highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
   observation.window.angle = -30, observation.window.opacity = 0.3,
-  events = NULL, events.ID.colname = NA, events.start.colname = NA,
-  events.end.colname = NA, events.date.format = NA,
-  col.events = adjustcolor("gray20", alpha.f = 0.5), bw.plot = FALSE,
-  print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1,
-  min.plot.size.in.characters.horiz = 10,
+  bw.plot = FALSE, print.CMA = TRUE, plot.CMA = TRUE,
+  CMA.plot.ratio = 0.1, min.plot.size.in.characters.horiz = 10,
   min.plot.size.in.characters.vert = 0.5, max.patients.to.plot = 100)
 }
 \arguments{
@@ -65,13 +62,16 @@ drawn (or 0 for no grid).}
 \item{legend.bkg.opacity}{A \emph{number} between 0.0 and 1.0 specifying the
 opacity of the legend background.}
 
-\item{cex, cex.axis, cex.lab}{\emph{numeric} values specifying the cex of the
-various types of text.}
+\item{cex, cex.axis, cex.lab, legend.cex, legend.cex.title}{\emph{numeric} values
+specifying the cex of the various types of text.}
 
 \item{col.cats}{A \emph{color} or a \emph{function} that specifies the single
 colour or the colour palette used to plot the different medication; by
 default \code{rainbow}, but we recommend, whenever possible, a
 colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.}
+
+\item{unspecified.category.label}{A \emph{string} giving the name of the
+unspecified (generic) medication category.}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
@@ -112,8 +112,8 @@ be plotted?}
 \item{highlight.observation.window}{\emph{Logical}, should the observation
 window be plotted?}
 
-\item{observation.window.col, observation.window.density, observation.window.angle}{Attributes of the observation window
-(colour, shading density and angle).}
+\item{observation.window.col, observation.window.density, observation.window.angle, observation.window.opacity}{Attributes of the observation window (colour, shading density, angle and
+opacity).}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
@@ -126,6 +126,11 @@ graphically?}
 \item{CMA.plot.ratio}{A \emph{number}, the proportion of the total horizontal
 plot space to be allocated to the CMA plot.
 \emph{Numeric}, the minimum size of the plotting surface in characters;
+horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+referes to a single event.}
+
+\item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
 horizontally (min.plot.size.in.characters.horiz) referes to the the whole
 duration of the events to plot; vertically (min.plot.size.in.characters.vert)
 referes to a single event.}

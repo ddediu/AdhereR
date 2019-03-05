@@ -307,18 +307,6 @@ cmaW1 <- CMA_sliding_window(CMA.to.apply="CMA9",
 # Plot:
 plot(cmaW1, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, eval=FALSE----------------------------------------------
-#  # Interactive plotting of CMA per-treatment-episode
-#  # Please run only within RStudio!
-#  plot_interactive_cma(data=ExamplePats,
-#                       cma.class="per episode",
-#                       ID.colname="PATIENT_ID",
-#                       event.date.colname="DATE",
-#                       event.duration.colname="DURATION",
-#                       event.daily.dose.colname="PERDAY",
-#                       medication.class.colname="CATEGORY",
-#                       date.format="%m/%d/%Y");
-
 ## ----eval=FALSE----------------------------------------------------------
 #  cmaW3 <- CMA_sliding_window(CMA="CMA1",
 #                              data=med.events,

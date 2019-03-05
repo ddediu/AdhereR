@@ -1,7 +1,7 @@
-Package: AdhereR.devel
+Package: AdhereR
 Type: Package
 Title: Adherence to Medications
-Version: 0.3.2
+Version: 0.4.2
 Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
                      email = "ddediu@gmail.com"),
              person("Alexandra", "Dima", role = "aut",
@@ -36,6 +36,9 @@ Imports: lubridate (>= 1.5),
     data.table (>= 1.9),
     manipulate (>= 1.0),
     shiny (>= 1.0),
+    shinyWidgets (>= 0.4.4),
+    shinyjs (>= 1.0),
+    V8 (>= 1.5),
     colourpicker (>= 1.0),
     viridisLite(>= 0.3),
     highlight (>= 0.4),
@@ -45,10 +48,10 @@ Imports: lubridate (>= 1.5),
     readxl (>= 1.2),
     haven (>= 2.0),
     DBI (>= 1.0),
-    RMariaDB (>= 1.0.5)
+    RMariaDB (>= 1.0.5),
+    RSQLite (>= 2.1)
 Depends: R (>= 3.0)
-Suggests: knitr (>= 1.15),
-    rmarkdown (>= 1.1),
+Suggests: rmarkdown (>= 1.1),
     R.rsp (>= 0.40)
 VignetteBuilder: knitr, R.rsp
 Encoding: UTF-8
