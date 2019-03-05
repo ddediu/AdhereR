@@ -329,9 +329,17 @@ compute_event_durations <- function(disp.data = NULL,
       if( !suppress.warnings ) warning(paste0("Column presc.date.colname='",presc.date.colname,"' must appear in the prescribing data!\n"));
       return (NULL);
     }
+    if(anyNA(presc.data[[presc.date.colname]])){
+      if( !suppress.warnings ) warning(paste0("Column presc.date.colname='",presc.date.colname,"' cannot contain missing values!\n"));
+      return (NULL);
+    }
     if( !is.na(disp.date.colname) && !(disp.date.colname %in% names(disp.data)) )
     {
       if( !suppress.warnings ) warning(paste0("Column disp.date.colname='",disp.date.colname,"' must appear in the dispensing data!\n"));
+      return (NULL);
+    }
+    if(anyNA(disp.data[[disp.date.colname]])){
+      if( !suppress.warnings ) warning(paste0("Column disp.date.colname='",disp.date.colname,"' cannot contain missing values!\n"));
       return (NULL);
     }
     if( any(!is.na(medication.class.colnames) & !(medication.class.colnames %in% names(disp.data)) & !(medication.class.colnames %in% names(presc.data))) ) # deal with the possibility of multiple column names
@@ -344,9 +352,17 @@ compute_event_durations <- function(disp.data = NULL,
       if( !suppress.warnings ) warning(paste0("Column total.dose.colname='",total.dose.colname,"' must appear in the dispensing data!\n"));
       return (NULL);
     }
+    if(anyNA(disp.data[[total.dose.colname]])){
+      if( !suppress.warnings ) warning(paste0("Column total.dose.colname='",total.dose.colname,"' cannot contain missing values!\n"));
+      return (NULL);
+    }
     if( !is.na(presc.daily.dose.colname) && !(presc.daily.dose.colname %in% names(presc.data)) )
     {
       if( !suppress.warnings ) warning(paste0("Column presc.daily.dose.colname='",presc.daily.dose.colname,"' must appear in the prescribing data!\n"));
+      return (NULL);
+    }
+    if(anyNA(presc.data[[presc.daily.dose.colname]])){
+      if( !suppress.warnings ) warning(paste0("Column presc.daily.dose.colname='",presc.daily.dose.colname,"' cannot contain missing values!\n"));
       return (NULL);
     }
     if( !is.na(presc.duration.colname) && !(presc.duration.colname %in% names(presc.data)) )
@@ -654,6 +670,7 @@ compute_event_durations <- function(disp.data = NULL,
       ## subset data to medication
 
       setkeyv(pat_disp, medication.class.colnames);
+      setkeyv(pat_presc, medication.class.colnames);
 
       med_disp <- pat_disp[list(disp_presc[med, medication.class.colnames, with = FALSE])];
 
@@ -739,10 +756,10 @@ compute_event_durations <- function(disp.data = NULL,
       med_presc[,END.PRESC := shift(END.PRESC, type = "lead")]; # ... and shift end dates up by one
 
       # adjust end date if prescription duration is provided and change start date of following prescriptions
-      med_presc[!is.na(get(presc.duration.colname)) & ((DATE.PRESC + get(presc.duration.colname)) <= END.PRESC | is.na(END.PRESC)), END.PRESC := DATE.PRESC + get(presc.duration.colname)]; # only if prescription ends before the current end prescription date!
-      end.limited.presc <- head(med_presc,-1)[!is.na(get(presc.duration.colname)) & ((DATE.PRESC + get(presc.duration.colname)) <= END.PRESC | is.na(END.PRESC))]$END.PRESC; #don't include last prescription episode
-      med_presc[shift(!is.na(get(presc.duration.colname)), type = "lag") & shift((DATE.PRESC + get(presc.duration.colname)) <= END.PRESC, type = "lag"), START.PRESC := end.limited.presc];
-      med_presc[DATE.PRESC>START.PRESC & get(presc.daily.dose.colname) != 0,START.PRESC:=DATE.PRESC];
+      med_presc[!is.na(get(presc.duration.colname)) & ((get(presc.date.colname) + get(presc.duration.colname)) <= END.PRESC | is.na(END.PRESC)), END.PRESC := get(presc.date.colname) + get(presc.duration.colname)]; # only if prescription ends before the current end prescription date!
+      end.limited.presc <- head(med_presc,-1)[!is.na(get(presc.duration.colname)) & ((get(presc.date.colname) + get(presc.duration.colname)) <= END.PRESC | is.na(END.PRESC))]$END.PRESC; #don't include last prescription episode
+      med_presc[shift(!is.na(get(presc.duration.colname)), type = "lag") & shift((get(presc.date.colname) + get(presc.duration.colname)) <= END.PRESC, type = "lag"), START.PRESC := end.limited.presc];
+      med_presc[get(presc.date.colname)>START.PRESC & get(presc.daily.dose.colname) != 0,START.PRESC:=get(presc.date.colname)];
 
       # combine episodes with set durations with previous episodes of same dosage but unrestricted duration
       med_presc[shift(get(presc.daily.dose.colname),type="lag")==get(presc.daily.dose.colname) & !is.na(shift(get(presc.duration.colname),type="lag")) & shift(END.PRESC, type = "lag") == START.PRESC, .episode := as.integer(.episode-1)];
@@ -798,7 +815,7 @@ compute_event_durations <- function(disp.data = NULL,
         med_disp[get(disp.date.colname) >= med_presc[i,START.PRESC] & (get(disp.date.colname) < med_presc[i,END.PRESC] | is.na(med_presc[i,END.PRESC])),
                  c("START.PRESC", "END.PRESC", presc.daily.dose.colname) := list(med_presc[i,START.PRESC], med_presc[i,END.PRESC],med_presc[i,get(presc.daily.dose.colname)])];
       }
-      med_disp[,DURATION := (TOTAL.DOSE)/(DAILY.DOSE)];
+      med_disp[,DURATION := (get(total.dose.colname))/(get(presc.daily.dose.colname))];
       med_disp[,`:=` (DISP.START = get(disp.date.colname),
                       DISP.END = get(disp.date.colname)+DURATION)];
 
@@ -826,6 +843,10 @@ compute_event_durations <- function(disp.data = NULL,
                                       "START.PRESC",
                                       "END.PRESC"), with = FALSE];
       medication_events[,HOSP.DURATION := 0];
+
+      setnames(medication_events,
+               old = c(presc.daily.dose.colname),
+               new = c("DAILY.DOSE"));
 
       med_disp <- med_disp[DURATION == Inf | .out == 1 | .hosp == 1];
 
@@ -879,10 +900,12 @@ compute_event_durations <- function(disp.data = NULL,
 
     pat_presc <- presc.data[get(ID.colname) == pat, c(ID.colname,
                                                       presc.date.colname,
-                                                      visit.colname,
                                                       medication.class.colnames,
                                                       presc.daily.dose.colname,
                                                       presc.duration.colname), with = FALSE];
+    if(visit.colname %in% colnames(presc.data)){
+      pat_presc <- cbind(presc.data[get(ID.colname) == pat, visit.colname, with = FALSE]);
+    };
 
     # sort by DCI
     setkeyv(pat_disp, cols = medication.class.colnames);
@@ -912,7 +935,7 @@ compute_event_durations <- function(disp.data = NULL,
     }
 
     # if duplicate visit numbers for different dates or vice versa, throw an error
-    if( length(unique(presc_events$DATE.PRESC)) != nrow(presc_events) )
+    if( length(unique(presc_events[[presc.date.colname]])) != nrow(presc_events) )
     {
       {
         if( !suppress.warnings ) warning("Prescription dates and visit number don't match for patient Nr.", pat);
@@ -939,19 +962,23 @@ compute_event_durations <- function(disp.data = NULL,
                                                 fill = TRUE));
     }
 
+    setkeyv(pat_disp, cols = medication.class.colnames);
+    setkeyv(pat_presc, cols = medication.class.colnames);
+
     patient_events <- rbind(patient_events,
                             pat_disp[list(disp_no_presc[,medication.class.colnames, with = FALSE]), c(ID.colname, disp.date.colname, medication.class.colnames, total.dose.colname), with = FALSE],
                             pat_presc[list(presc_no_disp[,medication.class.colnames, with = FALSE]), c(ID.colname, medication.class.colnames, presc.daily.dose.colname), with = FALSE],
                             fill = TRUE);
 
     # update progress bar
-    setTxtProgressBar(pb, pat);
+    setTxtProgressBar(pb, getTxtProgressBar(pb)+1);
 
     patient_events;
   }
 
   # extract IDs of all patients present in dispensing and prescription database
-  disp_presc_IDs <- intersect(disp.data[[ID.colname]], presc.data[[ID.colname]]);
+  disp_presc_IDs <- sort(intersect(disp.data[[ID.colname]], presc.data[[ID.colname]]));
+
 
   # add duration of hospitalization
   if( !is.null(hosp.data) )
