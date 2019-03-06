@@ -77,23 +77,51 @@
                        bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                        min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.25, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
+                       suppress.warnings=FALSE,         # suppress warnings?
                        ...
 )
 {
-  if( is.null(cma) || !(inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window")) || is.null(cma$data) || nrow(cma$data) < 1 ||
-      is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) ||
-      is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) ||
-      !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (plot.CMA0(cma,...));
+  if( is.null(cma) ||                                                                                            # must be: non-null
+      !(inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window") || inherits(cma, "CMA0")) ||     # a proper CMA object
+      is.null(cma$data) || nrow(cma$data) < 1 || !inherits(cma$data, "data.frame") ||                            # that containins non-null data derived from data.frame
+      is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) ||                                         # has a valid patient ID column
+      is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) ||                         # has a valid event date column
+      is.na(cma$event.duration.colname) || !(cma$event.duration.colname %in% names(cma$data))                    # has a valid event duration column
+  )
+  {
+    if( !suppress.warnings ) warning(paste0("Can only plot a correctly specified CMA object (i.e., with valid data and column names)!\n"));
+    return (invisible(NULL));
+  }
 
-  # Convert all data.table to data.frame:
-  if( inherits(cma$CMA, "data.table") ) cma$CMA <- as.data.frame(cma$CMA);
+  # Convert data.table to data.frame (basically, to guard against inconsistencies between data.table and data.frame in how they handle d[,i]):
   if( inherits(cma$data, "data.table") ) cma$data <- as.data.frame(cma$data);
 
   # Check compatibility between subtypes of plots:
-  if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
+  if( align.all.patients && show.period != "days" ){ show.period <- "days"; if( !suppress.warnings ) warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
 
-  # Depeding on the cma's exact type, the relevant columns might be different: homogenize them for later use
-  cmas <- cma$CMA;
+  # The patients:
+  patids <- unique(as.character(cma$data[,cma$ID.colname])); patids <- patids[!is.na(patids)];
+  if( !is.null(patients.to.plot) ) patids <- intersect(patids, as.character(patients.to.plot));
+  if( length(patids) == 0 )
+  {
+    if( !suppress.warnings ) warning("No patients to plot!\n");
+    return (invisible(NULL));
+  } else if( length(patids) > max.patients.to.plot )
+  {
+    if( !suppress.warnings ) warning(paste0("Too many patients to plot (",length(patids),
+                                            ")! If this is the desired outcome, please change the 'max.patients.to.plot' parameter value (now set at ",
+                                            max.patients.to.plot,") to at least ',length(patids),'!\n"));
+    return (invisible(NULL));
+  }
+
+  # Select only the patients to display:
+  cma <- subsetCMA(cma, patids);
+
+  # Cache the CMA estimates (if any):
+  cmas <- getCMA(cma);
+  if( inherits(cmas, "data.table") ) cmas <- as.data.frame(cmas); # same conversion to data.frame as above
+
+  # Depeding on the cma's exact type, the relevant columns might be different or even absent: homogenize them for later use
   if( inherits(cma, "CMA_per_episode") )
   {
     names(cmas)[2:ncol(cmas)] <- c("WND.ID", "start", "gap.days", "duration", "end", "CMA"); # avoid possible conflict with patients being called "ID"
@@ -101,8 +129,76 @@
   {
     cmas <- cbind(cmas[,1:3], "gap.days"=NA, "duration"=cma$sliding.window.duration, cmas[,4:ncol(cmas)]);
     names(cmas)[2:ncol(cmas)] <- c("WND.ID", "start", "gap.days", "duration", "end", "CMA"); # avoid possible conflict with patients being called "ID"
+  } else if( inherits(cma, "CMA0") && is.null(cma$event.info) )
+  {
+    # Try to compute the event.info:
+    event.info <- compute.event.int.gaps(data=cma$data,
+                                         ID.colname=cma$ID.colname,
+                                         event.date.colname=cma$event.date.colname,
+                                         event.duration.colname=cma$event.duration.colname,
+                                         event.daily.dose.colname=cma$event.daily.dose.colname,
+                                         medication.class.colname=cma$medication.class.colname,
+                                         event.interval.colname="event.interval",
+                                         gap.days.colname="gap.days",
+                                         carryover.within.obs.window=FALSE,
+                                         carryover.into.obs.window=FALSE,
+                                         carry.only.for.same.medication=FALSE,
+                                         consider.dosage.change=FALSE,
+                                         followup.window.start=cma$followup.window.start,
+                                         followup.window.start.unit=cma$followup.window.start.unit,
+                                         followup.window.duration=cma$followup.window.duration,
+                                         followup.window.duration.unit=cma$followup.window.duration.unit,
+                                         observation.window.start=cma$observation.window.start,
+                                         observation.window.start.unit=cma$observation.window.start.unit,
+                                         observation.window.duration=cma$observation.window.duration,
+                                         observation.window.duration.unit=cma$observation.window.duration.unit,
+                                         date.format=cma$date.format,
+                                         keep.window.start.end.dates=TRUE,
+                                         remove.events.outside.followup.window=FALSE,
+                                         keep.event.interval.for.all.events=TRUE,
+                                         parallel.backend="none", # make sure this runs sequentially!
+                                         parallel.threads=1,
+                                         suppress.warnings=FALSE,
+                                         return.data.table=FALSE);
+    if( !is.null(event.info) )
+    {
+      # Keep only those events that intersect with the observation window (and keep only the part that is within the intersection):
+
+      # Compute end prescription date as well:
+      event.info$.DATE.as.Date.end <- .add.time.interval.to.date(event.info$.DATE.as.Date, event.info[,cma$event.duration.colname], "days");
+
+      # Remove all treatments that end before FUW starts and those that start after FUW ends:
+      event.info <- event.info[ !(event.info$.DATE.as.Date.end < event.info$.FU.START.DATE | event.info$.DATE.as.Date > event.info$.FU.END.DATE), ];
+      if( is.null(event.info) || nrow(event.info) == 0 )
+      {
+        if( !suppress.warnings ) warning("No events in the follow-up window: nothing to plot!\n");
+        return (invisible(NULL));
+      }
+
+      # Find all prescriptions that start before the follow-up window and truncate them:
+      s <- (event.info$.DATE.as.Date < event.info$.FU.START.DATE);
+      if( length(s) > 0 )
+      {
+        event.info$.DATE.as.Date[s] <- event.info$.FU.START.DATE[s];
+      }
+
+      # Find all prescriptions that end after the follow-up window and truncate them:
+      s <- (event.info$.DATE.as.Date.end > event.info$.FU.END.DATE);
+      if( length(s) > 0 )
+      {
+        event.info[s,cma$event.duration.colname] <- .difftime.Dates.as.days(event.info$.FU.END.DATE[s], event.info$.DATE.as.Date[s]);
+      }
+
+      # Store the event.info data:
+      cma$event.info <- event.info;
+    } else
+    {
+      if( !suppress.warnings ) warning("Error(s) concerning the follow-up and observation windows: please see console for details!\n");
+      return (invisible(NULL));
+    }
   }
-  # add also the follow-up and observation window infor as well to have everything in one place:
+
+  # Add the follow-up and observation window info as well, to have everything in one place:
   cmas <- cbind(cmas, do.call(rbind, lapply(1:nrow(cmas), function(i)
   {
     s <- which(cma$event.info[,cma$ID.colname] == cmas[i,cma$ID.colname]);
@@ -110,33 +206,33 @@
     cma$event.info[s,c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
   })));
 
-  # Make sure the dates are strings of the right format:
-  if( inherits(cma$data[,cma$event.date.colname], "Date") )
+  # Make sure the dates are cached as `Date` objects:
+  if( !inherits(cma$data[,cma$event.date.colname], "Date") )
   {
-    cma$date.format <- "%m/%d/%Y"; # use the default format
-    cma$data[,cma$event.date.colname] <- as.character(cma$data[,cma$event.date.colname], format=cma$date.format);
+    if( is.na(cma$date.format) || is.null(cma$date.format) || length(cma$date.format) != 1 || !is.character(cma$date.format) )
+    {
+      if( !suppress.warnings ) warning(paste0("The date format must be a single string: cannot continue plotting!\n"));
+      return (invisible(NULL));
+    }
+
+    if( anyNA(cma$data[,cma$event.date.colname] <- as.Date(cma$data[,cma$event.date.colname], format=cma$date.format)) )
+    {
+      if( !suppress.warnings ) warning(paste0("Not all entries in the event date \"",cma$event.date.colname,"\" column are valid dates or conform to the date format \"",cma$date.format,"\"; first issue occurs on row ",min(which(is.na(cma$data$.DATE.as.Date))),": cannot continue plotting!\n"));
+      return (invisible(NULL));
+    }
   }
 
-  # The patients:
-  patids <- unique(cmas[,cma$ID.colname]); patids <- patids[!is.na(patids)];
-  if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
-  if( length(patids) == 0 )
-  {
-    cat("No patients to plot!\n");
-    return (invisible(NULL));
-  } else if( length(patids) > max.patients.to.plot )
-  {
-    cat(paste0("Too many patients to plot (",length(patids),
-               ")! If you really want that, please change the 'max.patients.to.plot' parameter value (now set at ",
-               max.patients.to.plot,"!\n"));
-    return (invisible(NULL));
-  }
-  # Select only the patients to display:
-  cma$data <- cma$data[ cma$data[,cma$ID.colname] %in% patids, ];
-  cmas <- cmas[ cmas[,cma$ID.colname] %in% patids, ];
   # Make sure the patients are ordered by ID and date:
-  cma$data <- cma$data[ order( cma$data[,cma$ID.colname], as.Date(cma$data[,cma$event.date.colname],format=cma$date.format)), ];
-  cmas <- cmas[ order( cmas[,cma$ID.colname], cmas$WND.ID, cmas$start), ];
+  cma$data <- cma$data[ order( cma$data[,cma$ID.colname], cma$data[,cma$event.date.colname]), ];
+  if( all(c("WND.ID","start") %in% names(cmas)) )
+  {
+    cmas <- cmas[ order( cmas[,cma$ID.colname], cmas$WND.ID, cmas$start), ];
+  } else
+  {
+    cmas <- cmas[ order( cmas[,cma$ID.colname]), ];
+  }
+
+  ### HERE ###
 
   # Grayscale plotting:
   if( bw.plot )

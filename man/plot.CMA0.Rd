@@ -5,15 +5,20 @@
 \title{Plot CMA0 objects.}
 \usage{
 \method{plot}{CMA0}(x, ..., patients.to.plot = NULL, duration = NA,
-  align.all.patients = FALSE, show.period = c("dates", "days")[2],
-  period.in.days = 90, show.legend = TRUE, legend.x = "right",
-  legend.y = "bottom", legend.bkg.opacity = 0.5, legend.cex = 0.75,
-  legend.cex.title = 1, cex = 1, cex.axis = 0.75, cex.lab = 1,
+  align.all.patients = FALSE, align.first.event.at.zero = TRUE,
+  show.period = c("dates", "days")[2], period.in.days = 90,
+  show.legend = TRUE, legend.x = "right", legend.y = "bottom",
+  legend.bkg.opacity = 0.5, legend.cex = 0.75, legend.cex.title = 1,
+  cex = 1, cex.axis = 0.75, cex.lab = 1, xlab = c(dates = "Date",
+  days = "Days"), ylab = c(withoutCMA = "patient", withCMA =
+  "patient (& CMA)"), title = c(aligned =
+  "Event patterns (all patients aligned)", notaligned = "Event patterns"),
   col.cats = rainbow, unspecified.category.label = "drug",
-  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
-  pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
-  print.dose.outline.col = "white", print.dose.centered = FALSE,
-  plot.dose = FALSE, lwd.event.max.dose = 8,
+  medication.groups = NULL, lty.event = "solid", lwd.event = 2,
+  pch.start.event = 15, pch.end.event = 16, print.dose = FALSE,
+  cex.dose = 0.75, print.dose.outline.col = "white",
+  print.dose.centered = FALSE, plot.dose = FALSE,
+  lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
   col.continuation = "black", lty.continuation = "dotted",
   lwd.continuation = 1, col.na = "lightgray",
@@ -21,9 +26,9 @@
   highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
   observation.window.angle = -30, observation.window.opacity = 0.3,
-  bw.plot = FALSE, print.CMA = TRUE, plot.CMA = TRUE,
-  CMA.plot.ratio = 0.1, min.plot.size.in.characters.horiz = 10,
-  min.plot.size.in.characters.vert = 0.5, max.patients.to.plot = 100)
+  bw.plot = FALSE, min.plot.size.in.characters.horiz = 10,
+  min.plot.size.in.characters.vert = 0.5, suppress.warnings = FALSE,
+  max.patients.to.plot = 100)
 }
 \arguments{
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
@@ -118,6 +123,14 @@ opacity).}
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
 
+\item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
+horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+referes to a single event.}
+
+\item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
+to plot.}
+
 \item{print.CMA}{\emph{Logical}, should the CMA values be printed?}
 
 \item{plot.CMA}{\emph{Logical}, should the CMA values be represented
@@ -129,14 +142,6 @@ plot space to be allocated to the CMA plot.
 horizontally (min.plot.size.in.characters.horiz) referes to the the whole
 duration of the events to plot; vertically (min.plot.size.in.characters.vert)
 referes to a single event.}
-
-\item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
-horizontally (min.plot.size.in.characters.horiz) referes to the the whole
-duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-referes to a single event.}
-
-\item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
-to plot.}
 }
 \description{
 Plots the events (prescribing or dispensing) data encapsulated in a basic
