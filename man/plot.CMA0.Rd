@@ -26,7 +26,8 @@
   highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
   observation.window.angle = -30, observation.window.opacity = 0.3,
-  bw.plot = FALSE, min.plot.size.in.characters.horiz = 10,
+  alternating.bands.cols = c("white", "gray95"), bw.plot = FALSE,
+  min.plot.size.in.characters.horiz = 10,
   min.plot.size.in.characters.vert = 0.5, suppress.warnings = FALSE,
   max.patients.to.plot = 100)
 }

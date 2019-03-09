@@ -35,6 +35,13 @@
 ################################################################################
 
 
+# Grayscale colors palette:
+.bw.colors <- function(n)
+{
+  gray.colors(n, start=0, end=0.5);
+}
+
+
 # For now, unify and refactor the code for all plotting (CMA0, CMA1+, PE and SW) using base R plotting:
 .plot.CMAs <- function(cma,                                   # the CMA_per_episode or CMA_sliding_window (or derived) object
                        patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
@@ -74,6 +81,7 @@
                        CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                        highlight.followup.window=TRUE, followup.window.col="green",
                        highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
+                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                        bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                        min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.25, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
@@ -81,6 +89,11 @@
                        ...
 )
 {
+  ##
+  ## Set-up, checks and local functions
+  ##
+
+  # Preconditions:
   if( is.null(cma) ||                                                                                            # must be: non-null
       !(inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window") || inherits(cma, "CMA0")) ||     # a proper CMA object
       is.null(cma$data) || nrow(cma$data) < 1 || !inherits(cma$data, "data.frame") ||                            # that containins non-null data derived from data.frame
@@ -93,11 +106,20 @@
     return (invisible(NULL));
   }
 
+  # Local functions:
+  # Is the cma a time series or per episodes?
+  is.TS.or.SW <- function(cma) (inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window"));
+
   # Convert data.table to data.frame (basically, to guard against inconsistencies between data.table and data.frame in how they handle d[,i]):
   if( inherits(cma$data, "data.table") ) cma$data <- as.data.frame(cma$data);
 
   # Check compatibility between subtypes of plots:
   if( align.all.patients && show.period != "days" ){ show.period <- "days"; if( !suppress.warnings ) warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
+
+
+  ##
+  ## Select patients:
+  ##
 
   # The patients:
   patids <- unique(as.character(cma$data[,cma$ID.colname])); patids <- patids[!is.na(patids)];
@@ -116,6 +138,11 @@
 
   # Select only the patients to display:
   cma <- subsetCMA(cma, patids);
+
+
+  ##
+  ## Cache, consolidate and homogenise the needed info (events, CMAs, FUW an OW)
+  ##
 
   # Cache the CMA estimates (if any):
   cmas <- getCMA(cma);
@@ -199,12 +226,26 @@
   }
 
   # Add the follow-up and observation window info as well, to have everything in one place:
-  cmas <- cbind(cmas, do.call(rbind, lapply(1:nrow(cmas), function(i)
+  if( !is.null(cmas) )
   {
-    s <- which(cma$event.info[,cma$ID.colname] == cmas[i,cma$ID.colname]);
-    if( length(s) != 1 ) return (NULL);
-    cma$event.info[s,c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
-  })));
+    cmas <- cbind(cmas, do.call(rbind, lapply(1:nrow(cmas), function(i)
+    {
+      s <- which(cma$event.info[,cma$ID.colname] == cmas[i,cma$ID.colname]);
+      if( length(s) != 1 ) return (NULL);
+      cma$event.info[s,c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
+    })));
+  } else
+  {
+    # Create a fake one, contining but the follow-up and observation window info:
+    cmas <- data.frame("..patid.."=unique(cma$data[,cma$ID.colname]), "CMA"=NA); names(cmas)[1] <- cma$ID.colname;
+    if( !is.null(cma$event.info) )
+    {
+      cmas <- merge(cmas, unique(cma$event.info[,c(cma$ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]), by=c(cma$ID.colname), all.x=TRUE);
+    } else
+    {
+      cmas <- cbind(cmas, ".FU.START.DATE"=NA, ".FU.END.DATE"=NA, ".OBS.START.DATE"=NA, ".OBS.END.DATE"=NA);
+    }
+  }
 
   # Make sure the dates are cached as `Date` objects:
   if( !inherits(cma$data[,cma$event.date.colname], "Date") )
@@ -215,15 +256,21 @@
       return (invisible(NULL));
     }
 
-    if( anyNA(cma$data[,cma$event.date.colname] <- as.Date(cma$data[,cma$event.date.colname], format=cma$date.format)) )
+    # Convert them to Date:
+    cma$data$.DATE.as.Date <- as.Date(cma$data[,cma$event.date.colname], format=cma$date.format);
+    if( anyNA(cma$data$.DATE.as.Date) )
     {
       if( !suppress.warnings ) warning(paste0("Not all entries in the event date \"",cma$event.date.colname,"\" column are valid dates or conform to the date format \"",cma$date.format,"\"; first issue occurs on row ",min(which(is.na(cma$data$.DATE.as.Date))),": cannot continue plotting!\n"));
       return (invisible(NULL));
     }
+  } else
+  {
+    # Just make a copy:
+    cma$data$.DATE.as.Date <- cma$data[,cma$event.date.colname];
   }
 
   # Make sure the patients are ordered by ID and date:
-  cma$data <- cma$data[ order( cma$data[,cma$ID.colname], cma$data[,cma$event.date.colname]), ];
+  cma$data <- cma$data[ order( cma$data[,cma$ID.colname], cma$data$.DATE.as.Date), ];
   if( all(c("WND.ID","start") %in% names(cmas)) )
   {
     cmas <- cmas[ order( cmas[,cma$ID.colname], cmas$WND.ID, cmas$start), ];
@@ -232,7 +279,10 @@
     cmas <- cmas[ order( cmas[,cma$ID.colname]), ];
   }
 
-  ### HERE ###
+
+  ##
+  ## Colors for plotting
+  ##
 
   # Grayscale plotting:
   if( bw.plot )
@@ -244,6 +294,17 @@
       CMA.plot.border <- gray(0.2);
       CMA.plot.bkg <- gray(0.5);
       CMA.plot.text <- CMA.plot.border;
+      col.na <- "lightgray";
+      col.continuation <- "black";
+      print.dose.outline.col <- "white";
+      plot.partial.CMAs.as.stacked.col.bars <- "gray90";
+      plot.partial.CMAs.as.stacked.col.border <- "gray30";
+      plot.partial.CMAs.as.stacked.col.text <- "black";
+      plot.partial.CMAs.as.timeseries.col.dot <- "black";
+      plot.partial.CMAs.as.timeseries.col.interval <- "gray70";
+      plot.partial.CMAs.as.timeseries.col.text <- "black";
+      plot.partial.CMAs.as.overlapping.col.interval <- "gray70";
+      plot.partial.CMAs.as.overlapping.col.text <- "black";
   }
 
   # The colors for the categories:
@@ -263,6 +324,11 @@
   }
   names(cols) <- categories;
   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
+
+
+  ##
+  ## Doses
+  ##
 
   # Daily dose:
   if( is.na(cma$event.daily.dose.colname) || !(cma$event.daily.dose.colname %in% names(cma$data)) )
@@ -298,50 +364,67 @@
     }
   }
 
-  # Make sure we are using actual dates:
-  if( !inherits(cma$data[,cma$event.date.colname], "Date") )
-  {
-    cma$data$.DATE.as.Date <- as.Date(cma$data[,cma$event.date.colname],format=cma$date.format);
-  } else
-  {
-    cma$data$.DATE.as.Date <- cma$data[,cma$event.date.colname];
-  }
+
+  ##
+  ## Event dates and durations
+  ##
+
   # Find the earliest date:
-  earliest.date <- min(cma$data$.DATE.as.Date, cmas$start, cmas$.OBS.START.DATE, cmas$.FU.START.DATE);
+  earliest.date <- min(cma$data$.DATE.as.Date, if( "start" %in% names(cmas) ) cmas$start, cmas$.OBS.START.DATE, cmas$.FU.START.DATE, na.rm=TRUE);
 
   # If aligning all participants to the same date, simply relocate all dates relative to the earliest date:
   if( align.all.patients )
   {
+    # ASSUMPTIONS: the data is sorted by patient ID and (ascending) by event date
     for( i in 1:nrow(cma$data) )
     {
+      # For each event in the dataset:
       if( i == 1 || cma$data[i,cma$ID.colname] != cma$data[i-1,cma$ID.colname] )
       {
+        # It's a new patient (or the first one):
+
+        # We will align to the patient's first event:
         align.to <- cma$data$.DATE.as.Date[i];
+
+        # Adjust the dates in the cmas as well:
         for( j in which(cmas[,cma$ID.colname] == cma$data[i,cma$ID.colname]) )
         {
-          cmas$start[j]           <- earliest.date + (cmas$start[j]           - align.to);
-          cmas$end[j]             <- earliest.date + (cmas$end[j]             - align.to);
+          if( "start" %in% names(cmas) ) cmas$start[j] <- earliest.date + (cmas$start[j] - align.to);
+          if( "end" %in% names(cmas) )   cmas$end[j]   <- earliest.date + (cmas$end[j]   - align.to);
           cmas$.FU.START.DATE[j]  <- earliest.date + (cmas$.FU.START.DATE[j]  - align.to);
           cmas$.FU.END.DATE[j]    <- earliest.date + (cmas$.FU.END.DATE[j]    - align.to);
           cmas$.OBS.START.DATE[j] <- earliest.date + (cmas$.OBS.START.DATE[j] - align.to);
           cmas$.OBS.END.DATE[j]   <- earliest.date + (cmas$.OBS.END.DATE[j]   - align.to);
         }
       }
-      cma$data$.DATE.as.Date[i] <- earliest.date + (cma$data$.DATE.as.Date[i] - align.to);
+
+      # Move the event so that it is properly aligned:
+      cma$data$.DATE.as.Date[i] <- (earliest.date + (cma$data$.DATE.as.Date[i] - align.to));
     }
+
+    # The corrected earliest follow-up window date:
     correct.earliest.followup.window <- min(cma$data$.DATE.as.Date - min(cmas$.FU.START.DATE,na.rm=TRUE),na.rm=TRUE);
   } else
   {
+    # There is no correction to the earliest follow-up window date:
     correct.earliest.followup.window <- 0;
   }
 
   # Compute the duration if not given:
   if( is.na(duration) )
   {
-    latest.date <- max(c(cmas$end, cmas$.FU.END.DATE, cmas$.OBS.END.DATE),na.rm=TRUE);
+    latest.date <- max(if("end" %in% names(cmas)) cmas$end else NULL,
+                       cmas$.FU.END.DATE, cmas$.OBS.END.DATE,
+                       cma$data$.DATE.as.Date + cma$data[,cma$event.duration.colname],
+                       na.rm=TRUE);
     duration <- as.numeric(latest.date - earliest.date) + correct.earliest.followup.window;
   }
   endperiod <- duration;
+
+
+  ##
+  ## Reserve plotting space for various components
+  ##
 
   # Reserve space for the CMA plotting:
   adh.plot.space <- c(0, ifelse( plot.CMA && !is.null(getCMA(cma)), duration*CMA.plot.ratio, 0) );
@@ -356,19 +439,34 @@
                                     {
                                       # The participant axis text:
                                       s <- which(cma$event.info[,cma$ID.colname] == p);
-                                      x <- which(getCMA(cma)[cma$ID.colname] == p);
-                                      pid <- p;
-                                      data.frame("ID"=p, "string"=pid, "width"=strwidth(pid, units="inches", cex=cex.axis), "height"=strheight(pid, units="inches", cex=cex.axis));
+                                      pid <- ifelse( print.CMA &&
+                                                       !is.TS.or.SW(cma) &&
+                                                       !is.null(getCMA(cma)) &&
+                                                       length(x <- which(getCMA(cma)[cma$ID.colname] == p))==1,
+                                                     paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)),
+                                                     p);
+                                      data.frame("ID"=p,
+                                                 "string"=pid,
+                                                 "width"=strwidth(pid, units="inches", cex=cex.axis),
+                                                 "height"=strheight(pid, units="inches", cex=cex.axis));
                                     }));
+
   y.label <- data.frame("string"=(tmp <- ifelse(is.null(ylab),"",
-                                                ifelse(length(ylab)==1,ylab,
-                                                       ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),ylab["withCMA"],ylab["withoutCMA"])))), # space needed for the label (in inches)
-                        "width"=strwidth(tmp, units="inches", cex=cex.lab), "height"=strheight(tmp, units="inches", cex=cex.lab));
+                                                ifelse(length(ylab)==1,
+                                                       ylab,
+                                                       ifelse((print.CMA || plot.CMA) &&
+                                                                !is.null(getCMA(cma)),
+                                                              ylab["withCMA"],
+                                                              ylab["withoutCMA"])))), # space needed for the label (in inches)
+                        "width"=strwidth(tmp, units="inches", cex=cex.lab),
+                        "height"=strheight(tmp, units="inches", cex=cex.lab));
+
   left.margin <- (cur.mai <- par("mai"))[2]; # left margin in inches (and cache the current margins too)
+
   # If there's enough space as it is, don't do anything:
-  if( left.margin < (y.label$height + max(id.labels$width,na.rm=TRUE)) ) # remeber that the y.label is vertical
+  if( left.margin < (y.label$height + max(id.labels$width,na.rm=TRUE)) ) # remeber: y.label is vertical
   {
-    # Well, there isn't so:
+    # Well, there isn't enough space, so:
     rotate.id.labels <- 30; # rotate the labels (in degrees)
     new.left.margin <- (y.label$height + (cos(rotate.id.labels*pi/180) * max(id.labels$width,na.rm=TRUE)) + strwidth("0000", units="inches", cex=cex.axis)); # ask for enough space
     par(mai=c(cur.mai[1], new.left.margin, cur.mai[3], cur.mai[4]));
@@ -379,277 +477,294 @@
   }
 
   # Vertical space needed for showing the partial CMAs:
-  if( ("timeseries" %in% plot.partial.CMAs.as) && (plot.partial.CMAs.as.timeseries.vspace < 5) )
+  vert.space.cmas <- 0;
+  if( is.TS.or.SW(cma) )
   {
-    warning(paste0("The minimum vertical space for the timeseries plots (plot.partial.CMAs.as.timeseries.vspace) is 5 lines, but it currently is only ",
-                   plot.partial.CMAs.as.timeseries.vspace,
-                   ": skipping timeseries plots...\n"));
-    plot.partial.CMAs.as <- plot.partial.CMAs.as[ plot.partial.CMAs.as != "timeseries" ];
-  }
-  vert.space.cmas <- 0 +
-    ifelse(plot.CMA && !is.null(getCMA(cma)),
-           (nrow(cmas)+length(patids)) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-             3 * length(patids) * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
-             plot.partial.CMAs.as.timeseries.vspace * length(patids) * as.numeric("timeseries" %in% plot.partial.CMAs.as),
-           0);
+    # There actually is a partial CMA to be potentially plotted:
+    if( ("timeseries" %in% plot.partial.CMAs.as) && (plot.partial.CMAs.as.timeseries.vspace < 5) )
+    {
+      warning(paste0("The minimum vertical space for the timeseries plots (plot.partial.CMAs.as.timeseries.vspace) is 5 lines, but it currently is only ",
+                     plot.partial.CMAs.as.timeseries.vspace,
+                     ": skipping timeseries plots...\n"));
+      plot.partial.CMAs.as <- plot.partial.CMAs.as[ plot.partial.CMAs.as != "timeseries" ];
+    }
 
-  # The actual plotting:
+    vert.space.cmas <- vert.space.cmas +
+      ifelse(plot.CMA && !is.null(getCMA(cma)),
+             (nrow(cmas)+length(patids)) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
+               3 * length(patids) * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+               plot.partial.CMAs.as.timeseries.vspace * length(patids) * as.numeric("timeseries" %in% plot.partial.CMAs.as),
+             0);
+  }
+
+
+  ##
+  ## The actual plotting
+  ##
+
+  # Create the plotting surface:
   if(inherits(msg <- try(plot( 0, 1,
-                               #xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
-                               xlim=c(0-5,duration.total+5), xaxs="i", # pad to improve plotting
-                               ylim=c(0,nrow(cma$data)+vert.space.cmas+1), yaxs="i", type="n",
+                               xlim=c(0-5,duration.total+5), # pad left and right by 5 days to improve plotting
+                               xaxs="i",
+                               ylim=c(0,nrow(cma$data)+vert.space.cmas+1),
+                               yaxs="i",
+                               type="n",
                                axes=FALSE,
-                               xlab="", ylab="" ),
+                               xlab="",
+                               ylab="" ),
                          silent=TRUE),
               "try-error"))
   {
     # Some error occured when creatig the plot...
-    cat(msg);
+    warning(msg);
     par(old.par); # restore graphical params
     return (invisible(NULL));
   }
 
   # Character width and height in the current plotting system:
-  if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
+  if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose);
   char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
   char.height.CMA <- strheight("0",cex=CMA.cex);
 
   # Minimum plot dimensions:
   if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
-      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * (nrow(cma$data)+ifelse(plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0)))
+      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * (nrow(cma$data) + ifelse(is.TS.or.SW(cma) && plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0)) )
   {
-    cat(paste0("Plotting area is too small (it must be at least ",
-               min.plot.size.in.characters.horiz,
-               " x ",
-               min.plot.size.in.characters.vert,
-               " characters per patient, but now it is only ",
-               round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
-               " x ",
-               round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (nrow(cma$data)+ifelse(plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0))),1),
-               ")!\n"));
-    #segments(x0=c(par("usr")[1], par("usr")[1]),
-    #         y0=c(par("usr")[3], par("usr")[4]),
-    #         x1=c(par("usr")[2], par("usr")[2]),
-    #         y1=c(par("usr")[4], par("usr")[3]),
-    #         col="red", lwd=3);
+    warning(paste0("Plotting area is too small (it must be at least ",
+                   min.plot.size.in.characters.horiz,
+                   " x ",
+                   min.plot.size.in.characters.vert,
+                   " characters per patient, but now it is only ",
+                   round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
+                   " x ",
+                   round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (nrow(cma$data) + ifelse(is.TS.or.SW(cma) && plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0))),1),
+                   ")!\n"));
     par(old.par); # restore graphical params
     return (invisible(NULL));
   }
 
   # Continue plotting:
   box();
-  title(main=paste0(ifelse(is.null(title),"",
-                           ifelse(length(title)==1,title,
-                                  ifelse(align.all.patients, title["aligned"], title["notaligned"]))),
+
+
+  ##
+  ## Title & axis labels
+  ##
+
+  # Title & axis labels:
+  title(main=paste0(ifelse(is.null(title),"",                                   # the plot title
+                           ifelse(length(title)==1,
+                                  title,
+                                  ifelse(align.all.patients,
+                                         title["aligned"],
+                                         title["notaligned"]))),
                     ifelse(!is.null(title) && show.cma,
                            paste0(" ",
                                   switch(class(cma)[1],
                                          "CMA_sliding_window"="sliding window",
-                                         "CMA_per_episode"="per episode"),
-                                  " (",cma$computed.CMA,")"),"")),
-        xlab=ifelse(is.null(xlab),"",
-                    ifelse(length(xlab)==1,xlab, xlab[show.period])),
-        #ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
+                                         "CMA_per_episode"="per episode",
+                                         class(cma)[1]),
+                                  " (",cma$computed.CMA,")"),
+                           "")),
+        xlab=ifelse(is.null(xlab),                                              # x axis label
+                    "",
+                    ifelse(length(xlab)==1,
+                           xlab,
+                           xlab[show.period])),
         cex.lab=cex.lab);
-  #text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("0000", cex=cex.axis)),
-  #     (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE);
+
+  # y-axis label:
   mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3);
 
-  # The patient axis and CMA plots:
+  # Function mapping the CMA values to the appropriate x-coordinates:
   if( plot.CMA && !is.null(getCMA(cma)) )
   {
-    # Maximum achieved CMA:
-    adh.max <- 1.0;
-    # Function mapping the CMA values to the appropriate x-coordinates:
-    .rescale.xcoord.for.CMA.plot <- function(x,pfree=0.20) return (adh.plot.space[1] + x/adh.max*(adh.plot.space[2]*(1-pfree) - adh.plot.space[1]));
+    adh.max <- 1.0; # maximum achieved CMA
+    .rescale.xcoord.for.CMA.plot <- function(x, pfree=0.20)
+    {
+      return (adh.plot.space[1] + (x / adh.max) * (adh.plot.space[2] * (1-pfree) - adh.plot.space[1]));
+    }
   }
-  draw.gray.band <- FALSE;
-  y.cur <- 1;
-  for( p in as.character(patids) )
+
+
+  ##
+  ## Plot most of the plot components
+  ##
+
+  # Intialisations
+  y.cur <- 1; # the current vertical line at which plotting takes place
+  alternating.band.to.draw <- 1; # for this patient, which alternating band to draw?
+
+  # For each individual event in turn:
+  for( i in 1:nrow(cma$data) )
   {
-    # The participant axis text:
-    s <- which(cma$data[,cma$ID.colname] == p);
-    x <- which(cmas[cma$ID.colname] == p);
-    pid <- p;
-    if( rotate.id.labels > 0 )
+    # For a new patients, draw the alternating bands, show the CMA and print the y-axis label:
+    if( i == 1 || (cma$data[i,cma$ID.colname] != cma$data[i-1,cma$ID.colname]) )
     {
-      # Rotate the labels:
-      text(par("usr")[1], y.cur+length(s)/2+ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,length(x),0)/2, pid, cex=cex.axis, srt=rotate.id.labels, pos=2, xpd=TRUE );
-    } else
-    {
-      # Don't rotate the labels:
-      mtext( pid, 2, line=0.5, at=y.cur+length(s)/2+ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,length(x),0)/2, las=2, cex=cex.axis );
-    }
+      # Save the current vertical position (for drawing the FUW and OW windows):
+      y.old <- y.cur;
 
-    # The alternating gray bands:
-    if( draw.gray.band )
-    {
-      rect( 0-1,
-            y.cur-0.5,
-            duration.total+1,
-            y.cur +
-              length(s) +
-              ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
-                     (length(x)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-                       3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
-                       plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
-                     0) -
-              0.5,
-            col=gray(0.95), border=NA );
-    }
-    draw.gray.band <- !draw.gray.band;
+      # Select the events and partial CMAs belonging to this patient:
+      s.events <- which(cma$data[,cma$ID.colname] == cma$data[i,cma$ID.colname]);
+      s.cmas   <- which(cmas[,cma$ID.colname]     == cma$data[i,cma$ID.colname]);
 
-    # The participant CMA plot:
-    if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
-    {
-      y.mean <- y.cur+length(s)/2+length(x)/2;
-      segments(.rescale.xcoord.for.CMA.plot(0), y.mean-2, .rescale.xcoord.for.CMA.plot(1), y.mean-2, lty="solid", col=CMA.plot.col);
-      segments(.rescale.xcoord.for.CMA.plot(0), y.mean+2, .rescale.xcoord.for.CMA.plot(1), y.mean+2, lty="solid", col=CMA.plot.col);
-      adh <- na.omit(getCMA(cma)[x,"CMA"]);
-      # Scale the CMA (itself or density) in such a way that if within 0..1 stays within 0..1 but scales if it goes outside this interval to accomodate it
-      if( plot.CMA.as.histogram )
+      # Total vartical space neede by this patient:
+      vspace.needed <- length(s.events) +
+        ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
+               (length(s.cmas)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
+                 3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+                 plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
+               0);
+
+
+      ##
+      ## The alternating bands
+      ##
+
+      # Draw the alternating bands
+      if( !is.null(alternating.bands.cols) )
       {
-        # Plot CMA as histogram:
-        if( length(adh) > 0 )
-        {
-          adh.hist <- hist(adh, plot=FALSE);
-          adh.x <- adh.hist$breaks[-1]; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
-          adh.y <- adh.hist$counts; adh.y <- adh.y / max(adh.y);
-          adh.x.max <- adh.x[which.max(adh.hist$counts)];
-          segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4*adh.y, lty="solid", lwd=1, col=CMA.plot.border);
-          if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-          {
-            # enough space for vertical writing all three of them:
-            text(x=.rescale.xcoord.for.CMA.plot(0),         y.mean-2-char.height.CMA/2,
-                 sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-            text(x=.rescale.xcoord.for.CMA.plot(1),         y.mean-2-char.height.CMA/2,
-                 sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-            text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean+2+char.height.CMA/2,
-                 sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=90, pos=3, cex=CMA.cex, col=CMA.plot.text);
-          }
-        }
+        rect( 0.0 - 1.0, y.cur - 0.5, duration.total + 1.0, y.cur + vspace.needed - 0.5, col=alternating.bands.cols[alternating.band.to.draw], border=NA );
+        alternating.band.to.draw <- if(alternating.band.to.draw >= length(alternating.bands.cols)) 1 else (alternating.band.to.draw + 1); # move to the next band
+      }
+
+
+      ##
+      ## The y-axis labels
+      ##
+
+      # The y-axis label:
+      pid <- cma$data[i,cma$ID.colname];
+      y.mean <- y.cur + vspace.needed/2; # vertical position of the label (centered on patient)
+      if( rotate.id.labels > 0 )
+      {
+        text(par("usr")[1], y.mean, pid, cex=cex.axis, srt=rotate.id.labels, pos=2, xpd=TRUE); # rotate the labels
       } else
       {
-        if( length(adh) > 2 )
+        mtext(pid, 2, line=0.5, at=y.mean, las=2, cex=cex.axis); # # don't rotate the labels
+      }
+
+
+      ##
+      ## The summary CMA plots
+      ##
+
+      # The patient's CMA plot:
+      if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
+      {
+        # The CMA plot background:
+        segments(.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2, .rescale.xcoord.for.CMA.plot(1.0), y.mean - 2, lty="solid", col=CMA.plot.col);
+        segments(.rescale.xcoord.for.CMA.plot(0.0), y.mean + 2, .rescale.xcoord.for.CMA.plot(1.0), y.mean + 2, lty="solid", col=CMA.plot.col);
+
+        # The non-missing CMA values:
+        adh <- na.omit(cmas[s.cmas,"CMA"]);
+
+        # Scale the CMA (itself or density) in such a way that if within 0..1 stays within 0..1 but scales if it goes outside this interval to accomodate it
+        if( plot.CMA.as.histogram )
         {
-          # Plot CMA as density plot:
-          #adh.density <- density(adh, from=min(adh,na.rm=TRUE), to=max(adh,na.rm=TRUE));
-          adh.density <- density(adh);
-          ss <- (adh.density$x >= min(adh,na.rm=TRUE) & adh.density$x <= max(adh,na.rm=TRUE));
-          if( sum(ss) == 0 )
+          # Plot CMA as histogram:
+          if( length(adh) > 0 )
           {
-            # probably constant numbers?
-            # Plot the individual lines:
-            #if( length(adh) == 1 || isTRUE(all.equal(min(adh), max(adh))) ) adh.x <- pmax(pmin(adh,1.0),0.0) else adh.x <- (adh - min(adh)) / (max(adh) - min(adh));
-            adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
-            segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
-            if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            adh.hist <- hist(adh, plot=FALSE);
+            adh.x <- adh.hist$breaks[-1]; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
+            adh.y <- adh.hist$counts; adh.y <- adh.y / max(adh.y);
+            adh.x.max <- adh.x[which.max(adh.hist$counts)];
+            segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, lty="solid", lwd=1, col=CMA.plot.border);
+            if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0)) )
             {
-              # enough space for vertical writing all of them:
-              for( i in 1:length(adh) )
-              {
-                text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean+ifelse(i %% 2==0,2+char.height.CMA/2,-2-char.height.CMA/2),
-                     sprintf("%.1f%%",100*adh[i]), srt=90, pos=ifelse(i %% 2==0,3,1), cex=CMA.cex, col=CMA.plot.text);
-              }
-            } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-            {
-              # enough space for vertical writing only the extremes:
-              text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean-2-char.height.CMA/2,
-                   sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-              text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean-2-char.height.CMA/2,
-                   sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-            }
-          } else
-          {
-            adh.density$x <- adh.density$x[ss]; adh.density$y <- adh.density$y[ss];
-            #adh.x <- adh.density$x; adh.x <- (adh.x - min(adh.x)) / (max(adh.x) - min(adh.x));
-            adh.x <- adh.density$x; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
-            adh.y <- adh.density$y; adh.y <- (adh.y - min(adh.y)) / (max(adh.y) - min(adh.y));
-            points(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4*adh.y, type="l", col=CMA.plot.border);
-            if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-            {
-              # enough space for vertical writing:
-              text(x=.rescale.xcoord.for.CMA.plot(0), y.mean-2-char.height.CMA/2, sprintf("%.1f%%",100*adh.x.0), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-              text(x=.rescale.xcoord.for.CMA.plot(1), y.mean-2-char.height.CMA/2, sprintf("%.1f%%",100*adh.x.1), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              # There's enough space for vertically writing all three of them:
+              text(x=.rescale.xcoord.for.CMA.plot(0.0),       y.mean - 2 - char.height.CMA/2,
+                   sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              text(x=.rescale.xcoord.for.CMA.plot(1.0),       y.mean - 2 - char.height.CMA/2,
+                   sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean + 2 + char.height.CMA/2,
+                   sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=90, pos=3, cex=CMA.cex, col=CMA.plot.text);
             }
           }
         } else
         {
-          #rect(.rescale.xcoord.for.CMA.plot(0), y.mean-2, .rescale.xcoord.for.CMA.plot(1), y.mean+2, border=NA, col=CMA.plot.col, density=25);
-          if( length(adh) == 0 )
+          if( length(adh) > 2 )
           {
-            # No points: nothing to plot!
+            # Plot CMA as density plot:
+            adh.density <- density(adh);
+            ss <- (adh.density$x >= min(adh,na.rm=TRUE) & adh.density$x <= max(adh,na.rm=TRUE));
+            if( sum(ss) == 0 )
+            {
+              # Probably constant numbers?
+              # Plot the individual lines:
+              adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
+              segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
+              if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+              {
+                # There's enough space for vertical writing all of them (alternated):
+                for( i in 1:length(adh) )
+                {
+                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean + ifelse(i %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
+                       sprintf("%.1f%%",100*adh[i]), srt=90, pos=ifelse(i %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
+                }
+              } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+              {
+                # There's enough space for vertical writing only the extremes:
+                text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean - 2 - char.height.CMA/2,
+                     sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean - 2 - char.height.CMA/2,
+                     sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              }
+            } else
+            {
+              adh.density$x <- adh.density$x[ss]; adh.density$y <- adh.density$y[ss];
+              adh.x <- adh.density$x; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
+              adh.y <- adh.density$y; adh.y <- (adh.y - min(adh.y)) / (max(adh.y) - min(adh.y));
+              points(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, type="l", col=CMA.plot.border);
+              if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+              {
+                # There's enough space for vertical writing:
+                text(x=.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.0), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                text(x=.rescale.xcoord.for.CMA.plot(1.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.1), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+              }
+            }
           } else
           {
-            # Plot the individual lines:
-            #if( length(adh) == 1 || isTRUE(all.equal(min(adh), max(adh))) ) adh.x <- pmax(pmin(adh,1.0),0.0) else adh.x <- (adh - min(adh)) / (max(adh) - min(adh));
-            adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
-            segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean-2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean-2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
-            if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+            if( length(adh) == 0 )
             {
-              # enough space for vertical writing all of them:
-              for( i in 1:length(adh) )
+              # No points at all: nothing to plot!
+            } else
+            {
+              # Plot the individual lines:
+              adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
+              segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
+              if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
               {
-                text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean+ifelse(i %% 2==0,2+char.height.CMA/2,-2-char.height.CMA/2),
-                     sprintf("%.1f%%",100*adh[i]), srt=90, pos=ifelse(i %% 2==0,3,1), cex=CMA.cex, col=CMA.plot.text);
+                # There's enough space for vertical writing all of them (alternating):
+                for( i in 1:length(adh) )
+                {
+                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean + ifelse(i %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
+                       sprintf("%.1f%%",100*adh[i]), srt=90, pos=ifelse(i %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
+                }
+              } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+              {
+                # enough space for vertical writing only the extremes:
+                text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean - 2 - char.height.CMA/2,
+                     sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean - 2 - char.height.CMA/2,
+                     sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
               }
-            } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-            {
-              # enough space for vertical writing only the extremes:
-              text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean-2-char.height.CMA/2,
-                   sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-              text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean-2-char.height.CMA/2,
-                   sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
             }
           }
         }
       }
     }
 
-    # The follow-up and observation windows:
-    if( highlight.followup.window )
-    {
-      # rect(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.25,
-      #      adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)+0.25,
-      #      col=NA, border=followup.window.col, lty="dashed", lwd=2);
-      rect(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.5,
-           adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)-0.5,
-           col=NA, border=followup.window.col, lty="dashed", lwd=2);
-    }
-    if( highlight.observation.window )
-    {
-      # The given observation window:
-      # rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.25,
-      #      adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)+0.25,
-      #      col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
-      rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur-0.5,
-           adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[x[1]] - earliest.date) + correct.earliest.followup.window, y.cur+length(s)-0.5,
-           col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
-    }
 
-    y.cur <- y.cur +
-      length(s) +
-      ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
-           (length(x)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-             3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
-             plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
-           0);
-  }
-  if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
-  {
-    # Mark the drawing area:
-    #rect(.rescale.xcoord.for.CMA.plot(0), par("usr")[3], .rescale.xcoord.for.CMA.plot(1.0), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
-    abline(v=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.col, lty="dotted", lwd=1);
-    #mtext( c("0%","100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col=CMA.plot.border );
-  }
+    ##
+    ## The event
+    ##
 
-  # Plot each event:
-  curpat <- TRUE;
-  y.cur <- 1;
-  for( i in 1:nrow(cma$data) )
-  {
+    # Get the event start and end dates:
     start <- as.numeric(cma$data$.DATE.as.Date[i] - earliest.date);
-    end <- start + cma$data[i,cma$event.duration.colname];
+    end   <- start + cma$data[i,cma$event.duration.colname];
+
+    # Map medication classes to colors:
     if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
     {
       col <- .map.category.to.color(unspecified.category.label);
@@ -657,141 +772,177 @@
     {
       col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
     }
-    points( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur, pch=pch.start.event, col=col, cex=cex);
-    points(adh.plot.space[2]+end+correct.earliest.followup.window, y.cur, pch=pch.end.event, col=col, cex=cex);
+
+    # Plot the bening and end of the event:
+    points(adh.plot.space[2] + start + correct.earliest.followup.window, y.cur, pch=pch.start.event, col=col, cex=cex);
+    points(adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur, pch=pch.end.event,   col=col, cex=cex);
+
+    # Do we show dose?
     if( plot.dose )
     {
+      # Show dose using event line width:
       if( nrow(dose.range) == 1 )
       {
-        segments( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+        # Just one dose:
+        segments( adh.plot.space[2] + start + correct.earliest.followup.window, y.cur,
+                  adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur,
+                  col=col, lty=lty.event,
+                  lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
       } else
       {
+        # There is a range of doses:
         if( plot.dose.lwd.across.medication.classes )
         {
-          segments( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max));
+          # Line width across all medication classes:
+          segments( adh.plot.space[2] + start + correct.earliest.followup.window, y.cur,
+                    adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur,
+                    col=col, lty=lty.event,
+                    lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max));
         } else
         {
+          # Line width per medication class:
           dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
           if( sum(dose.for.cat,na.rm=TRUE) == 1 )
           {
-            segments( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
+            # Found the corresponding medication class:
+            segments( adh.plot.space[2] + start + correct.earliest.followup.window, y.cur,
+                      adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur,
+                      col=col, lty=lty.event,
+                      lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
           } else
           {
-            segments( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur, col=col, lty=lty.event, lwd=lwd.event);
+            # Use a fixed width:
+            segments( adh.plot.space[2] + start + correct.earliest.followup.window, y.cur,
+                      adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur,
+                      col=col, lty=lty.event, lwd=lwd.event);
           }
         }
       }
     } else
     {
-      segments( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur, col=col, lty=lty.event, lwd=lwd.event);
+      # Use a fixed line width:
+      segments( adh.plot.space[2] + start + correct.earliest.followup.window, y.cur,
+                adh.plot.space[2] + end   + correct.earliest.followup.window,
+                y.cur, col=col, lty=lty.event, lwd=lwd.event);
     }
-    if( print.dose ) # print daily dose
+
+    if( print.dose )
     {
-      dose.text.y <- y.cur - ifelse(print.dose.centered,0 , dose.text.height*2/3); # print it on or below the dose segment?
+      # Show dose as actual numbers on the plot:
+      dose.text.y <- (y.cur - ifelse(print.dose.centered, 0, dose.text.height*2/3)); # print it on or below the dose segment?
+
       if( is.na(print.dose.outline.col) ) # simple or outlined?
       {
-        text(adh.plot.space[2]+(start + end)/2+correct.earliest.followup.window, dose.text.y, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
+        # Simple text:
+        text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
+             dose.text.y,
+             cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
       } else
       {
-        .shadow.text(adh.plot.space[2]+(start + end)/2+correct.earliest.followup.window, dose.text.y, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
+        # Outlined text:
+        .shadow.text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
+                     dose.text.y,
+                     cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
       }
     }
+
+    # Advance to the next vertical line:
     y.cur <- y.cur + 1;
 
-    if( i < nrow(cma$data) && cma$data[i,cma$ID.colname] == cma$data[i+1,cma$ID.colname] )
+
+    # Continuation between successive events:
+    if( i < nrow(cma$data) && (cma$data[i,cma$ID.colname] == cma$data[i+1,cma$ID.colname]) )
     {
-      # Extend the line
+      # We're still plotting the same patient: show the continuation line:
       start.next <- as.numeric(cma$data$.DATE.as.Date[i+1] - earliest.date);
-      segments( adh.plot.space[2]+end+correct.earliest.followup.window, y.cur-1, adh.plot.space[2]+start.next+correct.earliest.followup.window, y.cur-1,
+      segments( adh.plot.space[2] + end        + correct.earliest.followup.window, y.cur-1,
+                adh.plot.space[2] + start.next + correct.earliest.followup.window, y.cur-1,
                 col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
-      segments( adh.plot.space[2]+start.next+correct.earliest.followup.window, y.cur-1, adh.plot.space[2]+start.next+correct.earliest.followup.window, y.cur,
+      segments( adh.plot.space[2] + start.next + correct.earliest.followup.window, y.cur-1,
+                adh.plot.space[2] + start.next + correct.earliest.followup.window, y.cur,
                 col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
     } else
     {
-      # Now the patient is changing or is the last patient:
-      # Draw its subperiods:
-      if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
+      # The patient is changing or is the last one:
+
+
+      ##
+      ## Partial CMAs
+      ##
+
+      # Draw its subperiods (if so requested, meaningful and possible):
+      if( is.TS.or.SW(cma) && plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
       {
-        s <- which(cmas[,cma$ID.colname] == cma$data[i,cma$ID.colname]);
-        if( length(s) > 0 )
+        if( length(s.cmas) > 0 && !all(is.na(cmas$CMA[s.cmas])) )
         {
-          # There's stuff to plot:
+          # We do have non-missing partial CMAs to plot:
+
+          # Compute the start, end, location and string to display for these partial estimates:
+          ppts <- data.frame("start"=as.numeric(cmas$start[s.cmas] - earliest.date),
+                             "end"  =as.numeric(cmas$end[s.cmas]   - earliest.date),
+                             "x"    =NA,
+                             "y"    =cmas$CMA[s.cmas],
+                             "text" =ifelse(!is.na(cmas$CMA[s.cmas]), sprintf("%.0f%%", 100*cmas$CMA[s.cmas]), "?")
+                            );
+          ppts$x <- (ppts$start + ppts$end)/2;
+
+          # Cache stuff:
+          corrected.x <- (adh.plot.space[2] + correct.earliest.followup.window);
+          corrected.x.start <- (corrected.x+ppts$start);
+          corrected.x.end   <- (corrected.x+ppts$end);
+          x.start.min <- min(ppts$start,na.rm=TRUE);
+          x.end.max   <- max(ppts$end,  na.rm=TRUE);
+          corrected.x.text <- (corrected.x + ppts$x);
+          min.y <- min(ppts$y,na.rm=TRUE);
+          max.y <- max(ppts$y,na.rm=TRUE);
+
+          # Plotting type:
           if( "stacked" %in% plot.partial.CMAs.as )
           {
             # Show subperiods as stacked:
-            for( j in 1:length(s) )
+            ys <- (y.cur + 1:nrow(ppts) - 1); # cache this
+
+            # The intervals as empty rectangles:
+            rect(corrected.x.start, ys + 0.10, corrected.x.end,   ys + 0.90, border=gray(0.7), col="white");
+
+            # The CMAs as filled rectangles of length proportional to the CMA:
+            h <- (ppts$end - ppts$start) * pmax(pmin(ppts$y, 1.0), 0.0);
+            rect(corrected.x.start, ys + 0.10, corrected.x.start + h, ys + 0.90, border=plot.partial.CMAs.as.stacked.col.border, col=plot.partial.CMAs.as.stacked.col.bars);
+
+            if( print.CMA && char.height.CMA <= 0.80 )
             {
-              start <- as.numeric(cmas$start[s[j]] - earliest.date);
-              end <- as.numeric(cmas$end[s[j]] - earliest.date);
-              rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10, adh.plot.space[2]+end+correct.earliest.followup.window, y.cur+0.90, border=gray(0.7), col="white");
-              if( !is.na(cmas$CMA[s[j]]) )
-              {
-                h <- start + (end - start)*max(c(min(c(cmas$CMA[s[j]],1.0)),0.0));
-                rect( adh.plot.space[2]+start+correct.earliest.followup.window, y.cur+0.10,
-                      adh.plot.space[2]+h+correct.earliest.followup.window, y.cur+0.90,
-                      border=plot.partial.CMAs.as.stacked.col.border,
-                      col=plot.partial.CMAs.as.stacked.col.bars);
-                if( print.CMA && char.height.CMA <= 0.80 )
-                {
-                  text( adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, y.cur+0.5,
-                        sprintf("%.0f%%",100*cmas$CMA[s[j]]), cex=CMA.cex, col=plot.partial.CMAs.as.stacked.col.text);
-                }
-              }
-              y.cur <- y.cur+1;
+              text(corrected.x.text, ys + 0.5, ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.stacked.col.text);
             }
-            y.cur <- y.cur+1;
+
+            # Advance to next patient:
+            y.cur <- (y.cur + nrow(ppts) + 1);
           }
 
           if( "overlapping" %in% plot.partial.CMAs.as )
           {
             # Show subperiods as overlapping segments:
-            ppts <- do.call(rbind,lapply(s, function(x)
-            {
-              start <- as.numeric(cmas$start[x] - earliest.date);
-              end <- as.numeric(cmas$end[x] - earliest.date);
-              data.frame("x"=(start+end)/2, "y"=cmas$CMA[x], "start"=start, "end"=end, "text"=sprintf("%.0f%%",100*cmas$CMA[x]));
-            }));
-            if( all(is.na(ppts$y)) )
-            {
-              # All are missing:
-              text(adh.plot.space[2] + correct.earliest.followup.window + (min(ppts$start,na.rm=TRUE) + max(ppts$end,na.rm=TRUE))/2,
-                   y.cur + 1,
-                   "Missing data only", cex=CMA.cex, col=plot.partial.CMAs.as.overlapping.col.text);
-            } else
-            {
-              # There's at least one non-NA, so plot it:
-              ppts$x.plot <- (adh.plot.space[2] + correct.earliest.followup.window + ppts$x);
-              min.y <- min(ppts$y,na.rm=TRUE);
-              if( !((range.y <- (max(ppts$y,na.rm=TRUE) - min.y)) > 0) )
-              {
-                range.y <- 1; # avoid division by 0 if there's only one value
-              }
-              ppts$y.norm <- (ppts$y - min.y)/range.y;
+            if( !((range.y <- (max.y - min.y)) > 0) ) range.y <- 1; # avoid division by 0 if there's only one value
+            ppts$y.norm <- (ppts$y - min.y)/range.y;
 
-              if( !is.na(plot.partial.CMAs.as.overlapping.col.interval) )
+            if( !is.na(plot.partial.CMAs.as.overlapping.col.interval) )
+            {
+              if( plot.partial.CMAs.as.overlapping.alternate )
               {
-                if( plot.partial.CMAs.as.overlapping.alternate )
-                {
-                  v <- rep(c(0,1), nrow(ppts))[1:nrow(ppts)]; # alternate between low (0) and high (1) -- not the best way but works fine
-                } else
-                {
-                  v <- rep(0,nrow(ppts)); # all segments are drawn low (0)
-                }
-                segments(adh.plot.space[2]+ppts$start+correct.earliest.followup.window, y.cur+0.5+v,
-                         adh.plot.space[2]+ppts$end+correct.earliest.followup.window, y.cur+0.5+v,
-                         col=plot.partial.CMAs.as.overlapping.col.interval);
-                segments(adh.plot.space[2]+ppts$start+correct.earliest.followup.window, y.cur+0.5+v,
-                         adh.plot.space[2]+ppts$start+correct.earliest.followup.window, y.cur+0.5+v+(ppts$y.norm * -(v*2-1)), # -(v*2-1) maps 0 to 1 and 1 to -1
-                         col=plot.partial.CMAs.as.overlapping.col.interval);
-                segments(adh.plot.space[2]+ppts$end+correct.earliest.followup.window, y.cur+0.5+v,
-                         adh.plot.space[2]+ppts$end+correct.earliest.followup.window, y.cur+0.5+v+(ppts$y.norm * -(v*2-1)),
-                         col=plot.partial.CMAs.as.overlapping.col.interval);
-              }
-              if( print.CMA && char.height.CMA <= 0.80 && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
+                v <- rep(c(0,1), nrow(ppts))[1:nrow(ppts)]; # alternate between low (0) and high (1) -- not the best way but works fine
+              } else
               {
-                text( adh.plot.space[2]+ppts$x+correct.earliest.followup.window, y.cur+1.0,
-                      ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.overlapping.col.text);
+                v <- rep(0,nrow(ppts)); # all segments are drawn low (0)
               }
+              y.norm.v <- (ppts$y.norm * -(v*2-1)); # -(v*2-1) maps 0 to 1 and 1 to -1
+
+              segments(corrected.x.start, y.cur + 0.5 + v, corrected.x.end,   y.cur + 0.5 + v, col=plot.partial.CMAs.as.overlapping.col.interval);
+              segments(corrected.x.start, y.cur + 0.5 + v, corrected.x.start, y.cur + 0.5 + v + y.norm.v, col=plot.partial.CMAs.as.overlapping.col.interval);
+              segments(corrected.x.end,   y.cur + 0.5 + v, corrected.x.end,   y.cur + 0.5 + v + y.norm.v, col=plot.partial.CMAs.as.overlapping.col.interval);
+            }
+
+            if( print.CMA && char.height.CMA <= 0.80 && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
+            {
+              text(corrected.x.text, y.cur + 1.0, ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.overlapping.col.text);
             }
 
             # Advance to next patient:
@@ -801,209 +952,168 @@
           if( "timeseries" %in% plot.partial.CMAs.as )
           {
             # Show subperiods as a time series
-            ppts <- do.call(rbind,lapply(s, function(x)
-            {
-              start <- as.numeric(cmas$start[x] - earliest.date);
-              end <- as.numeric(cmas$end[x] - earliest.date);
-              data.frame("x"=(start+end)/2, "y"=cmas$CMA[x], "start"=start, "end"=end, "text"=sprintf("%.0f%%",100*cmas$CMA[x]));
-            }));
-            if( all(is.na(ppts$y)) )
-            {
-              # All are missing:
-              text(adh.plot.space[2] + correct.earliest.followup.window + (min(ppts$start,na.rm=TRUE) + max(ppts$end,na.rm=TRUE))/2,
-                   y.cur + plot.partial.CMAs.as.timeseries.vspace/2,
-                   "Missing data only", cex=CMA.cex, col=plot.partial.CMAs.as.timeseries.col.text);
-            } else
-            {
-              # There's at least one non-NA, so plot it:
-              ppts$x.plot <- (adh.plot.space[2] + correct.earliest.followup.window + ppts$x);
-              if( plot.partial.CMAs.as.timeseries.start.from.zero )
-              {
-                min.y <- min(ppts$y,0,na.rm=TRUE);
-              } else
-              {
-                min.y <- min(ppts$y,na.rm=TRUE);
-              }
-              if( !((range.y <- (max(ppts$y,na.rm=TRUE) - min.y)) > 0) )
-              {
-                range.y <- 1; # avoid division by 0 if there's only one value
-              }
-              ppts$y.norm <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (ppts$y - min.y)/range.y);
+            if( plot.partial.CMAs.as.timeseries.start.from.zero ) min.y <- min(min.y,0,na.rm=TRUE);
 
-              # The intervals:
-              if( !is.na(plot.partial.CMAs.as.timeseries.col.interval) )
+            if( !((range.y <- (max.y - min.y)) > 0) ) range.y <- 1; # avoid division by 0 if there's only one value
+            ppts$y.norm <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace - 3) * (ppts$y - min.y)/range.y);
+
+            # The intervals:
+            if( !is.na(plot.partial.CMAs.as.timeseries.col.interval) )
+            {
+              if( plot.partial.CMAs.as.timeseries.interval.type == "none" )
               {
-                if( plot.partial.CMAs.as.timeseries.interval.type == "none" )
+                # Nothing to plot
+              } else if( plot.partial.CMAs.as.timeseries.interval.type %in% c("segments", "arrows", "lines") )
+              {
+                # The lines:
+                segments(corrected.x.start, ppts$y.norm, corrected.x.end, ppts$y.norm, col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
                 {
-                  # Nothing to plot
-                } else if( plot.partial.CMAs.as.timeseries.interval.type %in% c("segments", "arrows", "lines") )
-                {
-                  # The lines:
-                  segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm,
-                           adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm,
+                  # The segment endings:
+                  segments(corrected.x.start, ppts$y.norm - 0.2, corrected.x.start, ppts$y.norm + 0.2,
                            col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                  if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
-                  {
-                    # The segment endings:
-                    segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm - 0.2,
-                             adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm + 0.2,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                    segments(adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm - 0.2,
-                             adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm + 0.2,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                  } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
-                  {
-                    # The arrow endings:
-                    segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window + char.width/2, ppts$y.norm - char.height/2,
-                             adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                    segments(adh.plot.space[2] + ppts$start + correct.earliest.followup.window + char.width/2, ppts$y.norm + char.height/2,
-                             adh.plot.space[2] + ppts$start + correct.earliest.followup.window, ppts$y.norm,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                    segments(adh.plot.space[2] + ppts$end + correct.earliest.followup.window - char.width/2, ppts$y.norm - char.height/2,
-                             adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                    segments(adh.plot.space[2] + ppts$end + correct.earliest.followup.window - char.width/2, ppts$y.norm + char.height/2,
-                             adh.plot.space[2] + ppts$end + correct.earliest.followup.window, ppts$y.norm,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                  }
-                } else if( plot.partial.CMAs.as.timeseries.interval.type == "rectangles" )
+                  segments(corrected.x.end,   ppts$y.norm - 0.2, corrected.x.end,   ppts$y.norm + 0.2,
+                           col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
                 {
-                  # As semi-transparent rectangles:
-                  rect(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, y.cur + 0.5,
-                       adh.plot.space[2] + ppts$end + correct.earliest.followup.window, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                       col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
-                       border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
+                  # The arrow endings:
+                  segments(corrected.x.start + char.width/2, ppts$y.norm - char.height/2, corrected.x.start, ppts$y.norm,
+                           col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                  segments(corrected.x.start + char.width/2, ppts$y.norm + char.height/2, corrected.x.start, ppts$y.norm,
+                           col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                  segments(corrected.x.end - char.width/2, ppts$y.norm - char.height/2, corrected.x.end, ppts$y.norm,
+                           col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                  segments(corrected.x.end - char.width/2, ppts$y.norm + char.height/2, corrected.x.end, ppts$y.norm,
+                           col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
                 }
-              }
-
-              # The axes:
-              segments(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), y.cur + 0.5,
-                       adh.plot.space[2] + correct.earliest.followup.window + max(ppts$end,na.rm=TRUE), y.cur + 0.5,
-                       lty="solid", col="black"); # horizontal axis
-              segments(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), y.cur + 0.5,
-                       adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                       lty="solid", col="black"); # vertical axis
-              segments(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), min(ppts$y.norm,na.rm=TRUE),
-                       adh.plot.space[2] + correct.earliest.followup.window + max(ppts$end,na.rm=TRUE), min(ppts$y.norm,na.rm=TRUE),
-                       lty="dashed", col="black"); # the minimum value
-              segments(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), max(ppts$y.norm,na.rm=TRUE),
-                       adh.plot.space[2] + correct.earliest.followup.window + max(ppts$end,na.rm=TRUE), max(ppts$y.norm,na.rm=TRUE),
-                       lty="dashed", col="black"); # the minimum value
-              if( plot.partial.CMAs.as.timeseries.show.0perc && (y.for.0perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (0 - min.y)/range.y)) >= y.cur + 0.5 )
+              } else if( plot.partial.CMAs.as.timeseries.interval.type == "rectangles" )
               {
-                segments(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), y.for.0perc,
-                         adh.plot.space[2] + correct.earliest.followup.window + max(ppts$end,na.rm=TRUE), y.for.0perc,
-                         lty="dotted", col="red"); # 0%
-              }
-              if( plot.partial.CMAs.as.timeseries.show.100perc && (y.for.100perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (1.0 - min.y)/range.y)) <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
-              {
-                segments(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), y.for.100perc,
-                         adh.plot.space[2] + correct.earliest.followup.window + max(ppts$end,na.rm=TRUE), y.for.100perc,
-                         lty="dotted", col="red"); # 0%
-              }
-              if( print.CMA && char.height.CMA <= 0.80 )
-              {
-                text(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), min(ppts$y.norm,na.rm=TRUE),
-                     sprintf("%.1f%%",100*min(ppts$y,na.rm=TRUE)), pos=2, cex=CMA.cex, col="black");
-                text(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), max(ppts$y.norm,na.rm=TRUE),
-                     sprintf("%.1f%%",100*max(ppts$y,na.rm=TRUE)), pos=2, cex=CMA.cex, col="black");
-                if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
-                {
-                  text(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), y.for.0perc,
-                       "0%", pos=2, cex=CMA.cex, col="red");
-                }
-                if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
-                {
-                  text(adh.plot.space[2] + correct.earliest.followup.window + min(ppts$start,na.rm=TRUE), y.for.100perc,
-                       "100%", pos=2, cex=CMA.cex, col="red");
-                }
-              }
-
-              # The points and connecting lines:
-              if( !is.na(plot.partial.CMAs.as.timeseries.col.dot) )
-              {
-                points(ppts$x.plot, ppts$y.norm, col=plot.partial.CMAs.as.timeseries.col.dot, cex=CMA.cex, type="o", pch=19, lty="solid");
-              }
-
-              # The actual values:
-              if( print.CMA && char.height.CMA <= 0.80 && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
-              {
-                text(ppts$x.plot, ppts$y.norm, ppts$text, adj=c(0.5,-0.5), cex=CMA.cex, col=plot.partial.CMAs.as.timeseries.col.text);
+                # As semi-transparent rectangles:
+                rect(corrected.x.start, y.cur + 0.5, corrected.x.end, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                     col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
+                     border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
               }
             }
 
-            # Go to the next plot:
+            # The axes:
+            min.y.norm <- min(ppts$y.norm,na.rm=TRUE);
+            max.y.norm <- max(ppts$y.norm,na.rm=TRUE);
+            segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.end.max,   y.cur + 0.5, lty="solid", col="black"); # horizontal axis
+            segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.start.min, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0, lty="solid", col="black"); # vertical axis
+            segments(corrected.x + x.start.min, min.y.norm, corrected.x + x.end.max, min.y.norm, lty="dashed", col="black"); # the minimum value
+            segments(corrected.x + x.start.min, max.y.norm, corrected.x + x.end.max, max.y.norm, lty="dashed", col="black"); # the minimum value
+            if( plot.partial.CMAs.as.timeseries.show.0perc &&
+                (y.for.0perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (0 - min.y)/range.y)) >= y.cur + 0.5 )
+            {
+              segments(corrected.x + x.start.min, y.for.0perc, corrected.x + x.end.max, y.for.0perc, lty="dotted", col="red"); # 0%
+            }
+            if( plot.partial.CMAs.as.timeseries.show.100perc &&
+                (y.for.100perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (1.0 - min.y)/range.y)) <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
+            {
+              segments(corrected.x + x.start.min, y.for.100perc, corrected.x + x.end.max, y.for.100perc, lty="dotted", col="red"); # 0%
+            }
+            if( print.CMA && char.height.CMA <= 0.80 )
+            {
+              text(corrected.x + x.start.min, min.y.norm, sprintf("%.1f%%",100*min.y), pos=2, cex=CMA.cex, col="black");
+              text(corrected.x + x.start.min, max.y.norm, sprintf("%.1f%%",100*max.y), pos=2, cex=CMA.cex, col="black");
+              if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
+              {
+                text(corrected.x + x.start.min, y.for.0perc, "0%", pos=2, cex=CMA.cex, col="red");
+              }
+              if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
+              {
+                text(corrected.x + x.start.min, y.for.100perc, "100%", pos=2, cex=CMA.cex, col="red");
+              }
+            }
+
+            # The points and connecting lines:
+            if( !is.na(plot.partial.CMAs.as.timeseries.col.dot) )
+            {
+              points(corrected.x.text, ppts$y.norm, col=plot.partial.CMAs.as.timeseries.col.dot, cex=CMA.cex, type="o", pch=19, lty="solid");
+            }
+
+            # The actual values:
+            if( print.CMA && char.height.CMA <= 0.80 && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
+            {
+              text(corrected.x.text, ppts$y.norm, ppts$text, adj=c(0.5,-0.5), cex=CMA.cex, col=plot.partial.CMAs.as.timeseries.col.text);
+            }
+
+            # Advance to next patient:
             y.cur <- y.cur + plot.partial.CMAs.as.timeseries.vspace;
           }
         }
       }
-      curpat <- !curpat;
+
+
+      ##
+      ## FUW and OW
+      ##
+
+      # The follow-up and observation windows (these are drawn only after all the other stuff for this patient has been drawn):
+      if( highlight.followup.window )
+      {
+        rect(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window, y.old - 0.5,
+             adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window, y.old + length(s.events) - 0.5,
+             col=NA, border=followup.window.col, lty="dashed", lwd=2);
+      }
+      if( highlight.observation.window )
+      {
+        rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window, y.old - 0.5,
+             adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window, y.old + length(s.events) - 0.5,
+             col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
+      }
+
     }
   }
 
-  # The days/dates axis and the grid at those important days/dates:
+
+  ##
+  ## Separator between CMA and event plotting areas
+  ##
+
+  # Draw the vertical line delimiting the CMAs from events plotting areas:
+  if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
+  {
+    abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.col, lty="dotted", lwd=1);
+  }
+
+
+  ##
+  ## The x-axis
+  ##
+
+  # The x-axis and vertical guides:
   if( period.in.days > 0 )
   {
     if( show.period=="dates" )
     {
-        #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-        #      labels=as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format),
-        #      las=3, cex.axis=cex.axis);
-        axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
-        axis.labels <- as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format);
-        # text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
-        #      par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
-        #      labels=axis.labels,
-        #      cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-        text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-             par("usr")[3],
-             labels=axis.labels,
-             cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-        abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
-        abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
+      xpos <- seq(0, as.numeric(endperiod), by=period.in.days); # where to put lables and guidelines
+      axis.labels <- as.character(earliest.date + round(xpos, 1), format=cma$date.format);
     } else
     {
         if( align.first.event.at.zero )
         {
-            xpos <- c(correct.earliest.followup.window-seq(0,as.numeric(correct.earliest.followup.window),by=period.in.days),
-                      seq(0,as.numeric(endperiod),by=period.in.days)+correct.earliest.followup.window);
+            xpos <- c(correct.earliest.followup.window - seq(0, as.numeric(correct.earliest.followup.window), by=period.in.days),
+                      seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
             xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
-            #axis( 1, at=adh.plot.space[2]+xpos,
-            #      labels=as.character(round(xpos-correct.earliest.followup.window,1)),
-            #      las=3, cex.axis=cex.axis);
-            axis( 1, at=adh.plot.space[2]+xpos, labels=FALSE);
-            axis.labels <- as.character(round(xpos-correct.earliest.followup.window,1));
-            # text(adh.plot.space[2]+xpos - strwidth(axis.labels, cex=cex.axis)/2,
-            #      par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
-            #      labels=axis.labels,
-            #      cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-            text(adh.plot.space[2]+xpos,
-                 par("usr")[3],
-                 labels=axis.labels,
-                 cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-            abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
-            abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
+            axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
         } else
         {
-            #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-            #      labels=as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1)),
-            #      las=3, cex.axis=cex.axis);
-            axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
-            axis.labels <- as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1));
-            # text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
-            #      par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
-            #      labels=axis.labels,
-            #      cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-            text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-                 par("usr")[3],
-                 labels=axis.labels,
-                 cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-            abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
-            abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
+          xpos <- seq(0, as.numeric(endperiod), by=period.in.days);
+          axis.labels <- as.character(round(xpos, 1));
         }
     }
+
+    axis( 1, at=adh.plot.space[2] + xpos, labels=FALSE);
+    text(adh.plot.space[2] + xpos, par("usr")[3], labels=axis.labels, cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
+    abline( v=adh.plot.space[2] + xpos,       lty="dotted", col=gray(0.5) );
+    abline( v=adh.plot.space[2] + endperiod,  lty="solid",  col=gray(0.5) );
   }
+
+
+  ##
+  ## The legend
+  ##
 
   # The legend:
   .legend <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)

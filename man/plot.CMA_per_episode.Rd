@@ -22,7 +22,8 @@
   CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
   followup.window.col = "green", highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
-  observation.window.angle = -30, show.real.obs.window.start = TRUE,
+  observation.window.angle = -30, alternating.bands.cols = c("white",
+  "gray95"), show.real.obs.window.start = TRUE,
   real.obs.window.density = 35, real.obs.window.angle = 30,
   bw.plot = FALSE)
 

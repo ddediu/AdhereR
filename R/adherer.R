@@ -841,6 +841,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       col.na="lightgray",                    # color for mising data
                       highlight.followup.window=TRUE, followup.window.col="green",
                       highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
+                      alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                       suppress.warnings=FALSE,         # suppress warnings?
@@ -894,6 +895,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              observation.window.density=observation.window.density,
              observation.window.angle=observation.window.angle,
              observation.window.opacity=observation.window.opacity,
+             alternating.bands.cols=alternating.bands.cols,
              bw.plot=bw.plot,
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
@@ -1679,9 +1681,6 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
   }
   return (unclass(start.dates) - unclass(end.dates)); # the difference between the raw internal representations of Date objects is in days
 }
-
-# Auxiliary function generating colors for bw plotting:
-.bw.colors <- function(n) gray.colors(n, start=0, end=0.5);
 
 
 # Auxiliary function: call a given function sequentially or in parallel:
@@ -8032,6 +8031,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                                  highlight.followup.window=TRUE, followup.window.col="green",
                                  highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
+                                 alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                                  show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
                                  bw.plot=FALSE                          # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
 )
@@ -8059,6 +8059,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                    observation.window.col=observation.window.col,
                    observation.window.density=observation.window.density,
                    observation.window.angle=observation.window.angle,
+                   alternating.bands.cols=alternating.bands.cols,
                    show.real.obs.window.start=show.real.obs.window.start,
                    real.obs.window.density=real.obs.window.density,
                    real.obs.window.angle=real.obs.window.angle,
