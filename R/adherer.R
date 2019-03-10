@@ -900,8 +900,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
-             suppress.warnings=suppress.warnings,
-             ...);
+             suppress.warnings=suppress.warnings);
 }
 # {
 #   cma <- x; # parameter x is required for S3 consistency, but I like cma more

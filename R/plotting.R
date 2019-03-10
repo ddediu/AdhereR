@@ -413,10 +413,8 @@
   # Compute the duration if not given:
   if( is.na(duration) )
   {
-    latest.date <- max(if("end" %in% names(cmas)) cmas$end else NULL,
-                       cmas$.FU.END.DATE, cmas$.OBS.END.DATE,
-                       cma$data$.DATE.as.Date + cma$data[,cma$event.duration.colname],
-                       na.rm=TRUE);
+    latest.date <- max(cmas$.FU.END.DATE, cmas$.OBS.END.DATE, cma$data$.DATE.as.Date + cma$data[,cma$event.duration.colname], na.rm=TRUE);
+    if( "end" %in% names(cmas) ) latest.date <- max(cmas$end, latest.date, na.rm=TRUE);
     duration <- as.numeric(latest.date - earliest.date) + correct.earliest.followup.window;
   }
   endperiod <- duration;
@@ -464,7 +462,7 @@
   left.margin <- (cur.mai <- par("mai"))[2]; # left margin in inches (and cache the current margins too)
 
   # If there's enough space as it is, don't do anything:
-  if( left.margin < (y.label$height + max(id.labels$width,na.rm=TRUE)) ) # remeber: y.label is vertical
+  if( left.margin < (y.label$height + max(id.labels$width,na.rm=TRUE) + strwidth("M", units="inches", cex=cex.lab)) ) # remember: y.label is vertical
   {
     # Well, there isn't enough space, so:
     rotate.id.labels <- 30; # rotate the labels (in degrees)
@@ -697,10 +695,10 @@
               if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
               {
                 # There's enough space for vertical writing all of them (alternated):
-                for( i in 1:length(adh) )
+                for( j in 1:length(adh) )
                 {
-                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean + ifelse(i %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
-                       sprintf("%.1f%%",100*adh[i]), srt=90, pos=ifelse(i %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
+                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[j]), y.mean + ifelse(j %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
+                       sprintf("%.1f%%",100*adh[j]), srt=90, pos=ifelse(j %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
                 }
               } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
               {
@@ -736,10 +734,10 @@
               if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
               {
                 # There's enough space for vertical writing all of them (alternating):
-                for( i in 1:length(adh) )
+                for( j in 1:length(adh) )
                 {
-                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[i]), y.mean + ifelse(i %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
-                       sprintf("%.1f%%",100*adh[i]), srt=90, pos=ifelse(i %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
+                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[j]), y.mean + ifelse(j %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
+                       sprintf("%.1f%%",100*adh[j]), srt=90, pos=ifelse(j %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
                 }
               } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
               {
