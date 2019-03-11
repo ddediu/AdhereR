@@ -5,37 +5,105 @@
 \alias{plot.CMA_sliding_window}
 \title{Plot CMA_per_episode and CMA_sliding_window objects.}
 \usage{
-\method{plot}{CMA_per_episode}(x, ..., patients.to.plot = NULL,
+\method{plot}{CMA_per_episode}(cma, patients.to.plot = NULL,
   duration = NA, align.all.patients = FALSE,
   align.first.event.at.zero = TRUE, show.period = c("dates",
   "days")[2], period.in.days = 90, show.legend = TRUE,
   legend.x = "right", legend.y = "bottom", legend.bkg.opacity = 0.5,
-  cex = 1, cex.axis = 0.75, cex.lab = 1, show.cma = TRUE,
+  legend.cex = 0.75, legend.cex.title = 1, cex = 1,
+  cex.axis = 0.75, cex.lab = 1, show.cma = TRUE, xlab = c(dates =
+  "Date", days = "Days"), ylab = c(withoutCMA = "patient", withCMA =
+  "patient (& CMA)"), title = c(aligned =
+  "Event patterns (all patients aligned)", notaligned = "Event patterns"),
   col.cats = rainbow, unspecified.category.label = "drug",
   lty.event = "solid", lwd.event = 2, pch.start.event = 15,
-  pch.end.event = 16, col.na = "lightgray",
-  col.continuation = "black", lty.continuation = "dotted",
-  lwd.continuation = 1, print.CMA = TRUE, CMA.cex = 0.5,
-  plot.CMA = TRUE, plot.CMA.as.histogram = TRUE,
+  pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
+  print.dose.outline.col = "white", print.dose.centered = FALSE,
+  plot.dose = FALSE, lwd.event.max.dose = 8,
+  plot.dose.lwd.across.medication.classes = FALSE,
+  col.na = "lightgray", col.continuation = "black",
+  lty.continuation = "dotted", lwd.continuation = 1,
+  print.CMA = TRUE, CMA.cex = 0.5, plot.CMA = TRUE,
+  plot.CMA.as.histogram = TRUE, plot.partial.CMAs.as = c("stacked",
+  "overlapping", "timeseries")[1],
+  plot.partial.CMAs.as.stacked.col.bars = "gray90",
+  plot.partial.CMAs.as.stacked.col.border = "gray30",
+  plot.partial.CMAs.as.stacked.col.text = "black",
+  plot.partial.CMAs.as.timeseries.vspace = 7,
+  plot.partial.CMAs.as.timeseries.start.from.zero = TRUE,
+  plot.partial.CMAs.as.timeseries.col.dot = "darkblue",
+  plot.partial.CMAs.as.timeseries.col.interval = "gray70",
+  plot.partial.CMAs.as.timeseries.col.text = "firebrick",
+  plot.partial.CMAs.as.timeseries.interval.type = c("none", "segments",
+  "arrows", "lines", "rectangles")[2],
+  plot.partial.CMAs.as.timeseries.lwd.interval = 1,
+  plot.partial.CMAs.as.timeseries.alpha.interval = 0.25,
+  plot.partial.CMAs.as.timeseries.show.0perc = TRUE,
+  plot.partial.CMAs.as.timeseries.show.100perc = FALSE,
+  plot.partial.CMAs.as.overlapping.alternate = TRUE,
+  plot.partial.CMAs.as.overlapping.col.interval = "gray70",
+  plot.partial.CMAs.as.overlapping.col.text = "firebrick",
   CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
   CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
   CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
   followup.window.col = "green", highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
-  observation.window.angle = -30, alternating.bands.cols = c("white",
-  "gray95"), show.real.obs.window.start = TRUE,
-  real.obs.window.density = 35, real.obs.window.angle = 30,
-  bw.plot = FALSE)
+  observation.window.angle = -30, observation.window.opacity = 0.3,
+  alternating.bands.cols = c("white", "gray95"), bw.plot = FALSE,
+  min.plot.size.in.characters.horiz = 10,
+  min.plot.size.in.characters.vert = 0.25, max.patients.to.plot = 100,
+  suppress.warnings = FALSE, ...)
 
-\method{plot}{CMA_sliding_window}(...)
+\method{plot}{CMA_sliding_window}(cma, patients.to.plot = NULL,
+  duration = NA, align.all.patients = FALSE,
+  align.first.event.at.zero = TRUE, show.period = c("dates",
+  "days")[2], period.in.days = 90, show.legend = TRUE,
+  legend.x = "right", legend.y = "bottom", legend.bkg.opacity = 0.5,
+  legend.cex = 0.75, legend.cex.title = 1, cex = 1,
+  cex.axis = 0.75, cex.lab = 1, show.cma = TRUE, xlab = c(dates =
+  "Date", days = "Days"), ylab = c(withoutCMA = "patient", withCMA =
+  "patient (& CMA)"), title = c(aligned =
+  "Event patterns (all patients aligned)", notaligned = "Event patterns"),
+  col.cats = rainbow, unspecified.category.label = "drug",
+  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
+  pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
+  print.dose.outline.col = "white", print.dose.centered = FALSE,
+  plot.dose = FALSE, lwd.event.max.dose = 8,
+  plot.dose.lwd.across.medication.classes = FALSE,
+  col.na = "lightgray", col.continuation = "black",
+  lty.continuation = "dotted", lwd.continuation = 1,
+  print.CMA = TRUE, CMA.cex = 0.5, plot.CMA = TRUE,
+  plot.CMA.as.histogram = TRUE, plot.partial.CMAs.as = c("stacked",
+  "overlapping", "timeseries")[1],
+  plot.partial.CMAs.as.stacked.col.bars = "gray90",
+  plot.partial.CMAs.as.stacked.col.border = "gray30",
+  plot.partial.CMAs.as.stacked.col.text = "black",
+  plot.partial.CMAs.as.timeseries.vspace = 7,
+  plot.partial.CMAs.as.timeseries.start.from.zero = TRUE,
+  plot.partial.CMAs.as.timeseries.col.dot = "darkblue",
+  plot.partial.CMAs.as.timeseries.col.interval = "gray70",
+  plot.partial.CMAs.as.timeseries.col.text = "firebrick",
+  plot.partial.CMAs.as.timeseries.interval.type = c("none", "segments",
+  "arrows", "lines", "rectangles")[2],
+  plot.partial.CMAs.as.timeseries.lwd.interval = 1,
+  plot.partial.CMAs.as.timeseries.alpha.interval = 0.25,
+  plot.partial.CMAs.as.timeseries.show.0perc = TRUE,
+  plot.partial.CMAs.as.timeseries.show.100perc = FALSE,
+  plot.partial.CMAs.as.overlapping.alternate = TRUE,
+  plot.partial.CMAs.as.overlapping.col.interval = "gray70",
+  plot.partial.CMAs.as.overlapping.col.text = "firebrick",
+  CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
+  CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
+  CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
+  followup.window.col = "green", highlight.observation.window = TRUE,
+  observation.window.col = "yellow", observation.window.density = 35,
+  observation.window.angle = -30, observation.window.opacity = 0.3,
+  alternating.bands.cols = c("white", "gray95"), bw.plot = FALSE,
+  min.plot.size.in.characters.horiz = 10,
+  min.plot.size.in.characters.vert = 0.25, max.patients.to.plot = 100,
+  suppress.warnings = FALSE, ...)
 }
 \arguments{
-\item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
-plot}
-
-\item{...}{other parameters (to be passed to the estimation and plotting of
-the simple CMA)}
-
 \item{patients.to.plot}{A vector of \emph{strings} containing the list of
 patient IDs to plot (a subset of those in the \code{cma} object), or
 \code{NULL} for all}
@@ -121,11 +189,17 @@ window be plotted?}
 \item{observation.window.col, observation.window.density, observation.window.angle}{Attributes of the observation window
 (colour, shading density and angle).}
 
-\item{show.real.obs.window.start, real.obs.window.density, real.obs.window.angle}{For some CMAs, the observation window
-might be adjusted, in which case should it be plotted and with that attributes?}
-
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
+
+\item{...}{other parameters (to be passed to the estimation and plotting of
+the simple CMA)}
+
+\item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
+plot}
+
+\item{show.real.obs.window.start, real.obs.window.density, real.obs.window.angle}{For some CMAs, the observation window
+might be adjusted, in which case should it be plotted and with that attributes?}
 }
 \description{
 Plots the event data and the estimated CMA per treatment episode and sliding

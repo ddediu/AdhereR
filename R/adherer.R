@@ -873,6 +873,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              medication.groups=medication.groups,
              lty.event=lty.event,
              lwd.event=lwd.event,
+             show.event.intervals=FALSE, # not for CMA0
              pch.start.event=pch.start.event,
              pch.end.event=pch.end.event,
              print.dose=print.dose,
@@ -3203,7 +3204,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            unspecified.category.label="drug",     # the label of the unspecified category of medication
                            medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
                            lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
-                           show.event.intervals=TRUE,             # show the actual rpescription intervals
+                           show.event.intervals=TRUE,             # show the actual prescription intervals
                            col.na="lightgray",                    # color for mising data
                            print.CMA=TRUE, CMA.cex=0.50,           # print CMA next to the participant's ID?
                            plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
@@ -3246,6 +3247,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              medication.groups=medication.groups,
              lty.event=lty.event,
              lwd.event=lwd.event,
+             show.event.intervals=show.event.intervals,
              pch.start.event=pch.start.event,
              pch.end.event=pch.end.event,
              print.dose=print.dose,
@@ -7928,8 +7930,6 @@ print.CMA_per_episode <- function(x,                                     # the C
   }
 }
 
-.plot.CMAintervals <- function(cma, ...) .plot.CMAs(cma, ...);
-
 
 #' Plot CMA_per_episode and CMA_sliding_window objects.
 #'
@@ -8091,64 +8091,129 @@ print.CMA_per_episode <- function(x,                                     # the C
 #'                        );
 #' plot(cmaE, patients.to.plot=c("1","2"));}
 #' @export
-plot.CMA_per_episode <- function(x,                                     # the CMA_per_episode or CMA_sliding_window (or derived) object
-                                 ...,                                   # required for S3 consistency
+plot.CMA_per_episode <- function(cma,                                     # the CMA_per_episode or CMA_sliding_window (or derived) object
                                  patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
                                  duration=NA,                           # duration and end period to plot in days (if missing, determined from the data)
                                  align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? and, if so, place the first event as the horizintal 0?
                                  show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                                  period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
-                                 show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, # legend params and position
+                                 show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
                                  cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                                  show.cma=TRUE,                         # show the CMA type
+                                 xlab=c("dates"="Date", "days"="Days"), # Vector of x labels to show for the two types of periods, or a single value for both, or NULL for nothing
+                                 ylab=c("withoutCMA"="patient", "withCMA"="patient (& CMA)"), # Vector of y labels to show without and with CMA estimates, or a single value for both, or NULL ofr nonthing
+                                 title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nonthing
                                  col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                  unspecified.category.label="drug",     # the label of the unspecified category of medication
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
+                                 print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
+                                 plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                                  col.na="lightgray",                    # color for mising data
                                  col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                                  print.CMA=TRUE, CMA.cex=0.50,    # print CMA next to the participant's ID?
                                  plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
                                  plot.CMA.as.histogram=TRUE,      # plot CMA as a histogram or as a density plot?
+                                 plot.partial.CMAs.as=c("stacked", "overlapping", "timeseries")[1], # how to plot the "partial" (i.e., intervals/episodes) CMAs (NULL for none)?
+                                 plot.partial.CMAs.as.stacked.col.bars="gray90", plot.partial.CMAs.as.stacked.col.border="gray30", plot.partial.CMAs.as.stacked.col.text="black",
+                                 plot.partial.CMAs.as.timeseries.vspace=7, # how much vertical space to reserve for the timeseries plot (in character lines)
+                                 plot.partial.CMAs.as.timeseries.start.from.zero=TRUE, #show the vertical axis start at 0 or at the minimum actual value (if positive)?
+                                 plot.partial.CMAs.as.timeseries.col.dot="darkblue", plot.partial.CMAs.as.timeseries.col.interval="gray70", plot.partial.CMAs.as.timeseries.col.text="firebrick", # setting any of these to NA results in them not being plotted
+                                 plot.partial.CMAs.as.timeseries.interval.type=c("none", "segments", "arrows", "lines", "rectangles")[2], # how to show the covered intervals
+                                 plot.partial.CMAs.as.timeseries.lwd.interval=1, # line width for some types of intervals
+                                 plot.partial.CMAs.as.timeseries.alpha.interval=0.25, # the transparency of the intervales (when drawn as rectangles)
+                                 plot.partial.CMAs.as.timeseries.show.0perc=TRUE, plot.partial.CMAs.as.timeseries.show.100perc=FALSE, #show the 0% and 100% lines?
+                                 plot.partial.CMAs.as.overlapping.alternate=TRUE, # should successive intervals be plotted low/high?
+                                 plot.partial.CMAs.as.overlapping.col.interval="gray70", plot.partial.CMAs.as.overlapping.col.text="firebrick", # setting any of these to NA results in them not being plotted
                                  CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
                                  CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                                  highlight.followup.window=TRUE, followup.window.col="green",
-                                 highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30,
+                                 highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                                  alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
-                                 show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
-                                 bw.plot=FALSE                          # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                                 bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                                 min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.25, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
+                                 max.patients.to.plot=100,        # maximum number of patients to plot
+                                 suppress.warnings=FALSE,         # suppress warnings?
+                                 ...
 )
-.plot.CMAintervals(cma=x,
-                   patients.to.plot=patients.to.plot,
-                   duration=duration,
-                   align.all.patients=align.all.patients, align.first.event.at.zero=align.first.event.at.zero,
-                   show.period=show.period,
-                   period.in.days=period.in.days,
-                   show.legend=show.legend, legend.x=legend.x, legend.y=legend.y, legend.bkg.opacity=legend.bkg.opacity,
-                   cex=cex, cex.axis=cex.axis, cex.lab=cex.lab,
-                   show.cma=show.cma,
-                   col.cats=col.cats,
-                   unspecified.category.label=unspecified.category.label,
-                   lty.event=lty.event, lwd.event=lwd.event, pch.start.event=pch.start.event, pch.end.event=pch.end.event,
-                   col.na=col.na,
-                   col.continuation=col.continuation, lty.continuation=lty.continuation, lwd.continuation=lwd.continuation,
-                   print.CMA=print.CMA, CMA.cex=CMA.cex,
-                   plot.CMA=plot.CMA,
-                   CMA.plot.ratio=CMA.plot.ratio,
-                   CMA.plot.col=CMA.plot.col, CMA.plot.border=CMA.plot.border,
-                   CMA.plot.bkg=CMA.plot.bkg, CMA.plot.text=CMA.plot.text,
-                   highlight.followup.window=highlight.followup.window, followup.window.col=followup.window.col,
-                   highlight.observation.window=highlight.observation.window,
-                   observation.window.col=observation.window.col,
-                   observation.window.density=observation.window.density,
-                   observation.window.angle=observation.window.angle,
-                   alternating.bands.cols=alternating.bands.cols,
-                   show.real.obs.window.start=show.real.obs.window.start,
-                   real.obs.window.density=real.obs.window.density,
-                   real.obs.window.angle=real.obs.window.angle,
-                   bw.plot=bw.plot,
-                   ...)
-
-
+{
+  .plot.CMAs(cma,
+             patients.to.plot=patients.to.plot,
+             duration=duration,
+             align.all.patients=align.all.patients,
+             align.first.event.at.zero=align.first.event.at.zero,
+             show.period=show.period,
+             period.in.days=period.in.days,
+             show.legend=show.legend,
+             legend.x=legend.x,
+             legend.y=legend.y,
+             legend.bkg.opacity=legend.bkg.opacity,
+             legend.cex=legend.cex,
+             legend.cex.title=legend.cex.title,
+             cex=cex,
+             cex.axis=cex.axis,
+             cex.lab=cex.lab,
+             show.cma=show.cma,
+             xlab=xlab,
+             ylab=ylab,
+             title=title,
+             col.cats=col.cats,
+             unspecified.category.label=unspecified.category.label,
+             medication.groups=medication.groups,
+             lty.event=lty.event,
+             lwd.event=lwd.event,
+             show.event.intervals=FALSE, # per-episode and sliding windows might have overlapping intervals, so better not to show them at all
+             pch.start.event=pch.start.event,
+             pch.end.event=pch.end.event,
+             print.dose=print.dose,
+             cex.dose=cex.dose,
+             print.dose.outline.col=print.dose.outline.col,
+             print.dose.centered=print.dose.centered,
+             plot.dose=plot.dose,
+             lwd.event.max.dose=lwd.event.max.dose,
+             plot.dose.lwd.across.medication.classes=plot.dose.lwd.across.medication.classes,
+             col.na=col.na,
+             print.CMA=print.CMA,
+             CMA.cex=CMA.cex,
+             plot.CMA=plot.CMA,
+             CMA.plot.ratio=CMA.plot.ratio,
+             CMA.plot.col=CMA.plot.col,
+             CMA.plot.border=CMA.plot.border,
+             CMA.plot.bkg=CMA.plot.bkg,
+             CMA.plot.text=CMA.plot.text,
+             plot.partial.CMAs.as=plot.partial.CMAs.as,
+             plot.partial.CMAs.as.stacked.col.bars=plot.partial.CMAs.as.stacked.col.bars,
+             plot.partial.CMAs.as.stacked.col.border=plot.partial.CMAs.as.stacked.col.border,
+             plot.partial.CMAs.as.stacked.col.text=plot.partial.CMAs.as.stacked.col.text,
+             plot.partial.CMAs.as.timeseries.vspace=plot.partial.CMAs.as.timeseries.vspace,
+             plot.partial.CMAs.as.timeseries.start.from.zero=plot.partial.CMAs.as.timeseries.start.from.zero,
+             plot.partial.CMAs.as.timeseries.col.dot=plot.partial.CMAs.as.timeseries.col.dot,
+             plot.partial.CMAs.as.timeseries.col.interval=plot.partial.CMAs.as.timeseries.col.interval,
+             plot.partial.CMAs.as.timeseries.col.text=plot.partial.CMAs.as.timeseries.col.text,
+             plot.partial.CMAs.as.timeseries.interval.type=plot.partial.CMAs.as.timeseries.interval.type,
+             plot.partial.CMAs.as.timeseries.lwd.interval=plot.partial.CMAs.as.timeseries.lwd.interval,
+             plot.partial.CMAs.as.timeseries.alpha.interval=plot.partial.CMAs.as.timeseries.alpha.interval,
+             plot.partial.CMAs.as.timeseries.show.0perc=plot.partial.CMAs.as.timeseries.show.0perc,
+             plot.partial.CMAs.as.timeseries.show.100perc=plot.partial.CMAs.as.timeseries.show.100perc,
+             plot.partial.CMAs.as.overlapping.alternate=plot.partial.CMAs.as.overlapping.alternate,
+             plot.partial.CMAs.as.overlapping.col.interval=plot.partial.CMAs.as.overlapping.col.interval,
+             plot.partial.CMAs.as.overlapping.col.text=plot.partial.CMAs.as.overlapping.col.text,
+             highlight.followup.window=highlight.followup.window,
+             followup.window.col=followup.window.col,
+             highlight.observation.window=highlight.observation.window,
+             observation.window.col=observation.window.col,
+             observation.window.density=observation.window.density,
+             observation.window.angle=observation.window.angle,
+             observation.window.opacity=observation.window.opacity,
+             show.real.obs.window.start=show.real.obs.window.start,
+             real.obs.window.density=real.obs.window.density,
+             real.obs.window.angle=real.obs.window.angle,
+             alternating.bands.cols=alternating.bands.cols,
+             bw.plot=bw.plot,
+             min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
+             min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
+             max.patients.to.plot=max.patients.to.plot,
+             suppress.warnings=suppress.warnings);
+}
 
 
 
@@ -8745,7 +8810,7 @@ print.CMA_sliding_window <- function(...) print.CMA_per_episode(...)
 
 #' @rdname plot.CMA_per_episode
 #' @export
-plot.CMA_sliding_window <- function(...) .plot.CMAintervals(...)
+plot.CMA_sliding_window <- plot.CMA_per_episode;
 
 
 
