@@ -81,6 +81,7 @@
                        CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                        highlight.followup.window=TRUE, followup.window.col="green",
                        highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
+                       show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for CMA8, the real observation window starts at a different date
                        alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                        bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                        min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.25, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
@@ -106,9 +107,10 @@
     return (invisible(NULL));
   }
 
-  # Local functions:
   # Is the cma a time series or per episodes?
-  is.TS.or.SW <- function(cma) (inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window"));
+  is.cma.TS.or.SW <- (inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window"));
+  # Does the cma contains estimated CMAs?
+  has.estimated.CMA <- !is.null(getCMA(cma));
 
   # Convert data.table to data.frame (basically, to guard against inconsistencies between data.table and data.frame in how they handle d[,i]):
   if( inherits(cma$data, "data.table") ) cma$data <- as.data.frame(cma$data);
@@ -231,8 +233,8 @@
     cmas <- cbind(cmas, do.call(rbind, lapply(1:nrow(cmas), function(i)
     {
       s <- which(cma$event.info[,cma$ID.colname] == cmas[i,cma$ID.colname]);
-      if( length(s) != 1 ) return (NULL);
-      cma$event.info[s,c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
+      if( length(s) == 0 ) return (NULL);
+      cma$event.info[s[1],c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
     })));
   } else
   {
@@ -425,7 +427,7 @@
   ##
 
   # Reserve space for the CMA plotting:
-  adh.plot.space <- c(0, ifelse( plot.CMA && !is.null(getCMA(cma)), duration*CMA.plot.ratio, 0) );
+  adh.plot.space <- c(0, ifelse( plot.CMA && has.estimated.CMA, duration*CMA.plot.ratio, 0) );
   duration.total <- duration + adh.plot.space[2];
 
   # Save the graphical params and restore them later:
@@ -438,8 +440,8 @@
                                       # The participant axis text:
                                       s <- which(cma$event.info[,cma$ID.colname] == p);
                                       pid <- ifelse( print.CMA &&
-                                                       !is.TS.or.SW(cma) &&
-                                                       !is.null(getCMA(cma)) &&
+                                                       !is.cma.TS.or.SW &&
+                                                       has.estimated.CMA &&
                                                        length(x <- which(getCMA(cma)[cma$ID.colname] == p))==1,
                                                      paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)),
                                                      p);
@@ -453,7 +455,7 @@
                                                 ifelse(length(ylab)==1,
                                                        ylab,
                                                        ifelse((print.CMA || plot.CMA) &&
-                                                                !is.null(getCMA(cma)),
+                                                                has.estimated.CMA,
                                                               ylab["withCMA"],
                                                               ylab["withoutCMA"])))), # space needed for the label (in inches)
                         "width"=strwidth(tmp, units="inches", cex=cex.lab),
@@ -476,7 +478,7 @@
 
   # Vertical space needed for showing the partial CMAs:
   vert.space.cmas <- 0;
-  if( is.TS.or.SW(cma) )
+  if( is.cma.TS.or.SW )
   {
     # There actually is a partial CMA to be potentially plotted:
     if( ("timeseries" %in% plot.partial.CMAs.as) && (plot.partial.CMAs.as.timeseries.vspace < 5) )
@@ -488,7 +490,7 @@
     }
 
     vert.space.cmas <- vert.space.cmas +
-      ifelse(plot.CMA && !is.null(getCMA(cma)),
+      ifelse(plot.CMA && has.estimated.CMA,
              (nrow(cmas)+length(patids)) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
                3 * length(patids) * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
                plot.partial.CMAs.as.timeseries.vspace * length(patids) * as.numeric("timeseries" %in% plot.partial.CMAs.as),
@@ -526,7 +528,7 @@
 
   # Minimum plot dimensions:
   if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
-      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * (nrow(cma$data) + ifelse(is.TS.or.SW(cma) && plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0)) )
+      abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * (nrow(cma$data) + ifelse(is.cma.TS.or.SW && plot.CMA && has.estimated.CMA, nrow(cmas), 0)) )
   {
     warning(paste0("Plotting area is too small (it must be at least ",
                    min.plot.size.in.characters.horiz,
@@ -535,7 +537,7 @@
                    " characters per patient, but now it is only ",
                    round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
                    " x ",
-                   round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (nrow(cma$data) + ifelse(is.TS.or.SW(cma) && plot.CMA && !is.null(getCMA(cma)), nrow(cmas), 0))),1),
+                   round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (nrow(cma$data) + ifelse(is.cma.TS.or.SW && plot.CMA && has.estimated.CMA, nrow(cmas), 0))),1),
                    ")!\n"));
     par(old.par); # restore graphical params
     return (invisible(NULL));
@@ -559,10 +561,10 @@
                     ifelse(!is.null(title) && show.cma,
                            paste0(" ",
                                   switch(class(cma)[1],
-                                         "CMA_sliding_window"="sliding window",
-                                         "CMA_per_episode"="per episode",
-                                         class(cma)[1]),
-                                  " (",cma$computed.CMA,")"),
+                                         "CMA_sliding_window"=paste0("sliding window (",cma$computed.CMA,")"),
+                                         "CMA_per_episode"=   paste0("per episode (",cma$computed.CMA,")"),
+                                         class(cma)[1])
+                                 ),
                            "")),
         xlab=ifelse(is.null(xlab),                                              # x axis label
                     "",
@@ -575,9 +577,9 @@
   mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3);
 
   # Function mapping the CMA values to the appropriate x-coordinates:
-  if( plot.CMA && !is.null(getCMA(cma)) )
+  if( plot.CMA && has.estimated.CMA )
   {
-    adh.max <- 1.0; # maximum achieved CMA
+    adh.max <- max(c(getCMA(cma)$CMA, 1.0),na.rm=TRUE); # maximum achieved CMA
     .rescale.xcoord.for.CMA.plot <- function(x, pfree=0.20)
     {
       return (adh.plot.space[1] + (x / adh.max) * (adh.plot.space[2] * (1-pfree) - adh.plot.space[1]));
@@ -596,19 +598,22 @@
   # For each individual event in turn:
   for( i in 1:nrow(cma$data) )
   {
+    # The current patient ID:
+    cur_pat_id <- cma$data[i,cma$ID.colname];
+
     # For a new patients, draw the alternating bands, show the CMA and print the y-axis label:
-    if( i == 1 || (cma$data[i,cma$ID.colname] != cma$data[i-1,cma$ID.colname]) )
+    if( i == 1 || (cur_pat_id != cma$data[i-1,cma$ID.colname]) )
     {
       # Save the current vertical position (for drawing the FUW and OW windows):
       y.old <- y.cur;
 
       # Select the events and partial CMAs belonging to this patient:
-      s.events <- which(cma$data[,cma$ID.colname] == cma$data[i,cma$ID.colname]);
-      s.cmas   <- which(cmas[,cma$ID.colname]     == cma$data[i,cma$ID.colname]);
+      s.events <- which(cma$data[,cma$ID.colname] == cur_pat_id);
+      s.cmas   <- which(cmas[,cma$ID.colname]     == cur_pat_id);
 
       # Total vartical space neede by this patient:
       vspace.needed <- length(s.events) +
-        ifelse(plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0,
+        ifelse(plot.CMA && has.estimated.CMA && adh.plot.space[2] > 0,
                (length(s.cmas)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
                  3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
                  plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
@@ -632,7 +637,7 @@
       ##
 
       # The y-axis label:
-      pid <- cma$data[i,cma$ID.colname];
+      pid <- cur_pat_id;
       y.mean <- y.cur + vspace.needed/2; # vertical position of the label (centered on patient)
       if( rotate.id.labels > 0 )
       {
@@ -648,111 +653,141 @@
       ##
 
       # The patient's CMA plot:
-      if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
+      if( plot.CMA && has.estimated.CMA && adh.plot.space[2] > 0 )
       {
-        # The CMA plot background:
-        segments(.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2, .rescale.xcoord.for.CMA.plot(1.0), y.mean - 2, lty="solid", col=CMA.plot.col);
-        segments(.rescale.xcoord.for.CMA.plot(0.0), y.mean + 2, .rescale.xcoord.for.CMA.plot(1.0), y.mean + 2, lty="solid", col=CMA.plot.col);
-
-        # The non-missing CMA values:
-        adh <- na.omit(cmas[s.cmas,"CMA"]);
-
-        # Scale the CMA (itself or density) in such a way that if within 0..1 stays within 0..1 but scales if it goes outside this interval to accomodate it
-        if( plot.CMA.as.histogram )
+        if( is.cma.TS.or.SW )
         {
-          # Plot CMA as histogram:
-          if( length(adh) > 0 )
+          # For per episode and sliding windows we show the distribution of the "partial" CMAs:
+
+          # The CMA plot background:
+          segments(.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2, .rescale.xcoord.for.CMA.plot(1.0), y.mean - 2, lty="solid", col=CMA.plot.col);
+          segments(.rescale.xcoord.for.CMA.plot(0.0), y.mean + 2, .rescale.xcoord.for.CMA.plot(1.0), y.mean + 2, lty="solid", col=CMA.plot.col);
+
+          # The non-missing CMA values:
+          adh <- na.omit(cmas[s.cmas,"CMA"]);
+
+          # Scale the CMA (itself or density) in such a way that if within 0..1 stays within 0..1 but scales if it goes outside this interval to accomodate it
+          if( plot.CMA.as.histogram )
           {
-            adh.hist <- hist(adh, plot=FALSE);
-            adh.x <- adh.hist$breaks[-1]; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
-            adh.y <- adh.hist$counts; adh.y <- adh.y / max(adh.y);
-            adh.x.max <- adh.x[which.max(adh.hist$counts)];
-            segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, lty="solid", lwd=1, col=CMA.plot.border);
-            if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0)) )
+            # Plot CMA as histogram:
+            if( length(adh) > 0 )
             {
-              # There's enough space for vertically writing all three of them:
-              text(x=.rescale.xcoord.for.CMA.plot(0.0),       y.mean - 2 - char.height.CMA/2,
-                   sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-              text(x=.rescale.xcoord.for.CMA.plot(1.0),       y.mean - 2 - char.height.CMA/2,
-                   sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-              text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean + 2 + char.height.CMA/2,
-                   sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=90, pos=3, cex=CMA.cex, col=CMA.plot.text);
-            }
-          }
-        } else
-        {
-          if( length(adh) > 2 )
-          {
-            # Plot CMA as density plot:
-            adh.density <- density(adh);
-            ss <- (adh.density$x >= min(adh,na.rm=TRUE) & adh.density$x <= max(adh,na.rm=TRUE));
-            if( sum(ss) == 0 )
-            {
-              # Probably constant numbers?
-              # Plot the individual lines:
-              adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
-              segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
-              if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+              adh.hist <- hist(adh, plot=FALSE);
+              adh.x <- adh.hist$breaks[-1]; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
+              adh.y <- adh.hist$counts; adh.y <- adh.y / max(adh.y);
+              adh.x.max <- adh.x[which.max(adh.hist$counts)];
+              segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, lty="solid", lwd=1, col=CMA.plot.border);
+              if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0)) )
               {
-                # There's enough space for vertical writing all of them (alternated):
-                for( j in 1:length(adh) )
-                {
-                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[j]), y.mean + ifelse(j %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
-                       sprintf("%.1f%%",100*adh[j]), srt=90, pos=ifelse(j %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
-                }
-              } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-              {
-                # There's enough space for vertical writing only the extremes:
-                text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean - 2 - char.height.CMA/2,
-                     sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean - 2 - char.height.CMA/2,
-                     sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-              }
-            } else
-            {
-              adh.density$x <- adh.density$x[ss]; adh.density$y <- adh.density$y[ss];
-              adh.x <- adh.density$x; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
-              adh.y <- adh.density$y; adh.y <- (adh.y - min(adh.y)) / (max(adh.y) - min(adh.y));
-              points(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, type="l", col=CMA.plot.border);
-              if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-              {
-                # There's enough space for vertical writing:
-                text(x=.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.0), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                text(x=.rescale.xcoord.for.CMA.plot(1.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.1), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                # There's enough space for vertically writing all three of them:
+                text(x=.rescale.xcoord.for.CMA.plot(0.0),       y.mean - 2 - char.height.CMA/2,
+                     sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                text(x=.rescale.xcoord.for.CMA.plot(1.0),       y.mean - 2 - char.height.CMA/2,
+                     sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean + 2 + char.height.CMA/2,
+                     sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=90, pos=3, cex=CMA.cex, col=CMA.plot.text);
               }
             }
           } else
           {
-            if( length(adh) == 0 )
+            if( length(adh) > 2 )
             {
-              # No points at all: nothing to plot!
+              # Plot CMA as density plot:
+              adh.density <- density(adh);
+              ss <- (adh.density$x >= min(adh,na.rm=TRUE) & adh.density$x <= max(adh,na.rm=TRUE));
+              if( sum(ss) == 0 )
+              {
+                # Probably constant numbers?
+                # Plot the individual lines:
+                adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
+                segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
+                if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+                {
+                  # There's enough space for vertical writing all of them (alternated):
+                  for( j in 1:length(adh) )
+                  {
+                    text(x=.rescale.xcoord.for.CMA.plot(adh.x[j]), y.mean + ifelse(j %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
+                         sprintf("%.1f%%",100*adh[j]), srt=90, pos=ifelse(j %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
+                  }
+                } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+                {
+                  # There's enough space for vertical writing only the extremes:
+                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean - 2 - char.height.CMA/2,
+                       sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean - 2 - char.height.CMA/2,
+                       sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                }
+              } else
+              {
+                adh.density$x <- adh.density$x[ss]; adh.density$y <- adh.density$y[ss];
+                adh.x <- adh.density$x; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
+                adh.y <- adh.density$y; adh.y <- (adh.y - min(adh.y)) / (max(adh.y) - min(adh.y));
+                points(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, type="l", col=CMA.plot.border);
+                if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+                {
+                  # There's enough space for vertical writing:
+                  text(x=.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.0), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                  text(x=.rescale.xcoord.for.CMA.plot(1.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.1), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                }
+              }
             } else
             {
-              # Plot the individual lines:
-              adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
-              segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
-              if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+              if( length(adh) == 0 )
               {
-                # There's enough space for vertical writing all of them (alternating):
-                for( j in 1:length(adh) )
+                # No points at all: nothing to plot!
+              } else
+              {
+                # Plot the individual lines:
+                adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
+                segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
+                if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
                 {
-                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[j]), y.mean + ifelse(j %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
-                       sprintf("%.1f%%",100*adh[j]), srt=90, pos=ifelse(j %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
+                  # There's enough space for vertical writing all of them (alternating):
+                  for( j in 1:length(adh) )
+                  {
+                    text(x=.rescale.xcoord.for.CMA.plot(adh.x[j]), y.mean + ifelse(j %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
+                         sprintf("%.1f%%",100*adh[j]), srt=90, pos=ifelse(j %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
+                  }
+                } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+                {
+                  # enough space for vertical writing only the extremes:
+                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean - 2 - char.height.CMA/2,
+                       sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean - 2 - char.height.CMA/2,
+                       sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
                 }
-              } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-              {
-                # enough space for vertical writing only the extremes:
-                text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean - 2 - char.height.CMA/2,
-                     sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean - 2 - char.height.CMA/2,
-                     sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
               }
             }
+          }
+        } else if( inherits(cma, "CMA1") )
+        {
+          # For CMA1+ we show the actual point estimate:
+
+          # The adherence estimate:
+          adh <- cmas[s.cmas,"CMA"];
+
+          # Draw the background rectangle:
+          rect(.rescale.xcoord.for.CMA.plot(0.0), mean(s.events) - 1, .rescale.xcoord.for.CMA.plot(min(adh,adh.max)), mean(s.events) + 1, col=CMA.plot.col, border=NA);
+          rect(.rescale.xcoord.for.CMA.plot(0.0), mean(s.events) - 1, .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)), mean(s.events) + 1, col=NA, border=CMA.plot.border);
+
+          if( !is.na(adh) )
+          {
+            cma.string <- sprintf("%.1f%%",adh*100);
+            available.x.space <- abs(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0));
+
+            if( strwidth(cma.string, cex=CMA.cex) <= available.x.space )
+            { # horizontal writing of the CMA:
+              text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s.events),
+                   labels=cma.string, col=CMA.plot.text, cex=CMA.cex);
+            } else if( strheight(cma.string, cex=CMA.cex) <= available.x.space )
+            { # vertical writing of the CMA:
+              text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s.events),
+                   labels=cma.string, col=CMA.plot.text, cex=CMA.cex, srt=90);
+            } # otherwise, theres' no space for showing the CMA here
           }
         }
       }
     }
-
 
     ##
     ## The event
@@ -849,7 +884,7 @@
 
 
     # Continuation between successive events:
-    if( i < nrow(cma$data) && (cma$data[i,cma$ID.colname] == cma$data[i+1,cma$ID.colname]) )
+    if( i < nrow(cma$data) && (cur_pat_id == cma$data[i+1,cma$ID.colname]) )
     {
       # We're still plotting the same patient: show the continuation line:
       start.next <- as.numeric(cma$data$.DATE.as.Date[i+1] - earliest.date);
@@ -869,7 +904,7 @@
       ##
 
       # Draw its subperiods (if so requested, meaningful and possible):
-      if( is.TS.or.SW(cma) && plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
+      if( is.cma.TS.or.SW && plot.CMA && has.estimated.CMA && adh.plot.space[2] > 0 )
       {
         if( length(s.cmas) > 0 && !all(is.na(cmas$CMA[s.cmas])) )
         {
@@ -1056,11 +1091,41 @@
       }
       if( highlight.observation.window )
       {
+        # The "given" OW:
         rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window, y.old - 0.5,
              adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window, y.old + length(s.events) - 0.5,
              col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
-      }
 
+        if( inherits(cma,"CMA8") && !is.null(cma$real.obs.window) && show.real.obs.window.start )
+        {
+          # For CMA8, the OW might have been changed, so we also have a "real" OW:
+          s.realOW <- which(cma$real.obs.window[,cma$ID.colname] == cur_pat_id);
+
+          # Find the begining of the "real" OW:
+          if( length(s.realOW) == 1)
+          {
+            if( !is.null(cma$real.obs.windows$window.start) && !is.na(cma$real.obs.windows$window.start[s.realOW]) )
+            {
+              real.obs.window.start <- cma$real.obs.windows$window.start[s.realOW];
+            } else
+            {
+              real.obs.window.start <- cma$event.info$.OBS.START.DATE[s.events[1]];
+            }
+            if( !is.null(cma$real.obs.windows$window.end) && !is.na(cma$real.obs.windows$window.end[s.realOW]) )
+            {
+              real.obs.window.end <- cma$real.obs.windows$window.end[s.realOW];
+            } else
+            {
+              real.obs.window.end <- cma$event.info$.OBS.END.DATE[s.events[1]];
+            }
+
+            # Draw the "real" OW:
+            rect(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window, y.old - 0.5,
+                 adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + correct.earliest.followup.window, y.old + length(s.events) - 0.5,
+                 col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=real.obs.window.density, angle=real.obs.window.angle);
+          }
+        }
+      }
     }
   }
 
@@ -1069,10 +1134,30 @@
   ## Separator between CMA and event plotting areas
   ##
 
-  # Draw the vertical line delimiting the CMAs from events plotting areas:
-  if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
+  # Mark the drawing area for the CMAs:
+  if( plot.CMA && has.estimated.CMA && adh.plot.space[2] > 0 )
   {
-    abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.col, lty="dotted", lwd=1);
+    if( is.cma.TS.or.SW )
+    {
+      abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.col, lty=c("solid","dotted"), lwd=1);
+    } else
+    {
+      if( adh.max > 1.0 )
+      {
+        rect(.rescale.xcoord.for.CMA.plot(0.0), par("usr")[3], .rescale.xcoord.for.CMA.plot(adh.max), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
+        abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0), .rescale.xcoord.for.CMA.plot(adh.max)), col=CMA.plot.border, lty=c("solid","dotted","solid"), lwd=1);
+        mtext( c("0%",sprintf("%.1f%%",adh.max*100)), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(adh.max)), las=2, cex=cex.axis, col=CMA.plot.border );
+        if( (.rescale.xcoord.for.CMA.plot(adh.max) - .rescale.xcoord.for.CMA.plot(1.0)) > 1.5*strwidth("0", cex=cex.axis) ) # Don't overcrowd the 100% and maximum CMA by omitting 100%
+        {
+          mtext( c("100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col=CMA.plot.border );
+        }
+      } else
+      {
+        rect(.rescale.xcoord.for.CMA.plot(0), par("usr")[3], .rescale.xcoord.for.CMA.plot(1.0), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
+        abline(v=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.border, lty="solid", lwd=1);
+        mtext( c("0%","100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col=CMA.plot.border );
+      }
+    }
   }
 
 
