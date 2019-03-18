@@ -1,0 +1,56 @@
+---
+title: "Compute event durations from different data sources"
+author: "Samuel S. Allemann, Dan Dediu & Alex L. Dima"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette: 
+    toc: yes
+    toc_depth: 4
+fig_caption: yes
+vignette: >
+  %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{AdhereR: Adherence to Medications}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+# Various Rmarkdown output options:
+# center figures and reduce their file size:
+knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg") 
+```
+
+Adherence is defined as the agreement between prescribed and actual medication use. `AdhereR` estimates adherence based on durations for which medications are prescribed and/or dispensed. However, medications might not be prescribed or dispensed for a specific duration in all circumstances. Many healthcare settings allow for multiple refills of prescriptions, and medications might be dispensed in fixed pre-packed quantities rather than from bulk. Moreover, various events might affect supply durations after medications have been dispensed. Prescribed dosage might change between dispensing events, changing the original supply duration. Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be taken into account. In contrast, patients might not use their own supplies during certain periods (e.g., when hospitalized). When information about prescription and dispensing events and treatment interruptions is available, `AdhereR` can calculate actual supply durations, taking into account changes during the course of treatment.
+
+This vignette describes the function `compute_event_durations` and its arguments. We use the provided example datasets to illustrate the various options and their impact on the calculated durations.
+
+```{r}
+event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 6 & ATC.CODE == "J01XB01"],
+                                           presc.data = durcomp.prescribing[ID == 6 & ATC.CODE == "J01XB01"],
+                                           hosp.data = durcomp.hospitalisation,
+                                           ID.colname = "ID",
+                                           presc.date.colname = "DATE.PRESC",
+                                           disp.date.colname = "DATE.DISP",
+                                           date.format = "%Y-%m-%d",
+                                           medication.class.colnames = c("ATC.CODE",
+                                                                         "UNIT", "FORM"),
+                                           total.dose.colname = "TOTAL.DOSE",
+                                           presc.daily.dose.colname = "DAILY.DOSE",
+                                           presc.duration.colname = "PRESC.DURATION",
+                                           visit.colname = "VISIT",
+                                           force.init.presc = TRUE,
+                                           force.presc.renew = TRUE,
+                                           split.on.dosage.change = TRUE,
+                                           trt.interruption = "continue",
+                                           suppress.warnings = FALSE,
+                                           return.data.table = TRUE);
+
+cma0 <- CMA0(event_durations[DURATION > 0],
+             ID.colname = "ID",
+             event.date.colname = "DISP.START",
+             event.duration.colname = "DURATION",
+             event.daily.dose.colname = "DAILY.DOSE",
+             medication.class.colname = "ATC.CODE")
+```
+

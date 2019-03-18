@@ -904,9 +904,8 @@ compute_event_durations <- function(disp.data = NULL,
                                                       presc.daily.dose.colname,
                                                       presc.duration.colname), with = FALSE];
     if(visit.colname %in% colnames(presc.data)){
-      pat_presc <- cbind(presc.data[get(ID.colname) == pat, visit.colname, with = FALSE]);
+      pat_presc <- cbind(presc.data[get(ID.colname) == pat, visit.colname, with = FALSE], pat_presc);
     };
-
     # sort by DCI
     setkeyv(pat_disp, cols = medication.class.colnames);
     setkeyv(pat_presc, cols = medication.class.colnames);
