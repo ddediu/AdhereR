@@ -51,7 +51,7 @@
                        show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                        period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                        show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
-                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
+                       cex=1.0, cex.axis=0.75, cex.lab=1.0, cex.title=1.5,   # various graphical params
                        show.cma=TRUE,                         # show the CMA type
                        xlab=c("dates"="Date", "days"="Days"), # Vector of x labels to show for the two types of periods, or a single value for both, or NULL for nothing
                        ylab=c("withoutCMA"="patient", "withCMA"="patient (& CMA)"), # Vector of y labels to show without and with CMA estimates, or a single value for both, or NULL ofr nonthing
@@ -89,11 +89,33 @@
                        min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.25, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
                        suppress.warnings=FALSE,         # suppress warnings?
+                       generate.HTML.container=TRUE,    # generate the HTML container for the SVG?
+                       generate.inline.SVG=FALSE,       # if a HTML container, include the SVG inline or generate as a self-contained file (always the case if there's no HTML container)?
                        ...
 )
 {
   ##
-  ## Set-up, checks and local functions
+  ## Initialise the SVG file content ####
+  ##
+  ## Things to remeber about SVGs:
+  ##   - coordinates start top-left and go rigth and bottom
+  ##   - font size is relative to the viewBox
+  ##
+
+  if( !generate.HTML.container || !generate.inline.SVG )
+  {
+    generate.inline.SVG <- FALSE; # make sure we generate a stand-alone SVG file
+    # The self-contained file header:
+    svg.str <- c('<?xml version="1.0" standalone="no"?>\n',
+                 '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n');
+  } else
+  {
+    svg.str <- NULL;
+  }
+
+
+  ##
+  ## Set-up, checks and local functions ####
   ##
 
   # Preconditions:
@@ -122,7 +144,7 @@
 
 
   ##
-  ## Select patients:
+  ## Select patients ####
   ##
 
   # The patients:
@@ -145,7 +167,7 @@
 
 
   ##
-  ## Cache, consolidate and homogenise the needed info (events, CMAs, FUW an OW)
+  ## Cache, consolidate and homogenise the needed info (events, CMAs, FUW an OW) ####
   ##
 
   # Cache the CMA estimates (if any):
@@ -285,7 +307,7 @@
 
 
   ##
-  ## Colors for plotting
+  ## Colors for plotting ####
   ##
 
   # Grayscale plotting:
@@ -331,7 +353,7 @@
 
 
   ##
-  ## Doses
+  ## Doses ####
   ##
 
   # Daily dose:
@@ -370,7 +392,7 @@
 
 
   ##
-  ## Event dates and durations
+  ## Event dates and durations ####
   ##
 
   # Find the earliest date:
@@ -425,7 +447,7 @@
 
 
   ##
-  ## Reserve plotting space for various components
+  ## Reserve plotting space for various components ####
   ##
 
   # Reserve space for the CMA plotting:
@@ -499,9 +521,40 @@
              0);
   }
 
+  # Vertical space needed for the x axis:
+  x.label <- ifelse(is.null(xlab), # x axis label
+                    "",
+                    ifelse(length(xlab)==1,
+                           xlab,
+                           xlab[show.period]));
+  date.labels <- NULL;
+  if( period.in.days > 0 )
+  {
+    if( show.period=="dates" )
+    {
+      xpos <- seq(0, as.numeric(endperiod), by=period.in.days); # where to put lables and guidelines
+      axis.labels <- as.character(earliest.date + round(xpos, 1), format=cma$date.format);
+    } else
+    {
+      if( align.first.event.at.zero )
+      {
+        xpos <- c(correct.earliest.followup.window - seq(0, as.numeric(correct.earliest.followup.window), by=period.in.days),
+                  seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
+        xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
+        axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
+      } else
+      {
+        xpos <- seq(0, as.numeric(endperiod), by=period.in.days);
+        axis.labels <- as.character(round(xpos, 1));
+      }
+    }
+
+    date.labels <- data.frame("position"=xpos, "string"=axis.labels);
+  }
+
 
   ##
-  ## The actual plotting
+  ## The actual plotting ####
   ##
 
   # Create the plotting surface:
@@ -522,6 +575,35 @@
     par(old.par); # restore graphical params
     return (invisible(NULL));
   }
+
+  # SVG:
+  # Compute the needed size:
+  # the idea is to assume 1 standard character (chr) == 16 user units, and 1 month (x axis) == 1 event (y axis) == 1 chr
+  # for the title,  axis ticks and labels: 1 title == 1.5 chr, 1 axis tick == 0.75 chr, 1 axis label = 1.0 chr
+  # plus spacing of about 0.5 chr around elements
+  dims.chr.std      <- 10; # the "standard" character size (SVG defaults to 16)
+  dims.chr.title    <- (cex.title * dims.chr.std);
+  dims.chr.axis     <- (cex.axis * dims.chr.std);
+  dims.chr.lab      <- (cex.lab * dims.chr.std);
+  dims.event.x      <- dims.chr.std*2; # the horizontal size of an event
+  dims.event.y      <- (cex * dims.chr.std); # the vertical size of an event
+  dims.day          <- ifelse(duration.total <= 90, 1, ifelse(duration.total <= 365, 7, ifelse(duration.total <= 3*365, 30, ifelse(duration.total <= 10*365, 90, 180)))); # how many days coorepond to a horizontal user unit (depends on how many days there are in total)
+  rotate.id.labels  <- 30 * as.numeric((dims.chr.std + dims.chr.lab + max(nchar(id.labels),na.rm=TRUE)*dims.chr.axis) >= (dims.chr.std*10)); # if the space required by the y-axis is more than 10 "standard" characters, then we rotate the labels
+  dims.axis.x       <- dims.chr.std + dims.chr.lab + (cos(30*pi/180) * max(nchar(as.character(date.labels$string)),na.rm=TRUE)*dims.chr.axis);
+  dims.axis.y       <- dims.chr.std + dims.chr.lab + (sin(rotate.id.labels*pi/180) * max(nchar(as.character(id.labels$string)),na.rm=TRUE)*dims.chr.axis);
+  dims.plot.x       <- (dims.axis.y + dims.chr.std);
+  dims.plot.y       <- (dims.chr.title + dims.chr.std);
+  dims.plot.width   <- (dims.event.x * (duration.total + 10)/dims.day);
+  dims.plot.height  <- (dims.event.y * (nrow(cma$data)+vert.space.cmas+1));
+  dims.total.width  <- (dims.plot.x + dims.plot.width);
+  dims.total.height <- (dims.plot.y + dims.plot.height + dims.axis.x);
+
+
+  svg.str <- c(svg.str,
+               '<svg viewBox="0 0 ',dims.total.width,' ',dims.total.height,'" ',
+               ifelse(generate.inline.SVG,'width="600" height="600"',''),
+               ' version="1.1" xmlns="http://www.w3.org/2000/svg">\n', # the plotting surface
+               '<rect width="',dims.total.width,'" height="',dims.total.height,'" style="fill:white; stroke:none"/>'); # clear the area
 
   # Character width and height in the current plotting system:
   if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose);
@@ -545,29 +627,27 @@
     return (invisible(NULL));
   }
 
-  # Continue plotting:
+  ##
+  ## Title & axis labels ####
+  ##
+
   box();
-
-
-  ##
-  ## Title & axis labels
-  ##
-
   # Title & axis labels:
-  title(main=paste0(ifelse(is.null(title),"",                                   # the plot title
-                           ifelse(length(title)==1,
-                                  title,
-                                  ifelse(align.all.patients,
-                                         title["aligned"],
-                                         title["notaligned"]))),
-                    ifelse(!is.null(title) && show.cma,
-                           paste0(" ",
-                                  switch(class(cma)[1],
-                                         "CMA_sliding_window"=paste0("sliding window (",cma$computed.CMA,")"),
-                                         "CMA_per_episode"=   paste0("per episode (",cma$computed.CMA,")"),
-                                         class(cma)[1])
-                                 ),
-                           "")),
+  title.string <- paste0(ifelse(is.null(title),"",                                   # the plot title
+                                ifelse(length(title)==1,
+                                       title,
+                                       ifelse(align.all.patients,
+                                              title["aligned"],
+                                              title["notaligned"]))),
+                         ifelse(!is.null(title) && show.cma,
+                                paste0(" ",
+                                       switch(class(cma)[1],
+                                              "CMA_sliding_window"=paste0("sliding window (",cma$computed.CMA,")"),
+                                              "CMA_per_episode"=   paste0("per episode (",cma$computed.CMA,")"),
+                                              class(cma)[1])
+                                ),
+                                ""));
+  title(main=title.string,
         xlab=ifelse(is.null(xlab),                                              # x axis label
                     "",
                     ifelse(length(xlab)==1,
@@ -577,6 +657,18 @@
 
   # y-axis label:
   mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3);
+
+  # SVG:
+  svg.str <- c(svg.str,
+               # The bounding box:
+               '<rect id="bounding-box" x="',dims.plot.x,'" y="',dims.plot.y,'" width="',dims.plot.width,'" height="',dims.plot.height,'" style="fill:none; stroke:black; stroke-width:1;"/>\n',
+               # The title:
+               '<text id="title" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.chr.std,'" font-size="',dims.chr.title,'" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black">',title.string,'</text>\n',
+               # The y axis label:
+               '<text id="axis-label-y" x="',dims.chr.axis,'" y="',dims.total.height/2,'" text-anchor="middle" alignment-baseline="middle" transform="rotate(-90, ',dims.chr.axis,', ',dims.total.height/2,')" font-size="',dims.chr.lab,'" font-family="Arial Bold">',as.character(y.label$string),'</text>\n',
+               # The x axis label:
+               '<text id="axis-label-x" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.total.height - dims.chr.axis,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.lab,'" font-family="Arial Bold">',as.character(x.label),'</text>\n'
+               );
 
   # Function mapping the CMA values to the appropriate x-coordinates:
   if( plot.CMA && has.estimated.CMA )
@@ -590,7 +682,7 @@
 
 
   ##
-  ## Plot most of the plot components
+  ## Plot most of the plot components ####
   ##
 
   # Intialisations
@@ -623,19 +715,24 @@
 
 
       ##
-      ## The alternating bands
+      ## The alternating bands ####
       ##
 
       # Draw the alternating bands
       if( !is.null(alternating.bands.cols) )
       {
         rect( 0.0 - 1.0, y.cur - 0.5, duration.total + 1.0, y.cur + vspace.needed - 0.5, col=alternating.bands.cols[alternating.band.to.draw], border=NA );
+
+        # SVG:
+        svg.str <- c(svg.str,
+                     '<rect id="alternating-bands" x="',dims.plot.x,'" y="',dims.plot.y + dims.plot.height - (y.cur - 0.5 + vspace.needed)*dims.event.y,'" width="',dims.plot.width,'" height="',vspace.needed*dims.event.y,'" style="fill:rgb(',paste0(col2rgb(alternating.bands.cols[alternating.band.to.draw]),collapse=","),'); stroke-width:0"/>\n');
+
         alternating.band.to.draw <- if(alternating.band.to.draw >= length(alternating.bands.cols)) 1 else (alternating.band.to.draw + 1); # move to the next band
       }
 
 
       ##
-      ## The y-axis labels
+      ## The y-axis labels ####
       ##
 
       # The y-axis label:
@@ -649,9 +746,13 @@
         mtext(pid, 2, line=0.5, at=y.mean, las=2, cex=cex.axis); # # don't rotate the labels
       }
 
+      # SVG:
+      svg.str <- c(svg.str,
+                   '<text id="axis-values-y" x="',(dims.plot.x - dims.chr.axis),'" y="',dims.plot.y + dims.plot.height - (y.cur + vspace.needed/2)*dims.event.y,'" text-anchor="end" alignment-baseline="middle" transform="rotate(-',rotate.id.labels,', ',(dims.plot.x - dims.chr.axis),', ',dims.plot.y + dims.plot.height - (y.cur + vspace.needed/2)*dims.event.y,')" font-size="',dims.chr.axis,'" font-family="Arial">',pid,'</text>\n');
+
 
       ##
-      ## The summary CMA plots
+      ## The summary CMA plots ####
       ##
 
       # The patient's CMA plot:
@@ -792,7 +893,7 @@
     }
 
     ##
-    ## The event
+    ## The event ####
     ##
 
     # Get the event start and end dates:
@@ -918,7 +1019,7 @@
 
 
       ##
-      ## Partial CMAs
+      ## Partial CMAs ####
       ##
 
       # Draw its subperiods (if so requested, meaningful and possible):
@@ -1097,7 +1198,7 @@
 
 
       ##
-      ## FUW and OW
+      ## FUW and OW ####
       ##
 
       # The follow-up and observation windows (these are drawn only after all the other stuff for this patient has been drawn):
@@ -1149,7 +1250,7 @@
 
 
   ##
-  ## Separator between CMA and event plotting areas
+  ## Separator between CMA and event plotting areas ####
   ##
 
   # Mark the drawing area for the CMAs:
@@ -1180,7 +1281,7 @@
 
 
   ##
-  ## The x-axis
+  ## The x-axis ####
   ##
 
   # The x-axis and vertical guides:
@@ -1211,9 +1312,26 @@
     abline( v=adh.plot.space[2] + endperiod,  lty="solid",  col=gray(0.5) );
   }
 
+  # SVG:
+  if( !is.null(date.labels) )
+  {
+    xs <- (dims.plot.x + dims.event.x * date.labels$position/dims.day);
+    ys <- (dims.plot.y + dims.plot.height + dims.chr.axis);
+    svg.str <- c(svg.str,
+                 # For each position:
+                 paste0(
+                   # Axis labels:
+                   '<text id="axis-values-x" x="',xs,'" y="',ys,'" text-anchor="end" alignment-baseline="middle" transform="rotate(-30, ',xs,', ',ys,')" font-size="',dims.chr.axis,'" font-family="Arial">',date.labels$string,'</text>\n',
+                   # Axis ticks:
+                   '<line id="axis-ticks-x" x1="',xs,'" x2="',xs,'" y1="',dims.plot.y + dims.plot.height,'" y2="',dims.plot.y + dims.plot.height + dims.chr.axis/2,'" stroke="black" stroke-width="1"/>\n',
+                   # Vertical dotted lines:
+                   '<line id="vertical-date-lines" x1="',xs,'" x2="',xs,'" y1="',dims.plot.y + dims.plot.height,'" y2="',dims.plot.y,'" stroke="rgb(50%,50%,50%)" stroke-dasharray="1,1" stroke-width="1"/>\n')
+                 );
+  }
+
 
   ##
-  ## The legend
+  ## The legend ####
   ##
 
   # The legend:
@@ -1351,6 +1469,33 @@
   {
     ret.val <- c("width"=NA, "height"=NA);
   }
+
+
+
+  ##
+  ## Finish and save the SVG (and possibly HTML) file(s) ####
+  ##
+
+  # Close the <sgv> tag:
+  svg.str <- c(svg.str, '</svg>\n');
+  if( generate.HTML.container )
+  {
+    # Write the HTML container:
+    writeLines(c('<!DOCTYPE html>\n',
+                 '<html>\n',
+                 '<body>\n',
+                 if(generate.inline.SVG) svg.str else '<img src="./AdhereR-plot.svg" height="600">\n',
+                 '</body>\n',
+                 '</html>'),
+               "~/Temp/tmp/AdhereR-plot.html", sep="");
+  }
+  if( !generate.inline.SVG )
+  {
+    # Save the SVG file:
+    writeLines(svg.str, "~/Temp/tmp/AdhereR-plot.svg", sep="");
+  }
+
+
 
   par(old.par); # restore graphical params
   return (invisible(ret.val));
