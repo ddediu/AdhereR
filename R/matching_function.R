@@ -34,10 +34,10 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' A sample dataset containing prescription events (one per row) for 16 patients
 #' over a period of roughly 15 months (1502 events in total).
 #' This is the appropriate format to compute event durations with the
-#' \code{compute_event_durations} function. Each row represent an individual prescription
+#' \code{compute_event_durations} function. Each row represents an individual prescription
 #' record for a specific dose of a specific medication for a patient at a given date.
 #' Visit number and Duration are optional, and more than one column to group medications
-#' can be supplied (such as Form or Unit).
+#' can be supplied (such as ATC Code, Form or Unit).
 #'
 #' @format A data table with 1502 rows and 8 variables:
 #' \describe{
@@ -70,10 +70,9 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' A sample dataset containing dispensing events (one per row) for 16 patients
 #' over a period of roughly 24 months (1794 events in total).
 #' This is the appropriate format to compute event durations with the
-#' \code{compute_event_durations} function. Each row represent an individual dispensing
+#' \code{compute_event_durations} function. Each row represents an individual dispensing
 #' record for a specific dose of a specific medication for a patient at a given date.
-#' Visit number and Duration are optional, and more than one column to group medications
-#' can be supplied (such as Form or Unit).
+#' More than one column to group medications can be supplied (such as ATC code, Form and Unit).
 #'
 #' @format A data frame with 1794 rows and 6 variables:
 #' \describe{
@@ -101,7 +100,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' A sample dataset containing hospitalization periods (one per row) for 10 patients
 #' over a period of roughly 18 months (28 events in total).
 #' This is the appropriate format to compute event durations with the
-#' \code{compute_event_durations} function. Each row represent an individual hospitalization period
+#' \code{compute_event_durations} function. Each row represents an individual hospitalization period
 #' of a patient for whom event durations should be calculated. Besides hospitalizations, this could
 #' cover other situations where patients may not use their own supply, e.g. during incarcerations.
 #' All column names must match the format provided in this example.
