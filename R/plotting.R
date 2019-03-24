@@ -86,7 +86,7 @@
                        show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for CMA8, the real observation window starts at a different date
                        alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                        bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                       min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.25, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
+                       min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
                        suppress.warnings=FALSE,         # suppress warnings?
                        generate.HTML.container=TRUE,    # generate the HTML container for the SVG?
@@ -586,7 +586,7 @@
   # for the title,  axis ticks and labels: 1 title == 1.5 chr, 1 axis tick == 0.75 chr, 1 axis label = 1.0 chr
   # plus spacing of about 0.5 chr around elements
   dims.chr.std      <- 10; # the "standard" character size (SVG defaults to 16)
-  dims.chr.event    <- dims.chr.std;
+  dims.chr.event    <- cex * dims.chr.std / 2;
   dims.chr.title    <- (cex.title * dims.chr.std);
   dims.chr.axis     <- (cex.axis * dims.chr.std);
   dims.chr.lab      <- (cex.lab * dims.chr.std);
@@ -968,9 +968,9 @@
     # SVG:
     svg.str <- c(svg.str,
                  # The begining of the event:
-                 '<use xlink:href="#pch0" transform="translate(',dims.plot.x + dims.event.x * (adh.plot.space[2] + start + correct.earliest.followup.window)/dims.day,' ',dims.plot.y + dims.plot.height - y.cur*dims.event.y,')" stroke="rgb(',paste0(col2rgb(col),collapse=","),')" fill="rgb(',paste0(col2rgb(col),collapse=","),')"/>\n',
+                 '<use xlink:href="#pch',pch.start.event,'" transform="translate(',dims.plot.x + dims.event.x * (adh.plot.space[2] + start + correct.earliest.followup.window)/dims.day,' ',dims.plot.y + dims.plot.height - y.cur*dims.event.y,')" stroke="rgb(',paste0(col2rgb(col),collapse=","),')" fill="rgb(',paste0(col2rgb(col),collapse=","),')"/>\n',
                  # The end of the event:
-                 '<use xlink:href="#pch28" transform="translate(',dims.plot.x + dims.event.x * (adh.plot.space[2] + end   + correct.earliest.followup.window)/dims.day,' ',dims.plot.y + dims.plot.height - y.cur*dims.event.y,')" stroke="rgb(',paste0(col2rgb(col),collapse=","),')" fill="rgb(',paste0(col2rgb(col),collapse=","),')"/>\n'
+                 '<use xlink:href="#pch',pch.end.event   ,'" transform="translate(',dims.plot.x + dims.event.x * (adh.plot.space[2] + end   + correct.earliest.followup.window)/dims.day,' ',dims.plot.y + dims.plot.height - y.cur*dims.event.y,')" stroke="rgb(',paste0(col2rgb(col),collapse=","),')" fill="rgb(',paste0(col2rgb(col),collapse=","),')"/>\n'
     );
 
 
@@ -991,26 +991,23 @@
     }
 
     # Do we show dose?
+    seg.x1 <- adh.plot.space[2] + start + correct.earliest.followup.window;
+    seg.x2 <- adh.plot.space[2] + end   + correct.earliest.followup.window;
+    seg.lwd <- NA;
     if( plot.dose )
     {
       # Show dose using event line width:
       if( nrow(dose.range) == 1 )
       {
         # Just one dose:
-        segments( adh.plot.space[2] + start + correct.earliest.followup.window, y.cur,
-                  adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur,
-                  col=col, lty=lty.event,
-                  lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
+        seg.lwd <- adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname])
       } else
       {
         # There is a range of doses:
         if( plot.dose.lwd.across.medication.classes )
         {
           # Line width across all medication classes:
-          segments( adh.plot.space[2] + start + correct.earliest.followup.window, y.cur,
-                    adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur,
-                    col=col, lty=lty.event,
-                    lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max));
+          seg.lwd <- adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max);
         } else
         {
           # Line width per medication class:
@@ -1018,26 +1015,27 @@
           if( sum(dose.for.cat,na.rm=TRUE) == 1 )
           {
             # Found the corresponding medication class:
-            segments( adh.plot.space[2] + start + correct.earliest.followup.window, y.cur,
-                      adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur,
-                      col=col, lty=lty.event,
-                      lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
+            seg.lwd <- adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]);
           } else
           {
             # Use a fixed width:
-            segments( adh.plot.space[2] + start + correct.earliest.followup.window, y.cur,
-                      adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur,
-                      col=col, lty=lty.event, lwd=lwd.event);
+            seg.lwd <- lwd.event;
           }
         }
       }
     } else
     {
       # Use a fixed line width:
-      segments( adh.plot.space[2] + start + correct.earliest.followup.window, y.cur,
-                adh.plot.space[2] + end   + correct.earliest.followup.window,
-                y.cur, col=col, lty=lty.event, lwd=lwd.event);
+      seg.lwd <- lwd.event;
     }
+    segments( seg.x1, y.cur, seg.x2, y.cur, col=col, lty=lty.event, lwd=seg.lwd);
+
+    # SVG:
+    svg.str <- c(svg.str,
+                 # The begining of the event:
+                 '<line id="event-segment" x1="',dims.plot.x + dims.event.x * seg.x1/dims.day,'" y1="',dims.plot.y + dims.plot.height - y.cur*dims.event.y,'" x2="',dims.plot.x + dims.event.x * seg.x2/dims.day,'" y2="',dims.plot.y + dims.plot.height - y.cur*dims.event.y,'" stroke="rgb(',paste0(col2rgb(col),collapse=","),')" stroke-width="',seg.lwd,'"/>\n'
+    );
+
 
     if( print.dose )
     {
@@ -1050,12 +1048,26 @@
         text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
              dose.text.y,
              cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
+
+        # SVG:
+        svg.str <- c(svg.str,
+                     # The begining of the event:
+                     '<text id="event-dose-text" x="',dims.plot.x + dims.event.x * (adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window)/dims.day,'" y="',dims.plot.y + dims.plot.height - (y.cur - ifelse(print.dose.centered, 0, 3/4))*dims.event.y,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.std * cex.dose,'" font-family="Arial">',cma$data[i,cma$event.daily.dose.colname],'</text>\n'
+        );
+
       } else
       {
         # Outlined text:
         .shadow.text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
                      dose.text.y,
                      cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
+
+        # SVG:
+        svg.str <- c(svg.str,
+                     # The dose text:
+                     '<text id="event-dose-text" x="',dims.plot.x + dims.event.x * (adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window)/dims.day,'" y="',dims.plot.y + dims.plot.height - (y.cur - ifelse(print.dose.centered, 0, 3/4))*dims.event.y,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.std * cex.dose,'" font-family="Arial" stroke="rgb(',paste0(col2rgb("black"),collapse=","),')" >',cma$data[i,cma$event.daily.dose.colname],'</text>\n'
+        );
+
       }
     }
 
