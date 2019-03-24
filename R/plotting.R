@@ -576,12 +576,17 @@
     return (invisible(NULL));
   }
 
+  ##
+  ## SVG definitions and setup ####
+  ##
+
   # SVG:
   # Compute the needed size:
   # the idea is to assume 1 standard character (chr) == 16 user units, and 1 month (x axis) == 1 event (y axis) == 1 chr
   # for the title,  axis ticks and labels: 1 title == 1.5 chr, 1 axis tick == 0.75 chr, 1 axis label = 1.0 chr
   # plus spacing of about 0.5 chr around elements
   dims.chr.std      <- 10; # the "standard" character size (SVG defaults to 16)
+  dims.chr.event    <- dims.chr.std;
   dims.chr.title    <- (cex.title * dims.chr.std);
   dims.chr.axis     <- (cex.axis * dims.chr.std);
   dims.chr.lab      <- (cex.lab * dims.chr.std);
@@ -599,10 +604,69 @@
   dims.total.height <- (dims.plot.y + dims.plot.height + dims.axis.x);
 
 
+  # SVG header:
   svg.str <- c(svg.str,
                '<svg viewBox="0 0 ',dims.total.width,' ',dims.total.height,'" ',
                ifelse(generate.inline.SVG,'width="600" height="600"',''),
-               ' version="1.1" xmlns="http://www.w3.org/2000/svg">\n', # the plotting surface
+               ' version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n'); # the plotting surface
+
+  # Reusable bits:
+  svg.str <- c(svg.str,
+               '<defs>\n',
+               # The pch symbols (used for events etc):
+               # pch 0:
+               '<g id="pch0" fill="none" stroke-width="1"> <rect x="',-dims.chr.event/2,'" y="',-dims.chr.event/2,'" width="',dims.chr.event,'" height="',dims.chr.event,'"/> </g>\n',
+               # pch 1:
+               '<g id="pch1" fill="none" stroke-width="1"> <circle cx="0" cy="0" r="',dims.chr.event/2,'"/> </g>\n',
+               # pch 2:
+               '<g id="pch2" fill="none" stroke-width="1"> <polyline points="',-dims.chr.event/2,',',dims.chr.event/2,' 0,',-dims.chr.event/2,' ',dims.chr.event/2,',',dims.chr.event/2,' ',-dims.chr.event/2,',',dims.chr.event/2,'"/> </g>\n',
+               # pch 3:
+               '<g id="pch3" fill="none" stroke-width="1"> <line x1="',-dims.chr.event/2,'" y1="0" x2="',dims.chr.event/2,'" y2="0"/> <line x1="0" y1="',-dims.chr.event/2,'" x2="0" y2="',dims.chr.event/2,'"/> </g>\n',
+               # pch 4:
+               '<g id="pch4" fill="none" stroke-width="1"> <line x1="',-dims.chr.event/2,'" y1="',dims.chr.event/2,'" x2="',dims.chr.event/2,'" y2="',-dims.chr.event/2,'"/> <line x1="',-dims.chr.event/2,'" y1="',-dims.chr.event/2,'" x2="',dims.chr.event/2,'" y2="',dims.chr.event/2,'"/> </g>\n',
+               # pch 5:
+               '<g id="pch5" fill="none" stroke-width="1"> <polyline points="',-dims.chr.event/2,',0 0,',-dims.chr.event/2,' ',dims.chr.event/2,',0 0,',dims.chr.event/2,' ',-dims.chr.event/2,',0"/> </g>\n',
+               # pch 6:
+               '<g id="pch6" fill="none" stroke-width="1"> <polyline points="',-dims.chr.event/2,',',-dims.chr.event/2,' 0,',dims.chr.event/2,' ',dims.chr.event/2,',',-dims.chr.event/2,' ',-dims.chr.event/2,',',-dims.chr.event/2,'"/> </g>\n',
+               # pch 7:
+               '<g id="pch7" fill="none" stroke-width="1"> <use xlink:href="#pch0"/> <use xlink:href="#pch4"/> </g>\n',
+               # pch 8:
+               '<g id="pch8" fill="none" stroke-width="1"> <use xlink:href="#pch3"/> <use xlink:href="#pch4"/> </g>\n',
+               # pch 9:
+               '<g id="pch9" fill="none" stroke-width="1"> <use xlink:href="#pch3"/> <use xlink:href="#pch5"/> </g>\n',
+               # pch 10:
+               '<g id="pch10" fill="none" stroke-width="1"> <use xlink:href="#pch3"/> <use xlink:href="#pch1"/> </g>\n',
+               # pch 11:
+               '<g id="pch11" fill="none" stroke-width="1"> <use xlink:href="#pch2"/> <use xlink:href="#pch6"/> </g>\n',
+               # pch 12:
+               '<g id="pch12" fill="none" stroke-width="1"> <use xlink:href="#pch0"/> <use xlink:href="#pch3"/> </g>\n',
+               # pch 13:
+               '<g id="pch13" fill="none" stroke-width="1"> <use xlink:href="#pch1"/> <use xlink:href="#pch4"/> </g>\n',
+               # pch 14:
+               '<g id="pch14" fill="none" stroke-width="1"> <use xlink:href="#pch0"/> <use xlink:href="#pch2"/> </g>\n',
+               # pch 15:
+               '<g id="pch15" stroke-width="1"> <rect x="',-dims.chr.event/2,'" y="',-dims.chr.event/2,'" width="',dims.chr.event,'" height="',dims.chr.event,'"/> </g>\n',
+               # pch 16:
+               '<g id="pch16" stroke-width="1"> <circle cx="0" cy="0" r="',dims.chr.event/3,'"/> </g>\n',
+               # pch 17:
+               '<g id="pch17" stroke-width="1"> <polyline points="',-dims.chr.event/2,',',dims.chr.event/2,' 0,',-dims.chr.event/2,' ',dims.chr.event/2,',',dims.chr.event/2,' ',-dims.chr.event/2,',',dims.chr.event/2,'"/> </g>\n',
+               # pch 18:
+               '<g id="pch18" stroke-width="1"> <polyline points="',-dims.chr.event/2,',0 0,',-dims.chr.event/2,' ',dims.chr.event/2,',0 0,',dims.chr.event/2,' ',-dims.chr.event/2,',0"/> </g>\n',
+               # pch 19:
+               '<g id="pch19" stroke-width="1"> <circle cx="0" cy="0" r="',dims.chr.event/2,'"/> </g>\n',
+               # pch 20:
+               '<g id="pch20" stroke-width="1"> <circle cx="0" cy="0" r="',dims.chr.event/4,'"/> </g>\n',
+               # pch 26 ( < ):
+               '<g id="pch26" fill="none" stroke-width="1"> <polyline points="0,',dims.chr.event/2,' ',-dims.chr.event/2,',0 0,',-dims.chr.event/2,' "/> </g>\n',
+               # pch 27 ( > ):
+               '<g id="pch27" fill="none" stroke-width="1"> <polyline points="0,',dims.chr.event/2,' ',dims.chr.event/2,',0 0,',-dims.chr.event/2,' "/> </g>\n',
+               # pch 28 ( | ):
+               '<g id="pch28" fill="none" stroke-width="1"> <line x1="0" y1="',dims.chr.event/2,'" x2="0" y2="',-dims.chr.event/2,'"/> </g>\n',
+               '</defs>\n',
+               '\n');
+
+  # The plotting area:
+  svg.str <- c(svg.str,
                '<rect width="',dims.total.width,'" height="',dims.total.height,'" style="fill:white; stroke:none"/>'); # clear the area
 
   # Character width and height in the current plotting system:
@@ -657,18 +721,6 @@
 
   # y-axis label:
   mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3);
-
-  # SVG:
-  svg.str <- c(svg.str,
-               # The bounding box:
-               '<rect id="bounding-box" x="',dims.plot.x,'" y="',dims.plot.y,'" width="',dims.plot.width,'" height="',dims.plot.height,'" style="fill:none; stroke:black; stroke-width:1;"/>\n',
-               # The title:
-               '<text id="title" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.chr.std,'" font-size="',dims.chr.title,'" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black">',title.string,'</text>\n',
-               # The y axis label:
-               '<text id="axis-label-y" x="',dims.chr.axis,'" y="',dims.total.height/2,'" text-anchor="middle" alignment-baseline="middle" transform="rotate(-90, ',dims.chr.axis,', ',dims.total.height/2,')" font-size="',dims.chr.lab,'" font-family="Arial Bold">',as.character(y.label$string),'</text>\n',
-               # The x axis label:
-               '<text id="axis-label-x" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.total.height - dims.chr.axis,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.lab,'" font-family="Arial Bold">',as.character(x.label),'</text>\n'
-               );
 
   # Function mapping the CMA values to the appropriate x-coordinates:
   if( plot.CMA && has.estimated.CMA )
@@ -909,9 +961,18 @@
       col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
     }
 
-    # Plot the bening and end of the event:
+    # Plot the beging and end of the event:
     points(adh.plot.space[2] + start + correct.earliest.followup.window, y.cur, pch=pch.start.event, col=col, cex=cex);
     points(adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur, pch=pch.end.event,   col=col, cex=cex);
+
+    # SVG:
+    svg.str <- c(svg.str,
+                 # The begining of the event:
+                 '<use xlink:href="#pch0" transform="translate(',dims.plot.x + dims.event.x * (adh.plot.space[2] + start + correct.earliest.followup.window)/dims.day,' ',dims.plot.y + dims.plot.height - y.cur*dims.event.y,')" stroke="rgb(',paste0(col2rgb(col),collapse=","),')" fill="rgb(',paste0(col2rgb(col),collapse=","),')"/>\n',
+                 # The end of the event:
+                 '<use xlink:href="#pch28" transform="translate(',dims.plot.x + dims.event.x * (adh.plot.space[2] + end   + correct.earliest.followup.window)/dims.day,' ',dims.plot.y + dims.plot.height - y.cur*dims.event.y,')" stroke="rgb(',paste0(col2rgb(col),collapse=","),')" fill="rgb(',paste0(col2rgb(col),collapse=","),')"/>\n'
+    );
+
 
     # Show event intervals as rectangles?
     if( show.event.intervals && !is.null(cma$event.info) && !is.na(cma$event.info$event.interval[i]) )
@@ -1278,6 +1339,25 @@
       }
     }
   }
+
+
+  ##
+  ## Title, box and axes ####
+  ##
+
+
+  # SVG:
+  svg.str <- c(svg.str,
+               # The bounding box:
+               '<rect id="bounding-box" x="',dims.plot.x,'" y="',dims.plot.y,'" width="',dims.plot.width,'" height="',dims.plot.height,'" style="fill:none; stroke:black; stroke-width:1;"/>\n',
+               # The title:
+               '<text id="title" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.chr.std,'" font-size="',dims.chr.title,'" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black">',title.string,'</text>\n',
+               # The y axis label:
+               '<text id="axis-label-y" x="',dims.chr.axis,'" y="',dims.total.height/2,'" text-anchor="middle" alignment-baseline="middle" transform="rotate(-90, ',dims.chr.axis,', ',dims.total.height/2,')" font-size="',dims.chr.lab,'" font-family="Arial Bold">',as.character(y.label$string),'</text>\n',
+               # The x axis label:
+               '<text id="axis-label-x" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.total.height - dims.chr.axis,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.lab,'" font-family="Arial Bold">',as.character(x.label),'</text>\n'
+  );
+
 
 
   ##
