@@ -61,7 +61,7 @@
                        medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
                        lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                        show.event.intervals=TRUE,             # show the actual prescription intervals
-                       print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
+                       print.dose=FALSE, cex.dose=0.75, print.dose.col="black", print.dose.outline.col=NA, print.dose.centered=FALSE, # print daily dose
                        plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                        col.na="lightgray",                    # color for mising data
                        col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
@@ -603,6 +603,24 @@
   dims.total.width  <- (dims.plot.x + dims.plot.width);
   dims.total.height <- (dims.plot.y + dims.plot.height + dims.axis.x);
 
+  # Stroke dash-arrays for line types (lty):
+  svg.stroke.dasharrays <- data.frame("lty"=0:6,
+                                      "names"=c("blank",
+                                                "solid",
+                                                "dashed",
+                                                "dotted",
+                                                "dotdash",
+                                                "longdash",
+                                                "twodash"),
+                                      "svg"=c(' fill="none" stroke="none" ',
+                                              ' fill="none" ',
+                                              ' fill="none" stroke-dasharray="3,3" ',
+                                              ' fill="none" stroke-dasharray="1,2" ',
+                                              ' fill="none" stroke-dasharray="1,2,3,2" ',
+                                              ' fill="none" stroke-dasharray="5,2" ',
+                                              ' fill="none" stroke-dasharray="2,2,4,2" '),
+                                      stringsAsFactors=FALSE);
+
 
   # SVG header:
   svg.str <- c(svg.str,
@@ -612,8 +630,10 @@
 
   # Reusable bits:
   svg.str <- c(svg.str,
+               # Predefined things to be used in the drawing:
                '<defs>\n',
-               # The pch symbols (used for events etc):
+
+               # The point symbols (pch) used for events etc:
                # pch 0:
                '<g id="pch0" fill="none" stroke-width="1"> <rect x="',-dims.chr.event/2,'" y="',-dims.chr.event/2,'" width="',dims.chr.event,'" height="',dims.chr.event,'"/> </g>\n',
                # pch 1:
@@ -662,6 +682,23 @@
                '<g id="pch27" fill="none" stroke-width="1"> <polyline points="0,',dims.chr.event/2,' ',dims.chr.event/2,',0 0,',-dims.chr.event/2,' "/> </g>\n',
                # pch 28 ( | ):
                '<g id="pch28" fill="none" stroke-width="1"> <line x1="0" y1="',dims.chr.event/2,'" x2="0" y2="',-dims.chr.event/2,'"/> </g>\n',
+
+               # Line styles (lty) used for events etc:
+               # lty 0 ("blank"):
+               '<!-- lty ',svg.stroke.dasharrays$lty[1],' ',svg.stroke.dasharrays$names[1],' ',svg.stroke.dasharrays$svg[1],' -->\n',
+               # lty 1 ("solid"):
+               '<!-- lty ',svg.stroke.dasharrays$lty[2],' ',svg.stroke.dasharrays$names[2],' ',svg.stroke.dasharrays$svg[2],' -->\n',
+               # lty 2 ("dashed"):
+               '<!-- lty ',svg.stroke.dasharrays$lty[3],' ',svg.stroke.dasharrays$names[3],' ',svg.stroke.dasharrays$svg[3],' -->\n',
+               # lty 3 ("dotted"):
+               '<!-- lty ',svg.stroke.dasharrays$lty[4],' ',svg.stroke.dasharrays$names[4],' ',svg.stroke.dasharrays$svg[4],' -->\n',
+               # lty 4 ("dotdash"):
+               '<!-- lty ',svg.stroke.dasharrays$lty[5],' ',svg.stroke.dasharrays$names[5],' ',svg.stroke.dasharrays$svg[5],' -->\n',
+               # lty 5 ("longdash"):
+               '<!-- lty ',svg.stroke.dasharrays$lty[6],' ',svg.stroke.dasharrays$names[6],' ',svg.stroke.dasharrays$svg[6],' -->\n',
+               # lty 6 ("twodash"):
+               '<!-- lty ',svg.stroke.dasharrays$lty[7],' ',svg.stroke.dasharrays$names[7],' ',svg.stroke.dasharrays$svg[7],' -->\n',
+
                '</defs>\n',
                '\n');
 
@@ -1047,28 +1084,23 @@
         # Simple text:
         text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
              dose.text.y,
-             cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
-
-        # SVG:
-        svg.str <- c(svg.str,
-                     # The begining of the event:
-                     '<text id="event-dose-text" x="',dims.plot.x + dims.event.x * (adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window)/dims.day,'" y="',dims.plot.y + dims.plot.height - (y.cur - ifelse(print.dose.centered, 0, 3/4))*dims.event.y,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.std * cex.dose,'" font-family="Arial">',cma$data[i,cma$event.daily.dose.colname],'</text>\n'
-        );
-
+             cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=ifelse(is.na(print.dose.col),col,print.dose.col));
       } else
       {
         # Outlined text:
         .shadow.text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
                      dose.text.y,
-                     cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
-
-        # SVG:
-        svg.str <- c(svg.str,
-                     # The dose text:
-                     '<text id="event-dose-text" x="',dims.plot.x + dims.event.x * (adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window)/dims.day,'" y="',dims.plot.y + dims.plot.height - (y.cur - ifelse(print.dose.centered, 0, 3/4))*dims.event.y,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.std * cex.dose,'" font-family="Arial" stroke="rgb(',paste0(col2rgb("black"),collapse=","),')" >',cma$data[i,cma$event.daily.dose.colname],'</text>\n'
-        );
-
+                     cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=ifelse(is.na(print.dose.col),col,print.dose.col), bg=print.dose.outline.col);
       }
+
+      # SVG:
+      svg.str <- c(svg.str,
+                   # The dose text:
+                   '<text id="event-dose-text" x="',dims.plot.x + dims.event.x * (adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window)/dims.day,'" y="',dims.plot.y + dims.plot.height - (y.cur - ifelse(print.dose.centered, 0, 3/4))*dims.event.y,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.std * cex.dose,'" font-family="Arial"',
+                   if(is.na(print.dose.col)) c(' fill="rgb(',paste0(col2rgb(col),collapse=","),')"') else c(' fill="rgb(',paste0(col2rgb(print.dose.col),collapse=","),')"'),
+                   if(!is.na(print.dose.outline.col)) c(' stroke="rgb(',paste0(col2rgb(print.dose.outline.col),collapse=","),')" stroke-width="0.5"'),
+                   '>',cma$data[i,cma$event.daily.dose.colname],'</text>\n'
+      );
     }
 
     # Advance to the next vertical line:
@@ -1086,6 +1118,12 @@
       segments( adh.plot.space[2] + start.next + correct.earliest.followup.window, y.cur-1,
                 adh.plot.space[2] + start.next + correct.earliest.followup.window, y.cur,
                 col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
+
+      # SVG:
+      svg.str <- c(svg.str,
+                   # The continuation line:
+                   '<polyline id="continuation-line" points="',dims.plot.x + dims.event.x * (adh.plot.space[2] + end + correct.earliest.followup.window)/dims.day,',',dims.plot.y + dims.plot.height - (y.cur-1)*dims.event.y,' ',dims.plot.x + dims.event.x * (adh.plot.space[2] + start.next + correct.earliest.followup.window)/dims.day,',',dims.plot.y + dims.plot.height - (y.cur-1)*dims.event.y,' ',dims.plot.x + dims.event.x * (adh.plot.space[2] + start.next + correct.earliest.followup.window)/dims.day,',',dims.plot.y + dims.plot.height - (y.cur-1)*dims.event.y,' ',dims.plot.x + dims.event.x * (adh.plot.space[2] + start.next + correct.earliest.followup.window)/dims.day,',',dims.plot.y + dims.plot.height - (y.cur)*dims.event.y,'" stroke="rgb(',paste0(col2rgb(col.continuation),collapse=","),')" stroke-width="',lwd.continuation,'" ',svg.stroke.dasharrays$svg[ if(is.numeric(lty.continuation)) (svg.stroke.dasharrays$lty == lty.continuation) else (svg.stroke.dasharrays$names == lty.continuation) ],' />\n'
+      );
     } else
     {
       # The patient is changing or is the last one:
