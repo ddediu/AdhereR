@@ -3,10 +3,7 @@ title: "Compute event durations from different data sources"
 author: "Samuel S. Allemann, Dan Dediu & Alex L. Dima"
 date: "`r Sys.Date()`"
 output: 
-  rmarkdown::html_vignette: 
-    toc: yes
-    toc_depth: 4
-    keep_md: TRUE
+  github_document
 fig_caption: yes
 vignette: >
   %\VignetteEncoding{UTF-8}
