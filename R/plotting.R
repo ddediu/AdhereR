@@ -41,6 +41,23 @@
   gray.colors(n, start=0, end=0.5);
 }
 
+# Replace special characters with XML/HTML entities
+# Inspired by htmlspecialchars() in package "fun"
+# and HTMLdecode()/HTMLencode() in package "textutils"
+.specialchars.2.XMLentities <- function(s)
+{
+  spec.chars <- c("&amp;"="&",
+                  "&quot;"='"',
+                  "&#039;"="'",
+                  "&lt;"="<",
+                  "&gt;"=">");
+  for (i in seq_along(spec.chars))
+  {
+    s <- gsub(spec.chars[i], names(spec.chars)[i], s, fixed = TRUE);
+  }
+  return (s);
+}
+
 
 # Make this function produce SVG
 # (and for now display it as well to maintain compatibility with the old function)
@@ -549,7 +566,7 @@
       }
     }
 
-    date.labels <- data.frame("position"=xpos, "string"=axis.labels);
+    date.labels <- data.frame("position"=adh.plot.space[2] + xpos, "string"=axis.labels);
   }
 
 
@@ -590,6 +607,7 @@
   dims.chr.title    <- (cex.title * dims.chr.std);
   dims.chr.axis     <- (cex.axis * dims.chr.std);
   dims.chr.lab      <- (cex.lab * dims.chr.std);
+  dims.chr.cma      <- (CMA.cex * dims.chr.std);
   dims.event.x      <- dims.chr.std*2; # the horizontal size of an event
   dims.event.y      <- (cex * dims.chr.std); # the vertical size of an event
   dims.day          <- ifelse(duration.total <= 90, 1, ifelse(duration.total <= 365, 7, ifelse(duration.total <= 3*365, 30, ifelse(duration.total <= 10*365, 90, 180)))); # how many days coorepond to a horizontal user unit (depends on how many days there are in total)
@@ -821,6 +839,73 @@
 
 
       ##
+      ## FUW and OW ####
+      ##
+
+      # The follow-up and observation windows (these are drawn only after all the other stuff for this patient has been drawn):
+      if( highlight.followup.window )
+      {
+        rect(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window, y.cur - 0.5,
+             adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window, y.cur + length(s.events) - 0.5,
+             col=NA, border=followup.window.col, lty="dashed", lwd=2);
+
+        # SVG:
+        svg.str <- c(svg.str,
+                     # FUW:
+                     '<rect id="fuw" x="',dims.plot.x + dims.event.x * (adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window)/dims.day,'" y="',dims.plot.y + dims.plot.height - (y.cur + length(s.events) - 0.5)*dims.event.y,'" width="',dims.event.x * as.numeric(cmas$.FU.END.DATE[s.cmas[1]] - cmas$.FU.START.DATE[s.cmas[1]])/dims.day,'" height="',length(s.events)*dims.event.y,'" stroke-width="2" stroke="rgb(',paste0(col2rgb(followup.window.col),collapse=","),')" ',svg.stroke.dasharrays$svg[ svg.stroke.dasharrays$name == "dashed" ],' />'
+        );
+      }
+      if( highlight.observation.window )
+      {
+        # The "given" OW:
+        rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window, y.cur - 0.5,
+             adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window, y.cur + length(s.events) - 0.5,
+             col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
+
+        # SVG:
+        svg.str <- c(svg.str,
+                     # OW:
+                     '<rect id="ow" x="',dims.plot.x + dims.event.x * (adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window)/dims.day,'" y="',dims.plot.y + dims.plot.height - (y.cur + length(s.events) - 0.5)*dims.event.y,'" width="',dims.event.x * as.numeric(cmas$.OBS.END.DATE[s.cmas[1]] - cmas$.OBS.START.DATE[s.cmas[1]])/dims.day,'" height="',length(s.events)*dims.event.y,'" stroke="none" fill="rgb(',paste0(col2rgb(observation.window.col),collapse=","),')" fill-opacity="',observation.window.opacity,'" />'
+        );
+
+        if( inherits(cma,"CMA8") && !is.null(cma$real.obs.window) && show.real.obs.window.start )
+        {
+          # For CMA8, the OW might have been changed, so we also have a "real" OW:
+          s.realOW <- which(cma$real.obs.window[,cma$ID.colname] == cur_pat_id);
+
+          # Find the begining of the "real" OW:
+          if( length(s.realOW) == 1)
+          {
+            if( !is.null(cma$real.obs.windows$window.start) && !is.na(cma$real.obs.windows$window.start[s.realOW]) )
+            {
+              real.obs.window.start <- cma$real.obs.windows$window.start[s.realOW];
+            } else
+            {
+              real.obs.window.start <- cma$event.info$.OBS.START.DATE[s.events[1]];
+            }
+            if( !is.null(cma$real.obs.windows$window.end) && !is.na(cma$real.obs.windows$window.end[s.realOW]) )
+            {
+              real.obs.window.end <- cma$real.obs.windows$window.end[s.realOW];
+            } else
+            {
+              real.obs.window.end <- cma$event.info$.OBS.END.DATE[s.events[1]];
+            }
+
+            # Draw the "real" OW:
+            rect(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window, y.cur - 0.5,
+                 adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + correct.earliest.followup.window, y.cur + length(s.events) - 0.5,
+                 col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=real.obs.window.density, angle=real.obs.window.angle);
+
+            # SVG:
+            svg.str <- c(svg.str,
+                         # "real" OW:
+                         '<rect id="ow-real" x="',dims.plot.x + dims.event.x * (adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window)/dims.day,'" y="',dims.plot.y + dims.plot.height - (y.cur + length(s.events) - 0.5)*dims.event.y,'" width="',dims.event.x * as.numeric(real.obs.window.end - real.obs.window.start)/dims.day,'" height="',length(s.events)*dims.event.y,'" stroke="none" fill="rgb(',paste0(col2rgb(observation.window.col),collapse=","),')" fill-opacity="',observation.window.opacity,'" />'
+            );
+          }
+        }
+      }
+
+      ##
       ## The y-axis labels ####
       ##
 
@@ -837,7 +922,7 @@
 
       # SVG:
       svg.str <- c(svg.str,
-                   '<text id="axis-values-y" x="',(dims.plot.x - dims.chr.axis),'" y="',dims.plot.y + dims.plot.height - (y.cur + vspace.needed/2)*dims.event.y,'" text-anchor="end" alignment-baseline="middle" transform="rotate(-',rotate.id.labels,', ',(dims.plot.x - dims.chr.axis),', ',dims.plot.y + dims.plot.height - (y.cur + vspace.needed/2)*dims.event.y,')" font-size="',dims.chr.axis,'" font-family="Arial">',pid,'</text>\n');
+                   '<text id="axis-values-y" x="',(dims.plot.x - dims.chr.axis),'" y="',dims.plot.y + dims.plot.height - (y.cur + vspace.needed/2)*dims.event.y,'" text-anchor="end" alignment-baseline="middle" transform="rotate(-',rotate.id.labels,', ',(dims.plot.x - dims.chr.axis),', ',dims.plot.y + dims.plot.height - (y.cur + vspace.needed/2)*dims.event.y,')" font-size="',dims.chr.axis,'" font-family="Arial">',.specialchars.2.XMLentities(pid),'</text>\n');
 
 
       ##
@@ -958,12 +1043,19 @@
           # The adherence estimate:
           adh <- cmas[s.cmas,"CMA"];
 
-          # Draw the background rectangle:
-          rect(.rescale.xcoord.for.CMA.plot(0.0), mean(s.events) - 1, .rescale.xcoord.for.CMA.plot(min(adh,adh.max)), mean(s.events) + 1, col=CMA.plot.col, border=NA);
-          rect(.rescale.xcoord.for.CMA.plot(0.0), mean(s.events) - 1, .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)), mean(s.events) + 1, col=NA, border=CMA.plot.border);
-
           if( !is.na(adh) )
           {
+            # Draw the background rectangle:
+            rect(.rescale.xcoord.for.CMA.plot(0.0), mean(s.events) - 1, .rescale.xcoord.for.CMA.plot(min(adh,adh.max)), mean(s.events) + 1, col=CMA.plot.col, border=NA);
+            rect(.rescale.xcoord.for.CMA.plot(0.0), mean(s.events) - 1, .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)), mean(s.events) + 1, col=NA, border=CMA.plot.border);
+
+            # SVG:
+            svg.str <- c(svg.str,
+                         # Draw the CMA estimate background rectangle:
+                         '<rect id="cma-estimate-bkg" x="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0) / dims.day,'" y="',dims.plot.y + dims.plot.height - (mean(s.events)+1)*dims.event.y,'" width="',dims.event.x * (.rescale.xcoord.for.CMA.plot(min(adh,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)) / dims.day,'" height="',2*dims.event.y,'" fill="rgb(',paste0(col2rgb(CMA.plot.col),collapse=","),')" stroke="none" />\n',
+                         '<rect id="cma-estimate-bkg" x="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0) / dims.day,'" y="',dims.plot.y + dims.plot.height - (mean(s.events)+1)*dims.event.y,'" width="',dims.event.x * (.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)) / dims.day,'" height="',2*dims.event.y,'" stroke="rgb(',paste0(col2rgb(CMA.plot.border),collapse=","),')" fill="none" stoke-width="1" />'
+            );
+
             cma.string <- sprintf("%.1f%%",adh*100);
             available.x.space <- abs(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0));
 
@@ -976,6 +1068,17 @@
               text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s.events),
                    labels=cma.string, col=CMA.plot.text, cex=CMA.cex, srt=90);
             } # otherwise, theres' no space for showing the CMA here
+
+            if( available.x.space * dims.event.x >= dims.chr.cma )
+            {
+              # SVG:
+              svg.str <- c(svg.str,
+                           # Write the CMA estimate (always vertically):
+                           '<text id="cma-estimate-text" x="',dims.plot.x + dims.event.x * ((.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2) / dims.day,'" y="',dims.plot.y + dims.plot.height - (mean(s.events))*dims.event.y,'" fill="rgb(',paste0(col2rgb(CMA.plot.text),collapse=","),')" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.cma,'" font-family="Arial" transform="rotate(-90, ',dims.plot.x + dims.event.x * ((.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2) / dims.day,', ',dims.plot.y + dims.plot.height - (mean(s.events))*dims.event.y,')" >',
+                           .specialchars.2.XMLentities(cma.string),
+                           '</text>'
+              );
+            }
           }
         }
       }
@@ -1099,7 +1202,9 @@
                    '<text id="event-dose-text" x="',dims.plot.x + dims.event.x * (adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window)/dims.day,'" y="',dims.plot.y + dims.plot.height - (y.cur - ifelse(print.dose.centered, 0, 3/4))*dims.event.y,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.std * cex.dose,'" font-family="Arial"',
                    if(is.na(print.dose.col)) c(' fill="rgb(',paste0(col2rgb(col),collapse=","),')"') else c(' fill="rgb(',paste0(col2rgb(print.dose.col),collapse=","),')"'),
                    if(!is.na(print.dose.outline.col)) c(' stroke="rgb(',paste0(col2rgb(print.dose.outline.col),collapse=","),')" stroke-width="0.5"'),
-                   '>',cma$data[i,cma$event.daily.dose.colname],'</text>\n'
+                   '>',
+                   .specialchars.2.XMLentities(cma$data[i,cma$event.daily.dose.colname]),
+                   '</text>\n'
       );
     }
 
@@ -1306,56 +1411,6 @@
           }
         }
       }
-
-
-      ##
-      ## FUW and OW ####
-      ##
-
-      # The follow-up and observation windows (these are drawn only after all the other stuff for this patient has been drawn):
-      if( highlight.followup.window )
-      {
-        rect(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window, y.old - 0.5,
-             adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window, y.old + length(s.events) - 0.5,
-             col=NA, border=followup.window.col, lty="dashed", lwd=2);
-      }
-      if( highlight.observation.window )
-      {
-        # The "given" OW:
-        rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window, y.old - 0.5,
-             adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window, y.old + length(s.events) - 0.5,
-             col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
-
-        if( inherits(cma,"CMA8") && !is.null(cma$real.obs.window) && show.real.obs.window.start )
-        {
-          # For CMA8, the OW might have been changed, so we also have a "real" OW:
-          s.realOW <- which(cma$real.obs.window[,cma$ID.colname] == cur_pat_id);
-
-          # Find the begining of the "real" OW:
-          if( length(s.realOW) == 1)
-          {
-            if( !is.null(cma$real.obs.windows$window.start) && !is.na(cma$real.obs.windows$window.start[s.realOW]) )
-            {
-              real.obs.window.start <- cma$real.obs.windows$window.start[s.realOW];
-            } else
-            {
-              real.obs.window.start <- cma$event.info$.OBS.START.DATE[s.events[1]];
-            }
-            if( !is.null(cma$real.obs.windows$window.end) && !is.na(cma$real.obs.windows$window.end[s.realOW]) )
-            {
-              real.obs.window.end <- cma$real.obs.windows$window.end[s.realOW];
-            } else
-            {
-              real.obs.window.end <- cma$event.info$.OBS.END.DATE[s.events[1]];
-            }
-
-            # Draw the "real" OW:
-            rect(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window, y.old - 0.5,
-                 adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + correct.earliest.followup.window, y.old + length(s.events) - 0.5,
-                 col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=real.obs.window.density, angle=real.obs.window.angle);
-          }
-        }
-      }
     }
   }
 
@@ -1401,18 +1456,12 @@
                # The bounding box:
                '<rect id="bounding-box" x="',dims.plot.x,'" y="',dims.plot.y,'" width="',dims.plot.width,'" height="',dims.plot.height,'" style="fill:none; stroke:black; stroke-width:1;"/>\n',
                # The title:
-               '<text id="title" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.chr.std,'" font-size="',dims.chr.title,'" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black">',title.string,'</text>\n',
+               '<text id="title" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.chr.std,'" font-size="',dims.chr.title,'" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black">',.specialchars.2.XMLentities(title.string),'</text>\n',
                # The y axis label:
-               '<text id="axis-label-y" x="',dims.chr.axis,'" y="',dims.total.height/2,'" text-anchor="middle" alignment-baseline="middle" transform="rotate(-90, ',dims.chr.axis,', ',dims.total.height/2,')" font-size="',dims.chr.lab,'" font-family="Arial Bold">',as.character(y.label$string),'</text>\n',
+               '<text id="axis-label-y" x="',dims.chr.axis,'" y="',dims.total.height/2,'" text-anchor="middle" alignment-baseline="middle" transform="rotate(-90, ',dims.chr.axis,', ',dims.total.height/2,')" font-size="',dims.chr.lab,'" font-family="Arial Bold">',.specialchars.2.XMLentities(as.character(y.label$string)),'</text>\n',
                # The x axis label:
-               '<text id="axis-label-x" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.total.height - dims.chr.axis,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.lab,'" font-family="Arial Bold">',as.character(x.label),'</text>\n'
+               '<text id="axis-label-x" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.total.height - dims.chr.axis,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.lab,'" font-family="Arial Bold">',.specialchars.2.XMLentities(as.character(x.label)),'</text>\n'
   );
-
-
-
-  ##
-  ## The x-axis ####
-  ##
 
   # The x-axis and vertical guides:
   if( period.in.days > 0 )
@@ -1451,7 +1500,7 @@
                  # For each position:
                  paste0(
                    # Axis labels:
-                   '<text id="axis-values-x" x="',xs,'" y="',ys,'" text-anchor="end" alignment-baseline="middle" transform="rotate(-30, ',xs,', ',ys,')" font-size="',dims.chr.axis,'" font-family="Arial">',date.labels$string,'</text>\n',
+                   '<text id="axis-values-x" x="',xs,'" y="',ys,'" text-anchor="end" alignment-baseline="middle" transform="rotate(-30, ',xs,', ',ys,')" font-size="',dims.chr.axis,'" font-family="Arial">',.specialchars.2.XMLentities(date.labels$string),'</text>\n',
                    # Axis ticks:
                    '<line id="axis-ticks-x" x1="',xs,'" x2="',xs,'" y1="',dims.plot.y + dims.plot.height,'" y2="',dims.plot.y + dims.plot.height + dims.chr.axis/2,'" stroke="black" stroke-width="1"/>\n',
                    # Vertical dotted lines:
