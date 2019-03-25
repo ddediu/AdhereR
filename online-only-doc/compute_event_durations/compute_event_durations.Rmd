@@ -6,6 +6,7 @@ output:
   rmarkdown::html_vignette: 
     toc: yes
     toc_depth: 4
+    keep_md: TRUE
 fig_caption: yes
 vignette: >
   %\VignetteEncoding{UTF-8}
