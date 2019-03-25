@@ -61,14 +61,50 @@
   return (s);
 }
 
-.SVG.rect <- function(id, # ID
-                      x1, y1, width, height, x2=NA, y2=NA,  # can accomodate both (wdith,height) and (x2,y2)
-                      stoke=NA, stroke_width=NA, fill="white", fill_opacity=NA, other_params=NA, # styling attributes
-                      comment=NA,  # any comment
+.SVG.color <- function(col)
+{
+  if( col == "none" ) return ('none') else return (c('rgb(', {x <- col2rgb(col); c(x[1],',',x[2],',',x[3])}, ')'));
+}
+
+.SVG.rect <- function(x=NA, y=NA, width=NA, height=NA, xend=NA, yend=NA,  # can accomodate both (wdith,height) and (xend,yend)
+                      stroke=NA, stroke_width=NA, stroke_dasharray=NA, fill="white", fill_opacity=NA, other_params=NA, # styling attributes
+                      id=NA, comment=NA,  # ID and comment
                       newline=TRUE, # should a newline be added at the end?
                       return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
 {
+  r <-  c(# The initial comment (if any):
+          if(!is.na(comment)) c('<!-- ',comment,' -->', if(newline) '\n'),
+
+          # The rect element:
+          '<rect ',
+
+          # The id (if any):
+          if(!is.na(id)) c('id="',id,'" '),
+
+          # The x and y coordinates of the bottom-left corner:
+          if(!is.na(x)) c('x="',x,'" '),
+          if(!is.na(y)) c('y="',y,'" '),
+
+          # The width and height of the rectangle (either given directly or computed from the top-right corner coordinates):
+          if(!is.na(width)) c('width="',width,'" ') else if(!is.na(xend)) c('width="',(xend-x),'" '),
+          if(!is.na(height)) c('height="',height,'" ') else if(!is.na(yend)) c('height="',(yend-yheight),'" '),
+
+          # Aesthetics:
+          if(!is.na(stroke)) c('stroke="', .SVG.color(stroke), '" '),
+          if(!is.na(stroke_width)) c('stoke-width="',stroke_width,'" '),
+          if(!is.na(stroke_dasharray)) c('stroke-dasharray="',stroke_dasharray,'" '),
+          if(!is.na(fill)) c('fill="', .SVG.color(fill), '" '),
+          if(!is.na(fill_opacity)) c('fill-opacity="',fill_opacity,'" '),
+          # Other parameters:
+          if(!is.na(other_params)) other_params,
+
+          # Close the element:
+          '/>',
+          # Add ending newline (if so required):
+          if(newline) '\n'
+        );
+  if( return_string ) return (paste0(r,collapse="")) else return (r);
 }
 
 
@@ -735,7 +771,13 @@
 
   # The plotting area:
   svg.str <- c(svg.str,
-               '<rect width="',dims.total.width,'" height="',dims.total.height,'" style="fill:white; stroke:none"/>'); # clear the area
+               # Clear the area:
+               .SVG.rect(comment="Clear the whole plotting area",
+                         id="plotting-area-background",
+                         width=dims.total.width, height=dims.total.height,
+                         fill="white", stroke="none"),
+               '\n' # one empty line
+               );
 
   # Character width and height in the current plotting system:
   if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose);
