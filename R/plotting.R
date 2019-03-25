@@ -41,10 +41,13 @@
   gray.colors(n, start=0, end=0.5);
 }
 
+
+## SVG special functions ####
+
 # Replace special characters with XML/HTML entities
 # Inspired by htmlspecialchars() in package "fun"
 # and HTMLdecode()/HTMLencode() in package "textutils"
-.specialchars.2.XMLentities <- function(s)
+.SVG.specialchars.2.XMLentities <- function(s)
 {
   spec.chars <- c("&amp;"="&",
                   "&quot;"='"',
@@ -56,6 +59,16 @@
     s <- gsub(spec.chars[i], names(spec.chars)[i], s, fixed = TRUE);
   }
   return (s);
+}
+
+.SVG.rect <- function(id, # ID
+                      x1, y1, width, height, x2=NA, y2=NA,  # can accomodate both (wdith,height) and (x2,y2)
+                      stoke=NA, stroke_width=NA, fill="white", fill_opacity=NA, other_params=NA, # styling attributes
+                      comment=NA,  # any comment
+                      newline=TRUE, # should a newline be added at the end?
+                      return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
+)
+{
 }
 
 
@@ -922,7 +935,7 @@
 
       # SVG:
       svg.str <- c(svg.str,
-                   '<text id="axis-values-y" x="',(dims.plot.x - dims.chr.axis),'" y="',dims.plot.y + dims.plot.height - (y.cur + vspace.needed/2)*dims.event.y,'" text-anchor="end" alignment-baseline="middle" transform="rotate(-',rotate.id.labels,', ',(dims.plot.x - dims.chr.axis),', ',dims.plot.y + dims.plot.height - (y.cur + vspace.needed/2)*dims.event.y,')" font-size="',dims.chr.axis,'" font-family="Arial">',.specialchars.2.XMLentities(pid),'</text>\n');
+                   '<text id="axis-values-y" x="',(dims.plot.x - dims.chr.axis),'" y="',dims.plot.y + dims.plot.height - (y.cur + vspace.needed/2)*dims.event.y,'" text-anchor="end" alignment-baseline="middle" transform="rotate(-',rotate.id.labels,', ',(dims.plot.x - dims.chr.axis),', ',dims.plot.y + dims.plot.height - (y.cur + vspace.needed/2)*dims.event.y,')" font-size="',dims.chr.axis,'" font-family="Arial">',.SVG.specialchars.2.XMLentities(pid),'</text>\n');
 
 
       ##
@@ -940,6 +953,13 @@
           segments(.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2, .rescale.xcoord.for.CMA.plot(1.0), y.mean - 2, lty="solid", col=CMA.plot.col);
           segments(.rescale.xcoord.for.CMA.plot(0.0), y.mean + 2, .rescale.xcoord.for.CMA.plot(1.0), y.mean + 2, lty="solid", col=CMA.plot.col);
 
+          # SVG:
+          svg.str <- c(svg.str,
+                       # The CMA plot background:
+                       '<line id="cma-drawing-area-background" x1="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0)/dims.day,'" y1="',dims.plot.y + dims.plot.height - (y.mean - 2)*dims.event.y,'" x2="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(1.0)/dims.day,'" y2="',dims.plot.y + dims.plot.height - (y.mean - 2)*dims.event.y,'" stroke-width="1" stroke="rgb(',paste0(col2rgb(CMA.plot.col),collapse=","),')" />\n',
+                       '<line id="cma-drawing-area-background" x1="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0)/dims.day,'" y1="',dims.plot.y + dims.plot.height - (y.mean + 2)*dims.event.y,'" x2="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(1.0)/dims.day,'" y2="',dims.plot.y + dims.plot.height - (y.mean + 2)*dims.event.y,'" stroke-width="1" stroke="rgb(',paste0(col2rgb(CMA.plot.col),collapse=","),')" />\n'
+          );
+
           # The non-missing CMA values:
           adh <- na.omit(cmas[s.cmas,"CMA"]);
 
@@ -954,6 +974,14 @@
               adh.y <- adh.hist$counts; adh.y <- adh.y / max(adh.y);
               adh.x.max <- adh.x[which.max(adh.hist$counts)];
               segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, lty="solid", lwd=1, col=CMA.plot.border);
+
+              # SVG:
+              for( i in seq_along(adh.x) )
+                svg.str <- c(svg.str,
+                             # The CMA as histogram:
+                             '<line id="cma-histogram" x1="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(adh.x[i])/dims.day,'" y1="',dims.plot.y + dims.plot.height - (y.mean - 2)*dims.event.y,'" x2="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(adh.x[i])/dims.day,'" y2="',dims.plot.y + dims.plot.height - (y.mean - 2 + 4*adh.y[i])*dims.event.y,'" stroke-width="1" stroke="rgb(',paste0(col2rgb(CMA.plot.border),collapse=","),')" />\n'
+                );
+
               if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0)) )
               {
                 # There's enough space for vertically writing all three of them:
@@ -1075,7 +1103,7 @@
               svg.str <- c(svg.str,
                            # Write the CMA estimate (always vertically):
                            '<text id="cma-estimate-text" x="',dims.plot.x + dims.event.x * ((.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2) / dims.day,'" y="',dims.plot.y + dims.plot.height - (mean(s.events))*dims.event.y,'" fill="rgb(',paste0(col2rgb(CMA.plot.text),collapse=","),')" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.cma,'" font-family="Arial" transform="rotate(-90, ',dims.plot.x + dims.event.x * ((.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2) / dims.day,', ',dims.plot.y + dims.plot.height - (mean(s.events))*dims.event.y,')" >',
-                           .specialchars.2.XMLentities(cma.string),
+                           .SVG.specialchars.2.XMLentities(cma.string),
                            '</text>'
               );
             }
@@ -1203,7 +1231,7 @@
                    if(is.na(print.dose.col)) c(' fill="rgb(',paste0(col2rgb(col),collapse=","),')"') else c(' fill="rgb(',paste0(col2rgb(print.dose.col),collapse=","),')"'),
                    if(!is.na(print.dose.outline.col)) c(' stroke="rgb(',paste0(col2rgb(print.dose.outline.col),collapse=","),')" stroke-width="0.5"'),
                    '>',
-                   .specialchars.2.XMLentities(cma$data[i,cma$event.daily.dose.colname]),
+                   .SVG.specialchars.2.XMLentities(cma$data[i,cma$event.daily.dose.colname]),
                    '</text>\n'
       );
     }
@@ -1425,6 +1453,13 @@
     if( is.cma.TS.or.SW )
     {
       abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.col, lty=c("solid","dotted"), lwd=1);
+
+      # SVG:
+      svg.str <- c(svg.str,
+                   # Vertical guides:
+                   '<line id="cma-drawing-area-guides-lines" x1="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0)/dims.day,'" y1="',dims.plot.y,'" x2="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0)/dims.day,'" y2="',dims.plot.y + dims.plot.height,'" stroke-width="1" stroke="rgb(',paste0(col2rgb(CMA.plot.border),collapse=","),')" />',
+                   '<line id="cma-drawing-area-guides-lines" x1="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(1.0)/dims.day,'" y1="',dims.plot.y,'" x2="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(1.0)/dims.day,'" y2="',dims.plot.y + dims.plot.height,'" stroke-width="1" stroke="rgb(',paste0(col2rgb(CMA.plot.border),collapse=","),')" ',svg.stroke.dasharrays$svg[ svg.stroke.dasharrays$name == "dotted" ],'/>'
+      );
     } else
     {
       if( adh.max > 1.0 )
@@ -1438,10 +1473,33 @@
         }
       } else
       {
-        rect(.rescale.xcoord.for.CMA.plot(0), par("usr")[3], .rescale.xcoord.for.CMA.plot(1.0), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
-        abline(v=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.border, lty="solid", lwd=1);
+        rect(.rescale.xcoord.for.CMA.plot(0.0), par("usr")[3], .rescale.xcoord.for.CMA.plot(1.0), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
+        abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.border, lty="solid", lwd=1);
         mtext( c("0%","100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col=CMA.plot.border );
       }
+
+      # SVG:
+      svg.str <- c(svg.str,
+                   # Background:
+                   '<rect id="cma-drawing-area-bkg" x="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0)/dims.day,'" y="',dims.plot.y,'" width="',dims.event.x * .rescale.xcoord.for.CMA.plot(adh.max)/dims.day,'" height="',dims.plot.height,'" stroke="none" fill="rgb(',paste0(col2rgb(CMA.plot.bkg),collapse=","),')" fill-opacity="0.25" />',
+
+                   # Vertical guides:
+                   '<line id="cma-drawing-area-guides-lines" x1="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0)/dims.day,'" y1="',dims.plot.y,'" x2="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0)/dims.day,'" y2="',dims.plot.y + dims.plot.height,'" stroke-width="1" stroke="rgb(',paste0(col2rgb(CMA.plot.border),collapse=","),')" />',
+                   '<line id="cma-drawing-area-guides-lines" x1="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(1.0)/dims.day,'" y1="',dims.plot.y,'" x2="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(1.0)/dims.day,'" y2="',dims.plot.y + dims.plot.height,'" stroke-width="1" stroke="rgb(',paste0(col2rgb(CMA.plot.border),collapse=","),')" ',if(adh.max > 1.0) svg.stroke.dasharrays$svg[ svg.stroke.dasharrays$name == "dotted" ] else '','/>',
+                   if(adh.max > 1.0) c('<line id="cma-drawing-area-guides-lines" x1="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(adh.max)/dims.day,'" y1="',dims.plot.y,'" x2="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(adh.max)/dims.day,'" y2="',dims.plot.y + dims.plot.height,'" stroke-width="1" stroke="rgb(',paste0(col2rgb(CMA.plot.border),collapse=","),')" />'),
+
+                   # Text guides:
+                   '<text id="cma-drawing-area-guides-text" x="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0)/dims.day,'" y="',dims.plot.y - dims.chr.axis/2,'" text-anchor="start" alignment-baseline="middle" font-size="',dims.chr.axis,'" font-family="Arial" transform="rotate(-30, ',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(0.0)/dims.day,', ',dims.plot.y - dims.chr.axis/2,')" >',.SVG.specialchars.2.XMLentities("0%"),'</text>',
+                   if(adh.max > 1.0)
+                   {
+                     c('<text id="cma-drawing-area-guides-text" x="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(adh.max)/dims.day,'" y="',dims.plot.y - dims.chr.axis/2,'" text-anchor="start" alignment-baseline="middle" font-size="',dims.chr.axis,'" font-family="Arial" transform="rotate(-30, ',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(adh.max)/dims.day,', ',dims.plot.y - dims.chr.axis/2,')" >',.SVG.specialchars.2.XMLentities(sprintf("%.1f%%",adh.max*100)),'</text>',
+                       if(dims.event.x*(.rescale.xcoord.for.CMA.plot(adh.max) - .rescale.xcoord.for.CMA.plot(1.0))/dims.day > 2.0*dims.chr.axis) # Don't overcrowd the 100% and maximum CMA
+                         c('<text id="cma-drawing-area-guides-text" x="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(1.0)/dims.day,'" y="',dims.plot.y - dims.chr.axis/2,'" text-anchor="start" alignment-baseline="middle" font-size="',dims.chr.axis,'" font-family="Arial" transform="rotate(-30, ',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(1.0)/dims.day,', ',dims.plot.y - dims.chr.axis/2,')" >',.SVG.specialchars.2.XMLentities("100%"),'</text>'))
+                   } else
+                   {
+                     c('<text id="cma-drawing-area-guides-text" x="',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(1.0)/dims.day,'" y="',dims.plot.y - dims.chr.axis/2,'" text-anchor="start" alignment-baseline="middle" font-size="',dims.chr.axis,'" font-family="Arial" transform="rotate(-30, ',dims.plot.x + dims.event.x * .rescale.xcoord.for.CMA.plot(1.0)/dims.day,', ',dims.plot.y - dims.chr.axis/2,')" >',.SVG.specialchars.2.XMLentities("100%"),'</text>')
+                   }
+      );
     }
   }
 
@@ -1456,11 +1514,11 @@
                # The bounding box:
                '<rect id="bounding-box" x="',dims.plot.x,'" y="',dims.plot.y,'" width="',dims.plot.width,'" height="',dims.plot.height,'" style="fill:none; stroke:black; stroke-width:1;"/>\n',
                # The title:
-               '<text id="title" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.chr.std,'" font-size="',dims.chr.title,'" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black">',.specialchars.2.XMLentities(title.string),'</text>\n',
+               '<text id="title" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.chr.std,'" font-size="',dims.chr.title,'" dominant-baseline="middle" text-anchor="middle" font-family="Arial Black">',.SVG.specialchars.2.XMLentities(title.string),'</text>\n',
                # The y axis label:
-               '<text id="axis-label-y" x="',dims.chr.axis,'" y="',dims.total.height/2,'" text-anchor="middle" alignment-baseline="middle" transform="rotate(-90, ',dims.chr.axis,', ',dims.total.height/2,')" font-size="',dims.chr.lab,'" font-family="Arial Bold">',.specialchars.2.XMLentities(as.character(y.label$string)),'</text>\n',
+               '<text id="axis-label-y" x="',dims.chr.axis,'" y="',dims.total.height/2,'" text-anchor="middle" alignment-baseline="middle" transform="rotate(-90, ',dims.chr.axis,', ',dims.total.height/2,')" font-size="',dims.chr.lab,'" font-family="Arial Bold">',.SVG.specialchars.2.XMLentities(as.character(y.label$string)),'</text>\n',
                # The x axis label:
-               '<text id="axis-label-x" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.total.height - dims.chr.axis,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.lab,'" font-family="Arial Bold">',.specialchars.2.XMLentities(as.character(x.label)),'</text>\n'
+               '<text id="axis-label-x" x="',(dims.plot.x + dims.total.width)/2,'" y="',dims.total.height - dims.chr.axis,'" text-anchor="middle" alignment-baseline="middle" font-size="',dims.chr.lab,'" font-family="Arial Bold">',.SVG.specialchars.2.XMLentities(as.character(x.label)),'</text>\n'
   );
 
   # The x-axis and vertical guides:
@@ -1500,7 +1558,7 @@
                  # For each position:
                  paste0(
                    # Axis labels:
-                   '<text id="axis-values-x" x="',xs,'" y="',ys,'" text-anchor="end" alignment-baseline="middle" transform="rotate(-30, ',xs,', ',ys,')" font-size="',dims.chr.axis,'" font-family="Arial">',.specialchars.2.XMLentities(date.labels$string),'</text>\n',
+                   '<text id="axis-values-x" x="',xs,'" y="',ys,'" text-anchor="end" alignment-baseline="middle" transform="rotate(-30, ',xs,', ',ys,')" font-size="',dims.chr.axis,'" font-family="Arial">',.SVG.specialchars.2.XMLentities(date.labels$string),'</text>\n',
                    # Axis ticks:
                    '<line id="axis-ticks-x" x1="',xs,'" x2="',xs,'" y1="',dims.plot.y + dims.plot.height,'" y2="',dims.plot.y + dims.plot.height + dims.chr.axis/2,'" stroke="black" stroke-width="1"/>\n',
                    # Vertical dotted lines:
