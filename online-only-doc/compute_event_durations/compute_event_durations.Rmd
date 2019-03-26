@@ -16,6 +16,7 @@ editor_options:
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
 library(AdhereR)
 library(data.table)
+source("B:/Postdoc/AdhereR/AdhereR/R/matching_function.R")
 
 # Various Rmarkdown output options:
 # center figures and reduce their file size:
@@ -137,7 +138,8 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 
                                            split.on.dosage.change = TRUE,
                                            trt.interruption = "continue",
                                            suppress.warnings = FALSE,
-                                           return.data.table = TRUE);
+                                           return.data.table = TRUE,
+                                           progress.bar = FALSE);
 
 cma7 <- CMA7(event_durations[DURATION > 0],
              ID.colname = "ID",
@@ -187,7 +189,8 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 
                                            split.on.dosage.change = FALSE,
                                            trt.interruption = "continue",
                                            suppress.warnings = FALSE,
-                                           return.data.table = TRUE);
+                                           return.data.table = TRUE,
+                                           progress.bar = FALSE);
 
 # subset to events with duration > 0 and medication of interest
 event_durations <- event_durations[DURATION > 0 & grepl("R03DC03", ATC.CODE)]
@@ -250,7 +253,8 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 
                                            split.on.dosage.change = TRUE,
                                            trt.interruption = "continue",
                                            suppress.warnings = FALSE,
-                                           return.data.table = TRUE);
+                                           return.data.table = TRUE,
+                                           progress.bar = FALSE);
 
 cma0 <- CMA0(event_durations[DURATION > 0],
              ID.colname = "ID",
@@ -300,7 +304,8 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 
                                            split.on.dosage.change = TRUE,
                                            trt.interruption = "carryover",
                                            suppress.warnings = FALSE,
-                                           return.data.table = TRUE);
+                                           return.data.table = TRUE,
+                                           progress.bar = FALSE);
 
 event_durations <- event_durations[DURATION > 0]
 
@@ -372,7 +377,8 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 
                                            split.on.dosage.change = TRUE,
                                            trt.interruption = "continue",
                                            suppress.warnings = FALSE,
-                                           return.data.table = TRUE);
+                                           return.data.table = TRUE,
+                                           progress.bar = FALSE);
 
 cma0 <- CMA0(event_durations[DURATION > 0],
              ID.colname = "ID",

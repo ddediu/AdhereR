@@ -107,12 +107,17 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'
 #' @format A data frame with 28 rows and 3 variables:
 #' \describe{
-#'   \item{ID}{\emph{integer} here; patient unique identifier. Can also
-#'   be \emph{string}}.
+#'   \item{ID}{\emph{Integer} here; patient unique identifier. Can also
+#'   be \emph{string}.}
 #'   \item{DATE.IN}{\emph{Date} here;the start of the hospitalization period, by default in the
 #'   yyyy-mm-dd format.Can also be \emph{string}.}
 #'   \item{DATE.OUT}{\emph{Date};the end of the hospitalization period, by default in the
 #'   yyyy-mm-dd format. Can also be \emph{string}.}
+#'   \item{TYPE}{\emph{Character}; describes the type of situation, e.g. "hospitalization"
+#'   or "holiday". Used to categorize different types of situations where use might differ
+#'   from "normal" periods.}
+#'   \item{ARG}{\emph{Character}; can be either \emph{continue}, \emph{discard}, or
+#'   \emph{carryover} (see function arguments in \code{compute_event_duration}).}
 #' }
 "durcomp.hospitalisation"
 
@@ -151,7 +156,10 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' use their own supply, e.g. during incarcerations). Must contain the same unique
 #' patient ID as dispensing and prescription data, and the start and end dates of the
 #' hospitalizations with the exact column names \emph{\code{DATE.IN}} and
-#' \emph{\code{DATE.OUT}}.
+#' \emph{\code{DATE.OUT}}. Additional required columns are \emph{\code{TYPE}} (indicating
+#' the type of special situation) and \emph{\code{ARG} (indication the argument for
+#' \code{trt.interruption}). Optional columns can be any of those specified in
+#' \code{medication.class.colnames}}
 #' @param ID.colname A \emph{string}, the name of the column in \code{disp.data},
 #' \code{presc.data}, and \code{hosp.data} containing the unique patient ID.
 #' @param presc.date.colname A \emph{string}, the name of the column in
@@ -206,6 +214,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any warnings.
 #' @param return.data.table \emph{Logical}, if \code{TRUE} return a
 #' \code{data.table} object, otherwise a \code{data.frame}.
+#' @param progress.bar \emph{Logical}, if \code{TRUE} show a progress bar.
 #' @param ... other possible parameters.
 #' @return A \code{data.frame} or \code{data.table} with the following columns:
 #' \itemize{
@@ -273,6 +282,7 @@ compute_event_durations <- function(disp.data = NULL,
                                     trt.interruption = c("continue", "discard", "carryover")[1],
                                     suppress.warnings = FALSE,
                                     return.data.table = FALSE,
+                                    progress.bar = TRUE,
                                     ...)
 {
   # Preconditions:
@@ -313,6 +323,21 @@ compute_event_durations <- function(disp.data = NULL,
       if( nrow(hosp.data) < 1 )
       {
         if( !suppress.warnings ) warning("The hospitalisation data must have at least one row!\n");
+        return (NULL);
+      }
+      if(!all(c("ID", "DATE.IN", "DATE.OUT") %in% colnames(hosp.data)))
+      {
+        if( !suppress.warnings ) warning("The hospitalization data must contain at least all
+                                         columns with the names 'ID', 'DATE.IN', and 'DATE.OUT'.\n
+                                         Please refer to the documentation for more information.\n");
+        return (NULL);
+      }
+      if(!all(colnames(hosp.data) %in% c("ID", "DATE.IN", "DATE.OUT", "TYPE", "ARG", medication.class.colnames)))
+      {
+        if( !suppress.warnings ) warning(paste0("The hospitalization data can only contain columns
+                                         with the names \"ID\", \"DATE.IN\", \"DATE.OUT\", \"TYPE\", \"ARG\", ",
+                                         paste(shQuote(medication.class.colnames), collapse = ", "), ".\n
+                                         Please refer to the documentation for more information.\n"));
         return (NULL);
       }
     }
@@ -502,16 +527,22 @@ compute_event_durations <- function(disp.data = NULL,
 
               # add hospitalizations during the supply period
               hosp.duration.i <- 0;
-              if(nrow(hosp_events) != 0 & !is.na(duration.i))
+              if(nrow(med_hosp_events) != 0 & !is.na(duration.i))
               {
                 # check for hospitalizations within the episode
-                hosp_events_i <- hosp_events[(DATE.IN <= end.episode|is.na(end.episode)) & DATE.OUT > start.episode];
+                hosp_events_i <- med_hosp_events[(DATE.IN <= end.episode|is.na(end.episode)) & DATE.OUT > start.episode];
 
                 # check end of supply date is after start of hospitalization and end of hospitalization is after start of dispsense
-                curr_hosp_event <- hosp_events_i[DATE.IN <= disp.end.date.i & DATE.OUT > disp.start.date.i];
+                curr_hosp_event <- med_hosp_events_i[DATE.IN <= disp.end.date.i & DATE.OUT > disp.start.date.i];
 
                 if(nrow(curr_hosp_event) > 0)
-                {
+                { if(trt.interruption.global == "custom") {
+                  # if arguments are the same for all events, set argument accordingly
+                  trt.interruption <- curr_hosp_event$ARG
+
+                  # if first argument is "discard", continue normally
+                }
+
                   if(trt.interruption == "continue") # if trt.interruption is set to continue, calculate duration of hospitalization and continue
                   {
                     hosp.duration.i <- sum(curr_hosp_event$HOSP.DURATION);
@@ -523,7 +554,6 @@ compute_event_durations <- function(disp.data = NULL,
                     stop <- 1;
                   } else #for carryover, construct medication events taking into account all hospitalizations within an episode
                   {
-                    #hosp.durations <- as.numeric(curr_hosp_event$HOSP.DURATION) #get hospitalization periods
                     hosp_dates <- sort(c(curr_hosp_event$DATE.IN, curr_hosp_event$DATE.OUT)); # sort hostpitalization dates
 
                     # if the dispensing event starts before the hospitalization, add the dispensing date
@@ -545,7 +575,6 @@ compute_event_durations <- function(disp.data = NULL,
                     } else # add end of episode
                     {
                       episode.dates <- c(episode.dates,end.episode);
-                      #hosp.durations <- c(hosp.durations, 0)
                     }
 
                     # create data table with all events in an episode
@@ -677,6 +706,13 @@ compute_event_durations <- function(disp.data = NULL,
 
       setkeyv(med_disp, cols = disp.date.colname);
       setkeyv(med_presc, cols = presc.date.colname);
+
+      if(medication.class.colnames %in% colnames(hosp_events)) {
+        setkeyv(hosp_events, medication.class.colnames);
+        med_hosp_events <- hosp_events[list(disp_presc[med, medication.class.colnames, with = FALSE])];
+        else { med_hosp_events <- copy(hosp_events) }
+
+      setkeyv(med_hosp_events, cols = "DATE.IN")
 
       # determine date of initial prescription
       first_presc <- med_presc[1];
@@ -822,11 +858,12 @@ compute_event_durations <- function(disp.data = NULL,
 
       # add hospitalization events to dispensing events
       med_disp[,.hosp := as.numeric(NA)];
-      if( nrow(hosp_events) != 0 )
-      {
-        for( i in 1:nrow(hosp_events) )
+
+      if( nrow(med_hosp_events) != 0 ){
+
+        for( i in 1:nrow(med_hosp_events) )
         {
-          med_disp[(DISP.END >= hosp_events[i,DATE.IN] & DISP.START < hosp_events[i,DATE.OUT])|(DISP.START >= hosp_events[i,DATE.IN] & DISP.START < hosp_events[i,DATE.OUT]),
+          med_disp[(DISP.END >= med_hosp_events[i,DATE.IN] & DISP.START < med_hosp_events[i,DATE.OUT])|(DISP.START >= med_hosp_events[i,DATE.IN] & DISP.START < med_hosp_events[i,DATE.OUT]),
                    .hosp := 1];
         }
       }
@@ -969,7 +1006,7 @@ compute_event_durations <- function(disp.data = NULL,
                             fill = TRUE);
 
     # update progress bar
-    setTxtProgressBar(pb, getTxtProgressBar(pb)+1);
+    if(progress.bar == TRUE) { setTxtProgressBar(pb, getTxtProgressBar(pb)+1) };
 
     patient_events;
   }
@@ -985,7 +1022,9 @@ compute_event_durations <- function(disp.data = NULL,
   }
 
   # progress bar
-  pb <- txtProgressBar(min = 0, max = length(disp_presc_IDs), style = 3);
+  if(progress.bar == TRUE) {
+    pb <- txtProgressBar(min = 0, max = length(disp_presc_IDs), style = 3);
+  }
 
   # apply process_patient function
   setkeyv(disp.data, cols = ID.colname);

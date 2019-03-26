@@ -279,14 +279,9 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 
                                            split.on.dosage.change = TRUE,
                                            trt.interruption = "continue",
                                            suppress.warnings = FALSE,
-                                           return.data.table = TRUE);
-```
+                                           return.data.table = TRUE,
+                                           progress.bar = FALSE);
 
-    ## 
-      |                                                                       
-      |                                                                 |   0%
-
-``` r
 cma7 <- CMA7(event_durations[DURATION > 0],
              ID.colname = "ID",
              event.date.colname = "DISP.START",
@@ -368,6 +363,8 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 
     ## 
       |                                                                       
       |                                                                 |   0%
+      |                                                                       
+      |=================================================================| 100%
 
 ``` r
 # subset to events with duration > 0 and medication of interest
@@ -450,6 +447,8 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 
     ## 
       |                                                                       
       |                                                                 |   0%
+      |                                                                       
+      |=================================================================| 100%
 
 ``` r
 cma0 <- CMA0(event_durations[DURATION > 0],
@@ -528,6 +527,8 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 
     ## 
       |                                                                       
       |                                                                 |   0%
+      |                                                                       
+      |=================================================================| 100%
 
 ``` r
 event_durations <- event_durations[DURATION > 0]
@@ -678,6 +679,8 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[ID == 
     ## 
       |                                                                       
       |                                                                 |   0%
+      |                                                                       
+      |=================================================================| 100%
 
 ``` r
 cma0 <- CMA0(event_durations[DURATION > 0],
