@@ -42,7 +42,8 @@
 }
 
 
-## SVG special functions ####
+## SVG special functions and constants ####
+
 
 # Replace special characters with XML/HTML entities
 # Inspired by htmlspecialchars() in package "fun"
@@ -66,13 +67,31 @@
   if( col == "none" ) return ('none') else return (c('rgb(', {x <- col2rgb(col); c(x[1],',',x[2],',',x[3])}, ')'));
 }
 
+# Stroke dash-arrays for line types (lty):
+.SVG.lty <- data.frame("lty"=0:6,
+                       "names"=c("blank", "solid", "dashed", "dotted", "dotdash", "longdash", "twodash"),
+                       "stroke"=c("none", NA, NA, NA, NA, NA, NA),
+                       "stroke-dasharray"=c(NA, NA, "3,3", "1,2", "1,2,3,2", "5,2", "2,2,4,2"),
+                       stringsAsFactors=FALSE);
+
 .SVG.rect <- function(x=NA, y=NA, width=NA, height=NA, xend=NA, yend=NA,  # can accomodate both (wdith,height) and (xend,yend)
-                      stroke=NA, stroke_width=NA, stroke_dasharray=NA, fill="white", fill_opacity=NA, other_params=NA, # styling attributes
+                      stroke=NA, stroke_width=NA, lty=NA, stroke_dasharray=NA, fill="white", fill_opacity=NA, other_params=NA, # styling attributes
                       id=NA, comment=NA,  # ID and comment
                       newline=TRUE, # should a newline be added at the end?
                       return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
 {
+  # Process lty first:
+  if( !is.na(lty) )
+  {
+    if( is.numeric(lty) ) s <- which(.SVG.lty$lty == lty) else s <- which(.SVG.lty$names == as.character(lty));
+    if( length(s) == 1 )
+    {
+      if( !is.na(.SVG.lty$stroke[s]) ) stroke <- .SVG.lty$stroke[s];
+      stroke_dasharray <- .SVG.lty$stroke.dasharray[s];
+    }
+  }
+
   r <-  c(# The initial comment (if any):
           if(!is.na(comment)) c('<!-- ',comment,' -->', if(newline) '\n'),
 
@@ -92,7 +111,7 @@
 
           # Aesthetics:
           if(!is.na(stroke)) c('stroke="', .SVG.color(stroke), '" '),
-          if(!is.na(stroke_width)) c('stoke-width="',stroke_width,'" '),
+          if(!is.na(stroke_width)) c('stroke-width="',stroke_width,'" '),
           if(!is.na(stroke_dasharray)) c('stroke-dasharray="',stroke_dasharray,'" '),
           if(!is.na(fill)) c('fill="', .SVG.color(fill), '" '),
           if(!is.na(fill_opacity)) c('fill-opacity="',fill_opacity,'" '),
@@ -106,7 +125,6 @@
         );
   if( return_string ) return (paste0(r,collapse="")) else return (r);
 }
-
 
 # Make this function produce SVG
 # (and for now display it as well to maintain compatibility with the old function)
@@ -670,6 +688,27 @@
   dims.total.width  <- (dims.plot.x + dims.plot.width);
   dims.total.height <- (dims.plot.y + dims.plot.height + dims.axis.x);
 
+  # Scaling functions for plotting within the SVG:
+  .scale.width.to.SVG.plot <- function(w)
+  {
+    return (dims.event.x * w / dims.day);
+  }
+
+  .scale.x.to.SVG.plot <- function(x)
+  {
+    return (dims.plot.x + .scale.width.to.SVG.plot(x));
+  }
+
+  .scale.height.to.SVG.plot <- function(h)
+  {
+    return (h * dims.event.y);
+  }
+
+  .scale.y.to.SVG.plot <- function(y)
+  {
+    return (dims.plot.y + dims.plot.height - .scale.height.to.SVG.plot(y));
+  }
+
   # Stroke dash-arrays for line types (lty):
   svg.stroke.dasharrays <- data.frame("lty"=0:6,
                                       "names"=c("blank",
@@ -749,22 +788,6 @@
                '<g id="pch27" fill="none" stroke-width="1"> <polyline points="0,',dims.chr.event/2,' ',dims.chr.event/2,',0 0,',-dims.chr.event/2,' "/> </g>\n',
                # pch 28 ( | ):
                '<g id="pch28" fill="none" stroke-width="1"> <line x1="0" y1="',dims.chr.event/2,'" x2="0" y2="',-dims.chr.event/2,'"/> </g>\n',
-
-               # Line styles (lty) used for events etc:
-               # lty 0 ("blank"):
-               '<!-- lty ',svg.stroke.dasharrays$lty[1],' ',svg.stroke.dasharrays$names[1],' ',svg.stroke.dasharrays$svg[1],' -->\n',
-               # lty 1 ("solid"):
-               '<!-- lty ',svg.stroke.dasharrays$lty[2],' ',svg.stroke.dasharrays$names[2],' ',svg.stroke.dasharrays$svg[2],' -->\n',
-               # lty 2 ("dashed"):
-               '<!-- lty ',svg.stroke.dasharrays$lty[3],' ',svg.stroke.dasharrays$names[3],' ',svg.stroke.dasharrays$svg[3],' -->\n',
-               # lty 3 ("dotted"):
-               '<!-- lty ',svg.stroke.dasharrays$lty[4],' ',svg.stroke.dasharrays$names[4],' ',svg.stroke.dasharrays$svg[4],' -->\n',
-               # lty 4 ("dotdash"):
-               '<!-- lty ',svg.stroke.dasharrays$lty[5],' ',svg.stroke.dasharrays$names[5],' ',svg.stroke.dasharrays$svg[5],' -->\n',
-               # lty 5 ("longdash"):
-               '<!-- lty ',svg.stroke.dasharrays$lty[6],' ',svg.stroke.dasharrays$names[6],' ',svg.stroke.dasharrays$svg[6],' -->\n',
-               # lty 6 ("twodash"):
-               '<!-- lty ',svg.stroke.dasharrays$lty[7],' ',svg.stroke.dasharrays$names[7],' ',svg.stroke.dasharrays$svg[7],' -->\n',
 
                '</defs>\n',
                '\n');
@@ -887,7 +910,11 @@
 
         # SVG:
         svg.str <- c(svg.str,
-                     '<rect id="alternating-bands" x="',dims.plot.x,'" y="',dims.plot.y + dims.plot.height - (y.cur - 0.5 + vspace.needed)*dims.event.y,'" width="',dims.plot.width,'" height="',vspace.needed*dims.event.y,'" style="fill:rgb(',paste0(col2rgb(alternating.bands.cols[alternating.band.to.draw]),collapse=","),'); stroke-width:0"/>\n');
+                     .SVG.rect(x=.scale.x.to.SVG.plot(0), y=.scale.y.to.SVG.plot(y.cur - 0.5 + vspace.needed),
+                               width=dims.plot.width, height=.scale.height.to.SVG.plot(vspace.needed),
+                               fill=alternating.bands.cols[alternating.band.to.draw],
+                               id="alternating-bands", comment="The alternating band")
+        );
 
         alternating.band.to.draw <- if(alternating.band.to.draw >= length(alternating.bands.cols)) 1 else (alternating.band.to.draw + 1); # move to the next band
       }
@@ -907,7 +934,12 @@
         # SVG:
         svg.str <- c(svg.str,
                      # FUW:
-                     '<rect id="fuw" x="',dims.plot.x + dims.event.x * (adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window)/dims.day,'" y="',dims.plot.y + dims.plot.height - (y.cur + length(s.events) - 0.5)*dims.event.y,'" width="',dims.event.x * as.numeric(cmas$.FU.END.DATE[s.cmas[1]] - cmas$.FU.START.DATE[s.cmas[1]])/dims.day,'" height="',length(s.events)*dims.event.y,'" stroke-width="2" stroke="rgb(',paste0(col2rgb(followup.window.col),collapse=","),')" ',svg.stroke.dasharrays$svg[ svg.stroke.dasharrays$name == "dashed" ],' />'
+                     .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window),
+                               y=.scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5),
+                               width=.scale.width.to.SVG.plot(as.numeric(cmas$.FU.END.DATE[s.cmas[1]] - cmas$.FU.START.DATE[s.cmas[1]])),
+                               height=.scale.height.to.SVG.plot(length(s.events)),
+                               stroke=followup.window.col, stroke_width=2, lty="dashed", fill="none",
+                               id="fuw", comment="The Follow-Up Windows (FUW)")
         );
       }
       if( highlight.observation.window )
