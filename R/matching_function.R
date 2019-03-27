@@ -710,7 +710,7 @@ compute_event_durations <- function(disp.data = NULL,
       if(medication.class.colnames %in% colnames(hosp_events)) {
         setkeyv(hosp_events, medication.class.colnames);
         med_hosp_events <- hosp_events[list(disp_presc[med, medication.class.colnames, with = FALSE])];
-        else { med_hosp_events <- copy(hosp_events) }
+        } else { med_hosp_events <- copy(hosp_events) }
 
       setkeyv(med_hosp_events, cols = "DATE.IN")
 
@@ -1043,7 +1043,7 @@ compute_event_durations <- function(disp.data = NULL,
   {
     return(treatment_episodes);
   }
-}
+  }
 
 ############ function to compute time to initiation
 
@@ -1195,5 +1195,111 @@ time_to_initiation <- function(presc.data = NULL,
     return(dt_t2i);
   }
 }
+
+##### helper function to process special episodes
+
+special_episodes <- data.table(ID = c(1,1,1,1,1,1,1,1,1,1),
+                               DATE.IN = c("2000-01-05",
+                                           "2000-01-30",
+                                           "2000-02-15",
+                                           "2000-04-01",
+                                           "2000-04-06",
+                                           "2000-06-06",
+                                           "2000-07-01",
+                                           "2000-09-01",
+                                           "2000-09-05",
+                                           "2000-09-20"),
+                               DATE.OUT = c("2000-01-10",
+                                            "2000-03-01",
+                                            "2000-02-20",
+                                            "2000-04-05",
+                                            "2000-06-01",
+                                            "2000-07-01",
+                                            "2000-08-15",
+                                            "2000-09-10",
+                                            "2000-09-30",
+                                            "2000-09-25"),
+                               TYPE = c("HOSP",
+                                        "HOLIDAY",
+                                        "HOSP",
+                                        "HOSP",
+                                        "JAIL",
+                                        "HOLIDAY",
+                                        "JAIL",
+                                        "HOSP",
+                                        "HOSP",
+                                        "HOSP"),
+                               ARG = c("carryover",
+                                       "continue",
+                                       "carryover",
+                                       "carryover",
+                                       "continue",
+                                       "continue",
+                                       "carryover",
+                                       "continue",
+                                       "continue",
+                                       "discard"))
+
+data = special_episodes
+ID.colname = "ID"
+DATE.IN.colname = "DATE.IN"
+DATE.OUT.colname = "DATE.OUT"
+TYPE.colname = "TYPE"
+ARG.colname = "ARG"
+date.format = "%Y-%m-%d"
+
+
+compute.special.episodes <- function(data = hosp.data,
+                                     ID.colname = ID.colname,
+                                     DATE.IN.colname = "DATE.IN",
+                                     DATE.OUT.colname = "DATE.OUT",
+                                     TYPE.colname = "TYPE",
+                                     ARG.colname = "ARG",
+                                     date.format = date.format){
+
+  # convert dates
+  data[, (DATE.IN.colname) := as.Date(get(DATE.IN.colname), format = date.format)]
+  data[, (DATE.OUT.colname) := as.Date(get(DATE.OUT.colname), format = date.format)]
+
+  # add durations
+  data[,DURATION := as.numeric(get(DATE.OUT.colname) - get(DATE.IN.colname))]
+
+  # add episodes
+  data[,.episode := seq_len(.N), by = get(TYPE.colname)]
+
+  # melt special episodes
+  data.melt <- melt(special_episodes,
+                    measure.vars = c(DATE.IN.colname, DATE.OUT.colname),
+                    variable.name = "EVENT",
+                    value.name = "DATE")
+
+  # sort by DATE.IN
+  setkeyv(data.melt, cols = "DATE")
+
+  # calculate durations of intersections
+  data.melt[,INT.DURATION := as.numeric(shift(DATE, n = 1, type = "lead")-DATE)]
+
+  data.melt[,DISP.EVENT := 0]
+  data.melt[ARG == "discard", DISP.EVENT := 1]
+  data.melt[,.drop := cumsum(DISP.EVENT)]
+  data.melt[ARG == "discard" & EVENT == DATE.IN.colname, .drop := .drop-1]
+
+  data.melt.drop <- data.melt[.drop == 0]
+
+  data.melt.drop[ARG %in% c("carryover", "discard") & EVENT == DATE.IN.colname, `:=` (DISP.EVENT = 0,
+                                                                                      INT.DURATION = 0)]
+  data.melt.drop[ARG == "carryover" & EVENT == DATE.OUT.colname, DISP.EVENT := 1]
+
+
+
+
+
+
+
+
+
+}
+
+
 
 
