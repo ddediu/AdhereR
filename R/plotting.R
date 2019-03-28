@@ -1340,6 +1340,29 @@
                 text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean + 2 + char.height.CMA/2,
                      sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=90, pos=3, cex=CMA.cex, col=CMA.plot.text);
               }
+
+              # SVG
+              if( 3*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
+              {
+                # There's enough space for vertically writing all three of them:
+                svg.str <- c(svg.str,
+                             # The CMA as histogram:
+                             .SVG.text(x=c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
+                                           .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)),
+                                           .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x.max))),
+                                       y=c(.scale.y.to.SVG.plot(y.mean - 2 - 0.25),
+                                           .scale.y.to.SVG.plot(y.mean - 2 - 0.25),
+                                           .scale.y.to.SVG.plot(y.mean + 2 + 0.25)),
+                                       text=c(sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)),
+                                              sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)),
+                                              sprintf("%d",max(adh.hist$counts,an.rm=TRUE))),
+                                       col=CMA.plot.text, font_size=dims.chr.cma,
+                                       h.align=c("right","right","left"),
+                                       v.align="center",
+                                       rotate=c(-60,-60,-90),
+                                       id="cma-histogram-text", comment=NA)
+                );
+              }
             }
           } else
           {
