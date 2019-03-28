@@ -8175,6 +8175,7 @@ plot.CMA_per_episode <- function(cma,                                     # the 
              print.CMA=print.CMA,
              CMA.cex=CMA.cex,
              plot.CMA=plot.CMA,
+             plot.CMA.as.histogram=plot.CMA.as.histogram,
              CMA.plot.ratio=CMA.plot.ratio,
              CMA.plot.col=CMA.plot.col,
              CMA.plot.border=CMA.plot.border,
