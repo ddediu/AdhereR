@@ -33,7 +33,8 @@ context("Matching functions")
 test_that("output format is correct", {
   test_results <- compute_event_durations(disp.data = durcomp.dispensing,
                                             presc.data = durcomp.prescribing,
-                                            hosp.data = durcomp.hospitalisation,
+                                            special.periods.data = durcomp.hospitalisation,
+                                          special.periods.mapping = "continue",
                                             ID.colname = "ID",
                                             presc.date.colname = "DATE.PRESC",
                                             disp.date.colname = "DATE.DISP",
@@ -62,7 +63,7 @@ test_that("output format is correct", {
                                       "DAILY.DOSE",
                                       "START.PRESC",
                                       "END.PRESC",
-                                      "HOSP.DURATION",
+                                      "SPECIAL.DURATION",
                                       "tot.presc.interruptions",
                                       "tot.dosage.changes"))
   expect_is(test_results$ID, "numeric") # ID's are integers
@@ -76,7 +77,7 @@ test_that("output format is correct", {
   expect_is(test_results$DAILY.DOSE, "numeric") # DAILY.DOSE is numeric
   expect_is(test_results$START.PRESC, "Date") # PRESC.START is a date
   expect_is(test_results$END.PRESC, "Date") # PRESC.END is a date
-  expect_is(test_results$HOSP.DURATION, "numeric") # HOSP.DURATIONS are numeric
+  expect_is(test_results$SPECIAL.DURATION, "numeric") # HOSP.DURATIONS are numeric
   expect_is(test_results$tot.presc.interruptions, "integer") # number of treatment interruptions are numeric
   expect_is(test_results$tot.dosage.changes, "numeric") # number of dosage changes are numeric
 })
@@ -85,7 +86,8 @@ test_that("output format is correct", {
 test_that("all patients are processed", {
   test_results <- compute_event_durations(disp.data = durcomp.dispensing,
                                           presc.data = durcomp.prescribing,
-                                          hosp.data = durcomp.hospitalisation,
+                                          special.periods.data = durcomp.hospitalisation,
+                                          special.periods.mapping = "continue",
                                           ID.colname = "ID",
                                           presc.date.colname = "DATE.PRESC",
                                           disp.date.colname = "DATE.DISP",
@@ -177,7 +179,7 @@ test_that("all medications for one patient are processed", {
                                                                  "2057-08-04",
                                                                  "2056-09-16",
                                                                  "2057-01-28"))) #prescription instances + NA
-    expect_equal(max(test_results$HOSP.DURATION, na.rm = T), 63) #maximal hospital duration
+    expect_equal(max(test_results$SPECIAL.DURATION, na.rm = T), 63) #maximal hospital duration
 
 
     durcomp.prescribing_2 <- data.table(ID = rep(10, 8),
@@ -244,7 +246,8 @@ test_that("all medications for one patient are processed", {
 test_that("all dispensing events for one patient are processed", {
   test_results <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
                                           presc.data = durcomp.prescribing[ID == 3],
-                                          hosp.data = durcomp.hospitalisation,
+                                          special.periods.data = durcomp.hospitalisation,
+                                          special.periods.mapping = "continue",
                                           ID.colname = "ID",
                                           presc.date.colname = "DATE.PRESC",
                                           disp.date.colname = "DATE.DISP",
@@ -272,7 +275,7 @@ test_that("all dispensing events for one patient are processed", {
 test_that("events are processed without hospitalizations", {
   test_results <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
                                           presc.data = durcomp.prescribing[ID == 3],
-                                          hosp.data = NULL,
+                                          special.periods.data = NULL,
                                           ID.colname = "ID",
                                           presc.date.colname = "DATE.PRESC",
                                           disp.date.colname = "DATE.DISP",
@@ -288,7 +291,7 @@ test_that("events are processed without hospitalizations", {
                                           trt.interruption = "continue",
                                           suppress.warnings = FALSE,
                                           return.data.table = TRUE)
-  expect_equal(max(test_results$HOSP.DURATION, na.rm = T), 0) #hospital duration
+  expect_equal(max(test_results$SPECIAL.DURATION, na.rm = T), 0) #hospital duration
   expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 0), 3269) #correct sum of durations
 })
 
