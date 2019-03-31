@@ -269,7 +269,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 compute_event_durations <- function(disp.data = NULL,
                                     presc.data = NULL,
                                     special.periods.data = NULL,
-                                    special.periods.mapping = c("continue", "discard", "carryover", "custom")[1],
+                                    special.periods.mapping = trt.interruption,
                                     ID.colname,
                                     presc.date.colname,
                                     disp.date.colname,
@@ -572,6 +572,10 @@ compute_event_durations <- function(disp.data = NULL,
           # drop rows after discard
           data.melt.drop <- data.melt[.drop == 0]
 
+          # calculat durations during carryover
+          data.melt.drop[get(CUSTOM.colname) == "carryover" & EVENT == DATE.IN.colname,
+                         CARRYOVER.DURATION := INT.DURATION]
+
           # remove duration during carryover and after discard
           data.melt.drop[get(CUSTOM.colname) %in% c("carryover", "discard") & EVENT == DATE.IN.colname, `:=` (DISP.EVENT = 0,
                                                                                               INT.DURATION = 0)]
@@ -606,9 +610,13 @@ compute_event_durations <- function(disp.data = NULL,
           # calculate duration covered during special intervals
           data.melt.drop[,SPECIAL.DURATION := 0]
 
-          data.melt.drop[(get(CUSTOM.colname) == "continue" & EVENT == DATE.IN.colname) | (shift(get(CUSTOM.colname), n = 1, type = "lead") == "continue" & shift(EVENT, n = 1, type = "lead") == DATE.OUT.colname) | (shift(get(CUSTOM.colname), n = 1, type = "lag") == "continue" & shift(EVENT, n = 1, type = "lag") == DATE.IN.colname),
-                         SPECIAL.DURATION := sum(INT.DURATION), by = .interval]
+          data.melt.drop[(get(CUSTOM.colname) == "continue" & EVENT == DATE.IN.colname) | (shift(get(CUSTOM.colname), n = 1, type = "lead") == "continue" & shift(EVENT, n = 1, type = "lead") == DATE.OUT.colname), # | (shift(get(CUSTOM.colname), n = 1, type = "lag") == "continue" & shift(EVENT, n = 1, type = "lag") == DATE.IN.colname),
+                         SPECIAL.DURATION := sum(INT.DURATION, na.rm = TRUE), by = .interval]
           data.melt.drop[,SPECIAL.DURATION := max(SPECIAL.DURATION, na.rm = TRUE), by = .interval]
+
+          # calculate duration NOT covered during special intervals
+
+          data.melt.drop[,CARRYOVER.DURATION := sum(CARRYOVER.DURATION, na.rm = TRUE), by = .interval]
 
           # subset to first and last row of interval
           events <- data.melt.drop[ data.melt.drop[, .I[c(1L,.N)], by=.interval]$V1 ]
@@ -619,11 +627,16 @@ compute_event_durations <- function(disp.data = NULL,
 
           all.events <- dcast(events, as.formula(paste0("ID", " + ",
                                                         CUSTOM.colname,
-                                                        " + DURATION + SPECIAL.DURATION + .interval ~ EVENT")), value.var = "DATE")
+                                                        " + DURATION + SPECIAL.DURATION + CARRYOVER.DURATION + .interval ~ EVENT")), value.var = "DATE")
           setorderv(all.events, cols = ".interval")
 
           # create all events table
-          all.events <- cbind(all.events[,c("ID", CUSTOM.colname, "DISP.START", "DURATION", "SPECIAL.DURATION"), with = FALSE],
+          all.events <- cbind(all.events[,c("ID",
+                                            CUSTOM.colname,
+                                            "DISP.START",
+                                            "DURATION",
+                                            "SPECIAL.DURATION",
+                                            "CARRYOVER.DURATION"), with = FALSE],
                               data.table(DAILY.DOSE = as.numeric(presc.dose.i),
                                          START.PRESC = start.episode,
                                          END.PRESC = end.episode))
@@ -725,37 +738,38 @@ compute_event_durations <- function(disp.data = NULL,
                 # check for special durations within the episode
                 med_special.periods_events_i <- med_special.periods_events[(DATE.IN <= end.episode|is.na(end.episode)) & DATE.OUT > start.episode];
 
-                # check end of supply date is after start of hospitalization and end of hospitalization is after start of dispense
-                # curr_hosp_event <- med_hosp_events_i[DATE.IN <= disp.end.date.i & DATE.OUT > disp.start.date.i];
-
-                if(nrow(med_special.periods_events_i) > 0)
+              if(nrow(med_special.periods_events_i) > 0)
                 {
                   all.events <- compute.special.intervals(med_special.periods_events_i);
 
                   sum.duration <- sum(all.events$DURATION, na.rm = TRUE)
 
+                  # if last line is "discard", create med_event
                   if(!is.na(last(all.events$CUSTOM)) && last(all.events$CUSTOM) == "discard") {
 
                     med_event <-  rbind(med_event,
                                         cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
-                                              all.events[,3:8]));
+                                              all.events[,3:9]),
+                                        fill = TRUE);
 
                     break;
                   } else if( duration.i == sum.duration) # if supply is equal to the sum of durations
                     {
                      med_event <-  rbind(med_event,
                                         cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
-                                              all.events[,3:8]));
+                                              all.events[,3:9]),
+                                        fill = TRUE);
 
                     break;
 
                   } else if(is.na(last(all.events$END.PRESC))) # if last event is not terminated
                   {
-                    all.events[nrow(all.events), DURATION := duration.i-sum.duration];
+                    all.events[nrow(all.events), DURATION := DURATION + (duration.i-sum.duration)];
 
                     med_event <-  rbind(med_event,
                                         cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
-                                              all.events[,3:8]));
+                                              all.events[,3:9]),
+                                        fill = TRUE);
                     break;
                   } else # if supply duration is longer than the sum of the durations
                   {
@@ -765,7 +779,8 @@ compute_event_durations <- function(disp.data = NULL,
 
                     med_event <-  rbind(med_event,
                                         cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
-                                              all.events[,3:8]));
+                                              all.events[,3:9]),
+                                        fill = TRUE);
                     next;
                   }
                 }
@@ -954,6 +969,7 @@ compute_event_durations <- function(disp.data = NULL,
       # fill in start and end dates by group
       med_presc[,START.PRESC := head(START.PRESC,1), by = .episode]; # first start date per episode
       med_presc[,END.PRESC:= tail(END.PRESC,1), by = .episode]; # last end date per episode
+      med_presc[,PRESC.DATE := min(PRESC.DATE), by = .episode]; # set PRESC.DATE to first start date
 
       # collapse episodes
       med_presc <- unique(med_presc, by = ".episode", fromLast = TRUE);
@@ -995,7 +1011,7 @@ compute_event_durations <- function(disp.data = NULL,
       }
 
 
-      ## calculate medication events for "simple" events not extending over multiple episodes or affected by hospitalizations
+      ## calculate medication events for "simple" events not extending over multiple episodes or affected by special periods
       # add prescription events to dispensing events
       for( i in 1:nrow(med_presc) )
       {
@@ -1008,7 +1024,7 @@ compute_event_durations <- function(disp.data = NULL,
 
       med_disp[DISP.END > END.PRESC, .out := 1];
 
-      # add hospitalization events to dispensing events
+      # add special periods to dispensing events
       med_disp[,.special.periods := as.numeric(NA)];
 
       if( nrow(med_special.periods_events) != 0 ){
@@ -1051,33 +1067,41 @@ compute_event_durations <- function(disp.data = NULL,
 
       setorderv(medication_events,cols=c("DISP.DATE", "DISP.START"));
 
-      if( force.presc.renew == TRUE )
+      if( force.presc.renew == TRUE ) # add number of prescription interruptions
       {
         tot.presc.interruptions <- nrow(med_presc[DAILY.DOSE==0]);
 
         medication_events[,tot.presc.interruptions := tot.presc.interruptions];
       }
 
-      if( split.on.dosage.change == TRUE )
+      if( split.on.dosage.change == TRUE ) # add number of dosage changes
       {
         tot.dosage.changes <- (nrow(med_presc) - 1 - 2*nrow(med_presc[DAILY.DOSE==0]));
 
         medication_events[,tot.dosage.changes := tot.dosage.changes];
       }
 
-      #med_presc <- med_presc[,`:=` (.episode=NULL,VISIT=NULL)]
-      setnames(med_presc,
-               old = c("DAILY.DOSE", "PRESC.DURATION"),
-               new = c("DAILY.DOSE", "PRESC.DURATION"));
+      # presc_episode_no_dispense <- med_presc[!medication_events[,c("DAILY.DOSE","START.PRESC","END.PRESC")],
+      #                                        on = c("DAILY.DOSE","START.PRESC", "END.PRESC")];
+      #
+      # presc_episode_no_dispense[,c(".episode","VISIT", "PRESC.DURATION", "PRESC.DATE") := NULL];
+      #
+      # medication_events <- rbind(medication_events, presc_episode_no_dispense, fill = TRUE);
 
-      presc_episode_no_dispense <- med_presc[!medication_events[,c("DAILY.DOSE","START.PRESC","END.PRESC")],
-                                             on = c("DAILY.DOSE","START.PRESC", "END.PRESC")];
+      # compute prescription events
 
-      presc_episode_no_dispense[,c(".episode","VISIT", "PRESC.DURATION", "PRESC.DATE") := NULL];
+      prescription_events <- med_presc[DAILY.DOSE != 0,
+                                        c("ID",
+                                          medication.class.colnames,
+                                          "DAILY.DOSE",
+                                          "PRESC.DURATION",
+                                          "START.PRESC",
+                                          "END.PRESC"), with = FALSE]
 
-      medication_events <- rbind(medication_events, presc_episode_no_dispense, fill = TRUE);
+      return(list(DURATIONS = medication_events,
+                  PRESCRIPTION_EPISODES = prescription_events));
 
-      medication_events;
+      # medication_events;
     }
 
     if(exists("debug.mode") && debug.mode==TRUE) print(paste("Patient:",pat));
@@ -1146,7 +1170,7 @@ compute_event_durations <- function(disp.data = NULL,
     # apply process_medication() function to each medication present in both databses
     patient_events <- NULL;
     if( nrow(disp_presc) != 0 )
-    {
+    { browser()
       patient_events <- do.call(rbindlist, list(l = lapply(1:nrow(disp_presc), FUN = function(i) process_medication(med = i)),
                                                 fill = TRUE));
     }
@@ -1177,14 +1201,14 @@ compute_event_durations <- function(disp.data = NULL,
   setkeyv(disp.data, cols = "ID");
   setkeyv(presc.data, cols = "ID");
 
-  treatment_episodes <- do.call(rbindlist, list(l = lapply(disp_presc_IDs, FUN = function(i) process_patient(pat = i)),
+  events_output <- do.call(rbindlist, list(l = lapply(disp_presc_IDs, FUN = function(i) process_patient(pat = i)),
                                                 fill = TRUE));
 
   # key by ID, medication class, and dispensing date
-  setkeyv(treatment_episodes, cols = c("ID", medication.class.colnames, "DISP.DATE"));
+  setkeyv(events_output, cols = c("ID", medication.class.colnames, "DISP.DATE"));
 
   # convert column names
-  setnames(treatment_episodes,
+  setnames(events_output,
            old = c("ID",
                    "DISP.DATE",
                    "DAILY.DOSE",
@@ -1193,14 +1217,16 @@ compute_event_durations <- function(disp.data = NULL,
                    disp.date.colname,
                    presc.daily.dose.colname,
                    total.dose.colname)
-           )
+  )
+
+  close(pb)
 
   if( !return.data.table )
   {
-    return (as.data.frame(treatment_episodes));
+    return (as.data.frame(events_output));
   } else
   {
-    return(treatment_episodes);
+    return(events_output);
   }
   }
 
