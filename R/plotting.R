@@ -463,6 +463,164 @@
     return (invisible(NULL));
   }
 
+
+  # Local functions for the various types of summary CMA plots:
+  .plot.summary.CMA.as.histogram <- function(adh, svg.str)
+  {
+    adh.hist <- hist(adh, plot=FALSE);
+    adh.x <- adh.hist$breaks[-1]; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
+    adh.y <- adh.hist$counts; adh.y <- adh.y / max(adh.y);
+    adh.x.max <- adh.x[which.max(adh.hist$counts)];
+    segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, lty="solid", lwd=1, col=CMA.plot.border);
+    if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0)) )
+    {
+      # There's enough space for vertically writing all three of them:
+      text(x=.rescale.xcoord.for.CMA.plot(0.0),       y.mean - 2 - char.height.CMA/2,
+           sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+      text(x=.rescale.xcoord.for.CMA.plot(1.0),       y.mean - 2 - char.height.CMA/2,
+           sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+      text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean + 2 + char.height.CMA/2,
+           sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=90, pos=3, cex=CMA.cex, col=CMA.plot.text);
+    }
+
+    # SVG
+    for( j in seq_along(adh.x) )
+    {
+      svg.str <- c(svg.str,
+                   # The CMA as histogram:
+                   .SVG.lines(x=rep(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x[j])),2),
+                              y=c(.scale.y.to.SVG.plot(y.mean - 2), .scale.y.to.SVG.plot(y.mean - 2 + 4*adh.y[j])),
+                              connected=FALSE,
+                              stroke=CMA.plot.border, stroke_width=1,
+                              id="cma-summary-plot", comment="The CMA summary")
+      );
+    }
+    if( 3*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
+    {
+      # There's enough space for vertically writing all three of them:
+      svg.str <- c(svg.str,
+                   # The CMA as histogram:
+                   .SVG.text(x=c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
+                                 .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)),
+                                 .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x.max))),
+                             y=c(.scale.y.to.SVG.plot(y.mean - 2 - 0.25),
+                                 .scale.y.to.SVG.plot(y.mean - 2 - 0.25),
+                                 .scale.y.to.SVG.plot(y.mean + 2 + 0.25)),
+                             text=c(sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)),
+                                    sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)),
+                                    sprintf("%d",max(adh.hist$counts,an.rm=TRUE))),
+                             col=CMA.plot.text, font_size=dims.chr.cma,
+                             h.align=c("right","right","left"),
+                             v.align="center",
+                             rotate=c(-60,-60,-90),
+                             id="cma-summary-text", comment=NA)
+      );
+    }
+    return (svg.str);
+  }
+  .plot.summary.CMA.as.density <- function(adh.x, adh.y, svg.str)
+  {
+    adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
+    adh.y <- (adh.y - min(adh.y)) / (max(adh.y) - min(adh.y));
+    points(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, type="l", col=CMA.plot.border);
+    if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+    {
+      # There's enough space for vertical writing:
+      text(x=.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.0), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+      text(x=.rescale.xcoord.for.CMA.plot(1.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.1), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+    }
+
+    # SVG:
+    svg.str <- c(svg.str,
+                 # The individual lines:
+                 .SVG.lines(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x)),
+                            y=.scale.y.to.SVG.plot(y.mean - 2 + 4*adh.y),
+                            connected=TRUE,
+                            stroke=CMA.plot.border, stroke_width=1,
+                            id="cma-summary-plot", comment="The CMA summary")
+    );
+    if( 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
+    {
+      # There's enough space for vertical writing:
+      svg.str <- c(svg.str,
+                   # The actual values as text:
+                   .SVG.text(x=c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
+                                 .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0))),
+                             y=c(.scale.y.to.SVG.plot(y.mean - 2 - 0.25),
+                                 .scale.y.to.SVG.plot(y.mean - 2 - 0.25)),
+                             text=c(sprintf("%.1f%%",100*adh.x.0),
+                                    sprintf("%.1f%%",100*adh.x.1)),
+                             col=CMA.plot.text, font_size=dims.chr.cma,
+                             h.align=c("right","right"), v.align="center", rotate=-60,
+                             id="cma-summary-text", comment=NA)
+      );
+    }
+    return (svg.str);
+  }
+  .plot.summary.CMA.as.lines <- function(adh, svg.str)
+  {
+    adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
+    segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
+    if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+    {
+      # There's enough space for vertical writing all of them (alternated):
+      for( j in 1:length(adh) )
+      {
+        text(x=.rescale.xcoord.for.CMA.plot(adh.x[j]), y.mean + ifelse(j %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
+             sprintf("%.1f%%",100*adh[j]), srt=90, pos=ifelse(j %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
+      }
+    } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+    {
+      # There's enough space for vertical writing only the extremes:
+      text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean - 2 - char.height.CMA/2,
+           sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+      text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean - 2 - char.height.CMA/2,
+           sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
+    }
+
+    # SVG:
+    for( j in seq_along(adh.x) )
+      svg.str <- c(svg.str,
+                   # The individual lines:
+                   .SVG.lines(x=rep(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x[j])),2),
+                              y=c(.scale.y.to.SVG.plot(y.mean - 2), .scale.y.to.SVG.plot(y.mean - 2 + 4)),
+                              connected=FALSE,
+                              stroke=CMA.plot.border, stroke_width=2,
+                              id="cma-summary-plot", comment="The CMA summary")
+      );
+    if( length(adh)*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
+    {
+      # There's enough space for vertical writing all of them (alternated):
+      svg.str <- c(svg.str,
+                   # The actual values as text:
+                   .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x)),
+                             y=.scale.y.to.SVG.plot(y.mean + rep(c(-2 - 0.25, 2 + 0.25),times=length(adh))[1:length(adh)]),
+                             text=sprintf("%.1f%%",100*adh),
+                             col=CMA.plot.text, font_size=dims.chr.cma,
+                             h.align=rep(c("right", "left"),times=length(adh))[1:length(adh)], v.align="center", rotate=-60,
+                             id="cma-summary-text", comment=NA)
+      );
+    } else if( 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
+    {
+      # There's enough space for vertical writing only the extremes:
+      svg.str <- c(svg.str,
+                   # The actual values as text:
+                   .SVG.text(x=c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x[1])),
+                                 .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]))),
+                             y=c(.scale.y.to.SVG.plot(y.mean - 2 - 0.25),
+                                 .scale.y.to.SVG.plot(y.mean - 2 - 0.25)),
+                             text=c(sprintf("%.1f%%",100*adh[1]),
+                                    sprintf("%.1f%%",100*adh[length(adh)])),
+                             col=CMA.plot.text, font_size=dims.chr.cma,
+                             h.align=c("right","right"), v.align="center",
+                             rotate=c(-90,-90),
+                             id="cma-summary-text", comment=NA)
+      );
+    }
+    return (svg.str);
+  }
+
+
   # Is the cma a time series or per episodes?
   is.cma.TS.or.SW <- (inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window"));
   # Does the cma contains estimated CMAs?
@@ -1310,60 +1468,8 @@
           # Scale the CMA (itself or density) in such a way that if within 0..1 stays within 0..1 but scales if it goes outside this interval to accomodate it
           if( plot.CMA.as.histogram )
           {
-            # Plot CMA as histogram:
-            if( length(adh) > 0 )
-            {
-              adh.hist <- hist(adh, plot=FALSE);
-              adh.x <- adh.hist$breaks[-1]; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
-              adh.y <- adh.hist$counts; adh.y <- adh.y / max(adh.y);
-              adh.x.max <- adh.x[which.max(adh.hist$counts)];
-              segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, lty="solid", lwd=1, col=CMA.plot.border);
-
-              # SVG:
-              for( j in seq_along(adh.x) )
-                svg.str <- c(svg.str,
-                             # The CMA as histogram:
-                             .SVG.lines(x=rep(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x[j])),2),
-                                        y=c(.scale.y.to.SVG.plot(y.mean - 2), .scale.y.to.SVG.plot(y.mean - 2 + 4*adh.y[j])),
-                                        connected=FALSE,
-                                        stroke=CMA.plot.border, stroke_width=1,
-                                        id="cma-histogram", comment="The CMA histogram")
-                );
-
-              if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0)) )
-              {
-                # There's enough space for vertically writing all three of them:
-                text(x=.rescale.xcoord.for.CMA.plot(0.0),       y.mean - 2 - char.height.CMA/2,
-                     sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                text(x=.rescale.xcoord.for.CMA.plot(1.0),       y.mean - 2 - char.height.CMA/2,
-                     sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                text(x=.rescale.xcoord.for.CMA.plot(adh.x.max), y.mean + 2 + char.height.CMA/2,
-                     sprintf("%d",max(adh.hist$counts,an.rm=TRUE)), srt=90, pos=3, cex=CMA.cex, col=CMA.plot.text);
-              }
-
-              # SVG
-              if( 3*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
-              {
-                # There's enough space for vertically writing all three of them:
-                svg.str <- c(svg.str,
-                             # The CMA as histogram:
-                             .SVG.text(x=c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
-                                           .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)),
-                                           .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x.max))),
-                                       y=c(.scale.y.to.SVG.plot(y.mean - 2 - 0.25),
-                                           .scale.y.to.SVG.plot(y.mean - 2 - 0.25),
-                                           .scale.y.to.SVG.plot(y.mean + 2 + 0.25)),
-                                       text=c(sprintf("%.1f%%",100*min(adh.x.0,na.rm=TRUE)),
-                                              sprintf("%.1f%%",100*max(adh.x.1,na.rm=TRUE)),
-                                              sprintf("%d",max(adh.hist$counts,an.rm=TRUE))),
-                                       col=CMA.plot.text, font_size=dims.chr.cma,
-                                       h.align=c("right","right","left"),
-                                       v.align="center",
-                                       rotate=c(-60,-60,-90),
-                                       id="cma-histogram-text", comment=NA)
-                );
-              }
-            }
+            # Plot CMA as histogram (or nothing, if too little data):
+            if( length(adh) > 0 ) svg.str <- .plot.summary.CMA.as.histogram(adh, svg.str);
           } else
           {
             if( length(adh) > 2 )
@@ -1373,38 +1479,12 @@
               ss <- (adh.density$x >= min(adh,na.rm=TRUE) & adh.density$x <= max(adh,na.rm=TRUE));
               if( sum(ss) == 0 )
               {
-                # Probably constant numbers?
-                # Plot the individual lines:
-                adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
-                segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
-                if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-                {
-                  # There's enough space for vertical writing all of them (alternated):
-                  for( j in 1:length(adh) )
-                  {
-                    text(x=.rescale.xcoord.for.CMA.plot(adh.x[j]), y.mean + ifelse(j %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
-                         sprintf("%.1f%%",100*adh[j]), srt=90, pos=ifelse(j %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
-                  }
-                } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-                {
-                  # There's enough space for vertical writing only the extremes:
-                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean - 2 - char.height.CMA/2,
-                       sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean - 2 - char.height.CMA/2,
-                       sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                }
+                # Probably constant numbers? Plot the individual lines:
+                svg.str <- .plot.summary.CMA.as.lines(adh, svg.str);
               } else
               {
-                adh.density$x <- adh.density$x[ss]; adh.density$y <- adh.density$y[ss];
-                adh.x <- adh.density$x; adh.x.0 <- min(adh.x,0); adh.x.1 <- max(adh.x,1); adh.x <- (adh.x - adh.x.0) / (adh.x.1 - adh.x.0);
-                adh.y <- adh.density$y; adh.y <- (adh.y - min(adh.y)) / (max(adh.y) - min(adh.y));
-                points(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, type="l", col=CMA.plot.border);
-                if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-                {
-                  # There's enough space for vertical writing:
-                  text(x=.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.0), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                  text(x=.rescale.xcoord.for.CMA.plot(1.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.1), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                }
+                # Plot as density:
+                svg.str <- .plot.summary.CMA.as.density(adh.density$x[ss], adh.density$y[ss], svg.str);
               }
             } else
             {
@@ -1414,24 +1494,7 @@
               } else
               {
                 # Plot the individual lines:
-                adh.x.0 <- min(adh,0); adh.x.1 <- max(adh,1); adh.x <- (adh - adh.x.0) / (adh.x.1 - adh.x.0);
-                segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4, lty="solid", lwd=2, col=CMA.plot.border);
-                if( char.height.CMA*length(adh) <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-                {
-                  # There's enough space for vertical writing all of them (alternating):
-                  for( j in 1:length(adh) )
-                  {
-                    text(x=.rescale.xcoord.for.CMA.plot(adh.x[j]), y.mean + ifelse(j %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
-                         sprintf("%.1f%%",100*adh[j]), srt=90, pos=ifelse(j %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
-                  }
-                } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
-                {
-                  # enough space for vertical writing only the extremes:
-                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean - 2 - char.height.CMA/2,
-                       sprintf("%.1f%%",100*adh[1]),           srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                  text(x=.rescale.xcoord.for.CMA.plot(adh.x[length(adh)]), y.mean - 2 - char.height.CMA/2,
-                       sprintf("%.1f%%",100*adh[length(adh)]), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
-                }
+                svg.str <- .plot.summary.CMA.as.lines(adh, svg.str);
               }
             }
           }
