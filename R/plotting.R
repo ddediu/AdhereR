@@ -106,6 +106,13 @@
                       return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
 {
+  # Check for missing data:
+  if( is.na(x) || is.na(y) || (is.na(width) && is.na(xend)) || (is.na(height) && is.na(yend)) )
+  {
+    # Nothing to plot!
+    if( return_string ) return ("") else return (NULL);
+  }
+
   # Process lty first:
   if( !is.na(lty) )
   {
@@ -163,7 +170,7 @@
   if( length(x) != length(y) || length(x) < 2 || length(y) < 2 )
   {
     warning("The line point coodinates must be of the same length >= 2.\n");
-    return (NULL);
+    if( return_string ) return ("") else return (NULL);
   }
 
   r <-  c(# The initial comment (if any):
@@ -184,6 +191,15 @@
         stroke_dasharray <- .SVG.lty$stroke.dasharray[s];
       }
     }
+
+    # Remove any points with NA coordinates:
+    s <- (!is.na(x) & !is.na(y));
+    if( !any(s) )
+    {
+      # Nothing to plot:
+      if( return_string ) return ("") else return (NULL);
+    }
+    x <- x[s]; y <- y[s]; # Keep only the non-missing points
 
     r <- c(r,
            '<polyline ',
@@ -218,6 +234,9 @@
 
     for(i in seq(1,length(x),by=2) )
     {
+      # Check for missing coordinates:
+      if( is.na(x[i]) || is.na(x[i+1]) || is.na(y[i]) || is.na(y[i+1]) ) next; # cannot draw this line
+
       # Process lty:
       if( length(lty) > 0 && all(!is.na(lty)) )
       {
@@ -279,6 +298,15 @@
   if( length(col) != length(x) ) col <- rep(col[1], length(x));
   if( length(cex) != length(x) ) cex <- rep(cex[1], length(x));
 
+  # Remove any points with NA coordinates:
+  s <- (!is.na(x) & !is.na(y) & !is.na(pch));
+  if( !any(s) )
+  {
+    # Nothing to plot:
+    if( return_string ) return ("") else return (NULL);
+  }
+  x <- x[s]; y <- y[s]; pch <- pch[s]; col <- col[s]; cex <- cex[s]; # Keep only the non-missing points
+
   r <-  c(# The initial comment (if any):
     if(!is.na(comment)) .SVG.comment(comment));
 
@@ -337,6 +365,15 @@
   if( length(h.align) != length(x) ) h.align <- rep(h.align[1], length(x));
   if( length(v.align) != length(x) ) v.align <- rep(v.align[1], length(x));
   if( length(rotate) != length(x) ) rotate <- rep(rotate[1], length(x));
+
+  # Remove any points with NA coordinates:
+  s <- (!is.na(x) & !is.na(y) & !is.na(text));
+  if( !any(s) )
+  {
+    # Nothing to plot:
+    if( return_string ) return ("") else return (NULL);
+  }
+  x <- x[s]; y <- y[s]; col <- col[s]; font <- font[s]; font_size <- font_size[s]; h.align <- h.align[s]; v.align <- v.align[s]; rotate <- rotate[s]; # Keep only the non-missing points
 
   r <-  c(# The initial comment (if any):
     if(!is.na(comment)) .SVG.comment(comment));
@@ -496,6 +533,9 @@
     }
 
     # SVG
+    svg.str <- c(svg.str,
+                 .SVG.comment("The CMA summary as histogram", newpara=TRUE));
+
     for( j in seq_along(adh.x) )
     {
       svg.str <- c(svg.str,
@@ -504,7 +544,7 @@
                               y=c(.scale.y.to.SVG.plot(y.mean - 2), .scale.y.to.SVG.plot(y.mean - 2 + 4*adh.y[j])),
                               connected=FALSE,
                               stroke=CMA.plot.border, stroke_width=1,
-                              id="cma-summary-plot", comment="The CMA summary")
+                              id="cma-summary-plot")
       );
     }
     if( 3*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
@@ -525,7 +565,7 @@
                              h.align=c("right","right","left"),
                              v.align="center",
                              rotate=c(-60,-60,-90),
-                             id="cma-summary-text", comment=NA)
+                             id="cma-summary-text")
       );
     }
     return (svg.str);
@@ -544,12 +584,15 @@
 
     # SVG:
     svg.str <- c(svg.str,
+                 .SVG.comment("The CMA summary as density", newpara=TRUE));
+
+    svg.str <- c(svg.str,
                  # The individual lines:
                  .SVG.lines(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.x)),
                             y=.scale.y.to.SVG.plot(y.mean - 2 + 4*adh.y),
                             connected=TRUE,
                             stroke=CMA.plot.border, stroke_width=1,
-                            id="cma-summary-plot", comment="The CMA summary")
+                            id="cma-summary-plot")
     );
     if( 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
     {
@@ -564,7 +607,7 @@
                                     sprintf("%.1f%%",100*adh.x.1)),
                              col=CMA.plot.text, font_size=dims.chr.cma,
                              h.align=c("right","right"), v.align="center", rotate=-60,
-                             id="cma-summary-text", comment=NA)
+                             id="cma-summary-text")
       );
     }
     return (svg.str);
@@ -591,6 +634,9 @@
     }
 
     # SVG:
+    svg.str <- c(svg.str,
+                 .SVG.comment("The CMA summary as barplot", newpara=TRUE));
+
     for( j in seq_along(adh.x) )
       svg.str <- c(svg.str,
                    # The individual lines:
@@ -598,7 +644,7 @@
                               y=c(.scale.y.to.SVG.plot(y.mean - 2), .scale.y.to.SVG.plot(y.mean - 2 + 4)),
                               connected=FALSE,
                               stroke=CMA.plot.border, stroke_width=2,
-                              id="cma-summary-plot", comment="The CMA summary")
+                              id="cma-summary-plot")
       );
     if( length(adh)*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
     {
@@ -610,7 +656,7 @@
                              text=sprintf("%.1f%%",100*adh),
                              col=CMA.plot.text, font_size=dims.chr.cma,
                              h.align=rep(c("right", "left"),times=length(adh))[1:length(adh)], v.align="center", rotate=-60,
-                             id="cma-summary-text", comment=NA)
+                             id="cma-summary-text")
       );
     } else if( 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
     {
@@ -626,7 +672,7 @@
                              col=CMA.plot.text, font_size=dims.chr.cma,
                              h.align=c("right","right"), v.align="center",
                              rotate=c(-90,-90),
-                             id="cma-summary-text", comment=NA)
+                             id="cma-summary-text")
       );
     }
     return (svg.str);
@@ -1596,10 +1642,10 @@
                  # The begining of the event:
                  .SVG.points(x=.scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window), y=.scale.y.to.SVG.plot(y.cur),
                              pch=pch.start.event, col=col, cex=cex,
-                             id="event-start", comment="Event start"),
+                             id="event-start"),
                  .SVG.points(x=.scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window), y=.scale.y.to.SVG.plot(y.cur),
                              pch=pch.end.event, col=col, cex=cex,
-                             id="event-start", comment="Event end")
+                             id="event-start")
     );
 
 
@@ -1666,7 +1712,7 @@
                             y=rep(.scale.y.to.SVG.plot(y.cur),2),
                             connected=FALSE,
                             stroke=col, stroke_width=seg.lwd,
-                            id="event-segment", comment="Event segment")
+                            id="event-segment")
     );
 
 
@@ -1698,7 +1744,7 @@
                              font_size=dims.chr.std * cex.dose, h.align="center", v.align="center",
                              col=if(is.na(print.dose.col)) col else print.dose.col,
                              other_params=if(!is.na(print.dose.outline.col)) paste0(' stroke="',.SVG.color(print.dose.outline.col,return_string=TRUE),'" stroke-width="0.5"'),
-                             id="event-dose-text", comment="The dose text")
+                             id="event-dose-text")
       );
     }
 
@@ -1731,7 +1777,7 @@
                                   .scale.y.to.SVG.plot(y.cur)),
                               connected=TRUE,
                               stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
-                              id="continuation-line", comment="The continuation line")
+                              id="continuation-line")
       );
     } else
     {
@@ -1796,19 +1842,19 @@
                            .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.90),
                                      xend=.scale.x.to.SVG.plot(corrected.x.end[j]), yend=.scale.y.to.SVG.plot(ys[j] + 0.10),
                                      stroke="gray70", fill="white",
-                                     id="partial_cma_stacked_rect_bkg", comment=NA),
+                                     id="partial_cma_stacked_rect_bkg"),
                            # The CMA estimate rect:
                            .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.90),
                                      xend=.scale.x.to.SVG.plot(corrected.x.start[j] + h[j]), yend=.scale.y.to.SVG.plot(ys[j] + 0.10),
                                      stroke=plot.partial.CMAs.as.stacked.col.border, fill=plot.partial.CMAs.as.stacked.col.bars,
-                                     id="partial_cma_stacked_rect_estimate", comment=NA),
+                                     id="partial_cma_stacked_rect_estimate"),
                            # The numeric estimate:
                            if( print.CMA && dims.chr.cma <= dims.chr.event )
                            {
                              .SVG.text(.scale.x.to.SVG.plot(corrected.x.text[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.50),
                                       text=ppts$text[j], font_size=dims.chr.cma, col=plot.partial.CMAs.as.stacked.col.text,
                                       h.align="center", v.align="center",
-                                      id="partial_cma_stacked_text_estimate", comment=NA)
+                                      id="partial_cma_stacked_text_estimate")
                            }
               );
             }
@@ -1850,13 +1896,13 @@
                              .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.end[j])),
                                         y=.scale.y.to.SVG.plot(c(y.cur + 0.5 + v[j], y.cur + 0.5 + v[j])),
                                         connected=FALSE, stroke=plot.partial.CMAs.as.overlapping.col.interval,
-                                        id="partial_cma_overlapping_segments", comment=NA),
+                                        id="partial_cma_overlapping_segments"),
                              if(!is.na(y.norm.v[j])) .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.start[j],
                                                                                          corrected.x.end[j],   corrected.x.end[j])),
                                                                 y=.scale.y.to.SVG.plot(c(y.cur + 0.5 + v[j], y.cur + 0.5 + v[j] + y.norm.v[j],
                                                                                          y.cur + 0.5 + v[j], y.cur + 0.5 + v[j] + y.norm.v[j])),
                                                                 connected=FALSE, stroke=plot.partial.CMAs.as.overlapping.col.interval,
-                                                                id="partial_cma_overlapping_segments", comment=NA)
+                                                                id="partial_cma_overlapping_segments")
                 );
               }
             }
@@ -1874,7 +1920,7 @@
                            .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(rep(y.cur + 1.0,length(corrected.x.text))), text=ppts$text,
                                      col=plot.partial.CMAs.as.overlapping.col.text, font_size=dims.chr.cma,
                                      h.align="center", v.align="center",
-                                     id="partial_cma_overlapping_text", comment=NA)
+                                     id="partial_cma_overlapping_text")
               );
             }
 
@@ -1893,6 +1939,96 @@
             # SVG:
             svg.str <- c(svg.str,
                          .SVG.comment("Partial CMAs as time series:", newpara=TRUE));
+
+            # The axes:
+            min.y.norm <- min(ppts$y.norm,na.rm=TRUE);
+            max.y.norm <- max(ppts$y.norm,na.rm=TRUE);
+            segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.end.max,   y.cur + 0.5, lty="solid", col="black"); # horizontal axis
+            segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.start.min, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0, lty="solid", col="black"); # vertical axis
+            segments(corrected.x + x.start.min, min.y.norm, corrected.x + x.end.max, min.y.norm, lty="dashed", col="black"); # the minimum value
+            segments(corrected.x + x.start.min, max.y.norm, corrected.x + x.end.max, max.y.norm, lty="dashed", col="black"); # the minimum value
+            # SVG
+            svg.str <- c(svg.str,
+                         # The axes:
+                         .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max,
+                                                             corrected.x + x.start.min, corrected.x + x.start.min,
+                                                             corrected.x + x.start.min, corrected.x + x.end.max,
+                                                             corrected.x + x.start.min, corrected.x + x.end.max)),
+                                    y=.scale.y.to.SVG.plot(c(y.cur + 0.5,               y.cur + 0.5,
+                                                             y.cur + 0.5,               y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                             min.y.norm,                min.y.norm,
+                                                             max.y.norm,                max.y.norm)),
+                                    connected=FALSE,
+                                    stroke="black", lty=c("solid", "solid", "dashed", "dashed"),
+                                    id="partial_cma_timeseries_axes")
+            );
+            if( plot.partial.CMAs.as.timeseries.show.0perc &&
+                (y.for.0perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (0 - min.y)/range.y)) >= y.cur + 0.5 )
+            {
+              segments(corrected.x + x.start.min, y.for.0perc, corrected.x + x.end.max, y.for.0perc, lty="dotted", col="red"); # 0%
+              # SVG
+              svg.str <- c(svg.str,
+                           # 0% line
+                           .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max)),
+                                      y=.scale.y.to.SVG.plot(c(y.for.0perc,               y.for.0perc)),
+                                      connected=FALSE, stroke="red", lty="dotted",
+                                      id="partial_cma_timeseries_0perc-line")
+              );
+            }
+            if( plot.partial.CMAs.as.timeseries.show.100perc &&
+                (y.for.100perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (1.0 - min.y)/range.y)) <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
+            {
+              segments(corrected.x + x.start.min, y.for.100perc, corrected.x + x.end.max, y.for.100perc, lty="dotted", col="red"); # 100%
+              # SVG
+              svg.str <- c(svg.str,
+                           # 100% line
+                           .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max)),
+                                      y=.scale.y.to.SVG.plot(c(y.for.100perc,             y.for.100perc)),
+                                      connected=FALSE, stroke="red", lty="dotted",
+                                      id="partial_cma_timeseries_100perc-line")
+              );
+            }
+            if( print.CMA && char.height.CMA <= 0.80 )
+            {
+              text(corrected.x + x.start.min, min.y.norm, sprintf("%.1f%%",100*min.y), pos=2, cex=CMA.cex, col="black");
+              text(corrected.x + x.start.min, max.y.norm, sprintf("%.1f%%",100*max.y), pos=2, cex=CMA.cex, col="black");
+              if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
+              {
+                text(corrected.x + x.start.min, y.for.0perc, "0%", pos=2, cex=CMA.cex, col="red");
+              }
+              if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
+              {
+                text(corrected.x + x.start.min, y.for.100perc, "100%", pos=2, cex=CMA.cex, col="red");
+              }
+            }
+            # SVG:
+            if( print.CMA && dims.chr.cma <= dims.chr.event )
+            {
+              svg.str <- c(svg.str,
+                           # Text
+                           .SVG.text(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.start.min)),
+                                     y=.scale.y.to.SVG.plot(c(min.y.norm,                max.y.norm)),
+                                     text=c(                sprintf("%.1f%%",100*min.y), sprintf("%.1f%%",100*max.y)),
+                                     col="black", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=-60,
+                                     id="partial_cma_timeseries_axis_text"),
+                           if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
+                           {
+                             .SVG.text(x=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                       y=.scale.y.to.SVG.plot(y.for.0perc),
+                                       text="0%",
+                                       col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=-60,
+                                       id="partial_cma_timeseries_axis_text")
+                           },
+                           if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
+                           {
+                             .SVG.text(x=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                       y=.scale.y.to.SVG.plot(y.for.100perc),
+                                       text="100%",
+                                       col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=-60,
+                                       id="partial_cma_timeseries_axis_text")
+                           }
+              );
+            }
 
             # The intervals:
             if( !is.na(plot.partial.CMAs.as.timeseries.col.interval) )
@@ -1932,7 +2068,7 @@
                                .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.end[j])),
                                           y=.scale.y.to.SVG.plot(c(ppts$y.norm[j], ppts$y.norm[j])),
                                           stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
-                                          id="partial_cma_timeseries_lines", comment=NA),
+                                          id="partial_cma_timeseries_lines"),
                                if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
                                {
                                  # The segment endings:
@@ -1940,7 +2076,7 @@
                                             y=.scale.y.to.SVG.plot(c(ppts$y.norm[j] - 0.2, ppts$y.norm[j] + 0.2, ppts$y.norm[j] - 0.2, ppts$y.norm[j] + 0.2)),
                                             connected=FALSE,
                                             stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
-                                            id="partial_cma_timeseries_lines", comment=NA)
+                                            id="partial_cma_timeseries_lines")
                                } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
                                {
                                  # The arrow endings:
@@ -1954,7 +2090,7 @@
                                                                      ppts$y.norm[j]       + 0.2, ppts$y.norm[j])),
                                             connected=FALSE,
                                             stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
-                                            id="partial_cma_timeseries_lines", comment=NA)
+                                            id="partial_cma_timeseries_lines")
                                }
 
                   );
@@ -1976,40 +2112,9 @@
                                          xend=.scale.x.to.SVG.plot(corrected.x.end[j]), yend=.scale.y.to.SVG.plot(y.cur + 0.5),
                                          fill=plot.partial.CMAs.as.timeseries.col.interval, fill_opacity=plot.partial.CMAs.as.timeseries.alpha.interval,
                                          stroke=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted",
-                                         id="partial_cma_timeseries_rect", comment=NA)
+                                         id="partial_cma_timeseries_rect")
                   );
                 }
-              }
-            }
-
-            # The axes:
-            min.y.norm <- min(ppts$y.norm,na.rm=TRUE);
-            max.y.norm <- max(ppts$y.norm,na.rm=TRUE);
-            segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.end.max,   y.cur + 0.5, lty="solid", col="black"); # horizontal axis
-            segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.start.min, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0, lty="solid", col="black"); # vertical axis
-            segments(corrected.x + x.start.min, min.y.norm, corrected.x + x.end.max, min.y.norm, lty="dashed", col="black"); # the minimum value
-            segments(corrected.x + x.start.min, max.y.norm, corrected.x + x.end.max, max.y.norm, lty="dashed", col="black"); # the minimum value
-            if( plot.partial.CMAs.as.timeseries.show.0perc &&
-                (y.for.0perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (0 - min.y)/range.y)) >= y.cur + 0.5 )
-            {
-              segments(corrected.x + x.start.min, y.for.0perc, corrected.x + x.end.max, y.for.0perc, lty="dotted", col="red"); # 0%
-            }
-            if( plot.partial.CMAs.as.timeseries.show.100perc &&
-                (y.for.100perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (1.0 - min.y)/range.y)) <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
-            {
-              segments(corrected.x + x.start.min, y.for.100perc, corrected.x + x.end.max, y.for.100perc, lty="dotted", col="red"); # 0%
-            }
-            if( print.CMA && char.height.CMA <= 0.80 )
-            {
-              text(corrected.x + x.start.min, min.y.norm, sprintf("%.1f%%",100*min.y), pos=2, cex=CMA.cex, col="black");
-              text(corrected.x + x.start.min, max.y.norm, sprintf("%.1f%%",100*max.y), pos=2, cex=CMA.cex, col="black");
-              if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
-              {
-                text(corrected.x + x.start.min, y.for.0perc, "0%", pos=2, cex=CMA.cex, col="red");
-              }
-              if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
-              {
-                text(corrected.x + x.start.min, y.for.100perc, "100%", pos=2, cex=CMA.cex, col="red");
               }
             }
 
@@ -2017,12 +2122,37 @@
             if( !is.na(plot.partial.CMAs.as.timeseries.col.dot) )
             {
               points(corrected.x.text, ppts$y.norm, col=plot.partial.CMAs.as.timeseries.col.dot, cex=CMA.cex, type="o", pch=19, lty="solid");
+              # SVG:
+              svg.str <- c(svg.str,
+                           # The connecting lines:
+                           .SVG.lines(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm),
+                                      connected=TRUE,
+                                      stroke=plot.partial.CMAs.as.timeseries.col.dot, lty="solid",
+                                      id="partial_cma_timeseries_connecting_lines"),
+                           # The points:
+                           .SVG.points(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm),
+                                       col=plot.partial.CMAs.as.timeseries.col.dot, cex=CMA.cex, pch=19,
+                                       id="partial_cma_timeseries_points")
+              );
             }
 
             # The actual values:
             if( print.CMA && char.height.CMA <= 0.80 && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
             {
               text(corrected.x.text, ppts$y.norm, ppts$text, adj=c(0.5,-0.5), cex=CMA.cex, col=plot.partial.CMAs.as.timeseries.col.text);
+            }
+
+            # The actual values:
+            if( print.CMA && dims.chr.cma <= dims.chr.event && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
+            {
+              # SVG:
+              svg.str <- c(svg.str,
+                           # The actual values:
+                           .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm), text=ppts$text,
+                                     col=plot.partial.CMAs.as.timeseries.col.text, font_size=dims.chr.cma,
+                                     h.align="center", v.align="bottom",
+                                     id="partial_cma_timeseries_values")
+              );
             }
 
             # Advance to next patient:
@@ -2048,11 +2178,12 @@
       # SVG:
       svg.str <- c(svg.str,
                    # Vertical guides:
+                   .SVG.comment("The vertical guides for the CMA drawing area"),
                    .SVG.lines(x=rep(c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0))), each=2),
                               y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=2),
                               connected=FALSE,
                               stroke=CMA.plot.border, stroke_width=1, lty=c("solid", "dotted"),
-                              id="cma-drawing-area-guides-lines", comment="The vertical guides for the CMA drawing area")
+                              id="cma-drawing-area-guides-lines")
       );
     } else
     {
@@ -2080,7 +2211,7 @@
                              width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)),
                              height=dims.plot.height,
                              stroke="none", fill=CMA.plot.bkg, fill_opacity=0.25,
-                             id="cma-drawing-area-bkg", comment="The CMA drawing area backgound"),
+                             id="cma-drawing-area-bkg"),
 
                    # Vertical guides:
                    .SVG.lines(x=rep(c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
@@ -2090,31 +2221,31 @@
                               y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=ifelse(adh.max > 1.0, 3, 2)),
                               connected=FALSE,
                               stroke=CMA.plot.border, stroke_width=1, lty=if(adh.max > 1.0) c("solid", "dotted", "solid") else "solid",
-                              id="cma-drawing-area-guides-lines", comment="The vertical guides for the CMA drawing area"),
+                              id="cma-drawing-area-guides-lines"),
 
                    # Text guides:
                    .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), y=(dims.plot.y - dims.chr.axis/2),
                              text="0%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
-                             id="cma-drawing-area-guides-text", comment="The extreme CMA values"),
+                             id="cma-drawing-area-guides-text"),
                    if(adh.max > 1.0)
                    {
                      c(
                        .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)), y=(dims.plot.y - dims.chr.axis/2),
                                  text=sprintf("%.1f%%",adh.max*100), col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
-                                 id="cma-drawing-area-guides-text", comment="The extreme CMA values"),
+                                 id="cma-drawing-area-guides-text"),
                        if(dims.event.x*(.rescale.xcoord.for.CMA.plot(adh.max) - .rescale.xcoord.for.CMA.plot(1.0))/dims.day > 2.0*dims.chr.axis)
                        {
                          # Don't overcrowd the 100% and maximum CMA
                          .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y - dims.chr.axis/2),
                                    text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
-                                   id="cma-drawing-area-guides-text", comment="The extreme CMA values")
+                                   id="cma-drawing-area-guides-text")
                        }
                      )
                    } else
                    {
                      .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y - dims.chr.axis/2),
                                text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
-                               id="cma-drawing-area-guides-text", comment="The extreme CMA values")
+                               id="cma-drawing-area-guides-text")
                    }
       );
     }
@@ -2189,21 +2320,21 @@
                  # Axis labels:
                  .SVG.text(x=xs, y=rep(ys, length(xs)),
                            text=as.character(date.labels$string), col="black", font="Arial", font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-30,
-                           id="axis-values-x", comment="The x-axis values"),
+                           id="axis-values-x"),
 
                  # Axis ticks:
                  .SVG.lines(x=rep(xs,each=2),
                             y=dims.plot.y + dims.plot.height + rep(c(0, dims.chr.axis/2), times=length(xs)),
                             connected=FALSE,
                             stroke="black", stroke_width=1,
-                            id="axis-ticks-x", comment="The x-axis ticks"),
+                            id="axis-ticks-x"),
 
                  # Vertical dotted lines:
                  .SVG.lines(x=rep(xs,each=2),
                             y=dims.plot.y + rep(c(dims.plot.height, 0), times=length(xs)),
                             connected=FALSE,
                             stroke="gray50", stroke_width=1, lty="dotted",
-                            id="vertical-date-lines", comment="The x-axis vertical dotted lines")
+                            id="vertical-date-lines")
                  );
   }
 
