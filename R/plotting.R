@@ -62,6 +62,18 @@
   return (s);
 }
 
+.SVG.comment <- function(s,
+                         newpara=FALSE, # should there be a newline before the comment?
+                         newline=TRUE, # should a newline be added at the end?
+                         return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
+)
+{
+  r <- c(if(newpara) '\n',
+         '<!-- ',s,' -->',
+         if(newline) '\n');
+  if( return_string ) return (paste0(r,collapse="")) else return (r);
+}
+
 .SVG.color <- function(col,
                        return_string=FALSE)
 {
@@ -106,7 +118,7 @@
   }
 
   r <-  c(# The initial comment (if any):
-          if(!is.na(comment)) c('<!-- ',comment,' -->', if(newline) '\n'),
+          if(!is.na(comment)) .SVG.comment(comment),
 
           # The rect element:
           '<rect ',
@@ -120,7 +132,7 @@
 
           # The width and height of the rectangle (either given directly or computed from the top-right corner coordinates):
           if(!is.na(width)) c('width="',width,'" ') else if(!is.na(xend)) c('width="',(xend-x),'" '),
-          if(!is.na(height)) c('height="',height,'" ') else if(!is.na(yend)) c('height="',(yend-yheight),'" '),
+          if(!is.na(height)) c('height="',height,'" ') else if(!is.na(yend)) c('height="',(yend-y),'" '),
 
           # Aesthetics:
           if(!is.na(stroke)) c('stroke="', .SVG.color(stroke), '" '),
@@ -155,7 +167,7 @@
   }
 
   r <-  c(# The initial comment (if any):
-    if(!is.na(comment)) c('<!-- ',comment,' -->', if(newline) '\n'));
+    if(!is.na(comment)) .SVG.comment(comment));
 
   if(connected)
   {
@@ -268,7 +280,7 @@
   if( length(cex) != length(x) ) cex <- rep(cex[1], length(x));
 
   r <-  c(# The initial comment (if any):
-    if(!is.na(comment)) c('<!-- ',comment,' -->', if(newline) '\n'));
+    if(!is.na(comment)) .SVG.comment(comment));
 
   for(i in seq_along(x))
   {
@@ -327,7 +339,7 @@
   if( length(rotate) != length(x) ) rotate <- rep(rotate[1], length(x));
 
   r <-  c(# The initial comment (if any):
-    if(!is.na(comment)) c('<!-- ',comment,' -->', if(newline) '\n'));
+    if(!is.na(comment)) .SVG.comment(comment));
 
   for(i in seq_along(x))
   {
@@ -1761,17 +1773,44 @@
           {
             # Show subperiods as stacked:
             ys <- (y.cur + 1:nrow(ppts) - 1); # cache this
+            h <- (ppts$end - ppts$start) * pmax(pmin(ppts$y, 1.0), 0.0); # cache the actual CMA estimates scaled for plotting
 
             # The intervals as empty rectangles:
             rect(corrected.x.start, ys + 0.10, corrected.x.end,   ys + 0.90, border=gray(0.7), col="white");
 
             # The CMAs as filled rectangles of length proportional to the CMA:
-            h <- (ppts$end - ppts$start) * pmax(pmin(ppts$y, 1.0), 0.0);
             rect(corrected.x.start, ys + 0.10, corrected.x.start + h, ys + 0.90, border=plot.partial.CMAs.as.stacked.col.border, col=plot.partial.CMAs.as.stacked.col.bars);
 
             if( print.CMA && char.height.CMA <= 0.80 )
             {
               text(corrected.x.text, ys + 0.5, ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.stacked.col.text);
+            }
+
+            # SVG:
+            svg.str <- c(svg.str,
+                         .SVG.comment("Partial CMAs as stacked bars:", newpara=TRUE));
+            for( j in 1:nrow(ppts) )
+            {
+              svg.str <- c(svg.str,
+                           # The background rect:
+                           .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.90),
+                                     xend=.scale.x.to.SVG.plot(corrected.x.end[j]), yend=.scale.y.to.SVG.plot(ys[j] + 0.10),
+                                     stroke="gray70", fill="white",
+                                     id="partial_cma_stacked_rect_bkg", comment=NA),
+                           # The CMA estimate rect:
+                           .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.90),
+                                     xend=.scale.x.to.SVG.plot(corrected.x.start[j] + h[j]), yend=.scale.y.to.SVG.plot(ys[j] + 0.10),
+                                     stroke=plot.partial.CMAs.as.stacked.col.border, fill=plot.partial.CMAs.as.stacked.col.bars,
+                                     id="partial_cma_stacked_rect_estimate", comment=NA),
+                           # The numeric estimate:
+                           if( print.CMA && dims.chr.cma <= dims.chr.event )
+                           {
+                             .SVG.text(.scale.x.to.SVG.plot(corrected.x.text[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.50),
+                                      text=ppts$text[j], font_size=dims.chr.cma, col=plot.partial.CMAs.as.stacked.col.text,
+                                      h.align="center", v.align="center",
+                                      id="partial_cma_stacked_text_estimate", comment=NA)
+                           }
+              );
             }
 
             # Advance to next patient:
@@ -1783,6 +1822,10 @@
             # Show subperiods as overlapping segments:
             if( !((range.y <- (max.y - min.y)) > 0) ) range.y <- 1; # avoid division by 0 if there's only one value
             ppts$y.norm <- (ppts$y - min.y)/range.y;
+
+            # SVG:
+            svg.str <- c(svg.str,
+                         .SVG.comment("Partial CMAs as overlapping segments:", newpara=TRUE));
 
             if( !is.na(plot.partial.CMAs.as.overlapping.col.interval) )
             {
@@ -1798,11 +1841,41 @@
               segments(corrected.x.start, y.cur + 0.5 + v, corrected.x.end,   y.cur + 0.5 + v, col=plot.partial.CMAs.as.overlapping.col.interval);
               segments(corrected.x.start, y.cur + 0.5 + v, corrected.x.start, y.cur + 0.5 + v + y.norm.v, col=plot.partial.CMAs.as.overlapping.col.interval);
               segments(corrected.x.end,   y.cur + 0.5 + v, corrected.x.end,   y.cur + 0.5 + v + y.norm.v, col=plot.partial.CMAs.as.overlapping.col.interval);
+
+              # SVG:
+              for( j in 1:nrow(ppts) )
+              {
+                svg.str <- c(svg.str,
+                             # The connected segments one by one:
+                             .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.end[j])),
+                                        y=.scale.y.to.SVG.plot(c(y.cur + 0.5 + v[j], y.cur + 0.5 + v[j])),
+                                        connected=FALSE, stroke=plot.partial.CMAs.as.overlapping.col.interval,
+                                        id="partial_cma_overlapping_segments", comment=NA),
+                             if(!is.na(y.norm.v[j])) .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.start[j],
+                                                                                         corrected.x.end[j],   corrected.x.end[j])),
+                                                                y=.scale.y.to.SVG.plot(c(y.cur + 0.5 + v[j], y.cur + 0.5 + v[j] + y.norm.v[j],
+                                                                                         y.cur + 0.5 + v[j], y.cur + 0.5 + v[j] + y.norm.v[j])),
+                                                                connected=FALSE, stroke=plot.partial.CMAs.as.overlapping.col.interval,
+                                                                id="partial_cma_overlapping_segments", comment=NA)
+                );
+              }
             }
 
             if( print.CMA && char.height.CMA <= 0.80 && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
             {
               text(corrected.x.text, y.cur + 1.0, ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.overlapping.col.text);
+            }
+
+            # SVG:
+            if( print.CMA && dims.chr.cma <= dims.chr.event && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
+            {
+              svg.str <- c(svg.str,
+                           # The text estimates:
+                           .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(rep(y.cur + 1.0,length(corrected.x.text))), text=ppts$text,
+                                     col=plot.partial.CMAs.as.overlapping.col.text, font_size=dims.chr.cma,
+                                     h.align="center", v.align="center",
+                                     id="partial_cma_overlapping_text", comment=NA)
+              );
             }
 
             # Advance to next patient:
@@ -1816,6 +1889,10 @@
 
             if( !((range.y <- (max.y - min.y)) > 0) ) range.y <- 1; # avoid division by 0 if there's only one value
             ppts$y.norm <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace - 3) * (ppts$y - min.y)/range.y);
+
+            # SVG:
+            svg.str <- c(svg.str,
+                         .SVG.comment("Partial CMAs as time series:", newpara=TRUE));
 
             # The intervals:
             if( !is.na(plot.partial.CMAs.as.timeseries.col.interval) )
@@ -1846,12 +1923,62 @@
                   segments(corrected.x.end - char.width/2, ppts$y.norm + char.height/2, corrected.x.end, ppts$y.norm,
                            col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
                 }
+
+                # SVG:
+                for( j in 1:nrow(ppts) )
+                {
+                  svg.str <- c(svg.str,
+                               # The lines:
+                               .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.end[j])),
+                                          y=.scale.y.to.SVG.plot(c(ppts$y.norm[j], ppts$y.norm[j])),
+                                          stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
+                                          id="partial_cma_timeseries_lines", comment=NA),
+                               if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
+                               {
+                                 # The segment endings:
+                                 .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.start[j], corrected.x.end[j],   corrected.x.end[j])),
+                                            y=.scale.y.to.SVG.plot(c(ppts$y.norm[j] - 0.2, ppts$y.norm[j] + 0.2, ppts$y.norm[j] - 0.2, ppts$y.norm[j] + 0.2)),
+                                            connected=FALSE,
+                                            stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
+                                            id="partial_cma_timeseries_lines", comment=NA)
+                               } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
+                               {
+                                 # The arrow endings:
+                                 .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j] + dims.event.x/2, corrected.x.start[j],
+                                                                     corrected.x.start[j] + dims.event.x/2, corrected.x.start[j],
+                                                                     corrected.x.end[j]   - dims.event.x/2, corrected.x.end[j],
+                                                                     corrected.x.end[j]   - dims.event.x/2, corrected.x.end[j])),
+                                            y=.scale.y.to.SVG.plot(c(ppts$y.norm[j]       - 0.2, ppts$y.norm[j],
+                                                                     ppts$y.norm[j]       + 0.2, ppts$y.norm[j],
+                                                                     ppts$y.norm[j]       - 0.2, ppts$y.norm[j],
+                                                                     ppts$y.norm[j]       + 0.2, ppts$y.norm[j])),
+                                            connected=FALSE,
+                                            stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
+                                            id="partial_cma_timeseries_lines", comment=NA)
+                               }
+
+                  );
+                }
+
               } else if( plot.partial.CMAs.as.timeseries.interval.type == "rectangles" )
               {
                 # As semi-transparent rectangles:
                 rect(corrected.x.start, y.cur + 0.5, corrected.x.end, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
                      col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
                      border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
+
+                # SVG:
+                for( j in 1:nrow(ppts) )
+                {
+                  svg.str <- c(svg.str,
+                               # As semi-transparent rectangles:
+                               .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]),  y=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                         xend=.scale.x.to.SVG.plot(corrected.x.end[j]), yend=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                         fill=plot.partial.CMAs.as.timeseries.col.interval, fill_opacity=plot.partial.CMAs.as.timeseries.alpha.interval,
+                                         stroke=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted",
+                                         id="partial_cma_timeseries_rect", comment=NA)
+                  );
+                }
               }
             }
 
