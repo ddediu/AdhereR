@@ -31,25 +31,27 @@ context("Matching functions")
 
 # Test output format
 test_that("output format is correct", {
-  test_results <- compute_event_durations(disp.data = durcomp.dispensing,
-                                            presc.data = durcomp.prescribing,
-                                            special.periods.data = durcomp.hospitalisation,
-                                          special.periods.mapping = "continue",
-                                            ID.colname = "ID",
-                                            presc.date.colname = "DATE.PRESC",
-                                            disp.date.colname = "DATE.DISP",
-                                            date.format = "%Y-%m-%d",
-                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-                                            total.dose.colname = "TOTAL.DOSE",
-                                            presc.daily.dose.colname = "DAILY.DOSE",
-                                            presc.duration.colname = "PRESC.DURATION",
-                                            visit.colname = "VISIT",
-                                            force.init.presc = TRUE,
-                                            force.presc.renew = TRUE,
-                                            split.on.dosage.change = TRUE,
-                                            trt.interruption = "continue",
-                                            suppress.warnings = FALSE,
-                                            return.data.table = TRUE)
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing,
+                                               presc.data = durcomp.prescribing,
+                                               special.periods.data = durcomp.hospitalisation,
+                                               special.periods.mapping = "continue",
+                                               ID.colname = "ID",
+                                               presc.date.colname = "DATE.PRESC",
+                                               disp.date.colname = "DATE.DISP",
+                                               date.format = "%Y-%m-%d",
+                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                               total.dose.colname = "TOTAL.DOSE",
+                                               presc.daily.dose.colname = "DAILY.DOSE",
+                                               presc.duration.colname = "PRESC.DURATION",
+                                               visit.colname = "VISIT",
+                                               force.init.presc = TRUE,
+                                               force.presc.renew = TRUE,
+                                               split.on.dosage.change = TRUE,
+                                               trt.interruption = "continue",
+                                               suppress.warnings = FALSE,
+                                               return.data.table = TRUE)
+
+  test_results <- test_results_list$event_durations
 
   expect_is(test_results, "data.table") # is a data.table
   expect_equal(names(test_results), c("ID",
@@ -65,7 +67,8 @@ test_that("output format is correct", {
                                       "END.PRESC",
                                       "SPECIAL.DURATION",
                                       "tot.presc.interruptions",
-                                      "tot.dosage.changes"))
+                                      "tot.dosage.changes",
+                                      "CARRYOVER.DURATION") )
   expect_is(test_results$ID, "numeric") # ID's are integers
   expect_is(test_results$ATC.CODE, "character") # DCIs are characters
   expect_is(test_results$UNIT, "character") # Units are characters
@@ -80,54 +83,61 @@ test_that("output format is correct", {
   expect_is(test_results$SPECIAL.DURATION, "numeric") # HOSP.DURATIONS are numeric
   expect_is(test_results$tot.presc.interruptions, "integer") # number of treatment interruptions are numeric
   expect_is(test_results$tot.dosage.changes, "numeric") # number of dosage changes are numeric
+  expect_is(test_results$CARRYOVER.DURATION, "numeric") # carryover duration numeric
 })
 
 # Test process_patient function
 test_that("all patients are processed", {
-  test_results <- compute_event_durations(disp.data = durcomp.dispensing,
-                                          presc.data = durcomp.prescribing,
-                                          special.periods.data = durcomp.hospitalisation,
-                                          special.periods.mapping = "continue",
-                                          ID.colname = "ID",
-                                          presc.date.colname = "DATE.PRESC",
-                                          disp.date.colname = "DATE.DISP",
-                                          date.format = "%Y-%m-%d",
-                                          medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-                                          total.dose.colname = "TOTAL.DOSE",
-                                          presc.daily.dose.colname = "DAILY.DOSE",
-                                          presc.duration.colname = "PRESC.DURATION",
-                                          visit.colname = "VISIT",
-                                          force.init.presc = TRUE,
-                                          force.presc.renew = TRUE,
-                                          split.on.dosage.change = TRUE,
-                                          trt.interruption = "continue",
-                                          suppress.warnings = FALSE,
-                                          return.data.table = TRUE)
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing,
+                                               presc.data = durcomp.prescribing,
+                                               special.periods.data = durcomp.hospitalisation,
+                                               special.periods.mapping = "continue",
+                                               ID.colname = "ID",
+                                               presc.date.colname = "DATE.PRESC",
+                                               disp.date.colname = "DATE.DISP",
+                                               date.format = "%Y-%m-%d",
+                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                               total.dose.colname = "TOTAL.DOSE",
+                                               presc.daily.dose.colname = "DAILY.DOSE",
+                                               presc.duration.colname = "PRESC.DURATION",
+                                               visit.colname = "VISIT",
+                                               force.init.presc = TRUE,
+                                               force.presc.renew = TRUE,
+                                               split.on.dosage.change = TRUE,
+                                               trt.interruption = "continue",
+                                               suppress.warnings = FALSE,
+                                               return.data.table = TRUE)
+
+  test_results <- test_results_list$event_durations
+
   expect_length(unique(test_results$ID), 16)
   expect_equal(unique(test_results$ID), c(1:16))
 })
 
 # Test process_medication function
 test_that("all medications for one patient are processed", {
-  test_results <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
-                                          presc.data = durcomp.prescribing[ID == 3],
-                                          special.periods.data = durcomp.hospitalisation,
-                                          special.periods.mapping = "continue",
-                                          ID.colname = "ID",
-                                          presc.date.colname = "DATE.PRESC",
-                                          disp.date.colname = "DATE.DISP",
-                                          date.format = "%Y-%m-%d",
-                                          medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-                                          total.dose.colname = "TOTAL.DOSE",
-                                          presc.daily.dose.colname = "DAILY.DOSE",
-                                          presc.duration.colname = "PRESC.DURATION",
-                                          visit.colname = "VISIT",
-                                          force.init.presc = TRUE,
-                                          force.presc.renew = TRUE,
-                                          split.on.dosage.change = TRUE,
-                                          trt.interruption = "continue",
-                                          suppress.warnings = FALSE,
-                                          return.data.table = TRUE)
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                               presc.data = durcomp.prescribing[ID == 3],
+                                               special.periods.data = durcomp.hospitalisation[ID == 3],
+                                               special.periods.mapping = "continue",
+                                               ID.colname = "ID",
+                                               presc.date.colname = "DATE.PRESC",
+                                               disp.date.colname = "DATE.DISP",
+                                               date.format = "%Y-%m-%d",
+                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                               total.dose.colname = "TOTAL.DOSE",
+                                               presc.daily.dose.colname = "DAILY.DOSE",
+                                               presc.duration.colname = "PRESC.DURATION",
+                                               visit.colname = "VISIT",
+                                               force.init.presc = TRUE,
+                                               force.presc.renew = TRUE,
+                                               split.on.dosage.change = TRUE,
+                                               trt.interruption = "continue",
+                                               suppress.warnings = FALSE,
+                                               return.data.table = TRUE)
+
+  test_results <- test_results_list$event_durations
+
   expect_length(unique(test_results$ATC.CODE), 17)  #number of medications dispensed & prescribed
   expect_equal(unique(test_results$ATC.CODE), c("A05AA02",
                                                 "A09AA02",
@@ -245,27 +255,29 @@ test_that("all medications for one patient are processed", {
 
 # Test process_dispensing events function
 test_that("all dispensing events for one patient are processed", {
-  test_results <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
-                                          presc.data = durcomp.prescribing[ID == 3],
-                                          special.periods.data = durcomp.hospitalisation,
-                                          special.periods.mapping = "continue",
-                                          ID.colname = "ID",
-                                          presc.date.colname = "DATE.PRESC",
-                                          disp.date.colname = "DATE.DISP",
-                                          date.format = "%Y-%m-%d",
-                                          medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-                                          total.dose.colname = "TOTAL.DOSE",
-                                          presc.daily.dose.colname = "DAILY.DOSE",
-                                          presc.duration.colname = "PRESC.DURATION",
-                                          visit.colname = "VISIT",
-                                          force.init.presc = TRUE,
-                                          force.presc.renew = TRUE,
-                                          split.on.dosage.change = TRUE,
-                                          trt.interruption = "continue",
-                                          suppress.warnings = FALSE,
-                                          return.data.table = TRUE)
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                               presc.data = durcomp.prescribing[ID == 3],
+                                               special.periods.data = durcomp.hospitalisation,
+                                               special.periods.mapping = "continue",
+                                               ID.colname = "ID",
+                                               presc.date.colname = "DATE.PRESC",
+                                               disp.date.colname = "DATE.DISP",
+                                               date.format = "%Y-%m-%d",
+                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                               total.dose.colname = "TOTAL.DOSE",
+                                               presc.daily.dose.colname = "DAILY.DOSE",
+                                               presc.duration.colname = "PRESC.DURATION",
+                                               visit.colname = "VISIT",
+                                               force.init.presc = TRUE,
+                                               force.presc.renew = TRUE,
+                                               split.on.dosage.change = TRUE,
+                                               trt.interruption = "continue",
+                                               suppress.warnings = FALSE,
+                                               return.data.table = TRUE)
 
-  expect_equal(dim(test_results), c(111,14)) #correct number of lines
+  test_results <- test_results_list$event_durations
+
+  expect_equal(dim(test_results), c(104,15)) #correct number of lines
   expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 3), 3269.214) #correct sum of durations
   expect_equal(round(min(test_results$DURATION, na.rm=TRUE), 0), 10) #correct minimum of durations
   expect_equal(round(mean(test_results$DURATION, na.rm=TRUE), 4), 32.0511) #correct mean of durations
@@ -277,147 +289,161 @@ test_that("all dispensing events for one patient are processed", {
 
 # Test process without hospitalizations
 test_that("events are processed without hospitalizations", {
-  test_results <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
-                                          presc.data = durcomp.prescribing[ID == 3],
-                                          special.periods.data = NULL,
-                                          ID.colname = "ID",
-                                          presc.date.colname = "DATE.PRESC",
-                                          disp.date.colname = "DATE.DISP",
-                                          date.format = "%Y-%m-%d",
-                                          medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-                                          total.dose.colname = "TOTAL.DOSE",
-                                          presc.daily.dose.colname = "DAILY.DOSE",
-                                          presc.duration.colname = "PRESC.DURATION",
-                                          visit.colname = "VISIT",
-                                          force.init.presc = TRUE,
-                                          force.presc.renew = TRUE,
-                                          split.on.dosage.change = TRUE,
-                                          trt.interruption = "continue",
-                                          suppress.warnings = FALSE,
-                                          return.data.table = TRUE)
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                               presc.data = durcomp.prescribing[ID == 3],
+                                               special.periods.data = NULL,
+                                               ID.colname = "ID",
+                                               presc.date.colname = "DATE.PRESC",
+                                               disp.date.colname = "DATE.DISP",
+                                               date.format = "%Y-%m-%d",
+                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                               total.dose.colname = "TOTAL.DOSE",
+                                               presc.daily.dose.colname = "DAILY.DOSE",
+                                               presc.duration.colname = "PRESC.DURATION",
+                                               visit.colname = "VISIT",
+                                               force.init.presc = TRUE,
+                                               force.presc.renew = TRUE,
+                                               split.on.dosage.change = TRUE,
+                                               trt.interruption = "continue",
+                                               suppress.warnings = FALSE,
+                                               return.data.table = TRUE)
+
+  test_results <- test_results_list$event_durations
+
   expect_equal(max(test_results$SPECIAL.DURATION, na.rm = T), 0) #hospital duration
   expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 0), 3269) #correct sum of durations
 })
 
 # Test with force.init.presc = FALSE
 test_that("enforcement of initial prescription can be turned off", {
-  test_results_1 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
-                                            presc.data = durcomp.prescribing[ID == 3],
-                                            special.periods.data = NULL,
-                                            ID.colname = "ID",
-                                            presc.date.colname = "DATE.PRESC",
-                                            disp.date.colname = "DATE.DISP",
-                                            date.format = "%Y-%m-%d",
-                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-                                            total.dose.colname = "TOTAL.DOSE",
-                                            presc.daily.dose.colname = "DAILY.DOSE",
-                                            presc.duration.colname = "PRESC.DURATION",
-                                            visit.colname = "VISIT",
-                                            force.init.presc = FALSE,
-                                            force.presc.renew = TRUE,
-                                            split.on.dosage.change = TRUE,
-                                            trt.interruption = "continue",
-                                            suppress.warnings = FALSE,
-                                            return.data.table = TRUE)
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                               presc.data = durcomp.prescribing[ID == 3],
+                                               special.periods.data = NULL,
+                                               ID.colname = "ID",
+                                               presc.date.colname = "DATE.PRESC",
+                                               disp.date.colname = "DATE.DISP",
+                                               date.format = "%Y-%m-%d",
+                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                               total.dose.colname = "TOTAL.DOSE",
+                                               presc.daily.dose.colname = "DAILY.DOSE",
+                                               presc.duration.colname = "PRESC.DURATION",
+                                               visit.colname = "VISIT",
+                                               force.init.presc = FALSE,
+                                               force.presc.renew = TRUE,
+                                               split.on.dosage.change = TRUE,
+                                               trt.interruption = "continue",
+                                               suppress.warnings = FALSE,
+                                               return.data.table = TRUE)
 
-  expect_equal(as.character(min(test_results_1$START.PRESC, na.rm = T)), "2056-09-23")
-  expect_equal(as.character(mean(test_results_1$START.PRESC, na.rm = T)), "2056-11-22")
-  expect_equal(as.character(max(test_results_1$START.PRESC, na.rm = T)), "2057-12-10")
+  test_results <- test_results_list$event_durations
+
+  expect_equal(as.character(min(test_results$START.PRESC, na.rm = T)), "2056-09-23")
+  expect_equal(as.character(mean(test_results$START.PRESC, na.rm = T)), "2056-11-07")
+  expect_equal(as.character(max(test_results$START.PRESC, na.rm = T)), "2057-08-04")
 })
 
 # Test with force.presc.renew = FALSE
 test_that("enforcing of prescription reneval can be turned off", {
-  test_results_2 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
-                                            presc.data = durcomp.prescribing[ID == 3],
-                                            special.periods.data = NULL,
-                                            ID.colname = "ID",
-                                            presc.date.colname = "DATE.PRESC",
-                                            disp.date.colname = "DATE.DISP",
-                                            date.format = "%Y-%m-%d",
-                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-                                            total.dose.colname = "TOTAL.DOSE",
-                                            presc.daily.dose.colname = "DAILY.DOSE",
-                                            presc.duration.colname = "PRESC.DURATION",
-                                            visit.colname = "VISIT",
-                                            force.init.presc = TRUE,
-                                            force.presc.renew = FALSE,
-                                            split.on.dosage.change = TRUE,
-                                            trt.interruption = "continue",
-                                            suppress.warnings = FALSE,
-                                            return.data.table = TRUE)
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                               presc.data = durcomp.prescribing[ID == 3],
+                                               special.periods.data = NULL,
+                                               ID.colname = "ID",
+                                               presc.date.colname = "DATE.PRESC",
+                                               disp.date.colname = "DATE.DISP",
+                                               date.format = "%Y-%m-%d",
+                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                               total.dose.colname = "TOTAL.DOSE",
+                                               presc.daily.dose.colname = "DAILY.DOSE",
+                                               presc.duration.colname = "PRESC.DURATION",
+                                               visit.colname = "VISIT",
+                                               force.init.presc = TRUE,
+                                               force.presc.renew = FALSE,
+                                               split.on.dosage.change = TRUE,
+                                               trt.interruption = "continue",
+                                               suppress.warnings = FALSE,
+                                               return.data.table = TRUE)
 
-  expect_equal(as.character(mean(test_results_2$START.PRESC, na.rm = T)), "2056-09-22")
-  expect_equal(dim(test_results_2), c(110,13))
+  test_results <- test_results_list$event_durations
+
+  expect_equal(as.character(mean(test_results$START.PRESC, na.rm = T)), "2056-09-03")
+  expect_equal(dim(test_results), c(104,13))
 })
 
 # Test with split.on.dosage.change = FALSE
 test_that("consideration of dosage changes can be turned off", {
-  test_results1 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
-                                           presc.data = durcomp.prescribing[ID == 3],
-                                           special.periods.data = NULL,
-                                           ID.colname = "ID",
-                                           presc.date.colname = "DATE.PRESC",
-                                           disp.date.colname = "DATE.DISP",
-                                           date.format = "%Y-%m-%d",
-                                           medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-                                           total.dose.colname = "TOTAL.DOSE",
-                                           presc.daily.dose.colname = "DAILY.DOSE",
-                                           presc.duration.colname = "PRESC.DURATION",
-                                           visit.colname = "VISIT",
-                                           force.init.presc = TRUE,
-                                           force.presc.renew = TRUE,
-                                           split.on.dosage.change = FALSE,
-                                           trt.interruption = "continue",
-                                           suppress.warnings = FALSE,
-                                           return.data.table = TRUE)
-  expect_equal(dim(test_results1), c(111,13))
-  expect_equal(round(sum(test_results1$DURATION, na.rm=TRUE),0), 3289) #correct sum of durations
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                               presc.data = durcomp.prescribing[ID == 3],
+                                               special.periods.data = NULL,
+                                               ID.colname = "ID",
+                                               presc.date.colname = "DATE.PRESC",
+                                               disp.date.colname = "DATE.DISP",
+                                               date.format = "%Y-%m-%d",
+                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                               total.dose.colname = "TOTAL.DOSE",
+                                               presc.daily.dose.colname = "DAILY.DOSE",
+                                               presc.duration.colname = "PRESC.DURATION",
+                                               visit.colname = "VISIT",
+                                               force.init.presc = TRUE,
+                                               force.presc.renew = TRUE,
+                                               split.on.dosage.change = FALSE,
+                                               trt.interruption = "continue",
+                                               suppress.warnings = FALSE,
+                                               return.data.table = TRUE)
+
+  test_results <- test_results_list$event_durations
+
+  expect_equal(dim(test_results), c(103,13))
+  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 3289) #correct sum of durations
 })
 
 # Test with trt.interruption = discard
 test_that("events are processed correctly with trt.interrupttion = discard", {
-  test_results1 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
-                                           presc.data = durcomp.prescribing[ID == 3],
-                                           special.periods.data = NULL,
-                                           ID.colname = "ID",
-                                           presc.date.colname = "DATE.PRESC",
-                                           disp.date.colname = "DATE.DISP",
-                                           date.format = "%Y-%m-%d",
-                                           medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-                                           total.dose.colname = "TOTAL.DOSE",
-                                           presc.daily.dose.colname = "DAILY.DOSE",
-                                           presc.duration.colname = "PRESC.DURATION",
-                                           visit.colname = "VISIT",
-                                           force.init.presc = TRUE,
-                                           force.presc.renew = TRUE,
-                                           split.on.dosage.change = FALSE,
-                                           trt.interruption = "discard",
-                                           suppress.warnings = FALSE,
-                                           return.data.table = TRUE)
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                               presc.data = durcomp.prescribing[ID == 3],
+                                               special.periods.data = NULL,
+                                               ID.colname = "ID",
+                                               presc.date.colname = "DATE.PRESC",
+                                               disp.date.colname = "DATE.DISP",
+                                               date.format = "%Y-%m-%d",
+                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                               total.dose.colname = "TOTAL.DOSE",
+                                               presc.daily.dose.colname = "DAILY.DOSE",
+                                               presc.duration.colname = "PRESC.DURATION",
+                                               visit.colname = "VISIT",
+                                               force.init.presc = TRUE,
+                                               force.presc.renew = TRUE,
+                                               split.on.dosage.change = FALSE,
+                                               trt.interruption = "discard",
+                                               suppress.warnings = FALSE,
+                                               return.data.table = TRUE)
 
-  expect_equal(round(sum(test_results1$DURATION, na.rm=TRUE),0), 3269) #correct sum of durations
+  test_results <- test_results_list$event_durations
+
+  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 3269) #correct sum of durations
 })
 
 # Test with trt.interruption = carryover
 test_that("events are processed correctly with trt.interrupttion = carryover", {
-  test_results1 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
-                                           presc.data = durcomp.prescribing[ID == 3],
-                                           special.periods.data = NULL,
-                                           ID.colname = "ID",
-                                           presc.date.colname = "DATE.PRESC",
-                                           disp.date.colname = "DATE.DISP",
-                                           date.format = "%Y-%m-%d",
-                                           medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-                                           total.dose.colname = "TOTAL.DOSE",
-                                           presc.daily.dose.colname = "DAILY.DOSE",
-                                           presc.duration.colname = "PRESC.DURATION",
-                                           visit.colname = "VISIT",
-                                           force.init.presc = TRUE,
-                                           force.presc.renew = TRUE,
-                                           split.on.dosage.change = FALSE,
-                                           trt.interruption = "carryover",
-                                           suppress.warnings = FALSE,
-                                           return.data.table = TRUE)
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
+                                               presc.data = durcomp.prescribing[ID == 3],
+                                               special.periods.data = NULL,
+                                               ID.colname = "ID",
+                                               presc.date.colname = "DATE.PRESC",
+                                               disp.date.colname = "DATE.DISP",
+                                               date.format = "%Y-%m-%d",
+                                               medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                               total.dose.colname = "TOTAL.DOSE",
+                                               presc.daily.dose.colname = "DAILY.DOSE",
+                                               presc.duration.colname = "PRESC.DURATION",
+                                               visit.colname = "VISIT",
+                                               force.init.presc = TRUE,
+                                               force.presc.renew = TRUE,
+                                               split.on.dosage.change = FALSE,
+                                               trt.interruption = "carryover",
+                                               suppress.warnings = FALSE,
+                                               return.data.table = TRUE)
 
-  expect_equal(round(sum(test_results1$DURATION, na.rm=TRUE),0), 3286) #correct sum of durations
+  test_results <- test_results_list$event_durations
+
+  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 3286) #correct sum of durations
 })
