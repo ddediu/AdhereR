@@ -1133,24 +1133,26 @@
   # the idea is to assume 1 standard character (chr) == 16 user units, and 1 month (x axis) == 1 event (y axis) == 1 chr
   # for the title,  axis ticks and labels: 1 title == 1.5 chr, 1 axis tick == 0.75 chr, 1 axis label = 1.0 chr
   # plus spacing of about 0.5 chr around elements
-  dims.chr.std      <- 10; # the "standard" character size (SVG defaults to 16)
-  dims.chr.event    <- dims.chr.std / 2;
-  dims.chr.title    <- (cex.title * dims.chr.std);
-  dims.chr.axis     <- (cex.axis * dims.chr.std);
-  dims.chr.lab      <- (cex.lab * dims.chr.std);
-  dims.chr.cma      <- (CMA.cex * dims.chr.std);
-  dims.event.x      <- dims.chr.std*2; # the horizontal size of an event
-  dims.event.y      <- (cex * dims.chr.std); # the vertical size of an event
-  dims.day          <- ifelse(duration.total <= 90, 1, ifelse(duration.total <= 365, 7, ifelse(duration.total <= 3*365, 30, ifelse(duration.total <= 10*365, 90, 180)))); # how many days coorepond to a horizontal user unit (depends on how many days there are in total)
-  rotate.id.labels  <- 30 * as.numeric((dims.chr.std + dims.chr.lab + max(nchar(id.labels),na.rm=TRUE)*dims.chr.axis) >= (dims.chr.std*10)); # if the space required by the y-axis is more than 10 "standard" characters, then we rotate the labels
-  dims.axis.x       <- dims.chr.std + dims.chr.lab + (cos(30*pi/180) * max(nchar(as.character(date.labels$string)),na.rm=TRUE)*dims.chr.axis);
-  dims.axis.y       <- dims.chr.std + dims.chr.lab + (sin(rotate.id.labels*pi/180) * max(nchar(as.character(id.labels$string)),na.rm=TRUE)*dims.chr.axis);
-  dims.plot.x       <- (dims.axis.y + dims.chr.std);
-  dims.plot.y       <- (dims.chr.title + dims.chr.std);
-  dims.plot.width   <- (dims.event.x * (duration.total + 10)/dims.day);
-  dims.plot.height  <- (dims.event.y * (nrow(cma$data)+vert.space.cmas+1));
-  dims.total.width  <- (dims.plot.x + dims.plot.width);
-  dims.total.height <- (dims.plot.y + dims.plot.height + dims.axis.x);
+  dims.chr.std          <- 10; # the "standard" character size (SVG defaults to 16)
+  dims.chr.event        <- dims.chr.std / 2;
+  dims.chr.title        <- (cex.title * dims.chr.std);
+  dims.chr.axis         <- (cex.axis * dims.chr.std);
+  dims.chr.lab          <- (cex.lab * dims.chr.std);
+  dims.chr.cma          <- (CMA.cex * dims.chr.std);
+  dims.chr.legend       <- (legend.cex * dims.chr.std);
+  dims.chr.legend.title <- (legend.cex.title * dims.chr.std);
+  dims.event.x          <- dims.chr.std*2; # the horizontal size of an event
+  dims.event.y          <- (cex * dims.chr.std); # the vertical size of an event
+  dims.day              <- ifelse(duration.total <= 90, 1, ifelse(duration.total <= 365, 7, ifelse(duration.total <= 3*365, 30, ifelse(duration.total <= 10*365, 90, 180)))); # how many days coorepond to a horizontal user unit (depends on how many days there are in total)
+  rotate.id.labels      <- 30 * as.numeric((dims.chr.std + dims.chr.lab + max(nchar(id.labels),na.rm=TRUE)*dims.chr.axis) >= (dims.chr.std*10)); # if the space required by the y-axis is more than 10 "standard" characters, then we rotate the labels
+  dims.axis.x           <- dims.chr.std + dims.chr.lab + (cos(30*pi/180) * max(nchar(as.character(date.labels$string)),na.rm=TRUE)*dims.chr.axis);
+  dims.axis.y           <- dims.chr.std + dims.chr.lab + (sin(rotate.id.labels*pi/180) * max(nchar(as.character(id.labels$string)),na.rm=TRUE)*dims.chr.axis);
+  dims.plot.x           <- (dims.axis.y + dims.chr.std);
+  dims.plot.y           <- (dims.chr.title + dims.chr.std);
+  dims.plot.width       <- (dims.event.x * (duration.total + 10)/dims.day);
+  dims.plot.height      <- (dims.event.y * (nrow(cma$data)+vert.space.cmas+1));
+  dims.total.width      <- (dims.plot.x + dims.plot.width);
+  dims.total.height     <- (dims.plot.y + dims.plot.height + dims.axis.x);
 
   # Scaling functions for plotting within the SVG:
   .scale.width.to.SVG.plot <- function(w)
@@ -2344,7 +2346,7 @@
   ##
 
   # The legend:
-  .legend <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
+  .legend.base <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
   {
     # Legend rectangle:
     if( do.plot ) rect(x, y, x + width, y + height, border=gray(0.6), lwd=2, col=rgb(0.99,0.99,0.99,legend.bkg.opacity));
@@ -2451,7 +2453,7 @@
     # Character size for the legend:
     legend.char.width <- strwidth("O",cex=legend.cex); legend.char.height <- strheight("O",cex=legend.cex);
 
-    legend.size <- .legend(do.plot=FALSE);
+    legend.size <- .legend.base(do.plot=FALSE);
     if( is.na(legend.x) || legend.x == "right" )
     {
       legend.x <- par("usr")[2] - legend.size["width"] - legend.char.width;
@@ -2472,13 +2474,49 @@
     {
       legend.y <- par("usr")[3] + legend.char.height;
     }
-    ret.val <- .legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
+    ret.val <- .legend.base(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
   }
   else
   {
     ret.val <- c("width"=NA, "height"=NA);
   }
 
+  # SVG:
+  .legend <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
+  {
+    # The legend is an object that we can move around, scale, etc:
+    l1 <- c(.SVG.comment("The legend", newpara=TRUE, newline=TRUE),
+            '<defs>\n', # don't display it yet...
+            '<g id="legend">\n');
+
+    # The legend dimensions:
+    lw <- lh <- 0;
+
+    # The actual legend content:
+    l2 <- c(.SVG.text(x=0, y=0, text="LEGEND", font_size=dims.chr.legend.title, font="Arial Black", h.align="left", v.align="bottom", col="black"));
+    lh <- lh + dims.chr.legend.title; lw <- max(lw, dims.chr.legend.title * nchar("LEGEND"));
+
+    # The legend background:
+    lbox <- .SVG.rect(x=0, y=0, width=lw, height=lh, stroke="gray60", stroke_width=2, fill="gray99", fill_opacity=legend.bkg.opacity, id="legend-background");
+
+    # Close the legend:
+    l2 <- c(l2,
+            '</g>\n',
+            '</defs>\n',
+            # Display it as desired:
+            '<use xlink:href="#legend" transform="translate(',x,' ',y,')"/>\n');
+
+    # Insert the legend background where it should be:
+    return (c(l1, lbox, l2));
+  }
+  if( show.legend )
+  {
+    svg.str <- c(svg.str,
+                 # The legend:
+                 #.legend(legend.x, legend.y)
+                 .legend(100, 30)
+    );
+  }
 
 
   ##
