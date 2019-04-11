@@ -459,7 +459,7 @@ event_durations[DURATION > 0, I := .I]
 dosage.changes <- event_durations[DISP.START != DATE.DISP, .(days = as.numeric(DISP.START-as.Date("2056-07-01")),
                                                              I = I)]
 
-plot(cma0, min.plot.size.in.characters.vert = 0,print.dose = TRUE)
+plot(cma0, min.plot.size.in.characters.vert = 0,print.dose = TRUE, show.legend = FALSE)
 segments(x0 = dosage.changes$days, y0 = dosage.changes$I, y1 = dosage.changes$I-1, lwd = 2, col = "blue")
 ```
 
@@ -516,46 +516,6 @@ In addition, the output contains all the arguments to the function call:
 ## Computing CMA with the output of compute_event_durations
 
 In principle the output of `compute_event_durations` can be used for CMA computation as described in the main vignette. However, there are some specificities to consider.
-
-## Accounting for carryover during special periods
-
-If special periods of type *carryover* need to be considered during CMA computations, the `event_durations` need further processing. Otherwise, these periods will appear as gaps, possibly leading to underestimation of implementation or even assumption of discontinuation and non-persistence. On the other hand, *carryover* during special periods may lead to overestimation of implementation, e.g. if patients get a refill after discharge from hospital and don't continue to use their previous supply. Likewise, it may also lead to overestimation of persistence, e.g. when patients do in fact discontinue treatments at the end of a special period. 
-
-To detect whether new dispensing events occur shortly after the end of a special period in spite of a remaining supply, `AdhereR` offers the `prune_event_durations` function. It accepts the raw list output of `compute_event_durations` and additional arguments to specify event durations that need to be removed:
-
-- `data`: a list, the output of `compute_event_durations`
-- `days.within.out.date.1`: event durations from before the special period are removed if there is a new dispensing event within the number of days after the end of a special period
-- `days.within.out.date.2`: event durations from before the special period are removed if there is *NO* new dispensing event within the number of days after the end of a special period
-
-```{r}
-prune_event_durations <- function(data, days.within.out.date.1, days.within.out.date.2){
-  
-  ## Preconditions
-  
-  event_durations <- data$event_durations
-  special_periods <- data$special_periods
-  
-  event_durations[, join_date := DISP.START]
-  special_periods[, join_date := DATE.OUT]
-  
-  setkeyv(event_durations, cols = c(data$ID.colname, "join_date"))
-  setkeyv(special_periods, cols = c(data$ID.colname, "join_date"))
-  
-  disp.within <- na.omit(special_periods[event_durations, roll = days.within.out.date.1], cols = c("DURATION", "DATE.OUT"))
-  
-  disp.within.carryover <- disp.within[get(data$disp.date.colname) < join_date & get(data$disp.date.colname) != DISP.START]
-  disp.within.new <- disp.within[-disp.within[get(data$disp.date.colname) < join_date & get(data$disp.date.colname) != DISP.START, which = TRUE]]
-  
-  disp.remove.1 <- disp.within.carryover[disp.within.new, on = c(data$ID.colname, data$medication.class.colnames, "DATE.OUT"), nomatch=0]
-  
-}
-
-
-
-```
-
-
-## Accounting for treatment interruptions
 
 ### Event date
 
@@ -640,5 +600,260 @@ for(i in 1:nrow(event_durations_list$special_periods)){
   }
 
 ```
+
+### Prune event durations after carryover
+
+Special periods an treatment interruptions of type *carryover* may lead to overestimation of implementation, e.g. if patients get a refill after discharge from hospital and don't continue to use their previous supply. Likewise, it may also lead to overestimation of persistence, e.g. when patients do in fact discontinue treatments after the end of a special period or treatment interruption. 
+
+To detect whether new dispensing events occur shortly after the end of a special period or treatment interruption in spite of a remaining supply, `AdhereR` offers the `prune_event_durations` function. It accepts the raw list output of `compute_event_durations` and additional arguments to specify event durations that need to be removed:
+
+- `data`: a *list*, the output of `compute_event_durations`,
+- `include`: indicates whether to include special periods and/or treatment interruptions,
+- `medication.class.colnames`: indicate columns in `event_durations` to identify medication classes. Defaults to the columns used in `compute_event_durations`,
+- `days.within.out.date.1`: event durations from before the special period or treatment interruptions are removed if there is a new dispensing event within the number of days after the end of a special period,
+- `days.within.out.date.2`: event durations from before the special period are removed if there is *NO* new dispensing event within the number of days after the end of a special period,
+- `keep.all`: *Logical*, should events be kept and marked for removal? If `TRUE`, a new column the `event_durations` 
+
+The function output is the pruned `event_durations` dataset.
+
+```{r}
+prune_event_durations <- function(data,
+                                  include = c("special periods", "treatment interruptions"),
+                                  medication.class.colnames = data$medication.class.colnames,
+                                  days.within.out.date.1,
+                                  days.within.out.date.2,
+                                  keep.all = FALSE){
+  
+  ## Preconditions
+
+  # extract data from output list
+  event_durations <- data$event_durations
+  
+  if(".prune.event" %in% colnames(event_durations)) {
+    
+      event_durations[,.prune.event := NULL]
+    
+  }
+
+  
+  end_dates <- NULL
+  
+  if("special periods" %in% include){ 
+    special_periods <- data$special_periods 
+    
+    end_dates <- unique(data.table(ID = special_periods[[data$ID.colname]],
+                          DATE.OUT = special_periods[["DATE.OUT"]]))
+    
+    }
+  if("treatment interruptions" %in% include){
+    presc_episodes <- data$prescription_episodes
+    trt_interruptions <- presc_episodes[shift(END.PRESC, n = 1, type = "lag") < START.PRESC, .SD, by = c(data$ID.colname, medication.class.colnames)]
+    
+        end_dates <- unique(rbind(end_dates,
+                                  data.table(ID = trt_interruptions[[data$ID.colname]],
+                                             DATE.OUT = trt_interruptions[["START.PRESC"]])))
+    }
+  
+  # create new variable for join date
+  event_durations[, join_date := DISP.START]
+  end_dates[, join_date := DATE.OUT]
+  
+  # key by ID and join date
+  setkeyv(event_durations, cols = c(data$ID.colname, "join_date"))
+  setkeyv(end_dates, cols = c(data$ID.colname, "join_date"))
+  
+  # identify events with carryover to remove from the event_durations dataset
+
+  disp.remove.1 <- NULL
+  if(!is.na(days.within.out.date.1)) {
+    
+    # rolling join to select events starting within the specified number of days after the end date of special periods
+  disp.within.1 <- na.omit(end_dates[event_durations, roll = days.within.out.date.1], cols = c("DURATION", "DATE.OUT", data$disp.date.colname))
+  
+  # identify carryover durations from previous events
+  disp.within.1[get(data$disp.date.colname) < DATE.OUT & get(data$disp.date.colname) < DISP.START, .from.carryover := 1]
+  
+  # identify new events
+  disp.within.1[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, medication.class.colnames, "DATE.OUT")]
+  
+  # mark events for removal if they are from carryover and at least one new event is present within the specified period
+  disp.remove.1 <- disp.within.1[.from.carryover == 1 & .new.events > 0, .prune.event := 1]
+  
+  disp.remove.1 <- disp.remove.1[.prune.event == 1]
+  
+  }
+  
+  disp.remove.2 <- NULL
+  if(!is.na(days.within.out.date.2)) {
+    
+    # rolling join to select events starting within the specified number of days after the end date of special periods
+  disp.within.2 <- na.omit(end_dates[event_durations, roll = days.within.out.date.2], cols = c("DURATION", "DATE.OUT", data$disp.date.colname))
+  
+  # identify carryover durations from previous events
+  disp.within.2[get(data$disp.date.colname) < DATE.OUT & get(data$disp.date.colname) < DISP.START, .from.carryover := 1]
+  
+  # identify new events
+  disp.within.2[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, medication.class.colnames, "DATE.OUT")]
+  
+  # mark events for removal if they are from carryover and no new events are present
+  disp.remove.2 <- disp.within.2[.from.carryover == 1 & .new.events == 0, .prune.event := 1]
+  
+    # in case of multiple carryover durations from the same dispensing event, mark previous carryover durations according to last carryover duration
+  disp.remove.2[.from.carryover == 1,.prune.event := last(.prune.event), by = c(data$disp.date.colname)]
+  
+  disp.remove.2 <- disp.remove.2[.prune.event == 1]
+  
+  }
+  
+  # compine events to remove
+  disp.remove <- rbind(disp.remove.1, disp.remove.2)
+  
+  # merge with event_durations
+  event_durations_prune <- merge(event_durations[, join_date := NULL], disp.remove[, c(data$ID.colname, medication.class.colnames, data$disp.date.colname, "DISP.START", "DURATION", ".prune.event"), with = FALSE], by = c(data$ID.colname, medication.class.colnames, data$disp.date.colname, "DISP.START", "DURATION"), all.x = TRUE)
+  
+  if(keep.all == FALSE) {
+    
+  output  <- event_durations_prune[is.na(.prune.event)]
+  
+  output[, .prune.event := NULL]
+    
+  } else { output <- event_durations_prune }
+
+  return(output)
+  
+}
+
+```
+
+### Consider special periods of type carryover as covered
+
+Without further processing of event_durations for CMA computations, special periods of type *carryover* will appear as gaps, possibly leading to underestimation of implementation or even assumption of discontinuation and non-persistence. To consider such periods as covered, they should be added to the `event_durations` dataset. This can be achieved by merging the special periods with the `event_durations` dataset. This can be done before pruning, but `prune_event_durations` can be used to identify periods that should not be considered as covered in case of no further dispensing events:
+
+```{r}
+
+# compute event durations
+event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
+                                                presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
+                                                special.periods.data = durcomp.hospitalisation[ID == 3],
+                                                special.periods.mapping = "carryover",
+                                                ID.colname = "ID",
+                                                presc.date.colname = "DATE.PRESC",
+                                                disp.date.colname = "DATE.DISP",
+                                                date.format = "%Y-%m-%d",
+                                                medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
+                                                total.dose.colname = "TOTAL.DOSE",
+                                                presc.daily.dose.colname = "DAILY.DOSE",
+                                                presc.duration.colname = "PRESC.DURATION",
+                                                visit.colname = "VISIT",
+                                                force.init.presc = TRUE,
+                                                force.presc.renew = TRUE,
+                                                split.on.dosage.change = TRUE,
+                                                trt.interruption = "carryover",
+                                                suppress.warnings = FALSE,
+                                                return.data.table = TRUE,
+                                                progress.bar = FALSE)
+
+# prune event durations
+event_durations <- prune_event_durations(event_durations_list, # output of compute_event_durations
+                                         include = c("special periods"), # only consider special periods
+                                         medication.class.colnames = "ATC.CODE", # only use ATC code to identify events for pruning
+                                         days.within.out.date.1 = NA, # don't flag carryover durations if there are new events within a number of days after the end of special periods 
+                                         days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods 
+                                         keep.all = TRUE # keep all events and add a flag in the dataset
+                                         )
+
+# get special periods dataset
+special_periods <- event_durations_list$special_periods
+
+# set join date to the beginning of special durations
+event_durations[, join_date := DISP.START + DURATION]
+special_periods[, join_date := DATE.IN]
+
+# key by ID and join date
+setkeyv(event_durations, cols = c(event_durations_list$ID.colname, "join_date"))
+setkeyv(special_periods, cols = c(event_durations_list$ID.colname, "join_date"))
+
+# select durations ending at the start of a special period
+dt1 <- na.omit(special_periods[event_durations], cols = "DATE.IN")
+dt1 <- dt1[,c(event_durations_list$ID.colname, "DATE.IN", "DATE.OUT", "ATC.CODE", "SPECIAL.DURATION", event_durations_list$presc.daily.dose.colname), with = FALSE] # only keep necessary columns, including daily dose
+
+# set join date to the end of special durations
+event_durations[, join_date := DISP.START]
+special_periods[, join_date := DATE.OUT]
+
+# key by ID and join date
+setkeyv(event_durations, cols = c(event_durations_list$ID.colname, "join_date"))
+setkeyv(special_periods, cols = c(event_durations_list$ID.colname, "join_date"))
+
+# select durations beginning at the end of a special period
+dt2 <- na.omit(special_periods[event_durations], cols = "DATE.OUT")
+dt2 <- dt2[,c(event_durations_list$ID.colname, "DATE.IN", "DATE.OUT", "ATC.CODE", "SPECIAL.DURATION", ".prune.event"), with = FALSE] # only keep necessary columns, including flag for pruning
+
+# merge dt1 and dt2 and select unique rows
+dt_merge <- unique(merge(dt1,
+                         dt2,
+                         all=FALSE,
+                         by = c(event_durations_list$ID.colname, "DATE.IN", "DATE.OUT", "SPECIAL.DURATION", "ATC.CODE")))
+
+# keep only rows not flagged for pruning
+covered_periods <- dt_merge[is.na(.prune.event)]
+
+# drop unnecessary columns
+covered_periods[,`:=` ( DATE.OUT = NULL,
+                        .prune.event = NULL)]
+
+
+
+# change column names
+setnames(covered_periods,
+         old = c("DATE.IN", "SPECIAL.DURATION"),
+         new = c("DISP.START", "DURATION"))
+
+# append covered periods to event durations dataset
+event_durations_list$event_durations <- rbind(event_durations, covered_periods, fill = TRUE)
+
+# prune dataset
+event_durations <- prune_event_durations(event_durations_list,
+                                         include = c("special periods"), # only consider special periods
+                                         medication.class.colnames = "ATC.CODE", 
+                                         days.within.out.date.1 = 7, # flag carryover durations if there are new events within 7 days after the end of special periods 
+                                         days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods 
+                                         keep.all = FALSE # remove flagged events from dataset
+                                         )
+
+# same plot as in Figure 1
+event_durations <- event_durations[DURATION > 0 & ID == 3 & grepl("J01EE01", ATC.CODE)]
+
+cma0 <- CMA0(event_durations,
+             ID.colname = "ID",
+             event.date.colname = "DISP.START",
+             event.duration.colname = "DURATION",
+             event.daily.dose.colname = "DAILY.DOSE",
+             medication.class.colname = "ATC.CODE",
+             followup.window.start = as.Date("2056-07-01"),
+             followup.window.duration = 2*365,
+             observation.window.start = as.Date("2057-01-01"),
+             observation.window.duration = 365)
+
+event_durations[,I := .I]
+
+plot(cma0, min.plot.size.in.characters.vert = 0, show.legend = FALSE)
+for(i in 1:nrow(durcomp.hospitalisation[ID == 3])){
+
+  first_event <- as.Date("2056-07-01")
+
+  bottom = head(event_durations[,I],1)
+  top = tail(event_durations[,I],1)
+  start = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.IN"]]-first_event)
+  end = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.OUT"]]-first_event)
+
+  rect(xleft=start, xright=end, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(0,0,1,alpha = 0.5), border = NULL)}
+
+```
+
+
+### Exclude special periods and treatment interruptions from CMA computations
+
+
 
 

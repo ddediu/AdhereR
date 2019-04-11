@@ -561,7 +561,9 @@ compute_event_durations <- function(disp.data = NULL,
                                         .episode = -1),
                              fill = TRUE)
 
-          setorderv(data.melt, cols = c("DATE", ".episode"), na.last = TRUE)
+          data.melt[, EVENT := factor(EVENT, levels = c("DATE.OUT", "DISP.DATE", "DATE.IN", "END.PRESC"))]
+
+          setorderv(data.melt, cols = c("DATE", "EVENT", ".episode"), na.last = TRUE)
 
           # calculate durations of intersections
           data.melt[,`:=` (DISP.EVENT = 0,
@@ -729,6 +731,7 @@ compute_event_durations <- function(disp.data = NULL,
             med_event <- NULL;
             for(episode in episodes)
             {
+
               presc.dose.i <- med_presc[[episode,"DAILY.DOSE"]]; # prescribed daily dose
 
               if(presc.dose.i == 0) # if event happens during treatment interruption (prescribed dose = 0), check what to do
