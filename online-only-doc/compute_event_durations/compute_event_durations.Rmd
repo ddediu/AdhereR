@@ -16,7 +16,7 @@ editor_options:
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
 library(AdhereR)
 library(data.table)
-source("B:/Postdoc/AdhereR/AdhereR/R/matching_function.R")
+source("matching_function.R")
 
 # Various Rmarkdown output options:
 # center figures and reduce their file size:
@@ -523,7 +523,7 @@ The `event_durations` dataset has two columns that can be used as event date: `d
 
 [Figure 6](#Figure-6) shows CMA7-plots of the same `event_durations`, on the left with `event.date.colname = "DATE.DISP"` and on the right with `event.date.colname = "DISP.START"`. The observation window (OW) begins and ends during special periods of type *carryover* (blue areas), pushing part of a supply into the OW and another supply partially out of the OW. With `event.date.colname = "DATE.DISP"`, the original dispensing date 
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6:** CMA7 calculated with event.date.colname = \"DATE.DISP\"" (left) and event.date.colname = \"DISP.START\"" (right) for an observation period starting and ending during special periods with carryover.", fig.height=6, fig.width=8, out.width="100%"}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6:** CMA7 calculated with event.date.colname = \"DATE.DISP\" (left) and event.date.colname = \"DISP.START\" (right) for an observation period starting and ending during special periods with carryover.", fig.height=6, fig.width=8, out.width="100%"}
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
                                            presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
                                            special.periods.data = durcomp.hospitalisation[c(4,9)],
@@ -730,7 +730,6 @@ prune_event_durations <- function(data,
 Without further processing of event_durations for CMA computations, special periods of type *carryover* will appear as gaps, possibly leading to underestimation of implementation or even assumption of discontinuation and non-persistence. To consider such periods as covered, they should be added to the `event_durations` dataset. This can be achieved by merging the special periods with the `event_durations` dataset. This can be done before pruning, but `prune_event_durations` can be used to identify periods that should not be considered as covered in case of no further dispensing events:
 
 ```{r}
-
 # compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
                                                 presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
@@ -753,28 +752,28 @@ event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[I
                                                 return.data.table = TRUE,
                                                 progress.bar = FALSE)
 
-# prune event durations
-event_durations <- prune_event_durations(event_durations_list, # output of compute_event_durations
+# prune dataset
+event_durations <- prune_event_durations(event_durations_list,
                                          include = c("special periods"), # only consider special periods
-                                         medication.class.colnames = "ATC.CODE", # only use ATC code to identify events for pruning
-                                         days.within.out.date.1 = NA, # don't flag carryover durations if there are new events within a number of days after the end of special periods 
+                                         medication.class.colnames = "ATC.CODE", 
+                                         days.within.out.date.1 = 7, # flag carryover durations if there are new events within 7 days after the end of special periods 
                                          days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods 
-                                         keep.all = TRUE # keep all events and add a flag in the dataset
+                                         keep.all = FALSE # remove flagged events from dataset
                                          )
 
 # get special periods dataset
 special_periods <- event_durations_list$special_periods
 
 # set join date to the beginning of special durations
-event_durations[, join_date := DISP.START + DURATION]
+event_durations[, join_date := DISP.START+DURATION]
 special_periods[, join_date := DATE.IN]
 
 # key by ID and join date
 setkeyv(event_durations, cols = c(event_durations_list$ID.colname, "join_date"))
 setkeyv(special_periods, cols = c(event_durations_list$ID.colname, "join_date"))
 
-# select durations ending at the start of a special period
-dt1 <- na.omit(special_periods[event_durations], cols = "DATE.IN")
+# select durations ending within 7 days before the start of a special period
+dt1 <- na.omit(special_periods[event_durations, roll = -7], cols = "DATE.IN")
 dt1 <- dt1[,c(event_durations_list$ID.colname, "DATE.IN", "DATE.OUT", "ATC.CODE", "SPECIAL.DURATION", event_durations_list$presc.daily.dose.colname), with = FALSE] # only keep necessary columns, including daily dose
 
 # set join date to the end of special durations
@@ -785,9 +784,9 @@ special_periods[, join_date := DATE.OUT]
 setkeyv(event_durations, cols = c(event_durations_list$ID.colname, "join_date"))
 setkeyv(special_periods, cols = c(event_durations_list$ID.colname, "join_date"))
 
-# select durations beginning at the end of a special period
-dt2 <- na.omit(special_periods[event_durations], cols = "DATE.OUT")
-dt2 <- dt2[,c(event_durations_list$ID.colname, "DATE.IN", "DATE.OUT", "ATC.CODE", "SPECIAL.DURATION", ".prune.event"), with = FALSE] # only keep necessary columns, including flag for pruning
+# select durations beginning within 7 days after the end of a special period
+dt2 <- na.omit(special_periods[event_durations, roll = 7], cols = "DATE.OUT")
+dt2 <- dt2[,c(event_durations_list$ID.colname, "DATE.IN", "DATE.OUT", "ATC.CODE", "SPECIAL.DURATION"), with = FALSE] # only keep necessary columns, including flag for pruning
 
 # merge dt1 and dt2 and select unique rows
 dt_merge <- unique(merge(dt1,
@@ -795,40 +794,21 @@ dt_merge <- unique(merge(dt1,
                          all=FALSE,
                          by = c(event_durations_list$ID.colname, "DATE.IN", "DATE.OUT", "SPECIAL.DURATION", "ATC.CODE")))
 
-# keep only rows not flagged for pruning
-covered_periods <- dt_merge[is.na(.prune.event)]
-
-# drop unnecessary columns
-covered_periods[,`:=` ( DATE.OUT = NULL,
-                        .prune.event = NULL)]
-
-
-
 # change column names
-setnames(covered_periods,
+setnames(dt_merge,
          old = c("DATE.IN", "SPECIAL.DURATION"),
          new = c("DISP.START", "DURATION"))
 
-# append covered periods to event durations dataset
-event_durations_list$event_durations <- rbind(event_durations, covered_periods, fill = TRUE)
 
-# prune dataset
-event_durations <- prune_event_durations(event_durations_list,
-                                         include = c("special periods"), # only consider special periods
-                                         medication.class.colnames = "ATC.CODE", 
-                                         days.within.out.date.1 = 7, # flag carryover durations if there are new events within 7 days after the end of special periods 
-                                         days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods 
-                                         keep.all = FALSE # remove flagged events from dataset
-                                         )
+event_durations <- rbind(event_durations, dt_merge, fill = TRUE)
+```
 
+```{r echo=FALSE}
 # same plot as in Figure 1
-event_durations <- event_durations[DURATION > 0 & ID == 3 & grepl("J01EE01", ATC.CODE)]
-
 cma0 <- CMA0(event_durations,
              ID.colname = "ID",
              event.date.colname = "DISP.START",
              event.duration.colname = "DURATION",
-             event.daily.dose.colname = "DAILY.DOSE",
              medication.class.colname = "ATC.CODE",
              followup.window.start = as.Date("2056-07-01"),
              followup.window.duration = 2*365,
@@ -848,7 +828,6 @@ for(i in 1:nrow(durcomp.hospitalisation[ID == 3])){
   end = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.OUT"]]-first_event)
 
   rect(xleft=start, xright=end, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(0,0,1,alpha = 0.5), border = NULL)}
-
 ```
 
 
