@@ -34,6 +34,23 @@
 #
 ################################################################################
 
+############
+## TODO ####
+#
+# float point precision in SVG
+# string height & width in SVG
+# make sure the image resizes well
+# convert IDs into class'es and use IDs only when really needed
+# check colors, etc, consistency
+#
+# wrapper for conversion to R image
+#
+# HTML + CSS + JavaScript
+#
+# test
+# profile & optimise
+#
+############
 
 # Grayscale colors palette:
 .bw.colors <- function(n)
@@ -2489,15 +2506,166 @@
             '<defs>\n', # don't display it yet...
             '<g id="legend">\n');
 
-    # The legend dimensions:
-    lw <- lh <- 0;
+    # The legend dimensions and other aesthetics:
+    lw <- lh <- 0; # width and height
+    lmx <- dims.chr.legend; lmy <- 2 # margins
+    lnl <- 1.25; lnp <- 0.25; # the vertical size of a newline and newpara (in dims.chr.legend)
 
     # The actual legend content:
-    l2 <- c(.SVG.text(x=0, y=0, text="LEGEND", font_size=dims.chr.legend.title, font="Arial Black", h.align="left", v.align="bottom", col="black"));
-    lh <- lh + dims.chr.legend.title; lw <- max(lw, dims.chr.legend.title * nchar("LEGEND"));
+    # The legend title:
+    l2 <- c(.SVG.text(x=lmx, y=lmy+lh, text="Legend",
+                      font_size=dims.chr.legend.title, font="Arial Black", h.align="left", v.align="bottom", col="gray30",
+                      id="legend-title"));
+    lh <- lh + dims.chr.legend.title + lnl*dims.chr.legend; lw <- max(lw, dims.chr.legend.title * nchar("Legend"));
+    lh <- lh + lnp*dims.chr.legend.title; # new para
+
+    # The event:
+    l2 <- c(l2,
+            .SVG.lines(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
+                       connected=FALSE, stroke="black", stroke_width=lwd.event, lty=lty.event,
+                       id="legend-events"),
+            .SVG.points(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
+                        pch=c(pch.start.event, pch.end.event),col="black", cex=legend.cex,
+                        id="legend-events"));
+
+    if( !plot.dose )
+    {
+      l2 <- c(l2,
+              .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="duration",
+                        col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                        id="legend-events"));
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("duration")+4)*dims.chr.legend);
+    } else
+    {
+      # Min dose:
+      l2 <- c(l2,
+              .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="duration (min. dose)",
+                        col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                        id="legend-events"));
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("duration (min. dose)")+4)*dims.chr.legend);
+
+      # Max dose:
+      l2 <- c(l2,
+              .SVG.lines(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
+                         connected=FALSE, stroke="black", stroke_width=lwd.event.max.dose, lty=lty.event,
+                         id="legend-events"),
+              .SVG.points(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
+                          pch=c(pch.start.event, pch.end.event),col="black", cex=legend.cex,
+                          id="legend-events"),
+              .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="duration (max. dose)",
+                        col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                        id="legend-events"));
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("duration (max. dose)")+4)*dims.chr.legend);
+    }
+
+    # No event:
+    l2 <- c(l2,
+            .SVG.lines(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
+                       connected=FALSE, stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
+                       id="legend-no-event"),
+            .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="no event/connector",
+                      col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                      id="legend-no-event"));
+    lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("no event/connector")+4)*dims.chr.legend);
+    lh <- lh + lnp*dims.chr.legend.title; # new para
+
+    # Event intervals:
+    if( show.event.intervals )
+    {
+      l2 <- c(l2,
+              .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                        stroke="black", fill="black", fill_opacity=0.5,
+                        id="legend-interval"),
+              .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="days covered",
+                        col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                        id="legend-interval"));
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("days covered")+4)*dims.chr.legend);
+      l2 <- c(l2,
+              .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                        stroke="black", fill="none",
+                        id="legend-interval"),
+              .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="gap days",
+                        col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                        id="legend-interval"));
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("gap days")+4)*dims.chr.legend);
+      lh <- lh + lnp*dims.chr.legend.title; # new para
+    }
+
+    # Medication classes:
+    for( i in 1:length(cols) )
+    {
+      med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+      l2 <- c(l2,
+              .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                        stroke="black", fill=cols[i], fill_opacity=0.5,
+                        id="legend-medication-class"));
+      med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+      if( print.dose || plot.dose )
+      {
+        dose.for.cat <- (dose.range$category == med.class.name);
+        if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+        {
+          med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+        }
+      }
+      l2 <- c(l2,
+              .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text=med.class.name,
+                        col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                        id="legend-medication-class"));
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar(med.class.name)+4)*dims.chr.legend);
+    }
+    lh <- lh + lnp*dims.chr.legend.title; # new para
+
+    # Follow-up window:
+    if( highlight.followup.window )
+    {
+      l2 <- c(l2,
+              .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                        stroke=followup.window.col, fill="none", stroke_width=2, lty="dashed",
+                        id="legend-fuw"),
+              .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="follow-up wnd.",
+                        col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                        id="legend-interval"));
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("follow-up wnd.")+4)*dims.chr.legend);
+    }
+
+    # Observation window:
+    if( highlight.observation.window )
+    {
+      if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
+      {
+        # CMA8 also has a "real" OW:
+        l2 <- c(l2,
+                .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                          stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
+                          id="legend-ow-theoretical"),
+                .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="theor. obs. wnd.",
+                          col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                          id="legend-ow-theoretical"));
+        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("theor. obs. wnd.")+4)*dims.chr.legend);
+        l2 <- c(l2,
+                .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                          stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
+                          id="legend-ow-real"),
+                .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="real obs. wnd.",
+                          col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                          id="legend-ow-real"));
+        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("real obs. wnd.")+4)*dims.chr.legend);
+      } else
+      {
+        l2 <- c(l2,
+                .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                          stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
+                          id="legend-ow"),
+                .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="observation wnd.",
+                          col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                          id="legend-ow"));
+        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("observation wnd.")+4)*dims.chr.legend);
+      }
+    }
 
     # The legend background:
-    lbox <- .SVG.rect(x=0, y=0, width=lw, height=lh, stroke="gray60", stroke_width=2, fill="gray99", fill_opacity=legend.bkg.opacity, id="legend-background");
+    lbox <- .SVG.rect(x=0, y=0, width=lw+2*lmx, height=lh+2*lmy, stroke="gray60", stroke_width=2, fill="gray99", fill_opacity=legend.bkg.opacity, id="legend-background");
 
     # Close the legend:
     l2 <- c(l2,
@@ -2514,7 +2682,7 @@
     svg.str <- c(svg.str,
                  # The legend:
                  #.legend(legend.x, legend.y)
-                 .legend(100, 30)
+                 .legend(100, 30) # RESTORE THE COORECT CALL AFTER DEBUG!!!
     );
   }
 
