@@ -508,6 +508,8 @@
                        min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
                        suppress.warnings=FALSE,         # suppress warnings?
+                       generate.PNG=FALSE, generate.JPEG=FALSE, # generate corresponding static images?
+                       generate.R.plot=FALSE,           # generate standard R plot?
                        generate.HTML.container=TRUE,    # generate the HTML container for the SVG?
                        generate.inline.SVG=FALSE,       # if a HTML container, include the SVG inline or generate as a self-contained file (always the case if there's no HTML container)?
                        ...
@@ -591,7 +593,7 @@
                              col=CMA.plot.text, font_size=dims.chr.cma,
                              h.align=c("right","right","left"),
                              v.align="center",
-                             rotate=c(-60,-60,-90),
+                             rotate=c(-(90+rotate.text),-(90+rotate.text),-90),
                              id="cma-summary-text")
       );
     }
@@ -626,7 +628,7 @@
                              text=c(sprintf("%.1f%%",100*adh.x.0),
                                     sprintf("%.1f%%",100*adh.x.1)),
                              col=CMA.plot.text, font_size=dims.chr.cma,
-                             h.align=c("right","right"), v.align="center", rotate=-60,
+                             h.align=c("right","right"), v.align="center", rotate=rotate.text,
                              id="cma-summary-text")
       );
     }
@@ -658,7 +660,7 @@
                              y=.scale.y.to.SVG.plot(y.mean + rep(c(-2 - 0.25, 2 + 0.25),times=length(adh))[1:length(adh)]),
                              text=sprintf("%.1f%%",100*adh),
                              col=CMA.plot.text, font_size=dims.chr.cma,
-                             h.align=rep(c("right", "left"),times=length(adh))[1:length(adh)], v.align="center", rotate=-60,
+                             h.align=rep(c("right", "left"),times=length(adh))[1:length(adh)], v.align="center", rotate=rotate.text,
                              id="cma-summary-text")
       );
     } else if( 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
@@ -1005,9 +1007,6 @@
   adh.plot.space <- c(0, ifelse( plot.CMA && has.estimated.CMA, duration*CMA.plot.ratio, 0) );
   duration.total <- duration + adh.plot.space[2];
 
-  # Save the graphical params and restore them later:
-  old.par <- par(no.readonly=TRUE);
-
   # Make sure there's enough space to actually plot the patient IDs on the y-axis:
   id.labels <- do.call(rbind,lapply(as.character(patids), # for each patient ID, compute the string dimensions in inches
                                     function(p)
@@ -1037,19 +1036,6 @@
                         "height"=strheight(tmp, units="inches", cex=cex.lab));
 
   left.margin <- (cur.mai <- par("mai"))[2]; # left margin in inches (and cache the current margins too)
-
-  # If there's enough space as it is, don't do anything:
-  if( left.margin < (y.label$height + max(id.labels$width,na.rm=TRUE) + strwidth("M", units="inches", cex=cex.lab)) ) # remember: y.label is vertical
-  {
-    # Well, there isn't enough space, so:
-    rotate.id.labels <- 30; # rotate the labels (in degrees)
-    new.left.margin <- (y.label$height + (cos(rotate.id.labels*pi/180) * max(id.labels$width,na.rm=TRUE)) + strwidth("0000", units="inches", cex=cex.axis)); # ask for enough space
-    par(mai=c(cur.mai[1], new.left.margin, cur.mai[3], cur.mai[4]));
-  } else
-  {
-    # Seems to fit, so don't do anything:
-    rotate.id.labels <- 0;
-  }
 
   # Vertical space needed for showing the partial CMAs:
   vert.space.cmas <- 0;
@@ -1122,10 +1108,12 @@
   dims.chr.legend.title <- (legend.cex.title * dims.chr.std);
   dims.event.x          <- dims.chr.std*2; # the horizontal size of an event
   dims.event.y          <- (cex * dims.chr.std); # the vertical size of an event
-  dims.day              <- ifelse(duration.total <= 90, 1, ifelse(duration.total <= 365, 7, ifelse(duration.total <= 3*365, 30, ifelse(duration.total <= 10*365, 90, 180)))); # how many days coorepond to a horizontal user unit (depends on how many days there are in total)
-  rotate.id.labels      <- 30 * as.numeric((dims.chr.std + dims.chr.lab + max(nchar(id.labels),na.rm=TRUE)*dims.chr.axis) >= (dims.chr.std*10)); # if the space required by the y-axis is more than 10 "standard" characters, then we rotate the labels
-  dims.axis.x           <- dims.chr.std + dims.chr.lab + (cos(30*pi/180) * max(nchar(as.character(date.labels$string)),na.rm=TRUE)*dims.chr.axis);
-  dims.axis.y           <- dims.chr.std + dims.chr.lab + (sin(rotate.id.labels*pi/180) * max(nchar(as.character(id.labels$string)),na.rm=TRUE)*dims.chr.axis);
+  dims.day              <- ifelse(duration.total <= 90, 1, ifelse(duration.total <= 365, 7, ifelse(duration.total <= 3*365, 30, ifelse(duration.total <= 10*365, 90, 180)))); # how many days correpond to one horizontal user unit (depends on how many days there are in total)
+  rotate.text           <- -60; # (select) text rotation (in degrees)
+  dims.axis.x           <- dims.chr.std + dims.chr.lab +
+    (cos(-rotate.text*pi/180) * max(vapply(as.character(date.labels$string), function(s) .SVG.string.dims(s, font_size=dims.chr.axis)["width"], numeric(1)),na.rm=TRUE));
+  dims.axis.y           <- dims.chr.std + dims.chr.lab +
+    (sin(-rotate.text*pi/180) * max(vapply(as.character(id.labels$string), function(s) .SVG.string.dims(s, font_size=dims.chr.axis)["width"], numeric(1)),na.rm=TRUE));
   dims.plot.x           <- (dims.axis.y + dims.chr.std);
   dims.plot.y           <- (dims.chr.title + dims.chr.std);
   dims.plot.width       <- (dims.event.x * (duration.total + 10)/dims.day);
@@ -1251,11 +1239,6 @@
                          fill="white", stroke="none"),
                '\n' # one empty line
                );
-
-
-  ##
-  ## Title & axis labels ####
-  ##
 
   # Function mapping the CMA values to the appropriate x-coordinates:
   if( plot.CMA && has.estimated.CMA )
@@ -1400,7 +1383,7 @@
       # SVG:
       svg.str <- c(svg.str,
                    .SVG.text(x=(dims.plot.x - dims.chr.axis), y=.scale.y.to.SVG.plot(y.cur + vspace.needed/2), text=pid,
-                             font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-rotate.id.labels,
+                             font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
                              id="axis-values-y", comment="The y-axis labels")
                    );
 
@@ -1838,14 +1821,14 @@
                            .SVG.text(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.start.min)),
                                      y=.scale.y.to.SVG.plot(c(min.y.norm,                max.y.norm)),
                                      text=c(                sprintf("%.1f%%",100*min.y), sprintf("%.1f%%",100*max.y)),
-                                     col="black", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=-60,
+                                     col="black", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
                                      id="partial_cma_timeseries_axis_text"),
                            if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
                            {
                              .SVG.text(x=.scale.x.to.SVG.plot(corrected.x + x.start.min),
                                        y=.scale.y.to.SVG.plot(y.for.0perc),
                                        text="0%",
-                                       col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=-60,
+                                       col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
                                        id="partial_cma_timeseries_axis_text")
                            },
                            if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
@@ -1853,7 +1836,7 @@
                              .SVG.text(x=.scale.x.to.SVG.plot(corrected.x + x.start.min),
                                        y=.scale.y.to.SVG.plot(y.for.100perc),
                                        text="100%",
-                                       col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=-60,
+                                       col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
                                        id="partial_cma_timeseries_axis_text")
                            }
               );
@@ -2002,7 +1985,7 @@
 
                    # Text guides:
                    .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), y=(dims.plot.y - dims.chr.axis/2),
-                             text="0%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
+                             text="0%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
                              id="cma-drawing-area-guides-text"),
                    if(adh.max > 1.0)
                    {
@@ -2014,14 +1997,14 @@
                        {
                          # Don't overcrowd the 100% and maximum CMA
                          .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y - dims.chr.axis/2),
-                                   text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
+                                   text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
                                    id="cma-drawing-area-guides-text")
                        }
                      )
                    } else
                    {
                      .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y - dims.chr.axis/2),
-                               text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
+                               text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
                                id="cma-drawing-area-guides-text")
                    }
       );
@@ -2104,7 +2087,7 @@
     svg.str <- c(svg.str,
                  # Axis labels:
                  .SVG.text(x=xs, y=rep(ys, length(xs)),
-                           text=as.character(date.labels$string), col="black", font="Arial", font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-30,
+                           text=as.character(date.labels$string), col="black", font="Arial", font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
                            id="axis-values-x"),
 
                  # Axis ticks:
