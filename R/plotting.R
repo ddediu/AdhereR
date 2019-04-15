@@ -2383,144 +2383,8 @@
   ## The legend ####
   ##
 
-  # The legend:
-  .legend.base <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
-  {
-    # Legend rectangle:
-    if( do.plot ) rect(x, y, x + width, y + height, border=gray(0.6), lwd=2, col=rgb(0.99,0.99,0.99,legend.bkg.opacity));
-
-    cur.y <- y + height; # current y
-    max.width <- width; # maximum width
-
-    # Legend title:
-    if( do.plot ) text(x + width/2, cur.y, "Legend", pos=1, col=gray(0.3), cex=legend.cex.title);
-    cur.y <- cur.y - strheight("Legend", cex=legend.cex.title) - 3*legend.char.height; max.width <- max(max.width, strwidth("Legend", cex=legend.cex.title));
-
-    # Event:
-    if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event, col="black");
-    if( do.plot ) points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
-    if( do.plot ) points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
-
-    if( !plot.dose )
-    {
-      if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "duration", col="black", cex=legend.cex, pos=4);
-      cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration", cex=legend.cex));
-    } else
-    {
-      if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "duration (min. dose)", col="black", cex=legend.cex, pos=4);
-      cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration (min. dose)", cex=legend.cex));
-      if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event.max.dose, col="black");
-      if( do.plot ) points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
-      if( do.plot ) points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
-      if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "duration (max. dose)", col="black", cex=legend.cex, pos=4);
-      cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration (max. dose)", cex=legend.cex));
-    }
-
-    # No event:
-    if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.continuation, lwd=lwd.continuation, col=col.continuation);
-    if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "no event/connector", col="black", cex=legend.cex, pos=4);
-    cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("no event/connector", cex=legend.cex));
-
-    # Event intervals:
-    if( show.event.intervals )
-    {
-      if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor("black",alpha.f=0.5));
-      if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "days covered", col="black", cex=legend.cex, pos=4);
-      cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("days covered", cex=legend.cex));
-      if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col="black", density=25);
-      if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "gap days", col="black", cex=legend.cex, pos=4);
-      cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("gap days", cex=legend.cex));
-    }
-
-    # medication classes:
-    for( i in 1:length(cols) )
-    {
-      med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
-      if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor(cols[i],alpha.f=0.5));
-      if( do.plot )
-      {
-        med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
-        if( print.dose || plot.dose )
-        {
-          dose.for.cat <- (dose.range$category == med.class.name);
-          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
-          {
-            med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
-          }
-        }
-        text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, med.class.name, col="black", cex=legend.cex, pos=4);
-      }
-      cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth(names(cols)[i], cex=legend.cex));
-    }
-    cur.y <- cur.y - 0.5*legend.char.height;
-
-    # Follow-up window:
-    if( highlight.followup.window )
-    {
-      if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=followup.window.col, lty="dotted", lwd=2, col=rgb(1,1,1,0.0));
-      if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "follow-up wnd.", col="black", cex=legend.cex, pos=4);
-      cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("follow-up wnd.", cex=legend.cex));
-    }
-
-    # Observation window:
-    if( highlight.observation.window )
-    {
-      if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
-      {
-        # CMA8 also has a "real" OW:
-        if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=observation.window.density, angle=observation.window.angle);
-        if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "theor. obs. wnd.", col="black", cex=legend.cex, pos=4);
-        cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("theor. obs. wnd.", cex=legend.cex));
-        if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=real.obs.window.density, angle=real.obs.window.angle);
-        if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "real obs.wnd.", col="black", cex=legend.cex, pos=4);
-        cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("real obs.wnd.", cex=legend.cex));
-      } else
-      {
-        if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=observation.window.density, angle=observation.window.angle);
-        if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "observation wnd.", col="black", cex=legend.cex, pos=4);
-        cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("observation wnd.", cex=legend.cex));
-      }
-    }
-
-    # Required size:
-    return (c("width" =max.width + 5.0*legend.char.width,
-              "height"=(y + height - cur.y) + 1.0*legend.char.height));
-  }
-  if( show.legend )
-  {
-    # Character size for the legend:
-    legend.char.width <- strwidth("O",cex=legend.cex); legend.char.height <- strheight("O",cex=legend.cex);
-
-    legend.size <- .legend.base(do.plot=FALSE);
-    if( is.na(legend.x) || legend.x == "right" )
-    {
-      legend.x <- par("usr")[2] - legend.size["width"] - legend.char.width;
-    } else if( legend.x == "left" )
-    {
-      legend.x <- par("usr")[1] + legend.char.width;
-    } else if( !is.numeric(legend.x) && length(legend.x) != 1 )
-    {
-      legend.x <- par("usr")[2] - legend.size["width"] - legend.char.width;
-    }
-    if( is.na(legend.y) || legend.y == "bottom" )
-    {
-      legend.y <- par("usr")[3] + legend.char.height;
-    } else if( legend.y == "top" )
-    {
-      legend.y <- par("usr")[4] - legend.size["height"] - legend.char.height;
-    } else if( !is.numeric(legend.y) && length(legend.y) != 1 )
-    {
-      legend.y <- par("usr")[3] + legend.char.height;
-    }
-    ret.val <- .legend.base(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
-  }
-  else
-  {
-    ret.val <- c("width"=NA, "height"=NA);
-  }
-
   # SVG:
-  .legend <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
+  .legend <- function(x=0, y=0)
   {
     # The legend is an object that we can move around, scale, etc:
     l1 <- c(.SVG.comment("The legend", newpara=TRUE, newline=TRUE),
@@ -2688,6 +2552,36 @@
     # The legend background:
     lbox <- .SVG.rect(x=0, y=0, width=lw+2*lmx, height=lh+2*lmy, stroke="gray60", stroke_width=2, fill="gray99", fill_opacity=legend.bkg.opacity, id="legend-background");
 
+    # The legend position:
+    if( is.null(x) || length(x) > 1 || is.na(x) || !(x %in% c("left", "center", "right") || is.numeric(x)) ) x <- "right";
+    if( is.na(x) || x == "right" )
+    {
+      x <- (dims.plot.x + dims.plot.width - lw - 3*lmx);
+    } else if( x == "center" )
+    {
+      x <- (dims.plot.x + lmx + (dims.plot.width - lmx - lw)/2);
+    } else if( x == "left" )
+    {
+      x <- (dims.plot.x + lmx);
+    } else
+    {
+      x <- .scale.x.to.SVG.plot(x);
+    }
+    if( is.null(y) || length(y) > 1 || is.na(y) || !(y %in% c("top", "center", "bottom") || is.numeric(y)) ) y <- "bottom";
+    if( is.na(y) || y == "bottom" )
+    {
+      y <- (dims.plot.y + dims.plot.height - lh - 3*lmy);
+    } else if( y == "center" )
+    {
+      y <- (dims.plot.y + (dims.plot.height - lh - 2*lmy)/2);
+    } else if( y == "top" )
+    {
+      y <- (dims.plot.y + lmy);
+    } else
+    {
+      y <- .scale.y.to.SVG.plot(y);
+    }
+
     # Close the legend:
     l2 <- c(l2,
             '</g>\n',
@@ -2698,14 +2592,10 @@
     # Insert the legend background where it should be:
     return (c(l1, lbox, l2));
   }
-  if( show.legend )
-  {
-    svg.str <- c(svg.str,
-                 # The legend:
-                 #.legend(legend.x, legend.y)
-                 .legend(100, 30) # RESTORE THE COORECT CALL AFTER DEBUG!!!
-    );
-  }
+  svg.str <- c(svg.str,
+               # The legend:
+               .legend(legend.x, legend.y)
+  );
 
 
   ##
@@ -2730,11 +2620,6 @@
     # Save the SVG file:
     writeLines(svg.str, "~/Temp/tmp/AdhereR-plot.svg", sep="");
   }
-
-
-
-  par(old.par); # restore graphical params
-  return (invisible(ret.val));
 }
 
 
