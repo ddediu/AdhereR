@@ -439,6 +439,27 @@
   if( return_string ) return (paste0(r,collapse="")) else return (r);
 }
 
+# For a given font, style, font size and cex, compute the string's width and height in pixels
+# family cam be "serif", "sans" or "mono"; font can be 1 = plain text, 2 = bold face, 3 = italic and 4 = bold italic; font_size in pixels; cex as for points
+.SVG.string.dims <- function(s, family="sans", font=1, font_size=10, cex=1.0)
+{
+  # Actual font size:
+  font_size_cex <- (font_size * cex);
+
+  # The number of lines of text:
+  no.lines <- length(grep("\n",s,fixed=TRUE)) + 1;
+
+  ## The stupid way:
+  #return (c("width"=(nchar(s) - no.lines + 1) * font_size_cex,
+  #          "height"=no.lines * font_size_cex));
+
+  # Slightly better way: use "M" as the reference and compute everything relative to it (use the ):
+  M.h <- strheight("M",units="inches"); M.w <- strwidth("M",units="inches");
+  s.h <- strheight(s,units="inches");   s.w <- strwidth(s,units="inches");
+  return (c("width"=(s.w / M.w) * font_size_cex,
+            "height"=(s.h / M.h) * font_size_cex));
+}
+
 
 # Make this function produce SVG
 # (and for now display it as well to maintain compatibility with the old function)
@@ -2516,7 +2537,7 @@
     l2 <- c(.SVG.text(x=lmx, y=lmy+lh, text="Legend",
                       font_size=dims.chr.legend.title, font="Arial Black", h.align="left", v.align="bottom", col="gray30",
                       id="legend-title"));
-    lh <- lh + dims.chr.legend.title + lnl*dims.chr.legend; lw <- max(lw, dims.chr.legend.title * nchar("Legend"));
+    lh <- lh + dims.chr.legend.title + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("Legend", font_size=dims.chr.legend.title)["width"]);
     lh <- lh + lnp*dims.chr.legend.title; # new para
 
     # The event:
@@ -2534,7 +2555,7 @@
               .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="duration",
                         col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                         id="legend-events"));
-      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("duration")+4)*dims.chr.legend);
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
     } else
     {
       # Min dose:
@@ -2542,7 +2563,7 @@
               .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="duration (min. dose)",
                         col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                         id="legend-events"));
-      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("duration (min. dose)")+4)*dims.chr.legend);
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration (min. dose)", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
 
       # Max dose:
       l2 <- c(l2,
@@ -2555,7 +2576,7 @@
               .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="duration (max. dose)",
                         col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                         id="legend-events"));
-      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("duration (max. dose)")+4)*dims.chr.legend);
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration (max. dose)", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
     }
 
     # No event:
@@ -2566,7 +2587,7 @@
             .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="no event/connector",
                       col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                       id="legend-no-event"));
-    lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("no event/connector")+4)*dims.chr.legend);
+    lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("no event/connector", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
     lh <- lh + lnp*dims.chr.legend.title; # new para
 
     # Event intervals:
@@ -2579,7 +2600,7 @@
               .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="days covered",
                         col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                         id="legend-interval"));
-      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("days covered")+4)*dims.chr.legend);
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("days covered", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       l2 <- c(l2,
               .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                         stroke="black", fill="none",
@@ -2587,7 +2608,7 @@
               .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="gap days",
                         col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                         id="legend-interval"));
-      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("gap days")+4)*dims.chr.legend);
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("gap days", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       lh <- lh + lnp*dims.chr.legend.title; # new para
     }
 
@@ -2612,7 +2633,7 @@
               .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text=med.class.name,
                         col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                         id="legend-medication-class"));
-      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar(med.class.name)+4)*dims.chr.legend);
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims(med.class.name, font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
     }
     lh <- lh + lnp*dims.chr.legend.title; # new para
 
@@ -2626,7 +2647,7 @@
               .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="follow-up wnd.",
                         col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                         id="legend-interval"));
-      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("follow-up wnd.")+4)*dims.chr.legend);
+      lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("follow-up wnd", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
     }
 
     # Observation window:
@@ -2642,7 +2663,7 @@
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="theor. obs. wnd.",
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                           id="legend-ow-theoretical"));
-        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("theor. obs. wnd.")+4)*dims.chr.legend);
+        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("theor. obs. wnd", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
         l2 <- c(l2,
                 .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                           stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
@@ -2650,7 +2671,7 @@
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="real obs. wnd.",
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                           id="legend-ow-real"));
-        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("real obs. wnd.")+4)*dims.chr.legend);
+        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("real obs. wnd.", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       } else
       {
         l2 <- c(l2,
@@ -2660,7 +2681,7 @@
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="observation wnd.",
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                           id="legend-ow"));
-        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, (nchar("observation wnd.")+4)*dims.chr.legend);
+        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       }
     }
 
