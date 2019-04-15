@@ -973,9 +973,10 @@ compute_event_durations <- function(disp.data = NULL,
       med_presc[,.episode := rleidv(med_presc, cols = c("DAILY.DOSE", "PRESC.DURATION"))];
 
       # if consecutive episodes with set end date, increase .episode counter
+
       if( nrow(med_presc) > 2 )
       {
-        for( n in 2:(nrow(med_presc)-1) )
+        for( n in 2:(nrow(med_presc)))
         {
           if( !is.na(med_presc[n,"PRESC.DURATION", with = FALSE]) & !is.na(med_presc[n-1,"PRESC.DURATION", with = FALSE]) )
           {
@@ -1437,11 +1438,11 @@ time_to_initiation <- function(presc.data = NULL,
 
   # convert dates
   presc.data[,(presc.start.colname) := as.Date(get(presc.start.colname), format = date.format)];
-  disp.data[,(disp.date.colname) := as.Date(DISP.DATE, format = date.format)];
+  disp.data[,(disp.date.colname) := as.Date(get(disp.date.colname), format = date.format)];
 
   first_presc <- presc.data[,list(first.presc = min(get(presc.start.colname),na.rm=TRUE)),
                             by = c(ID.colname, medication.class.colnames)];
-  first_disp <- disp.data[,list(first.disp = min(DISP.DATE,na.rm=TRUE)),
+  first_disp <- disp.data[,list(first.disp = min(get(disp.date.colname),na.rm=TRUE)),
                            by = c(ID.colname, medication.class.colnames)];
 
   dt_t2i <- merge(first_presc, first_disp, by = c(ID.colname, medication.class.colnames), all = TRUE);

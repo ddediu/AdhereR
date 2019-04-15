@@ -7390,6 +7390,7 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' @export
 CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g., "CMA1") to be used
                              data, # the data used to compute the CMA on
+                             treat.epi=NULL, # the treatment episodes, if available
                              # Important columns in the data
                              ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
                              event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
@@ -7526,31 +7527,35 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                   suppress.warnings=NULL
   )
   {
-    # Compute the treatment espisodes:
-    treat.epi <- compute.treatment.episodes( data=data,
-                                             ID.colname=ID.colname,
-                                             event.date.colname=event.date.colname,
-                                             event.duration.colname=event.duration.colname,
-                                             event.daily.dose.colname=event.daily.dose.colname,
-                                             medication.class.colname=medication.class.colname,
-                                             carryover.within.obs.window=carryover.within.obs.window,
-                                             carry.only.for.same.medication=carry.only.for.same.medication,
-                                             consider.dosage.change=consider.dosage.change,
-                                             medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
-                                             dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
-                                             maximum.permissible.gap=maximum.permissible.gap,
-                                             maximum.permissible.gap.unit=maximum.permissible.gap.unit,
-                                             followup.window.start=followup.window.start,
-                                             followup.window.start.unit=followup.window.start.unit,
-                                             followup.window.duration=followup.window.duration,
-                                             followup.window.duration.unit=followup.window.duration.unit,
-                                             date.format=date.format,
-                                             parallel.backend="none", # make sure this runs sequentially!
-                                             parallel.threads=1,
-                                             suppress.warnings=suppress.warnings,
-                                             return.data.table=TRUE);
-    if( is.null(treat.epi) || nrow(treat.epi) == 0 ) return (NULL);
+    if(is.null(treat.epi)) {
 
+      # Compute the treatment espisodes:
+      treat.epi <- compute.treatment.episodes( data=data,
+                                               ID.colname=ID.colname,
+                                               event.date.colname=event.date.colname,
+                                               event.duration.colname=event.duration.colname,
+                                               event.daily.dose.colname=event.daily.dose.colname,
+                                               medication.class.colname=medication.class.colname,
+                                               carryover.within.obs.window=carryover.within.obs.window,
+                                               carry.only.for.same.medication=carry.only.for.same.medication,
+                                               consider.dosage.change=consider.dosage.change,
+                                               medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                               dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
+                                               maximum.permissible.gap=maximum.permissible.gap,
+                                               maximum.permissible.gap.unit=maximum.permissible.gap.unit,
+                                               followup.window.start=followup.window.start,
+                                               followup.window.start.unit=followup.window.start.unit,
+                                               followup.window.duration=followup.window.duration,
+                                               followup.window.duration.unit=followup.window.duration.unit,
+                                               date.format=date.format,
+                                               parallel.backend="none", # make sure this runs sequentially!
+                                               parallel.threads=1,
+                                               suppress.warnings=suppress.warnings,
+                                               return.data.table=TRUE);
+
+    }
+
+    if( is.null(treat.epi) || nrow(treat.epi) == 0 ) return (NULL);
 
     # Compute the real observation windows (might differ per patient) only once per patient (speed things up & the observation window is the same for all events within a patient):
     tmp <- as.data.frame(data); tmp <- tmp[!duplicated(tmp[,ID.colname]),]; # the reduced dataset for computing the actual OW:
