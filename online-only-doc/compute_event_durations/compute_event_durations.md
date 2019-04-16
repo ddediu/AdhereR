@@ -240,7 +240,7 @@ their previously available supplies after discharge. Similarly, if
 patients have repeat prescriptions for short durations and are expected
 to use supplies from previous courses. **CAVE: When using this setting,
 the computed durations may need additional processing before CMA
-calculations (see examples in section XX).**
+calculations (see examples below).**
 
 In addition to the global options, both settings accept a column name in
 the dispensing dataset (for `trt.interruption`) or special periods
@@ -563,8 +563,8 @@ cma0 <- CMA0(event_durations,
              observation.window.duration = 365)
 
 # construc treatment episodes
-TEs <- unique(event_durations[,.(START.PRESC, END.PRESC, DAILY.DOSE)])
-TEs[is.na(END.PRESC), END.PRESC := as.Date("2057-12-31")] #set end date for last episode
+TEs <- unique(event_durations[,.(episode.start, episode.end, DAILY.DOSE)])
+TEs[is.na(episode.end), episode.end := as.Date("2057-12-31")] #set end date for last episode
 TEs <- na.omit(TEs) #omit TEs with NA
 
 # add row indices
@@ -576,9 +576,9 @@ plot(cma0, min.plot.size.in.characters.vert = 0, show.legend = FALSE)
 for(i in 1:nrow(TEs)){
   bottom = head(event_durations[,I],1)
   top = tail(event_durations[,I],1)
-  start = as.numeric(TEs[i, "START.PRESC"]-head(TEs[,"START.PRESC"],1)) + 26
-  end = as.numeric(TEs[i, "END.PRESC"]-head(TEs[, "START.PRESC"],1)) + 26
-  offset = min(TEs[["START.PRESC"]], na.rm = TRUE)-min(event_durations[["DISP.START"]], na.rm = TRUE)
+  start = as.numeric(TEs[i, "episode.start"]-head(TEs[,"episode.start"],1)) + 26
+  end = as.numeric(TEs[i, "episode.end"]-head(TEs[, "episode.start"],1)) + 26
+  offset = min(TEs[["episode.start"]], na.rm = TRUE)-min(event_durations[["DISP.START"]], na.rm = TRUE)
 
   rect(xleft=start+offset, xright=end+offset, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(1,1,0,alpha = 0.2), border = "black", lty = "dashed", lwd = 0.1)}
 ```
@@ -672,9 +672,7 @@ required for CMA computations, plus additional information:
         changes or treatment interruptions/hospitalisations.
       - `DURATION`: the calculated duration of the supply, based on the
         total dispensed dose and the prescribed daily dose, starting
-        from the `DISP.START` date. \# + `START.PRESC`: the start date
-        of the prescription episode. \# + `END.PRESC`: the end date of
-        the prescription episode.
+        from the `DISP.START` date.
       - `SPECIAL.DURATION`: the number of days *during* the current
         duration affected by special durations or treatment
         interruptions of type “continue”
@@ -694,11 +692,10 @@ required for CMA computations, plus additional information:
         `medication.class.colnames` parameter.
       - `presc.daily.dose.colname`: the prescribed daily dose, as given
         by the `presc.daily.dose.colname` parameter.
-      - `DURATION`: the calculated duration of the supply, based on the
-        total dispensed dose and the prescribed daily dose, starting
-        from the `DISP.START` date.
-      - `START.PRESC`: the start date of the prescription episode.
-      - `END.PRESC`: the end date of the prescription episode.
+      - `episode.start`: the start date of the prescription episode.
+      - `episode.duration`: the duration of the prescription episode in
+        days.
+      - `episode.end`: the end date of the prescription episode.
   - `special_periods`: a `data.table` or `data.frame` with the following
     columns:
       - `ID.colname`: the unique patient ID, as given by the
@@ -735,6 +732,15 @@ computation as described in the main vignette. However, there are some
 specificities to consider.
 
 ### Medication class
+
+In `compute_event_durations`, multiple columns to specify medication
+classes can be provided. This is especially useful when different
+formulations or brands of the same medication need to be matched between
+dispensing and prescribing data. This way, polypharmacy regimens with
+multiple different treatments per patient can be processed. For CMA
+computations, only one column can be used for the medication type. If
+information from multiple columns should be considered, the content of
+these columns can be pasted together in a new column.
 
 ### Event date
 
@@ -834,7 +840,7 @@ for(i in 1:nrow(event_durations_list$special_periods)){
   }
 ```
 
-<img src="compute_event_durations_files/figure-gfm/unnamed-chunk-11-1.jpeg" title="&lt;a name=&quot;Figure-6&quot;&gt;&lt;/a&gt;**Figure 6:** CMA7 calculated with event.date.colname = &quot;DATE.DISP&quot; (left) and event.date.colname = &quot;DISP.START&quot; (right) for an observation period starting and ending during special periods with carryover." alt="&lt;a name=&quot;Figure-6&quot;&gt;&lt;/a&gt;**Figure 6:** CMA7 calculated with event.date.colname = &quot;DATE.DISP&quot; (left) and event.date.colname = &quot;DISP.START&quot; (right) for an observation period starting and ending during special periods with carryover." width="100%" style="display: block; margin: auto;" /><img src="compute_event_durations_files/figure-gfm/unnamed-chunk-11-2.jpeg" title="&lt;a name=&quot;Figure-6&quot;&gt;&lt;/a&gt;**Figure 6:** CMA7 calculated with event.date.colname = &quot;DATE.DISP&quot; (left) and event.date.colname = &quot;DISP.START&quot; (right) for an observation period starting and ending during special periods with carryover." alt="&lt;a name=&quot;Figure-6&quot;&gt;&lt;/a&gt;**Figure 6:** CMA7 calculated with event.date.colname = &quot;DATE.DISP&quot; (left) and event.date.colname = &quot;DISP.START&quot; (right) for an observation period starting and ending during special periods with carryover." width="100%" style="display: block; margin: auto;" />
+<img src="compute_event_durations_files/figure-gfm/unnamed-chunk-11-1.jpeg" title="&lt;a name=&quot;Figure-6&quot;&gt;&lt;/a&gt;**Figure 6:** CMA7 calculated with event.date.colname = &quot;DATE.DISP&quot; (top) and event.date.colname = &quot;DISP.START&quot; (bottom) for an observation period starting and ending during special periods with carryover." alt="&lt;a name=&quot;Figure-6&quot;&gt;&lt;/a&gt;**Figure 6:** CMA7 calculated with event.date.colname = &quot;DATE.DISP&quot; (top) and event.date.colname = &quot;DISP.START&quot; (bottom) for an observation period starting and ending during special periods with carryover." width="100%" style="display: block; margin: auto;" /><img src="compute_event_durations_files/figure-gfm/unnamed-chunk-11-2.jpeg" title="&lt;a name=&quot;Figure-6&quot;&gt;&lt;/a&gt;**Figure 6:** CMA7 calculated with event.date.colname = &quot;DATE.DISP&quot; (top) and event.date.colname = &quot;DISP.START&quot; (bottom) for an observation period starting and ending during special periods with carryover." alt="&lt;a name=&quot;Figure-6&quot;&gt;&lt;/a&gt;**Figure 6:** CMA7 calculated with event.date.colname = &quot;DATE.DISP&quot; (top) and event.date.colname = &quot;DISP.START&quot; (bottom) for an observation period starting and ending during special periods with carryover." width="100%" style="display: block; margin: auto;" />
 
 ### Prune event durations after carryover
 
@@ -1033,25 +1039,16 @@ event_durations <- copy(event_durations_list$event_durations)
 prescription_episodes <- copy(event_durations_list$prescription_episodes)
 
 # if no prescription enddate, set to end of follow-up window
-treatment_episodes <- copy(prescription_episodes[is.na(END.PRESC), END.PRESC := as.Date("2058-01-01")])
+treatment_episodes <- copy(prescription_episodes[is.na(episode.end), episode.end := as.Date("2058-01-01")])
 
 # calculate episode duration
-treatment_episodes[is.na(PRESC.DURATION), PRESC.DURATION := as.numeric(END.PRESC-START.PRESC)]
-
-# add episode.ID
-treatment_episodes[,episode.ID := seq(.N),
-                   by = c(event_durations_list$ID.colname, event_durations_list$medication.class.colnames)]
+treatment_episodes[is.na(episode.duration), episode.duration := as.numeric(episode.end-episode.start)]
 
 # drop unnecessary columns
 treatment_episodes[,`:=` (ATC.CODE = NULL,
                              UNIT = NULL,
                              FORM = NULL,
                              DAILY.DOSE = NULL)]
-
-# change column names
-setnames(treatment_episodes,
-         old = c("START.PRESC", "PRESC.DURATION", "END.PRESC"),
-         new = c("episode.start", "episode.duration", "episode.end"))
 
 # compute CMA per episode
 df_cma_episode <- CMA_per_episode(data = event_durations[DURATION > 0],
@@ -1080,17 +1077,26 @@ knitr::kable(cma_episode)
 
 | ID | episode.ID | episode.start | end.episode.gap.days | episode.duration | episode.end |       CMA |
 | -: | ---------: | :------------ | -------------------: | ---------------: | :---------- | --------: |
-|  3 |          1 | 2056-09-09    |                  410 |        433.00000 | 2057-11-16  | 0.7492163 |
-|  5 |          1 | 2057-03-02    |                  655 |         13.33333 | 2057-03-15  | 1.0000000 |
-|  6 |          1 | 2057-01-17    |                  308 |         25.00000 | 2057-02-11  | 1.0000000 |
-|  6 |          2 | 2057-12-16    |                  337 |         43.00000 | 2058-01-28  | 0.9375000 |
-|  7 |          1 | 2057-12-14    |                  372 |         10.00000 | 2057-12-24  | 1.0000000 |
-|  9 |          1 | 2057-04-10    |                  600 |         30.00000 | 2057-05-10  | 1.0000000 |
-| 10 |          1 | 2057-04-21    |                  455 |        163.66667 | 2057-10-01  | 0.3658537 |
-| 12 |          1 | 2057-04-14    |                  532 |         94.00000 | 2057-07-17  | 0.2659574 |
-| 13 |          1 | 2056-12-24    |                  417 |        320.00000 | 2057-11-09  | 0.2467949 |
-| 14 |          1 | 2056-07-31    |                  443 |        440.00000 | 2057-10-14  | 0.4265734 |
-| 16 |          1 | 2057-09-22    |                  390 |         75.00000 | 2057-12-06  | 0.8000000 |
+|  3 |          1 | 2056-09-09    |             8.000000 |              159 | 2057-06-09  | 0.8113208 |
+|  3 |          2 | 2057-06-09    |            46.000000 |              206 | 2058-01-01  | 0.5339806 |
+|  5 |          1 | 2057-02-23    |             9.666667 |               30 | 2057-03-25  | 0.4444444 |
+|  6 |          1 | 2057-01-16    |             4.000000 |               30 | 2057-02-15  | 0.8333333 |
+|  6 |          2 | 2057-12-15    |                   NA |               17 | 2058-01-14  | 0.8823529 |
+|  7 |          1 | 2057-12-10    |             8.000000 |               22 | 2058-01-09  | 0.4545455 |
+|  9 |          1 | 2057-01-07    |                   NA |               30 | 2057-02-06  |        NA |
+|  9 |          2 | 2057-04-10    |             0.000000 |               30 | 2057-05-10  | 1.0000000 |
+| 10 |          1 | 2057-01-06    |                   NA |               30 | 2057-02-05  |        NA |
+| 10 |          2 | 2057-04-21    |             0.000000 |               30 | 2057-05-21  | 1.0000000 |
+| 10 |          3 | 2057-06-09    |            15.666667 |               30 | 2057-07-09  | 0.4444444 |
+| 10 |          4 | 2057-08-21    |             0.000000 |               30 | 2057-09-20  | 0.1666667 |
+| 12 |          1 | 2057-03-30    |             0.000000 |               30 | 2057-04-29  | 0.5000000 |
+| 12 |          2 | 2057-07-07    |            20.000000 |               30 | 2057-08-06  | 0.3333333 |
+| 13 |          1 | 2056-12-12    |             8.000000 |               10 | 2057-01-11  | 0.2000000 |
+| 13 |          2 | 2057-04-23    |            53.000000 |              253 | 2058-01-01  | 0.2964427 |
+| 14 |          1 | 2056-07-31    |             0.000000 |              258 | 2057-09-16  | 0.3643411 |
+| 14 |          2 | 2057-09-16    |             2.000000 |               30 | 2057-10-16  | 0.9333333 |
+| 16 |          1 | 2057-09-22    |             0.000000 |               48 | 2057-11-09  | 0.6875000 |
+| 16 |          2 | 2057-11-09    |             3.000000 |               30 | 2057-12-09  | 0.9000000 |
 
 CMA calculations for precomputed episodes do not necessarily reflect
 implementation. Delayed initiation and early discontinuation
@@ -1104,7 +1110,7 @@ calculate time to initiation for the same data:
 time_init <- time_to_initiation(presc.data = prescription_episodes,
                                 disp.data = event_durations,
                                 ID.colname = "ID",
-                                presc.start.colname = "START.PRESC",
+                                presc.start.colname = "episode.start",
                                 disp.date.colname = "DATE.DISP",
                                 medication.class.colnames = c("ATC.CODE"),
                                 date.format = "%Y-%m-%d",
@@ -1114,28 +1120,28 @@ time_init <- time_to_initiation(presc.data = prescription_episodes,
 knitr::kable(time_init)
 ```
 
-| ID | ATC.CODE | first.presc | first.disp | time.to.initiation |
-| -: | :------- | :---------- | :--------- | -----------------: |
-|  3 | J01EE01  | 2056-09-09  | 2056-09-09 |                  0 |
-|  3 | J01EE01  | 2057-06-09  | 2057-06-25 |                 16 |
-|  5 | J01EE01  | 2057-02-23  | 2057-03-02 |                  7 |
-|  6 | J01EE01  | 2057-01-16  | 2057-01-17 |                  1 |
-|  6 | J01EE01  | 2057-12-15  | 2057-12-16 |                  1 |
-|  7 | J01EE01  | 2057-12-10  | 2057-12-14 |                  4 |
-|  9 | J01EE01  | 2057-04-10  | NA         |                 NA |
-|  9 | J01EE01  | 2057-01-07  | 2057-03-19 |                 71 |
-| 10 | J01EE01  | 2057-01-06  | 2057-02-18 |                 43 |
-| 10 | J01EE01  | 2057-04-21  | 2057-04-24 |                  3 |
-| 10 | J01EE01  | 2057-06-09  | 2057-06-10 |                  1 |
-| 10 | J01EE01  | 2057-08-21  | 2057-09-15 |                 25 |
-| 11 | J01EE01  | 2057-10-19  | NA         |                 NA |
-| 12 | J01EE01  | 2057-07-07  | NA         |                 NA |
-| 12 | J01EE01  | 2057-03-30  | 2057-04-14 |                 15 |
-| 13 | J01EE01  | 2056-12-12  | 2056-12-24 |                 12 |
-| 13 | J01EE01  | 2057-04-23  | 2057-04-25 |                  2 |
-| 14 | J01EE01  | 2057-09-16  | NA         |                 NA |
-| 14 | J01EE01  | 2056-07-31  | 2056-07-31 |                  0 |
-| 16 | J01EE01  | 2057-09-22  | 2057-09-22 |                  0 |
-| 16 | J01EE01  | 2057-11-09  | 2057-11-09 |                  0 |
+| ID | ATC.CODE | episode.start | first.disp | time.to.initiation |
+| -: | :------- | :------------ | :--------- | -----------------: |
+|  3 | J01EE01  | 2056-09-09    | 2056-09-09 |                  0 |
+|  3 | J01EE01  | 2057-06-09    | 2057-06-25 |                 16 |
+|  5 | J01EE01  | 2057-02-23    | 2057-03-02 |                  7 |
+|  6 | J01EE01  | 2057-01-16    | 2057-01-17 |                  1 |
+|  6 | J01EE01  | 2057-12-15    | 2057-12-16 |                  1 |
+|  7 | J01EE01  | 2057-12-10    | 2057-12-14 |                  4 |
+|  9 | J01EE01  | 2057-04-10    | NA         |                 NA |
+|  9 | J01EE01  | 2057-01-07    | 2057-03-19 |                 71 |
+| 10 | J01EE01  | 2057-01-06    | 2057-02-18 |                 43 |
+| 10 | J01EE01  | 2057-04-21    | 2057-04-24 |                  3 |
+| 10 | J01EE01  | 2057-06-09    | 2057-06-10 |                  1 |
+| 10 | J01EE01  | 2057-08-21    | 2057-09-15 |                 25 |
+| 11 | J01EE01  | 2057-10-19    | NA         |                 NA |
+| 12 | J01EE01  | 2057-07-07    | NA         |                 NA |
+| 12 | J01EE01  | 2057-03-30    | 2057-04-14 |                 15 |
+| 13 | J01EE01  | 2056-12-12    | 2056-12-24 |                 12 |
+| 13 | J01EE01  | 2057-04-23    | 2057-04-25 |                  2 |
+| 14 | J01EE01  | 2057-09-16    | NA         |                 NA |
+| 14 | J01EE01  | 2056-07-31    | 2056-07-31 |                  0 |
+| 16 | J01EE01  | 2057-09-22    | 2057-09-22 |                  0 |
+| 16 | J01EE01  | 2057-11-09    | 2057-11-09 |                  0 |
 
 ## Conclusions

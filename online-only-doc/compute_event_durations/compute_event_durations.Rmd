@@ -16,10 +16,9 @@ editor_options:
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
 library(AdhereR)
 library(data.table)
-library(gridExtra)
-library(grid)
 
 source("matching_function.R")
+source("adherer.R")
 
 # Various Rmarkdown output options:
 # center figures and reduce their file size:
@@ -398,8 +397,8 @@ cma0 <- CMA0(event_durations,
              observation.window.duration = 365)
 
 # construc treatment episodes
-TEs <- unique(event_durations[,.(START.PRESC, END.PRESC, DAILY.DOSE)])
-TEs[is.na(END.PRESC), END.PRESC := as.Date("2057-12-31")] #set end date for last episode
+TEs <- unique(event_durations[,.(episode.start, episode.end, DAILY.DOSE)])
+TEs[is.na(episode.end), episode.end := as.Date("2057-12-31")] #set end date for last episode
 TEs <- na.omit(TEs) #omit TEs with NA
 
 # add row indices
@@ -411,9 +410,9 @@ plot(cma0, min.plot.size.in.characters.vert = 0, show.legend = FALSE)
 for(i in 1:nrow(TEs)){
   bottom = head(event_durations[,I],1)
   top = tail(event_durations[,I],1)
-  start = as.numeric(TEs[i, "START.PRESC"]-head(TEs[,"START.PRESC"],1)) + 26
-  end = as.numeric(TEs[i, "END.PRESC"]-head(TEs[, "START.PRESC"],1)) + 26
-  offset = min(TEs[["START.PRESC"]], na.rm = TRUE)-min(event_durations[["DISP.START"]], na.rm = TRUE)
+  start = as.numeric(TEs[i, "episode.start"]-head(TEs[,"episode.start"],1)) + 26
+  end = as.numeric(TEs[i, "episode.end"]-head(TEs[, "episode.start"],1)) + 26
+  offset = min(TEs[["episode.start"]], na.rm = TRUE)-min(event_durations[["DISP.START"]], na.rm = TRUE)
 
   rect(xleft=start+offset, xright=end+offset, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(1,1,0,alpha = 0.2), border = "black", lty = "dashed", lwd = 0.1)}
 ```
@@ -482,8 +481,6 @@ The output of `copute_event_durations` is a list containing all data required fo
     + `presc.daily.dose.colname`: the prescribed daily dose, as given by the `presc.daily.dose.colname` parameter.
     + `DISP.START`: the start date of the dispensing event, either the same as in `disp.date.colnema` or a later date in case of dosage changes or treatment interruptions/hospitalisations.
     + `DURATION`: the calculated duration of the supply, based on the total dispensed dose and the prescribed daily dose, starting from the `DISP.START` date.
-   # + `START.PRESC`: the start date of the prescription episode.
-   # + `END.PRESC`: the end date of the prescription episode.
     + `SPECIAL.DURATION`: the number of days *during* the current duration affected by special durations or treatment interruptions of type "continue"
     + `CARRYOVER.DURATION`: the number of days *after* the current duration affected by special durations or treatment interruptions of type "carryover"
     + `tot.presc.interruptions`: the total number of prescription interruptions per patient for a specific medication.
@@ -492,9 +489,9 @@ The output of `copute_event_durations` is a list containing all data required fo
     + `ID.colname`: the unique patient ID, as given by the `ID.colname` parameter.
     + `medication.class.colnames`:  the column(s) with classes/types/groups of medication, as given by the `medication.class.colnames` parameter.
     + `presc.daily.dose.colname`: the prescribed daily dose, as given by the `presc.daily.dose.colname` parameter.
-    + `DURATION`: the calculated duration of the supply, based on the total dispensed dose and the prescribed daily dose, starting from the `DISP.START` date.
-    + `START.PRESC`: the start date of the prescription episode.
-    + `END.PRESC`: the end date of the prescription episode.
+    + `episode.start`: the start date of the prescription episode.
+    + `episode.duration`: the duration of the prescription episode in days.
+    + `episode.end`: the end date of the prescription episode.
 - `special_periods`: a `data.table` or `data.frame` with the following columns: 
     + `ID.colname`: the unique patient ID, as given by the `ID.colname` parameter.
     + `DATE.IN`: the start date of the special period
@@ -658,11 +655,11 @@ prune_event_durations <- function(data,
     }
   if("treatment interruptions" %in% include){
     presc_episodes <- data$prescription_episodes
-    trt_interruptions <- presc_episodes[shift(END.PRESC, n = 1, type = "lag") < START.PRESC, .SD, by = c(data$ID.colname, medication.class.colnames)]
+    trt_interruptions <- presc_episodes[shift(episode.end, n = 1, type = "lag") < episode.start, .SD, by = c(data$ID.colname, medication.class.colnames)]
     
         end_dates <- unique(rbind(end_dates,
                                   data.table(ID = trt_interruptions[[data$ID.colname]],
-                                             DATE.OUT = trt_interruptions[["START.PRESC"]])))
+                                             DATE.OUT = trt_interruptions[["episode.start"]])))
     }
   
   # create new variable for join date
@@ -916,7 +913,7 @@ Delayed initiation becomes evident when we calculate time to initiation for the 
 time_init <- time_to_initiation(presc.data = prescription_episodes,
                                 disp.data = event_durations,
                                 ID.colname = "ID",
-                                presc.start.colname = "START.PRESC",
+                                presc.start.colname = "episode.start",
                                 disp.date.colname = "DATE.DISP",
                                 medication.class.colnames = c("ATC.CODE"),
                                 date.format = "%Y-%m-%d",
