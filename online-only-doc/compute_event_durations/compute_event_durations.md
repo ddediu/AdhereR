@@ -218,7 +218,7 @@ hospitalisation data
 The function provides various options regarding prescription start and
 renewal, dosage changes, and treatment interruptions.
 
-### Special periods mapping and treatment interrupstions
+### Special periods mapping and treatment interruptions
 
 During special periods and treatment interruptions, medication use may
 differ from daily life. `special.periods.mapping` tells `AdhereR` what
@@ -316,7 +316,7 @@ for(i in 1:nrow(durcomp.hospitalisation[ID == 3])){
   rect(xleft=start, xright=end, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(0,0,1,alpha = 0.5), border = NULL)}
 ```
 
-<img src="compute_event_durations_files/figure-gfm/unnamed-chunk-4-1.jpeg" title="&lt;a name=&quot;Figure-1&quot;&gt;&lt;/a&gt;**Figure 1:** CMA0 calculated for a patient with trt.interruption = &quot;carryover&quot;" alt="&lt;a name=&quot;Figure-1&quot;&gt;&lt;/a&gt;**Figure 1:** CMA0 calculated for a patient with trt.interruption = &quot;carryover&quot;" width="100%" style="display: block; margin: auto;" />
+<img src="compute_event_durations_files/figure-gfm/unnamed-chunk-4-1.jpeg" title="**Figure 1:** CMA0 calculated for a patient with trt.interruption = &quot;carryover&quot;" alt="**Figure 1:** CMA0 calculated for a patient with trt.interruption = &quot;carryover&quot;" width="100%" style="display: block; margin: auto;" />
 
 Let’s consider a hypothetical scenario with a lot of overlapping special
 periods:
@@ -408,7 +408,7 @@ for(i in 1:nrow(special_episodes)){
   }
 ```
 
-<img src="compute_event_durations_files/figure-gfm/unnamed-chunk-6-1.jpeg" title="&lt;a name=&quot;Figure-2&quot;&gt;&lt;/a&gt;**Figure 2:** CMA0 calculated for a patient with different types of special periods and special.periods.mapping = &quot;CUSTOM&quot;. Bars at the top of the plot and shaded areas indicate special periods: Blue for 'continue' and Purple for 'carryover'." alt="&lt;a name=&quot;Figure-2&quot;&gt;&lt;/a&gt;**Figure 2:** CMA0 calculated for a patient with different types of special periods and special.periods.mapping = &quot;CUSTOM&quot;. Bars at the top of the plot and shaded areas indicate special periods: Blue for 'continue' and Purple for 'carryover'." width="100%" style="display: block; margin: auto;" />
+<img src="compute_event_durations_files/figure-gfm/unnamed-chunk-6-1.jpeg" title="**Figure 2:** CMA0 calculated for a patient with different types of special periods and special.periods.mapping = &quot;CUSTOM&quot;. Bars at the top of the plot and shaded areas indicate special periods: Blue for 'continue' and Purple for 'carryover'." alt="**Figure 2:** CMA0 calculated for a patient with different types of special periods and special.periods.mapping = &quot;CUSTOM&quot;. Bars at the top of the plot and shaded areas indicate special periods: Blue for 'continue' and Purple for 'carryover'." width="100%" style="display: block; margin: auto;" />
 
 ### Force initial prescription
 
@@ -485,7 +485,7 @@ cma7 <- CMA7(event_durations[DURATION > 0],
 plot(cma7, min.plot.size.in.characters.vert = 0)
 ```
 
-<img src="compute_event_durations_files/figure-gfm/unnamed-chunk-7-1.jpeg" title="&lt;a name=&quot;Figure-3&quot;&gt;&lt;/a&gt;**Figure 3:** CMA7 calculated for a patient with force.init.presc = TRUE" alt="&lt;a name=&quot;Figure-3&quot;&gt;&lt;/a&gt;**Figure 3:** CMA7 calculated for a patient with force.init.presc = TRUE" width="100%" style="display: block; margin: auto;" />
+<img src="compute_event_durations_files/figure-gfm/unnamed-chunk-7-1.jpeg" title="**Figure 3:** CMA7 calculated for a patient with force.init.presc = TRUE" alt="**Figure 3:** CMA7 calculated for a patient with force.init.presc = TRUE" width="100%" style="display: block; margin: auto;" />
 
 ### Force prescription renewal
 

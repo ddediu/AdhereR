@@ -18,7 +18,7 @@ library(AdhereR)
 library(data.table)
 
 source("matching_function.R")
-source("adherer.R")
+# source("adherer.R")
 
 # Various Rmarkdown output options:
 # center figures and reduce their file size:
@@ -113,7 +113,7 @@ knitr::kable(head(durcomp.hospitalisation), caption = "<a name=\"Table-3\"></a>*
 
 The function provides various options regarding prescription start and renewal, dosage changes, and treatment interruptions.
 
-### Special periods mapping and treatment interrupstions
+### Special periods mapping and treatment interruptions
 
 During special periods and treatment interruptions, medication use may differ from daily life. `special.periods.mapping` tells `AdhereR` what to do during such periods. Similarly, `trt.interruption` specifies handling of treatment interruptions (periods without prescription). There are 4 options that can be set globally:
 - *continue* has no impact on durations and dispensing start dates: Patients are expected to continue using the existing supply as initially prescribed,
@@ -126,7 +126,7 @@ Special periods may occur during prescription episodes or treatment interruption
 
 In [Figure 1](#Figure-1) below, the patient had frequent hospitalisation events (blue segments). By setting `trt.interruptions = "carryover"`, supplies available before the start of hospitalisation are truncated and a new event is created on the day of discharge for the remaining supply. 
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1\"></a>**Figure 1:** CMA0 calculated for a patient with trt.interruption = \"carryover\"", fig.height=6, fig.width=8, out.width="100%"}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "**Figure 1:** CMA0 calculated for a patient with trt.interruption = \"carryover\"", fig.height=6, fig.width=8, out.width="100%"}
 
 # select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
@@ -222,7 +222,7 @@ knitr::kable(special_episodes)
 
 [Figure 2](#Figure-2) shows a hypothetical patient with one prescription and one dispensing event for 60 days. By providing the the above dataset as `special.periods = "special_episodes"` and setting `special.periods.mapping = "CUSTOM"`, the 60-day supply is truncated and restarted according to the most recent special period that hasn't ended yet.
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-2\"></a>**Figure 2:** CMA0 calculated for a patient with different types of special periods and special.periods.mapping = \"CUSTOM\". Bars at the top of the plot and shaded areas indicate special periods: Blue for 'continue' and Purple for 'carryover'.", fig.height=6, fig.width=8, out.width="100%"}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "**Figure 2:** CMA0 calculated for a patient with different types of special periods and special.periods.mapping = \"CUSTOM\". Bars at the top of the plot and shaded areas indicate special periods: Blue for 'continue' and Purple for 'carryover'.", fig.height=6, fig.width=8, out.width="100%"}
 disp.data = data.table(ID = c(1),
                        ATC = c("A01"),
                        DATE.DISP = c("2000-01-01"),
@@ -289,7 +289,6 @@ for(i in 1:nrow(special_episodes)){
   rect(xleft=start, xright=end, ybottom=0, ytop=top, col = rgb(col,0,1,alpha = 0.1), border = NA)
   rect(xleft=start, xright=end, ybottom=bottom, ytop=top, col = rgb(col,0,1,alpha = 1), border = NA)
   }
-
 ```
 
 
@@ -299,7 +298,7 @@ If the dispensing dataset of a patient covers events with earlier dates than the
 
 In the example in [Figure 3](#Figure-3) below, the patient had dispensing events for Salbutamol (R03AC02) and Salmeterol (R03AC12) starting from 2056-07-31, but the first prescribing event for either of those was not before 2056-12-10. Because the prescriptions were not limited in duration, by setting `force.init.presc = TRUE`, durations for dispensing events before 2056-12-10 can be calculated.
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-3\"></a>**Figure 3:** CMA7 calculated for a patient with force.init.presc = TRUE", fig.height=6, fig.width=8, out.width="100%"}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "**Figure 3:** CMA7 calculated for a patient with force.init.presc = TRUE", fig.height=6, fig.width=8, out.width="100%"}
 min(durcomp.dispensing[ID == 14 & grepl("R03AC", ATC.CODE), DATE.DISP])
 min(durcomp.prescribing[ID == 14 & grepl("R03AC", ATC.CODE), DATE.PRESC])
 
