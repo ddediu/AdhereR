@@ -42,6 +42,7 @@
 # make sure the image resizes well
 # convert IDs into class'es and use IDs only when really needed
 # check colors, etc, consistency
+# image dimensions (also for export)
 #
 # wrapper for conversion to R image
 #
@@ -509,10 +510,10 @@
                        min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
                        suppress.warnings=FALSE,         # suppress warnings?
-                       generate.PNG=FALSE, generate.JPEG=FALSE, # generate corresponding static images?
-                       generate.R.plot=FALSE,           # generate standard R plot?
-                       generate.HTML.container=TRUE,    # generate the HTML container for the SVG?
-                       generate.inline.SVG=FALSE,       # if a HTML container, include the SVG inline or generate as a self-contained file (always the case if there's no HTML container)?
+                       export.formats=NULL,             # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "svg-and-html" (SVG + HTML + CSS + JavaScript as independent files), "svg-in-html" (SVG + HTML + CSS + JavaScript all contained in the HTML document), "png", "webp", "ps" and "pdf"
+                       export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
+                       export.formats.directory=NA,     # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                       generate.R.plot=FALSE,           # generate standardR plot for plotting within R?
                        ...
 )
 {
@@ -524,16 +525,10 @@
   ##   - font size is relative to the viewBox
   ##
 
-  if( !generate.HTML.container || !generate.inline.SVG )
-  {
-    generate.inline.SVG <- FALSE; # make sure we generate a stand-alone SVG file
-    # The self-contained file header:
-    svg.str <- c('<?xml version="1.0" standalone="no"?>\n',
-                 '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n');
-  } else
-  {
-    svg.str <- NULL;
-  }
+  # The SVG header and string (body):
+  svg.header <- c('<?xml version="1.0" standalone="no"?>\n',
+                  '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n');
+  svg.str <- NULL;
 
 
   ##
@@ -1165,7 +1160,7 @@
   # SVG header:
   svg.str <- c(svg.str,
                '<svg viewBox="0 0 ',dims.total.width,' ',dims.total.height,'" ',
-               ifelse(generate.inline.SVG,'width="600" height="600"',''),
+               #ifelse(generate.inline.SVG,'width="600" height="600"',''),
                ' version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n'); # the plotting surface
 
   # Reusable bits:
@@ -2328,27 +2323,157 @@
 
 
   ##
-  ## Finish and save the SVG (and possibly HTML) file(s) ####
+  ## Finish and possibly export the file(s) ####
   ##
 
   # Close the <sgv> tag:
   svg.str <- c(svg.str, '</svg>\n');
-  if( generate.HTML.container )
+
+
+  ## DEBUG ##
+  export.formats <- c("svg", "svg-and-html", "svg-in-html", "png", "webp", "ps", "pdf");
+  export.formats.directory <- "~/Temp/tmp";
+
+  # Export to various formats (if so requested):
+  exported.file.names <- NULL; # the list of exported files (if any)
+  if( !is.null(export.formats) )
   {
-    # Write the HTML container:
-    writeLines(c('<!DOCTYPE html>\n',
-                 '<html>\n',
-                 '<body>\n',
-                 if(generate.inline.SVG) svg.str else '<img src="./AdhereR-plot.svg" height="600">\n',
-                 '</body>\n',
-                 '</html>'),
-               "~/Temp/tmp/AdhereR-plot.html", sep="");
+    file.svg <- NULL;
+    if( "svg" %in% export.formats ||
+        "svg-and-html" %in% export.formats)
+    {
+      # Stand-alone SVG file:
+      file.svg <- ifelse( is.na(export.formats.directory), tempfile(export.formats.fileprefix, fileext=".svg"), file.path(export.formats.directory, paste0(export.formats.fileprefix,".svg")) );
+      exported.file.names <- c(exported.file.names, file.svg);
+
+      # Export SVG:
+      writeLines(c(svg.header, svg.str), file.svg, sep="");
+    }
+
+    if( "svg-and-html" %in% export.formats )
+    {
+      # HTML and friends as stand-alone files (the SVG was already generated):
+      file.html <- ifelse( is.na(export.formats.directory), tempfile(export.formats.fileprefix, fileext=".html"), file.path(export.formats.directory, paste0(export.formats.fileprefix,".html")) );
+      file.css  <- ifelse( is.na(export.formats.directory), tempfile(export.formats.fileprefix, fileext=".css"),  file.path(export.formats.directory, paste0(export.formats.fileprefix,".css")) );
+      file.js   <- ifelse( is.na(export.formats.directory), tempfile(export.formats.fileprefix, fileext=".js"),   file.path(export.formats.directory, paste0(export.formats.fileprefix,".js")) );
+      exported.file.names <- c(exported.file.names, file.html, file.css, file.js);
+
+      # Export HTML:
+      writeLines(c('<!DOCTYPE html>\n',
+                   '<html>\n',
+                   '<head>\n',
+                   ' <script type="text/javascript" src="',basename(file.js),'"></script>\n',
+                   ' <link rel="stylesheet" href="',basename(file.css),'">\n',
+                   '</head>\n',
+                   '<body>\n',
+                   '<img src="',basename(file.svg),'" height="600">\n',
+                   '</body>\n',
+                   '</html>'),
+                 file.html, sep="");
+
+      # Export CSS:
+      writeLines(c("/* This is a dummy CSS example */\n",
+                   "body {\n",
+                   "  margin: 25px;\n",
+                   "  background-color: rgb(240,240,240);\n",
+                   "  font-family: arial, sans-serif;\n",
+                   "  font-size: 14px;\n",
+                   "}\n"),
+                 file.css, sep="");
+
+      # Export JS:
+      writeLines(c("function display()\n",
+                   "{\n",
+                   "alert('Hello World!');\n",
+                   "}\n"),
+                 file.js, sep="");
+    }
+
+    if( "svg-in-html" %in% export.formats )
+    {
+      # Self-contained HTML document:
+      html.prefix <- ifelse("svg-and-html" %in% export.formats, paste0(export.formats.fileprefix,"-selfcontained"), export.formats.fileprefix); # avoid conflicts between HTMLs
+      file.html <- ifelse( is.na(export.formats.directory), tempfile(html.prefix, fileext=".html"), file.path(export.formats.directory, paste0(html.prefix,".html")) );
+      exported.file.names <- c(exported.file.names, file.html);
+
+      # Export HTML:
+      writeLines(c('<!DOCTYPE html>\n',
+                   '<html>\n',
+                   '<head>\n',
+                   ' <script>\b',
+                   "function display()\n",
+                   "{\n",
+                   "alert('Hello World!');\n",
+                   "}\n",
+                   '</script>\n',
+                   '<style>\n',
+                   '  body {background-color: powderblue;}\n',
+                   '  h1   {color: blue;}\n',
+                   '  p    {color: red;}\n',
+                   '</style>\n',
+                   '</head>\n',
+                   '<body>\n',
+                   svg.str,'\n',
+                   '</body>\n',
+                   '</html>'),
+                 file.html, sep="");
+    }
+
+    if( any(c("png", "ps", "pdf", "webp") %in% export.formats) )
+    {
+      # Need to covert the SVG to one of these, so we need to export it (if not already exported):
+      if( is.null(file.svg) )
+      {
+        file.svg <- tempfile(export.formats.fileprefix, fileext=".svg");
+        writeLines(c(svg.header, svg.str), file.svg, sep="");
+      }
+
+      if( "png" %in% export.formats )
+      {
+        # PNG file:
+        file.png <- ifelse( is.na(export.formats.directory), tempfile(export.formats.fileprefix, fileext=".png"), file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
+        exported.file.names <- c(exported.file.names, file.png);
+        rsvg::rsvg_png(file.svg, file=file.png);
+      }
+
+      if( "webp" %in% export.formats )
+      {
+        # WEBP file:
+        file.webp <- ifelse( is.na(export.formats.directory), tempfile(export.formats.fileprefix, fileext=".webp"), file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
+        exported.file.names <- c(exported.file.names, file.webp);
+        rsvg::rsvg_webp(file.svg, file=file.webp);
+      }
+
+      if( "ps" %in% export.formats )
+      {
+        # PS file:
+        file.ps <- ifelse( is.na(export.formats.directory), tempfile(export.formats.fileprefix, fileext=".ps"), file.path(export.formats.directory, paste0(export.formats.fileprefix,".ps")) );
+        exported.file.names <- c(exported.file.names, file.ps);
+        rsvg::rsvg_ps(file.svg, file=file.ps);
+      }
+
+      if( "pdf" %in% export.formats )
+      {
+        # PDF file:
+        file.pdf <- ifelse( is.na(export.formats.directory), tempfile(export.formats.fileprefix, fileext=".pdf"), file.path(export.formats.directory, paste0(export.formats.fileprefix,".pdf")) );
+        exported.file.names <- c(exported.file.names, file.pdf);
+        rsvg::rsvg_pdf(file.svg, file=file.pdf);
+      }
+    }
+
   }
-  if( !generate.inline.SVG )
+
+
+  ##
+  ## Generate R plot ####
+  ##
+
+  if( generate.R.plot )
   {
-    # Save the SVG file:
-    writeLines(svg.str, "~/Temp/tmp/AdhereR-plot.svg", sep="");
   }
+
+  # Return value:
+  return (invisible(exported.file.names));
 }
 
 
