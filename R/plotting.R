@@ -412,7 +412,8 @@
 
             # The alignment:
             if(!is.na(h.align[i])) c('text-anchor="',switch(h.align[i], "left"="start", "center"="middle", "right"="end"),'" '),
-            if(!is.na(v.align[i])) c('alignment-baseline="',switch(v.align[i], "top"="auto", "center"="middle", "bottom"="baseline"),'" '),
+            #if(!is.na(v.align[i])) c('alignment-baseline="',switch(v.align[i], "top"="auto", "center"="central", "bottom"="baseline"),'" '),
+            if(!is.na(v.align[i]) && v.align[i]!="top") c('dominant-baseline="',switch(v.align[i], "center"="central", "bottom"="text-before-edge"),'" '),
 
             # Rotation:
             if(!is.na(rotate[i])) c('transform="rotate(',rotate[i],' ',x[i],' ',y[i],')" '),
@@ -1235,7 +1236,7 @@
                # Clear the area:
                .SVG.rect(comment="Clear the whole plotting area",
                          id="plotting-area-background",
-                         width=dims.total.width, height=dims.total.height,
+                         x=0, y=0, width=dims.total.width, height=dims.total.height,
                          fill="white", stroke="none"),
                '\n' # one empty line
                );
@@ -1926,9 +1927,9 @@
               # SVG:
               svg.str <- c(svg.str,
                            # The actual values:
-                           .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm), text=ppts$text,
+                           .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm) + dims.chr.cma, text=ppts$text,
                                      col=plot.partial.CMAs.as.timeseries.col.text, font_size=dims.chr.cma,
-                                     h.align="center", v.align="bottom",
+                                     h.align="center", v.align="center",
                                      id="partial_cma_timeseries_values")
               );
             }
@@ -2041,8 +2042,8 @@
                          id="bounding-box", comment="The bounding box"),
 
                # The title:
-               .SVG.text(x=(dims.plot.x + dims.total.width)/2, y=dims.chr.std,
-                         text=title.string, col="black", font="Arial Black", font_size=dims.chr.title, h.align="center", v.align="center",
+               .SVG.text(x=(dims.plot.x + dims.total.width)/2, y=dims.chr.title,
+                         text=title.string, col="black", font="Arial", font_size=dims.chr.title, h.align="center", v.align="center",
                          id="main-title", comment="The main title"),
 
                # The y axis label:
@@ -2126,8 +2127,8 @@
 
     # The actual legend content:
     # The legend title:
-    l2 <- c(.SVG.text(x=lmx, y=lmy+lh, text="Legend",
-                      font_size=dims.chr.legend.title, font="Arial Black", h.align="left", v.align="bottom", col="gray30",
+    l2 <- c(.SVG.text(x=lmx, y=lmy+lh+dims.chr.legend.title*2/3, text="Legend",
+                      font_size=dims.chr.legend.title, font="Arial", h.align="left", v.align="center", col="gray30",
                       id="legend-title"));
     lh <- lh + dims.chr.legend.title + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("Legend", font_size=dims.chr.legend.title)["width"]);
     lh <- lh + lnp*dims.chr.legend.title; # new para
