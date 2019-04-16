@@ -21,11 +21,11 @@
 
 # Declare some variables as global to avoid NOTEs during package building:
 globalVariables(c("DATE.IN", "DATE.OUT",
-                  "DATE.PRESC", "START.PRESC", "END.PRESC",
+                  "DATE.PRESC", "episode.start", "episode.end",
                   "DURATION", "SPECIAL.DURATION",
                   "DAILY.DOSE", "TOTAL.DOSE",
                   "DISP.START", "DISP.END",
-                  "cum.duration", ".episode", ".out", ".special.periods", "time.to.initiation", "first.disp", "first.presc",
+                  "cum.duration", ".episode", ".out", ".special.periods", "time.to.initiation", "first.disp", "episode.start",
                   "debug.mode"));
 
 
@@ -58,7 +58,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'   dispensing events.}
 #'   \item{UNIT}{\emph{integer}; the unit of the prescribed dose. This is optional and can be used
 #'   as a separate variable to match between prescription and dispensing events.}
-#'   \item{PRESC.DURATION}{\emph{numeric}; the duration (in days) for which the prescription
+#'   \item{episode.duration}{\emph{numeric}; the duration (in days) for which the prescription
 #'   is intended. Can be \code{NA} if the prescription is continuous without a fixed end date.}
 #'   \item{DAILY.DOSE}{\emph{numeric}; the daily dose prescribed during this event (e.g., \code{50} for 1 tablet
 #'   of 50 mg per day or \code{25} for 1 tablet of 50 mg every two days).}
@@ -236,8 +236,8 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'  \item \code{DURATION} the calculated duration of the supply, based on the total
 #'  dispensed dose and the prescribed daily dose, starting from the \code{DISP.START}
 #'  date.
-#'  \item \code{START.PRESC} the start date of the prescription episode.
-#'  \item \code{END.PRESC} the end date of the prescription episode.
+#'  \item \code{episode.start} the start date of the prescription episode.
+#'  \item \code{episode.end} the end date of the prescription episode.
 #'  \item \code{SPECIAL.DURATION} the number of days during the current supply period
 #'  affected by hospitalizations.
 #'  \item \code{tot.presc.interruptions} the total number of prescription interruptions
@@ -257,7 +257,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'                                            "UNIT", "FORM"),
 #'                                            total.dose.colname = "TOTAL.DOSE",
 #'                                            presc.daily.dose.colname = "DAILY.DOSE",
-#'                                            presc.duration.colname = "PRESC.DURATION",
+#'                                            presc.duration.colname = "episode.duration",
 #'                                            visit.colname = "VISIT",
 #'                                            force.init.presc = TRUE,
 #'                                            force.presc.renew = TRUE,
@@ -462,7 +462,7 @@ compute_event_durations <- function(disp.data = NULL,
              new = c("ID",
                      "PRESC.DATE",
                      "DAILY.DOSE",
-                     "PRESC.DURATION"))
+                     "episode.duration"))
 
     setnames(disp.data,
              old = c(ID.colname,
@@ -557,11 +557,11 @@ compute_event_durations <- function(disp.data = NULL,
           data.melt <- rbind(data.melt,
                              data.table(ID = pat,
                                         DATE = end.episode,
-                                        EVENT = "END.PRESC",
+                                        EVENT = "episode.end",
                                         .episode = -1),
                              fill = TRUE)
 
-          data.melt[, EVENT := factor(EVENT, levels = c("DATE.OUT", "DISP.DATE", "DATE.IN", "END.PRESC"))]
+          data.melt[, EVENT := factor(EVENT, levels = c("DATE.OUT", "DISP.DATE", "DATE.IN", "episode.end"))]
 
           setorderv(data.melt, cols = c("DATE", "EVENT", ".episode"), na.last = TRUE)
 
@@ -603,7 +603,7 @@ compute_event_durations <- function(disp.data = NULL,
           # remove events before dispensing date and after end date
           first.row <- data.melt[EVENT == "DISP.DATE", which = TRUE]
 
-          last.row <- data.melt[EVENT == "END.PRESC", which = TRUE]
+          last.row <- data.melt[EVENT == "episode.end", which = TRUE]
 
           data.melt <- data.melt[first.row:last.row]
 
@@ -678,8 +678,8 @@ compute_event_durations <- function(disp.data = NULL,
                                             "SPECIAL.DURATION",
                                             "CARRYOVER.DURATION"), with = FALSE],
                               data.table(DAILY.DOSE = as.numeric(presc.dose.i),
-                                         START.PRESC = start.episode,
-                                         END.PRESC = end.episode))
+                                         episode.start = start.episode,
+                                         episode.end = end.episode))
 
           return(all.events)
         }
@@ -698,14 +698,12 @@ compute_event_durations <- function(disp.data = NULL,
                              DISP.START = orig.disp.date,
                              DURATION = 0,
                              DAILY.DOSE = NA,
-                             START.PRESC = as.Date(NA, format = date.format),
-                             END.PRESC = as.Date(NA, format = date.format),
                              SPECIAL.DURATION = NA);
           # if current dispensing event is after end of last prescription date, don't calculate a duration (only when last prescription indicates termination)
         } else
         {
           #select prescription episodes ending after the original dispensing date and add the one immediately before
-          episodes <- med_presc[orig.disp.date < END.PRESC | is.na(END.PRESC), which = TRUE];
+          episodes <- med_presc[orig.disp.date < episode.end | is.na(episode.end), which = TRUE];
 
           # if the current dispensing event is after the last prescription episode, don't calculate a duration
           if(length(episodes) == 0)
@@ -714,8 +712,6 @@ compute_event_durations <- function(disp.data = NULL,
                                DISP.START = orig.disp.date,
                                DURATION = 0,
                                DAILY.DOSE = NA,
-                               START.PRESC = as.Date(NA, format = date.format),
-                               END.PRESC = as.Date(NA, format = date.format),
                                SPECIAL.DURATION = NA);
           } else
           {
@@ -749,8 +745,6 @@ compute_event_durations <- function(disp.data = NULL,
                                        DISP.START = disp.start.date.i,
                                        DURATION = 0,
                                        DAILY.DOSE = NA,
-                                       START.PRESC = as.Date(NA, format = date.format),
-                                       END.PRESC = as.Date(NA, format = date.format),
                                        SPECIAL.DURATION = NA);
                   }
 
@@ -762,8 +756,8 @@ compute_event_durations <- function(disp.data = NULL,
                 }
               }
 
-              start.episode <- med_presc[episode,START.PRESC];
-              end.episode <- med_presc[episode,END.PRESC];
+              start.episode <- med_presc[episode,episode.start];
+              end.episode <- med_presc[episode,episode.end];
 
               # if it is not the first episode, adjust supply start date to prescription start date
               if(episode != episodes[1]) disp.start.date.i <- start.episode;
@@ -803,7 +797,7 @@ compute_event_durations <- function(disp.data = NULL,
 
                     break;
 
-                  } else if(is.na(last(all.events$END.PRESC))) # if last event is not terminated
+                  } else if(is.na(last(all.events$episode.end))) # if last event is not terminated
                   {
                     all.events[nrow(all.events), DURATION := DURATION + (duration.i-sum.duration)];
 
@@ -857,8 +851,6 @@ compute_event_durations <- function(disp.data = NULL,
                                          data.table(DISP.START = disp.start.date.i,
                                                     DURATION = as.numeric(duration.i),
                                                     DAILY.DOSE = as.numeric(presc.dose.i),
-                                                    START.PRESC = start.episode,
-                                                    END.PRESC = end.episode,
                                                     SPECIAL.DURATION = as.numeric(special.periods.duration.i))),
                                    fill = TRUE);
                 break;
@@ -880,8 +872,6 @@ compute_event_durations <- function(disp.data = NULL,
                                          data.table(DISP.START = disp.start.date.i,
                                                     DURATION = as.numeric(duration.i),
                                                     DAILY.DOSE = as.numeric(presc.dose.i),
-                                                    START.PRESC = start.episode,
-                                                    END.PRESC = end.episode,
                                                     SPECIAL.DURATION = as.numeric(special.periods.duration.i))),
                                    fill = TRUE);
               }
@@ -957,7 +947,7 @@ compute_event_durations <- function(disp.data = NULL,
 
         presc_interruptions <- med_presc[rep(1, length(presc_omit))]; # create table with one row for each interruption
 
-        presc_interruptions[, c(visit.colname, "PRESC.DATE", "DAILY.DOSE", "PRESC.DURATION") :=
+        presc_interruptions[, c(visit.colname, "PRESC.DATE", "DAILY.DOSE", "episode.duration") :=
                               list(presc_events[[visit.colname]][presc_omit], interruption_dates, 0, NA)]; # adjust variables
 
         med_presc <- rbind(med_presc, presc_interruptions); # bind to existing prescriptions
@@ -970,7 +960,7 @@ compute_event_durations <- function(disp.data = NULL,
 
       ## construct treatment episodes
       # create new .episode counter
-      med_presc[,.episode := rleidv(med_presc, cols = c("DAILY.DOSE", "PRESC.DURATION"))];
+      med_presc[,.episode := rleidv(med_presc, cols = c("DAILY.DOSE", "episode.duration"))];
 
       # if consecutive episodes with set end date, increase .episode counter
 
@@ -978,49 +968,49 @@ compute_event_durations <- function(disp.data = NULL,
       {
         for( n in 2:(nrow(med_presc)))
         {
-          if( !is.na(med_presc[n,"PRESC.DURATION", with = FALSE]) & !is.na(med_presc[n-1,"PRESC.DURATION", with = FALSE]) )
+          if( !is.na(med_presc[n,"episode.duration", with = FALSE]) & !is.na(med_presc[n-1,"episode.duration", with = FALSE]) )
           {
             med_presc[n:nrow(med_presc), .episode := as.integer(.episode + 1)];
           }
         }
       } else if( nrow(med_presc) == 2 )
       {
-        med_presc[!is.na(shift(PRESC.DURATION, type = "lag")) & !is.na(PRESC.DURATION), .episode := as.integer(.episode + 1)];
+        med_presc[!is.na(shift(episode.duration, type = "lag")) & !is.na(episode.duration), .episode := as.integer(.episode + 1)];
       }
 
       # add episodes with same dose but set end date to last episode
-      .row <- med_presc[is.na(shift(PRESC.DURATION, type = "lag")) & shift(DAILY.DOSE, type = "lag") == DAILY.DOSE & !is.na(PRESC.DURATION), which = TRUE];
+      .row <- med_presc[is.na(shift(episode.duration, type = "lag")) & shift(DAILY.DOSE, type = "lag") == DAILY.DOSE & !is.na(episode.duration), which = TRUE];
       if( length(.row)>0 )
       {
         med_presc[.row:nrow(med_presc),.episode := as.integer(.episode-1)];
       }
 
       ## set start and end of prescription dates per group
-      med_presc[, `:=` (START.PRESC = PRESC.DATE, # set prescription date as start date
-                        END.PRESC = PRESC.DATE)]; # set end date to prescription date ...
+      med_presc[, `:=` (episode.start = PRESC.DATE, # set prescription date as start date
+                        episode.end = PRESC.DATE)]; # set end date to prescription date ...
 
-      med_presc[,END.PRESC := shift(END.PRESC, type = "lead")]; # ... and shift end dates up by one
+      med_presc[,episode.end := shift(episode.end, type = "lead")]; # ... and shift end dates up by one
 
       # adjust end date if prescription duration is provided and change start date of following prescriptions
-      med_presc[!is.na(PRESC.DURATION) & ((PRESC.DATE + PRESC.DURATION) <= END.PRESC | is.na(END.PRESC)), END.PRESC := PRESC.DATE + PRESC.DURATION]; # only if prescription ends before the current end prescription date!
-      end.limited.presc <- head(med_presc,-1)[!is.na(PRESC.DURATION) & ((PRESC.DATE + PRESC.DURATION) <= END.PRESC | is.na(END.PRESC))]$END.PRESC; #don't include last prescription episode
-      med_presc[shift(!is.na(PRESC.DURATION), type = "lag") & shift((PRESC.DATE + PRESC.DURATION) <= END.PRESC, type = "lag"), START.PRESC := end.limited.presc];
-      med_presc[PRESC.DATE>START.PRESC & DAILY.DOSE != 0,START.PRESC:=PRESC.DATE];
+      med_presc[!is.na(episode.duration) & ((PRESC.DATE + episode.duration) <= episode.end | is.na(episode.end)), episode.end := PRESC.DATE + episode.duration]; # only if prescription ends before the current end prescription date!
+      end.limited.presc <- head(med_presc,-1)[!is.na(episode.duration) & ((PRESC.DATE + episode.duration) <= episode.end | is.na(episode.end))]$episode.end; #don't include last prescription episode
+      med_presc[shift(!is.na(episode.duration), type = "lag") & shift((PRESC.DATE + episode.duration) <= episode.end, type = "lag"), episode.start := end.limited.presc];
+      med_presc[PRESC.DATE>episode.start & DAILY.DOSE != 0,episode.start:=PRESC.DATE];
 
       # combine episodes with set durations with previous episodes of same dosage but unrestricted duration
-      med_presc[shift(DAILY.DOSE,type="lag")==DAILY.DOSE & !is.na(shift(PRESC.DURATION,type="lag")) & shift(END.PRESC, type = "lag") == START.PRESC, .episode := as.integer(.episode-1)];
+      med_presc[shift(DAILY.DOSE,type="lag")==DAILY.DOSE & !is.na(shift(episode.duration,type="lag")) & shift(episode.end, type = "lag") == episode.start, .episode := as.integer(.episode-1)];
 
       # fill in start and end dates by group
-      med_presc[,START.PRESC := head(START.PRESC,1), by = .episode]; # first start date per episode
-      med_presc[,END.PRESC:= tail(END.PRESC,1), by = .episode]; # last end date per episode
+      med_presc[,episode.start := head(episode.start,1), by = .episode]; # first start date per episode
+      med_presc[,episode.end:= tail(episode.end,1), by = .episode]; # last end date per episode
       med_presc[,PRESC.DATE := min(PRESC.DATE), by = .episode]; # set PRESC.DATE to first start date
 
       # collapse episodes
       med_presc <- unique(med_presc, by = ".episode", fromLast = TRUE);
-      med_presc[,.episode := rleidv(med_presc, cols = c("START.PRESC", "END.PRESC"))];
+      med_presc[,.episode := rleidv(med_presc, cols = c("episode.start", "episode.end"))];
 
       # remove episodes where end date is before start date
-      rm.episode <- med_presc[END.PRESC <= START.PRESC, which = TRUE];
+      rm.episode <- med_presc[episode.end <= episode.start, which = TRUE];
       if( length(rm.episode) > 0 )
       {
         med_presc <- med_presc[-rm.episode];
@@ -1028,29 +1018,29 @@ compute_event_durations <- function(disp.data = NULL,
       med_presc[,.episode := rleidv(med_presc)];
 
       # collapse consecutive episodes where end date of the former is before start date of the latter
-      med_presc[shift(END.PRESC,type = "lag") > START.PRESC & shift(DAILY.DOSE,type = "lag") == DAILY.DOSE,
+      med_presc[shift(episode.end,type = "lag") > episode.start & shift(DAILY.DOSE,type = "lag") == DAILY.DOSE,
                 .episode := as.integer(.episode-1)];
-      med_presc[,START.PRESC := head(START.PRESC,1), by = .episode]; # first start date per episode
-      med_presc[,END.PRESC:= tail(END.PRESC,1), by = .episode]; # last end date per episode
+      med_presc[,episode.start := head(episode.start,1), by = .episode]; # first start date per episode
+      med_presc[,episode.end:= tail(episode.end,1), by = .episode]; # last end date per episode
       med_presc <- unique(med_presc, by = ".episode");
-      med_presc[,.episode := rleidv(med_presc, cols = c("START.PRESC", "END.PRESC"))];
+      med_presc[,.episode := rleidv(med_presc, cols = c("episode.start", "episode.end"))];
 
       # add treatment interruptions
 
-      med_presc <- rbind(med_presc,med_presc[shift(START.PRESC,type = "lead")!=END.PRESC][,c("DAILY.DOSE", "START.PRESC", ".episode") := list(0, END.PRESC, 0)]);
-      setorder(med_presc, START.PRESC, END.PRESC);
-      end.trt.interruptions <- med_presc[shift(END.PRESC,type = "lag")!=START.PRESC]$START.PRESC;
-      med_presc[.episode == 0, END.PRESC := end.trt.interruptions];
+      med_presc <- rbind(med_presc,med_presc[shift(episode.start,type = "lead")!=episode.end][,c("DAILY.DOSE", "episode.start", ".episode") := list(0, episode.end, 0)]);
+      setorder(med_presc, episode.start, episode.end);
+      end.trt.interruptions <- med_presc[shift(episode.end,type = "lag")!=episode.start]$episode.start;
+      med_presc[.episode == 0, episode.end := end.trt.interruptions];
 
       if( force.init.presc == TRUE )
       {
         # if initial dispense is before initial prescription, adjust date of initial prescription to match initial dispense
         # but only if first prescription is unlimited
-        if( first_disp < first(med_presc[["START.PRESC"]]) & is.na(head(med_presc[["PRESC.DURATION"]],1)) )
+        if( first_disp < first(med_presc[["episode.start"]]) & is.na(head(med_presc[["episode.duration"]],1)) )
         {
           # adjust first prescription date
           first_presc[1, PRESC.DATE := first_disp];
-          med_presc[1, START.PRESC := first_disp];
+          med_presc[1, episode.start := first_disp];
         }
       }
 
@@ -1059,14 +1049,14 @@ compute_event_durations <- function(disp.data = NULL,
 
       for( i in 1:nrow(med_presc) )
       {
-        med_disp[DISP.DATE >= med_presc[i,START.PRESC] & (DISP.DATE < med_presc[i,END.PRESC] | is.na(med_presc[i,END.PRESC])),
-                 c("START.PRESC", "END.PRESC", "DAILY.DOSE") := list(med_presc[i,START.PRESC], med_presc[i,END.PRESC],med_presc[i,DAILY.DOSE])];
+        med_disp[DISP.DATE >= med_presc[i,episode.start] & (DISP.DATE < med_presc[i,episode.end] | is.na(med_presc[i,episode.end])),
+                 c("episode.start", "episode.end", "DAILY.DOSE") := list(med_presc[i,episode.start], med_presc[i,episode.end],med_presc[i,DAILY.DOSE])];
       }
       med_disp[,DURATION := (TOTAL.DOSE)/(DAILY.DOSE)];
       med_disp[,`:=` (DISP.START = DISP.DATE,
                       DISP.END = DISP.DATE+DURATION)];
 
-      med_disp[DISP.END > END.PRESC, .out := 1];
+      med_disp[DISP.END > episode.end, .out := 1];
 
       # add special periods to dispensing events
       med_disp[,.special.periods := as.numeric(NA)];
@@ -1087,9 +1077,7 @@ compute_event_durations <- function(disp.data = NULL,
                                       "DISP.DATE",
                                       "DISP.START",
                                       "DURATION",
-                                      "DAILY.DOSE",
-                                      "START.PRESC",
-                                      "END.PRESC"), with = FALSE];
+                                      "DAILY.DOSE"), with = FALSE];
       medication_events[,SPECIAL.DURATION := 0];
 
       med_disp <- med_disp[DURATION == Inf | .out == 1 | .special.periods == 1];
@@ -1121,21 +1109,28 @@ compute_event_durations <- function(disp.data = NULL,
         medication_events[,tot.dosage.changes := tot.dosage.changes];
       }
 
-      # presc_episode_no_dispense <- med_presc[!medication_events[,c("DAILY.DOSE","START.PRESC","END.PRESC")],
-      #                                         on = c("DAILY.DOSE","START.PRESC", "END.PRESC")];
+      # presc_episode_no_dispense <- med_presc[!medication_events[,c("DAILY.DOSE","episode.start","episode.end")],
+      #                                         on = c("DAILY.DOSE","episode.start", "episode.end")];
       #
-      # presc_episode_no_dispense[,c(".episode","VISIT", "PRESC.DURATION", "PRESC.DATE") := NULL];
+      # presc_episode_no_dispense[,c(".episode","VISIT", "episode.duration", "PRESC.DATE") := NULL];
       #
       # medication_events <- rbind(medication_events, presc_episode_no_dispense, fill = TRUE);
+
+      # add episode number
+      med_presc <- med_presc[DAILY.DOSE != 0, episode.ID := seq(.N)];
+
+      # calculate duration
+      med_presc[,episode.duration := as.numeric(episode.end-episode.start)];
 
       # compute prescription events
       prescription_events <- med_presc[DAILY.DOSE != 0,
                                        c("ID",
                                          medication.class.colnames,
                                          "DAILY.DOSE",
-                                         "PRESC.DURATION",
-                                         "START.PRESC",
-                                         "END.PRESC"), with = FALSE]
+                                         "episode.ID",
+                                         "episode.start",
+                                         "episode.duration",
+                                         "episode.end"), with = FALSE]
 
       return(list(DURATIONS = medication_events,
                   PRESCRIPTION_EPISODES = prescription_events));
@@ -1155,7 +1150,7 @@ compute_event_durations <- function(disp.data = NULL,
                                          "PRESC.DATE",
                                          medication.class.colnames,
                                          "DAILY.DOSE",
-                                         "PRESC.DURATION"), with = FALSE];
+                                         "episode.duration"), with = FALSE];
     if(visit.colname %in% colnames(presc.data)){
       pat_presc <- cbind(presc.data[ID == pat, visit.colname, with = FALSE], pat_presc);
     };
@@ -1274,11 +1269,9 @@ compute_event_durations <- function(disp.data = NULL,
 
   setnames(events_output_prescriptions,
            old = c("ID",
-                   "DAILY.DOSE",
-                   "PRESC.DURATION"),
+                   "DAILY.DOSE"),
            new = c(ID.colname,
-                   presc.daily.dose.colname,
-                   presc.duration.colname)
+                   presc.daily.dose.colname)
   )
 if(progress.bar == TRUE)  close(pb)
 
@@ -1314,20 +1307,20 @@ if(progress.bar == TRUE)  close(pb)
 
 #' Computation of initiation times.
 #'
-#' Computes the time between the first prescription event and the first dispensing
+#' Computes the time between the start of a prescription episode and the first dispensing
 #' event for each medication class.
 #'
-#' The period between the first prescription event and the first dose administration
+#' The period between the start of a prescription episode and the first dose administration
 #' may impact health outcomes differently than omitting doses once on treatment or
 #' interrupting medication for longer periods of time. Primary non-adherence (not
 #' acquiring the first prescription) or delayed initiation may have a negative
 #' impact on health outcomes. The function \code{time_to_initiation} calculates
-#' the time between the first prescription and the first dispensing event, taking
+#' the time between the start of a prescription episode and the first dispensing event, taking
 #' into account multiple variables to differentiate between treatments.
 #'
 #' @param presc.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
-#' the prescription events. Must contain, at a minimum, the patient unique ID,
-#' one medication identifier, and the start date of the prescription, and might
+#' the prescription episodes. Must contain, at a minimum, the patient unique ID,
+#' one medication identifier, and the start date of the prescription episode, and might
 #' also contain additional columns to identify and group medications (the actual
 #' column names are defined in the \emph{\code{medication.class.colnames}} parameter).
 #' @param disp.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
@@ -1361,7 +1354,7 @@ if(progress.bar == TRUE)  close(pb)
 #'  parameter.
 #'  \item \code{medication.class.colnames} the column(s) with classes/types/groups
 #'  of medication, as given by the  \code{medication.class.colnames} parameter.
-#'  \item \code{first.presc} the date of the first prescription event.
+#'  \item \code{episode.start} the date of the first prescription event.
 #'  \item \code{first.disp} the date of the first dispensing event.
 #'  \item \code{time.to.initiation} the difference in days between the first
 #'  dispensing date and the  first prescription date.
@@ -1436,18 +1429,33 @@ time_to_initiation <- function(presc.data = NULL,
     }
   }
 
+  presc.data <- presc.data[,c(ID.colname, presc.start.colname, medication.class.colnames), with = FALSE]
+  disp.data <- disp.data[,c(ID.colname, disp.date.colname, medication.class.colnames), with = FALSE]
+
   # convert dates
   presc.data[,(presc.start.colname) := as.Date(get(presc.start.colname), format = date.format)];
   disp.data[,(disp.date.colname) := as.Date(get(disp.date.colname), format = date.format)];
 
-  first_presc <- presc.data[,list(first.presc = min(get(presc.start.colname),na.rm=TRUE)),
-                            by = c(ID.colname, medication.class.colnames)];
-  first_disp <- disp.data[,list(first.disp = min(get(disp.date.colname),na.rm=TRUE)),
-                           by = c(ID.colname, medication.class.colnames)];
+  # set join date to the beginning of special durations
+  presc.data[, join_date := get(presc.start.colname)]
+  disp.data[, join_date := get(disp.date.colname)]
 
-  dt_t2i <- merge(first_presc, first_disp, by = c(ID.colname, medication.class.colnames), all = TRUE);
+  # key by ID and join date
+  setkeyv(presc.data, cols = c(ID.colname, medication.class.colnames, "join_date"))
+  setkeyv(disp.data, cols = c(ID.colname, medication.class.colnames, "join_date"))
 
-  dt_t2i[,time.to.initiation := as.numeric(first.disp-first.presc)];
+  # rolling join first dispensing event for each prescription episode
+  dt_t2i <- disp.data[presc.data, roll = -Inf]
+
+  setnames(dt_t2i,
+           old = c(disp.date.colname, presc.start.colname),
+           new = c("first.disp", "episode.start"))
+
+  dt_t2i <- dt_t2i[,c(ID.colname, medication.class.colnames, "episode.start", "first.disp"),
+                   with = FALSE]
+
+  # calculate time to initiation
+  dt_t2i[,time.to.initiation := as.numeric(first.disp-episode.start)];
 
   # key by ID, medication class, and dispensing date
   setkeyv(dt_t2i, cols = c(ID.colname, medication.class.colnames, "first.disp"));

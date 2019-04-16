@@ -7609,6 +7609,42 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     data.epi <- merge(treat.epi, data, allow.cartesian=TRUE);
     setkeyv(data.epi, c(".PATIENT.EPISODE.ID", ".DATE.as.Date"));
 
+    # compute end.episode.gap.days, if treat.epi are supplied
+    if(!"end.episode.gap.days" %in% colnames(treat.epi)) {
+      data.epi2 <- compute.event.int.gaps(data=as.data.frame(data.epi),
+                                          ID.colname=".PATIENT.EPISODE.ID",
+                                          event.date.colname=event.date.colname,
+                                          event.duration.colname=event.duration.colname,
+                                          event.daily.dose.colname=event.daily.dose.colname,
+                                          medication.class.colname=medication.class.colname,
+                                          carryover.within.obs.window=carryover.within.obs.window,
+                                          carryover.into.obs.window=carryover.into.obs.window,
+                                          carry.only.for.same.medication=carry.only.for.same.medication,
+                                          consider.dosage.change=consider.dosage.change,
+                                          followup.window.start="episode.start",
+                                          followup.window.start.unit=followup.window.start.unit,
+                                          followup.window.duration="episode.duration",
+                                          followup.window.duration.unit=followup.window.duration.unit,
+                                          observation.window.start=".INTERSECT.EPISODE.OBS.WIN.START",
+                                          observation.window.duration=".INTERSECT.EPISODE.OBS.WIN.DURATION",
+                                          observation.window.duration.unit="days",
+                                          date.format=date.format,
+                                          keep.window.start.end.dates=TRUE,
+                                          remove.events.outside.followup.window=FALSE,
+                                          parallel.backend="none", # make sure this runs sequentially!
+                                          parallel.threads=1,
+                                          suppress.warnings=suppress.warnings,
+                                          return.data.table=TRUE);
+
+      episode.gap.days <- data.epi2[which(.EVENT.WITHIN.FU.WINDOW), c(ID.colname, "episode.ID", gap.days.colname), by = c(ID.colname, "episode.ID"), with = FALSE]; # gap days during the follow-up window
+      end.episode.gap.days <- episode.gap.days[,.(end.episode.gap.days = last(get(gap.days.colname))), by = c(ID.colname, "episode.ID")]; # gap days during the last event
+
+      treat.epi <- merge(treat.epi, end.episode.gap.days, all.x = TRUE, by = c(ID.colname, "episode.ID")); # merge end.episode.gap.days back to data.epi
+
+      treat.epi[, episode.duration := as.numeric(.INTERSECT.EPISODE.OBS.WIN.END-.INTERSECT.EPISODE.OBS.WIN.START)];
+    }
+
+
     # Compute the required CMA on this new combined database:
     cma <- CMA.FNC(data=as.data.frame(data.epi),
                    ID.colname=".PATIENT.EPISODE.ID",

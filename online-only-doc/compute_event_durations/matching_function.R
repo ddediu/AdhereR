@@ -973,9 +973,10 @@ compute_event_durations <- function(disp.data = NULL,
       med_presc[,.episode := rleidv(med_presc, cols = c("DAILY.DOSE", "PRESC.DURATION"))];
 
       # if consecutive episodes with set end date, increase .episode counter
+
       if( nrow(med_presc) > 2 )
       {
-        for( n in 2:(nrow(med_presc)-1) )
+        for( n in 2:(nrow(med_presc)))
         {
           if( !is.na(med_presc[n,"PRESC.DURATION", with = FALSE]) & !is.na(med_presc[n-1,"PRESC.DURATION", with = FALSE]) )
           {
@@ -1313,20 +1314,20 @@ if(progress.bar == TRUE)  close(pb)
 
 #' Computation of initiation times.
 #'
-#' Computes the time between the first prescription event and the first dispensing
+#' Computes the time between the start of a prescription episode and the first dispensing
 #' event for each medication class.
 #'
-#' The period between the first prescription event and the first dose administration
+#' The period between the start of a prescription episode and the first dose administration
 #' may impact health outcomes differently than omitting doses once on treatment or
 #' interrupting medication for longer periods of time. Primary non-adherence (not
 #' acquiring the first prescription) or delayed initiation may have a negative
 #' impact on health outcomes. The function \code{time_to_initiation} calculates
-#' the time between the first prescription and the first dispensing event, taking
+#' the time between the start of a prescription episode and the first dispensing event, taking
 #' into account multiple variables to differentiate between treatments.
 #'
 #' @param presc.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
-#' the prescription events. Must contain, at a minimum, the patient unique ID,
-#' one medication identifier, and the start date of the prescription, and might
+#' the prescription episodes. Must contain, at a minimum, the patient unique ID,
+#' one medication identifier, and the start date of the prescription episode, and might
 #' also contain additional columns to identify and group medications (the actual
 #' column names are defined in the \emph{\code{medication.class.colnames}} parameter).
 #' @param disp.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
@@ -1435,17 +1436,32 @@ time_to_initiation <- function(presc.data = NULL,
     }
   }
 
+  presc.data <- presc.data[,c(ID.colname, presc.start.colname, medication.class.colnames), with = FALSE]
+  disp.data <- disp.data[,c(ID.colname, disp.date.colname, medication.class.colnames), with = FALSE]
+
   # convert dates
   presc.data[,(presc.start.colname) := as.Date(get(presc.start.colname), format = date.format)];
-  disp.data[,(disp.date.colname) := as.Date(DISP.DATE, format = date.format)];
+  disp.data[,(disp.date.colname) := as.Date(get(disp.date.colname), format = date.format)];
 
-  first_presc <- presc.data[,list(first.presc = min(get(presc.start.colname),na.rm=TRUE)),
-                            by = c(ID.colname, medication.class.colnames)];
-  first_disp <- disp.data[,list(first.disp = min(DISP.DATE,na.rm=TRUE)),
-                           by = c(ID.colname, medication.class.colnames)];
+  # set join date to the beginning of special durations
+  presc.data[, join_date := get(presc.start.colname)]
+  disp.data[, join_date := get(disp.date.colname)]
 
-  dt_t2i <- merge(first_presc, first_disp, by = c(ID.colname, medication.class.colnames), all = TRUE);
+  # key by ID and join date
+  setkeyv(presc.data, cols = c(ID.colname, medication.class.colnames, "join_date"))
+  setkeyv(disp.data, cols = c(ID.colname, medication.class.colnames, "join_date"))
 
+  # rolling join first dispensing event for each prescription episode
+  dt_t2i <- disp.data[presc.data, roll = -Inf]
+
+  setnames(dt_t2i,
+           old = c(disp.date.colname, presc.start.colname),
+           new = c("first.disp", "first.presc"))
+
+  dt_t2i <- dt_t2i[,c(ID.colname, medication.class.colnames, "first.presc", "first.disp"),
+                   with = FALSE]
+
+  # calculate time to initiation
   dt_t2i[,time.to.initiation := as.numeric(first.disp-first.presc)];
 
   # key by ID, medication class, and dispensing date

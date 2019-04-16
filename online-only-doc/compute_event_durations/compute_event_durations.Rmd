@@ -16,7 +16,10 @@ editor_options:
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
 library(AdhereR)
 library(data.table)
-#source("matching_function.R")
+library(gridExtra)
+library(grid)
+
+source("matching_function.R")
 
 # Various Rmarkdown output options:
 # center figures and reduce their file size:
@@ -85,7 +88,7 @@ For demonstration purposes, we included a sample dataset containing prescription
 
 [Table 2](#Table-2) shows the first 10 rows of the prescription events in the example dataset `durcomp.prescribing`. 
 
-```{r echo = FALSe}
+```{r echo = FALSE}
 # Display head of prescribing data as pretty markdown table:
 knitr::kable(head(durcomp.prescribing), caption = "<a name=\"Table-2\"></a>**Table 2:** First 10 rows of example prescribing data");
 ```
@@ -116,7 +119,7 @@ The function provides various options regarding prescription start and renewal, 
 During special periods and treatment interruptions, medication use may differ from daily life. `special.periods.mapping` tells `AdhereR` what to do during such periods. Similarly, `trt.interruption` specifies handling of treatment interruptions (periods without prescription). There are 4 options that can be set globally:
 - *continue* has no impact on durations and dispensing start dates: Patients are expected to continue using the existing supply as initially prescribed,
 - *discard* truncates supplies at the beginning of special period or treatment interruption and the remaining supply is discarded. This might be used if patients are asked to return unused medications after a limited treatment course (e.g. antibiotic treatments), 
-- *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will added for the remaining duration. This might be used if patients are hospitalized where they receive medications from hospital wards, but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. **CAVE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples in section XX).**
+- *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will added for the remaining duration. This might be used if patients are hospitalized where they receive medications from hospital wards, but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. **CAVE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples below).**
 
 In addition to the global options, both settings accept a column name in the dispensing dataset (for `trt.interruption`) or special periods dataset (for `special.periods.mapping`). The column can contain either of *continue*, *discard*, or *carryover* per medication type (for `trt.interruption`) or per special period type and/or medication type (for `special.periods.mapping`).
 
@@ -126,6 +129,7 @@ In [Figure 1](#Figure-1) below, the patient had frequent hospitalisation events 
 
 ```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1\"></a>**Figure 1:** CMA0 calculated for a patient with trt.interruption = \"carryover\"", fig.height=6, fig.width=8, out.width="100%"}
 
+# select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
                                            presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
                                            special.periods.data = durcomp.hospitalisation,
@@ -231,6 +235,7 @@ presc.data = data.table(ID = c(1),
                         PRESC.DOSE = c(1),
                         PRESC.DURATION = c(NA))
 
+# compute event durations
 event_durations_list <- compute_event_durations(disp.data = disp.data,
                                            presc.data = presc.data,
                                            special.periods.data = special_episodes,
@@ -299,6 +304,7 @@ In the example in [Figure 3](#Figure-3) below, the patient had dispensing events
 min(durcomp.dispensing[ID == 14 & grepl("R03AC", ATC.CODE), DATE.DISP])
 min(durcomp.prescribing[ID == 14 & grepl("R03AC", ATC.CODE), DATE.PRESC])
 
+# select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 14 & grepl("R03AC", ATC.CODE)],
                                            presc.data = durcomp.prescribing[ID == 14 & grepl("R03AC", ATC.CODE)],
                                            special.periods.data = durcomp.hospitalisation,
@@ -352,7 +358,7 @@ knitr::kable(durcomp.prescribing[ID == 9 & grepl("R03DC03", ATC.CODE)], caption 
 
 ```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-4\"></a>**Figure 4:** CMA0 calculated for a patient with force.presc.renew = TRUE", fig.height=6, fig.width=8, out.width="100%"}
 
-# cumpute event durations for all medications for a patient to cover all visits
+# compute event durations for all medications for a patient to cover all visits
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 9],
                                            presc.data = durcomp.prescribing[ID == 9],
                                            special.periods.data = durcomp.hospitalisation,
@@ -420,6 +426,7 @@ In [Figure 5](#Figure-5) below, the dosage for Insulin (NovoMix) changed while t
 
 ```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5:** CMA0 calculated for a patient with split.on.dosage.change = TRUE", fig.height=6, fig.width=8, out.width="100%"}
 
+# select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 7 & grepl("A10AB", ATC.CODE)],
                                            presc.data = durcomp.prescribing[ID == 7 & grepl("A10AB", ATC.CODE)],
                                            special.periods.data = durcomp.hospitalisation,
@@ -517,13 +524,19 @@ In addition, the output contains all the arguments to the function call:
 
 In principle the output of `compute_event_durations` can be used for CMA computation as described in the main vignette. However, there are some specificities to consider.
 
+### Medication class
+
+In `compute_event_durations`, multiple columns to specify medication classes can be provided. This is especially useful when different formulations or brands of the same medication need to be matched between dispensing and prescribing data. This way, polypharmacy regimens with multiple different treatments per patient can be processed. For CMA computations, only one column can be used for the medication type. If information from multiple columns should be considered, the content of these columns can be pasted together in a new column.
+
 ### Event date
 
 The `event_durations` dataset has two columns that can be used as event date: `disp.date.colname`, the original dispensing date in the dispensing dataset or `DISP.START`, which might differ from the former in case of dosage changes, treatment interruptions or special periods of type *carryover*. For CMA versions accounting for carryover, there will be no difference between the two choices, as long as the events take place within the observation period. If an event start gets pushed out of the observation period (e.g., because of carryover during a special period), this will affect CMA calculation. Generally, it is appropriate to use `DISP.START` as input for CMA calculations.
 
 [Figure 6](#Figure-6) shows CMA7-plots of the same `event_durations`, on the left with `event.date.colname = "DATE.DISP"` and on the right with `event.date.colname = "DISP.START"`. The observation window (OW) begins and ends during special periods of type *carryover* (blue areas). With `event.date.colname = "DISP.START"`, part of a supply is pushed into the OW and another supply is partially pushed out of the OW. 
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6:** CMA7 calculated with event.date.colname = \"DATE.DISP\" (left) and event.date.colname = \"DISP.START\" (right) for an observation period starting and ending during special periods with carryover.", fig.height=6, fig.width=8, out.width="100%"}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6:** CMA7 calculated with event.date.colname = \"DATE.DISP\" (top) and event.date.colname = \"DISP.START\" (bottom) for an observation period starting and ending during special periods with carryover.", fig.height=6, fig.width=8, out.width="100%"}
+
+# select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
                                            presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
                                            special.periods.data = durcomp.hospitalisation[c(4,9)],
@@ -727,7 +740,7 @@ prune_event_durations <- function(data,
 Without further processing of event_durations for CMA computations, special periods will appear as gaps, possibly leading to underestimation of implementation or even assumption of discontinuation and non-persistence. To consider such periods as covered, they can be added to the `event_durations` dataset. This can be achieved by merging the special periods with the `event_durations` dataset. This should be done after pruning with `prune_event_durations`. We can use rolling joins in `data.table` to identify special periods that are in proximity to already covered durations (Alex/Dan: should this be encapsulated in a separate function?):
 
 ```{r results=FALSE}
-# compute event durations
+# select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
                                                 presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
                                                 special.periods.data = durcomp.hospitalisation[ID == 3],
@@ -802,7 +815,7 @@ event_durations <- rbind(event_durations, dt_merge, fill = TRUE)
 
 [Figure 7](#Figure-7) shows the same plot as [Figure 1](#Figure-1), but with pruned durations and added events for special durations.
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-7\"></a>**Figure 7:** CMA0 calculated for a patient with trt.interruption = \"carryover\", carryover events pruned and special durations covered.", fig.height=6, fig.width=8, out.width="100%"r echo=FALSE}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-7\"></a>**Figure 7:** CMA0 calculated for a patient with trt.interruption = \"carryover\", carryover events pruned and special durations covered.", fig.height=6, fig.width=8, out.width="100%"}
 # same plot as in Figure 1
 cma0 <- CMA0(event_durations,
              ID.colname = "ID",
@@ -832,61 +845,54 @@ for(i in 1:nrow(durcomp.hospitalisation[ID == 3])){
 
 ### Exclude special periods and treatment interruptions from CMA computations
 
-During periods without prescriptions (treatment interruptions) or certain special episodes, it might not be meaninful to calculate a CMA at all. In these instances, it might be advisable to use `CMA_per_episode` with precomputed episodes, e.g. from the output of `compute_event_durations`. 
+During periods without prescriptions (treatment interruptions) or certain special episodes, it might not be meaninful to calculate a CMA at all. In these instances, it might be advisable to use `CMA_per_episode` with precomputed episodes, e.g. prescription episodes from the output of `compute_event_durations`. Precomputed episodes can be specified with the `treat.epi` parameter in `CMA_per_episode`. The episodes have to be a `data.frame` or `data.table` with the following columns:
+
+- `ID.colname`: the patient ID,
+- `episode.ID`: the episode unique ID (increasing sequentially),
+- `episode.start`: the episode start date,
+- `episode.duration`: the episode duration in days,
+- `episode.end`: the episode end date.
 
 ```{r}
-# select medication with fixed treatment episodes
+# select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[grepl("J01EE01", ATC.CODE)],
-                                           presc.data = durcomp.prescribing[grepl("J01EE01", ATC.CODE)],
-                                           ID.colname = "ID",
-                                           presc.date.colname = "DATE.PRESC",
-                                           disp.date.colname = "DATE.DISP",
-                                           date.format = "%Y-%m-%d",
-                                           medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
-                                           total.dose.colname = "TOTAL.DOSE",
-                                           presc.daily.dose.colname = "DAILY.DOSE",
-                                           presc.duration.colname = "PRESC.DURATION",
-                                           visit.colname = "VISIT",
-                                           force.init.presc = TRUE,
-                                           force.presc.renew = TRUE,
-                                           split.on.dosage.change = TRUE,
-                                           trt.interruption = "carryover",
-                                           suppress.warnings = FALSE,
-                                           return.data.table = TRUE,
-                                           progress.bar = FALSE);
-
+                                                presc.data = durcomp.prescribing[grepl("J01EE01", ATC.CODE)],
+                                                ID.colname = "ID",
+                                                presc.date.colname = "DATE.PRESC",
+                                                disp.date.colname = "DATE.DISP",
+                                                date.format = "%Y-%m-%d",
+                                                medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
+                                                total.dose.colname = "TOTAL.DOSE",
+                                                presc.daily.dose.colname = "DAILY.DOSE",
+                                                presc.duration.colname = "PRESC.DURATION",
+                                                visit.colname = "VISIT",
+                                                force.init.presc = TRUE,
+                                                force.presc.renew = TRUE,
+                                                split.on.dosage.change = TRUE,
+                                                trt.interruption = "carryover",
+                                                suppress.warnings = FALSE,
+                                                return.data.table = TRUE,
+                                                progress.bar = FALSE)
+                                           
 # get event durations and prescription epoisodes
 event_durations <- copy(event_durations_list$event_durations)
 prescription_episodes <- copy(event_durations_list$prescription_episodes)
 
 # if no prescription enddate, set to end of follow-up window
-prescription_episodes[is.na(END.PRESC), END.PRESC := as.Date("2058-01-01")]
+treatment_episodes <- copy(prescription_episodes[is.na(episode.end), episode.end := as.Date("2058-01-01")])
 
-# calculate duration
-prescription_episodes[is.na(PRESC.DURATION), PRESC.DURATION := as.numeric(END.PRESC-START.PRESC)]
-
-
-# add end.episode.gap.days and episode.ID
-prescription_episodes[,`:=` (end.episode.gap.days = shift(START.PRESC, n=1, type="lead")-END.PRESC,
-                             episode.ID = seq(.N)), by = c(event_durations_list$ID.colname, event_durations_list$medication.class.colnames)]
-
-prescription_episodes[is.na(end.episode.gap.days), end.episode.gap.days := 0]
+# calculate episode duration
+treatment_episodes[is.na(episode.duration), episode.duration := as.numeric(episode.end-episode.start)]
 
 # drop unnecessary columns
-prescription_episodes[,`:=` (ATC.CODE = NULL,
+treatment_episodes[,`:=` (ATC.CODE = NULL,
                              UNIT = NULL,
                              FORM = NULL,
                              DAILY.DOSE = NULL)]
 
-# change column names
-setnames(prescription_episodes,
-         old = c("START.PRESC", "PRESC.DURATION", "END.PRESC"),
-         new = c("episode.start", "episode.duration", "episode.end"))
-
 # compute CMA per episode
-
-cma_episode <- CMA_per_episode(data = event_durations[DURATION > 0],
-                               treat.epi = prescription_episodes,
+df_cma_episode <- CMA_per_episode(data = event_durations[DURATION > 0],
+                               treat.epi = treatment_episodes, # supply precomputed prescription episodes to CMA_per_episode
                                CMA.to.apply = "CMA7",
                                ID.colname = "ID",
                                event.date.colname = "DISP.START",
@@ -898,11 +904,30 @@ cma_episode <- CMA_per_episode(data = event_durations[DURATION > 0],
                                observation.window.start = as.Date("2057-01-01"),
                                observation.window.duration = 365)
 
-                               
-             
+cma_episode <- getCMA(df_cma_episode)
 
-
+knitr::kable(cma_episode)
 ```
+
+CMA calculations for precomputed episodes do not necessarily reflect implementation. Delayed initiation and early discontinuation (non-persistence) may reduce CMA values. Non-persistence can be identified by looking at `end.episode.gap.days` in the output of `CMA_per_episodes`, which indicates how many days before the end of an episode are not covered.
+Delayed initiation becomes evident when we calculate time to initiation for the same data: 
+
+```{r}
+time_init <- time_to_initiation(presc.data = prescription_episodes,
+                                disp.data = event_durations,
+                                ID.colname = "ID",
+                                presc.start.colname = "START.PRESC",
+                                disp.date.colname = "DATE.DISP",
+                                medication.class.colnames = c("ATC.CODE"),
+                                date.format = "%Y-%m-%d",
+                                suppress.warnings = FALSE,
+                                return.data.table = TRUE)
+
+knitr::kable(time_init)
+```
+
+## Conclusions
+
 
 
 
