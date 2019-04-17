@@ -3,14 +3,11 @@ title: "Compute event durations from different data sources"
 author: "Samuel S. Allemann, Dan Dediu & Alex L. Dima"
 date: "`r Sys.Date()`"
 output: 
-  github_document
-fig_caption: yes
-vignette: >
-  %\VignetteEncoding{UTF-8}
-  %\VignetteIndexEntry{AdhereR: Adherence to Medications}
-  %\VignetteEngine{knitr::rmarkdown}
-editor_options: 
-  chunk_output_type: console
+  word_document:
+    fig_caption: yes
+  github_document:
+    toc: true
+    toc_depth: 3
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
@@ -111,14 +108,15 @@ knitr::kable(head(durcomp.hospitalisation), caption = "<a name=\"Table-3\"></a>*
 
 ## Function arguments
 
-The function provides various options regarding prescription start and renewal, dosage changes, and treatment interruptions.
+The compute_event_durations function provides various options regarding prescription start and renewal, dosage changes, and treatment interruptions.
 
 ### Special periods mapping and treatment interruptions
 
-During special periods and treatment interruptions, medication use may differ from daily life. `special.periods.mapping` tells `AdhereR` what to do during such periods. Similarly, `trt.interruption` specifies handling of treatment interruptions (periods without prescription). There are 4 options that can be set globally:
+During special periods and treatment interruptions, medication use may differ from daily life. The argument `special.periods.mapping` tells `AdhereR` what to do during such periods. Similarly, `trt.interruption` specifies handling of treatment interruptions (periods without prescription). There are 3 options that can be set globally:
+
 - *continue* has no impact on durations and dispensing start dates: Patients are expected to continue using the existing supply as initially prescribed,
 - *discard* truncates supplies at the beginning of special period or treatment interruption and the remaining supply is discarded. This might be used if patients are asked to return unused medications after a limited treatment course (e.g. antibiotic treatments), 
-- *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will added for the remaining duration. This might be used if patients are hospitalized where they receive medications from hospital wards, but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. **CAVE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples below).**
+- *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will be added for the remaining duration. This might be used if patients are hospitalized and receive medications from hospital wards, but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. **CAVE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples below).**
 
 In addition to the global options, both settings accept a column name in the dispensing dataset (for `trt.interruption`) or special periods dataset (for `special.periods.mapping`). The column can contain either of *continue*, *discard*, or *carryover* per medication type (for `trt.interruption`) or per special period type and/or medication type (for `special.periods.mapping`).
 
