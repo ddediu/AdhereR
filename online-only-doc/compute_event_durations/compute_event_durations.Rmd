@@ -842,6 +842,7 @@ for(i in 1:nrow(durcomp.hospitalisation[ID == 3])){
 During periods without prescriptions (treatment interruptions) or certain special episodes, it might not be meaninful to calculate a CMA at all. In these instances, it might be advisable to use `CMA_per_episode` with precomputed episodes, e.g. prescription episodes from the output of `compute_event_durations`. Precomputed episodes can be specified with the `treat.epi` parameter in `CMA_per_episode`. The episodes have to be a `data.frame` or `data.table` with the following columns:
 
 - `ID.colname`: the patient ID,
+- `medication.class.colname`: the medication class used for CMA computations,
 - `episode.ID`: the episode unique ID (increasing sequentially),
 - `episode.start`: the episode start date,
 - `episode.duration`: the episode duration in days,

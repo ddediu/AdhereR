@@ -7196,6 +7196,11 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' unique ID, the event date and duration, and might also contain the daily
 #' dosage and medication type (the actual column names are defined in the
 #' following four parameters).
+#' @param treat.epi A \emph{\code{data.frame}} containing the treatment episodes.
+#' Must contain the patient ID (\code{ID.colname}), the episode unique ID
+#' (increasing sequentially, \code{episode.ID}), the episode start date
+#' (\code{episode.start}), the episode duration in days (\code{episode.duration}),
+#' and the episode end date (\code{episode.end}).
 #' @param ID.colname A \emph{string}, the name of the column in \code{data}
 #' containing the unique patient ID; must be present.
 #' @param event.date.colname A \emph{string}, the name of the column in
@@ -7553,6 +7558,16 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                                suppress.warnings=suppress.warnings,
                                                return.data.table=TRUE);
 
+    } else {
+
+      # Convert treat.epi to data.table, cache event dat as Date objects, and key by patient ID and event date
+      treat.epi <- as.data.table(treat.epi);
+      treat.epi[, `:=` (episode.start := as.Date(episode.start,format=date.format),
+                        episode.end := as.Date(episode.end,format=date.format)
+                        )]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
+      setkeyv(treat.epi, c(ID.colname, episode.ID)); # key (and sorting) by patient and episode ID
+
+
     }
 
     if( is.null(treat.epi) || nrow(treat.epi) == 0 ) return (NULL);
@@ -7589,7 +7604,9 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     if( is.null(event.info2) ) return (NULL);
 
     # Merge the observation window start and end dates back into the treatment episodes:
-    treat.epi <- merge(treat.epi, event.info2[,c(ID.colname, ".OBS.START.DATE", ".OBS.END.DATE"),with=FALSE], all.x=TRUE);
+    treat.epi <- merge(treat.epi, event.info2[,c(ID.colname, ".OBS.START.DATE", ".OBS.END.DATE"),with=FALSE],
+                       all.x=TRUE,
+                       by = c(ID.colname));
     setnames(treat.epi, ncol(treat.epi)-c(1,0), c(".OBS.START.DATE.PRECOMPUTED", ".OBS.END.DATE.PRECOMPUTED"));
     # Get the intersection between the episode and the observation window:
     treat.epi[, c(".INTERSECT.EPISODE.OBS.WIN.START",
