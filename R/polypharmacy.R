@@ -363,17 +363,17 @@ CMA_polypharmacy <- function(data = data,
 
     # auxiliary function to handle precomputed treatment episodes
       compute.treat.epi <- function(treat.epi = treat.epi){
-        browser()
+
         # Convert treat.epi to data.table, cache event dat as Date objects, and key by patient ID and event date
         treat.epi <- as.data.table(treat.epi);
         treat.epi[, `:=` (episode.start = as.Date(episode.start,format=date.format),
                           episode.end = as.Date(episode.end,format=date.format)
         )]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-        setkeyv(treat.epi, c(ID.colname, medication.class.colname, "episode.ID")); # key (and sorting) by patient and episode ID
+        setkeyv(treat.epi, c(ID.colname, grouping, "episode.ID")); # key (and sorting) by patient and episode ID
 
         # Compute the real observation windows (might differ per patient) only once per patient (speed things up & the observation window is the same for all events within a patient):
-        tmp <- data[!duplicated(data[,c(ID.colname,medication.class.colname), with = FALSE]),]; # the reduced dataset for computing the actual OW:
-        tmp[,.PATIENT.MED.ID := paste(get(ID.colname),get(medication.class.colname),sep="*")]
+        tmp <- data[!duplicated(data[,c(ID.colname,grouping), with = FALSE]),]; # the reduced dataset for computing the actual OW:
+        tmp[,.PATIENT.MED.ID := paste(get(ID.colname),get(grouping),sep="*")]
         event.info2 <- compute.event.int.gaps(data=as.data.frame(tmp),
                                               ID.colname=".PATIENT.MED.ID",
                                               event.date.colname=event.date.colname,
@@ -404,32 +404,32 @@ CMA_polypharmacy <- function(data = data,
         if( is.null(event.info2) ) return (NULL);
 
         # Merge the observation window start and end dates back into the treatment episodes:
-        treat.epi <- merge(treat.epi, event.info2[,c(ID.colname, medication.class.colname, ".OBS.START.DATE", ".OBS.END.DATE"),with=FALSE],
+        treat.epi <- merge(treat.epi, event.info2[,c(ID.colname, grouping, ".OBS.START.DATE", ".OBS.END.DATE"),with=FALSE],
                            all.x=TRUE,
-                           by = c(ID.colname, medication.class.colname));
+                           by = c(ID.colname, grouping));
         setnames(treat.epi, ncol(treat.epi)-c(1,0), c(".OBS.START.DATE.PRECOMPUTED", ".OBS.END.DATE.PRECOMPUTED"));
         # Get the intersection between the episode and the observation window:
         treat.epi[, c(".INTERSECT.EPISODE.OBS.WIN.START",
                       ".INTERSECT.EPISODE.OBS.WIN.END")
                   := list(max(episode.start, .OBS.START.DATE.PRECOMPUTED),
                           min(episode.end,   .OBS.END.DATE.PRECOMPUTED)),
-                  by=c(ID.colname,"episode.ID", medication.class.colname)];
+                  by=c(ID.colname,"episode.ID", grouping)];
         treat.epi <- treat.epi[ .INTERSECT.EPISODE.OBS.WIN.START < .INTERSECT.EPISODE.OBS.WIN.END, ]; # keep only the episodes which fall within the OW
         treat.epi[, c("episode.duration",
                       ".INTERSECT.EPISODE.OBS.WIN.DURATION",
-                      ".PATIENT.EPISODE.ID")
+                      ".PATIENT.MED.EPISODE.ID")
                   := list(as.numeric(episode.end - episode.start),
                           as.numeric(.INTERSECT.EPISODE.OBS.WIN.END - .INTERSECT.EPISODE.OBS.WIN.START),
-                          paste(get(ID.colname),episode.ID,sep="*"))];
+                          paste(get(ID.colname),get(grouping),episode.ID,sep="*"))];
 
         # Merge the data and the treatment episodes info:
         data.epi <- merge(treat.epi, data, allow.cartesian=TRUE);
-        setkeyv(data.epi, c(".PATIENT.EPISODE.ID", ".DATE.as.Date"));
+        setkeyv(data.epi, c(".PATIENT.MED.EPISODE.ID", ".DATE.as.Date"));
 
         # compute end.episode.gap.days
 
         data.epi2 <- compute.event.int.gaps(data=as.data.frame(data.epi),
-                                            ID.colname=".PATIENT.EPISODE.ID",
+                                            ID.colname=".PATIENT.MED.EPISODE.ID",
                                             event.date.colname=event.date.colname,
                                             event.duration.colname=event.duration.colname,
                                             event.daily.dose.colname=event.daily.dose.colname,
@@ -454,33 +454,79 @@ CMA_polypharmacy <- function(data = data,
                                             return.data.table=TRUE);
 
 
-        episode.gap.days <- data.epi2[which(.EVENT.WITHIN.FU.WINDOW), c(ID.colname, "episode.ID", gap.days.colname), by = c(ID.colname, "episode.ID"), with = FALSE]; # gap days during the follow-up window
-        end.episode.gap.days <- episode.gap.days[,.(end.episode.gap.days = last(get(gap.days.colname))), by = c(ID.colname, "episode.ID")]; # gap days during the last event
+        episode.gap.days <- data.epi2[which(.EVENT.WITHIN.FU.WINDOW), c(ID.colname, grouping, "episode.ID", "gap.days"), by = c(ID.colname, "episode.ID", grouping), with = FALSE]; # gap days during the follow-up window
+        end.episode.gap.days <- episode.gap.days[,.(end.episode.gap.days = last(gap.days)), by = c(ID.colname, "episode.ID", grouping)]; # gap days during the last event
 
-        treat.epi <- merge(treat.epi, end.episode.gap.days, all.x = TRUE, by = c(ID.colname, "episode.ID")); # merge end.episode.gap.days back to data.epi
+        treat.epi <- merge(treat.epi, end.episode.gap.days, all.x = TRUE, by = c(ID.colname, "episode.ID", grouping)); # merge end.episode.gap.days back to data.epi
 
         treat.epi[, episode.duration := as.numeric(.INTERSECT.EPISODE.OBS.WIN.END-.INTERSECT.EPISODE.OBS.WIN.START)];
 
+        browser()
+
+        data.epi.ret <- data.epi[, c(ID.colname,
+                                     grouping,
+                                     event.date.colname,
+                                     event.duration.colname,
+                                     event.daily.dose.colname,
+                                     medication.class.colname,
+                                     ".PATIENT.MED.EPISODE.ID",
+                                     "episode.start",
+                                     "episode.duration",
+                                     ".INTERSECT.EPISODE.OBS.WIN.START",
+                                     ".INTERSECT.EPISODE.OBS.WIN.DURATION"), with = FALSE]
+
+        setnames(data.epi.ret,
+                 old = c(".PATIENT.MED.EPISODE.ID",
+                         "episode.start",
+                         "episode.duration",
+                         ".INTERSECT.EPISODE.OBS.WIN.START",
+                         ".INTERSECT.EPISODE.OBS.WIN.DURATION"),
+                 new = c(".PATIENT.MED.EPISODE.ID",
+                         "med.episode.start",
+                         "med.episode.duration",
+                         ".MED.INTERSECT.EPISODE.OBS.WIN.START",
+                         ".MED.INTERSECT.EPISODE.OBS.WIN.DURATION"))
+
+        treat.epi.ret <- treat.epi[,c(ID.colname,
+                                      ".PATIENT.MED.EPISODE.ID",
+                                      grouping,
+                                      "episode.ID",
+                                      "episode.start",
+                                      "episode.end",
+                                      "episode.duration",
+                                      "end.episode.gap.days"),
+                                   with = FALSE]
+
         # construct return object
-        ret <- list(data.epi = data.epi, treat.epi = treat.epi)
+        ret <- list(data.epi = data.epi.ret, treat.epi = treat.epi.ret)
 
         return(ret)
 
       }
 
+      # cache data and various parameters
+      data.2 <- copy(data)
+
+      ID.colname.2 <- ID.colname
+      followup.window.start.2 <- followup.window.start
+      followup.window.duration.2 <- followup.window.duration
+      observation.window.start.2 <- observation.window.start
+      observation.window.duration.2 <- observation.window.duration
+      observation.window.duration.unit.2 <- observation.window.duration.unit
+
       # adjust parameters if treat.epi is defined
       if(!is.null(treat.epi)){
 
-      data.epi <- compute.treat.epi(treat.epi)
+        data.epi <- compute.treat.epi(treat.epi)
 
-      data <- data.epi$data.epi
+        data.2 <- copy(data.epi$data.epi)
 
-      ID.colname <- ".PATIENT.EPISODE.ID"
-      followup.window.start <- "episode.start"
-      followup.window.duration <- "episode.duration"
-      observation.window.start <- ".INTERSECT.EPISODE.OBS.WIN.START"
-      observation.window.duration <- ".INTERSECT.EPISODE.OBS.WIN.DURATION"
-      observation.window.duration.unit <- "days"
+        ID.colname.2 <- ".PATIENT.MED.EPISODE.ID"
+        followup.window.start.2 <- "med.episode.start"
+        followup.window.duration.2 <- "med.episode.duration"
+        observation.window.start.2 <- ".MED.INTERSECT.EPISODE.OBS.WIN.START"
+        observation.window.duration.2 <- ".MED.INTERSECT.EPISODE.OBS.WIN.DURATION"
+        observation.window.duration.unit.2 <- "days"
 
       }
 
@@ -489,25 +535,25 @@ CMA_polypharmacy <- function(data = data,
       # setkeyv(tmp, c(ID.colname,"episode.ID"));
 
     # compute CMA per group for raw returns, simple (mean, median, min, max) or custom aggregation functions
-
+browser()
     if(!polypharmacy.method %in% c("DPPR", "any", "all")){
 
       # compute CMAs by medication group
-      CMA_all_by_group <- by(data, data[[grouping]], CMA.FNC,
+      CMA_all_by_group <- by(data.2, data.2[[grouping]], CMA.FNC,
                              CMA.to.apply = CMA.to.apply,
-                             ID.colname = ID.colname,
+                             ID.colname = ID.colname.2,
                              event.date.colname = event.date.colname,
                              event.duration.colname = event.duration.colname,
                              medication.class.colname = medication.class.colname,
                              event.daily.dose.colname = event.daily.dose.colname,
-                             followup.window.start=followup.window.start,
+                             followup.window.start=followup.window.start.2,
                              followup.window.start.unit=followup.window.start.unit,
-                             followup.window.duration=followup.window.duration,
+                             followup.window.duration=followup.window.duration.2,
                              followup.window.duration.unit=followup.window.duration.unit,
-                             observation.window.start=observation.window.start,
+                             observation.window.start=observation.window.start.2,
                              observation.window.start.unit=observation.window.start.unit,
-                             observation.window.duration=observation.window.duration,
-                             observation.window.duration.unit=observation.window.duration.unit,
+                             observation.window.duration=observation.window.duration.2,
+                             observation.window.duration.unit=observation.window.duration.unit.2,
                              date.format=date.format,parallel.backend="none")
 
       # get CMA values
@@ -560,24 +606,25 @@ CMA_polypharmacy <- function(data = data,
     } else { # compute CMA for "DPPR", "any" and "all" aggregation functions
 
       # calculate CMA_per_episode with maximum permissible gap of 0 days
-      CMA_full_per_day <- by(data, data[[grouping]],
+      CMA_full_per_day <- by(data.2, data.2[[grouping]],
+                             treat.epi = NULL,
                              CMA_per_episode,
                              maximum.permissible.gap = 0,
                              maximum.permissible.gap.unit = "days",
                              CMA.to.apply = CMA.to.apply,
-                             ID.colname = ID.colname,
+                             ID.colname = ID.colname.2,
                              event.date.colname = event.date.colname,
                              event.duration.colname = event.duration.colname,
                              medication.class.colname = medication.class.colname,
                              event.daily.dose.colname = event.daily.dose.colname,
-                             followup.window.start=followup.window.start,
+                             followup.window.start=followup.window.start.2,
                              followup.window.start.unit=followup.window.start.unit,
-                             followup.window.duration=followup.window.duration,
+                             followup.window.duration=followup.window.duration.2,
                              followup.window.duration.unit=followup.window.duration.unit,
-                             observation.window.start=observation.window.start,
+                             observation.window.start=observation.window.start.2,
                              observation.window.start.unit=observation.window.start.unit,
-                             observation.window.duration=observation.window.duration,
-                             observation.window.duration.unit=observation.window.duration.unit,
+                             observation.window.duration=observation.window.duration.2,
+                             observation.window.duration.unit=observation.window.duration.unit.2,
                              carry.only.for.same.medication = carry.only.for.same.medication,
                              date.format=date.format,
                              suppress.warnings = TRUE)
@@ -658,7 +705,7 @@ CMA_polypharmacy <- function(data = data,
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
   data.copy <- data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date", medication.class.colname)); # key (and sorting) by patient ID and event date
+  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date", grouping)); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- AdhereR:::.compute.function(.workhorse.function, fnc.ret.vals=2,

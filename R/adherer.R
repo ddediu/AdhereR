@@ -7562,10 +7562,10 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
 
       # Convert treat.epi to data.table, cache event dat as Date objects, and key by patient ID and event date
       treat.epi <- as.data.table(treat.epi);
-      treat.epi[, `:=` (episode.start := as.Date(episode.start,format=date.format),
-                        episode.end := as.Date(episode.end,format=date.format)
+      treat.epi[, `:=` (episode.start = as.Date(episode.start,format=date.format),
+                        episode.end = as.Date(episode.end,format=date.format)
                         )]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-      setkeyv(treat.epi, c(ID.colname, episode.ID)); # key (and sorting) by patient and episode ID
+      setkeyv(treat.epi, c(ID.colname, "episode.ID")); # key (and sorting) by patient and episode ID
 
 
     }
@@ -7660,7 +7660,6 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
 
       treat.epi[, episode.duration := as.numeric(.INTERSECT.EPISODE.OBS.WIN.END-.INTERSECT.EPISODE.OBS.WIN.START)];
     }
-
 
     # Compute the required CMA on this new combined database:
     cma <- CMA.FNC(data=as.data.frame(data.epi),
