@@ -461,31 +461,30 @@ CMA_polypharmacy <- function(data = data,
 
         treat.epi[, episode.duration := as.numeric(.INTERSECT.EPISODE.OBS.WIN.END-.INTERSECT.EPISODE.OBS.WIN.START)];
 
-        browser()
-
         data.epi.ret <- data.epi[, c(ID.colname,
                                      grouping,
                                      event.date.colname,
                                      event.duration.colname,
                                      event.daily.dose.colname,
                                      medication.class.colname,
-                                     ".PATIENT.MED.EPISODE.ID",
                                      "episode.start",
                                      "episode.duration",
+                                     ".PATIENT.MED.EPISODE.ID",
                                      ".INTERSECT.EPISODE.OBS.WIN.START",
-                                     ".INTERSECT.EPISODE.OBS.WIN.DURATION"), with = FALSE]
+                                     ".INTERSECT.EPISODE.OBS.WIN.DURATION",
+                                     ".INTERSECT.EPISODE.OBS.WIN.END"), with = FALSE]
 
         setnames(data.epi.ret,
-                 old = c(".PATIENT.MED.EPISODE.ID",
-                         "episode.start",
+                 old = c("episode.start",
                          "episode.duration",
                          ".INTERSECT.EPISODE.OBS.WIN.START",
-                         ".INTERSECT.EPISODE.OBS.WIN.DURATION"),
-                 new = c(".PATIENT.MED.EPISODE.ID",
-                         "med.episode.start",
+                         ".INTERSECT.EPISODE.OBS.WIN.DURATION",
+                         ".INTERSECT.EPISODE.OBS.WIN.END"),
+                 new = c("med.episode.start",
                          "med.episode.duration",
                          ".MED.INTERSECT.EPISODE.OBS.WIN.START",
-                         ".MED.INTERSECT.EPISODE.OBS.WIN.DURATION"))
+                         ".MED.INTERSECT.EPISODE.OBS.WIN.DURATION",
+                         ".MED.INTERSECT.EPISODE.OBS.WIN.END"))
 
         treat.epi.ret <- treat.epi[,c(ID.colname,
                                       ".PATIENT.MED.EPISODE.ID",
@@ -535,7 +534,7 @@ CMA_polypharmacy <- function(data = data,
       # setkeyv(tmp, c(ID.colname,"episode.ID"));
 
     # compute CMA per group for raw returns, simple (mean, median, min, max) or custom aggregation functions
-browser()
+
     if(!polypharmacy.method %in% c("DPPR", "any", "all")){
 
       # compute CMAs by medication group
@@ -629,11 +628,14 @@ browser()
                              date.format=date.format,
                              suppress.warnings = TRUE)
 
+      browser()
+
       # get CMA values
       CMA_per_day <- lapply(CMA_full_per_day, FUN = function(x){
         cbind(grouping = first(x$data[[grouping]]), x$CMA)
       })
       CMA_per_day <- rbindlist(CMA_per_day)
+      CMA_per_day <- merge(CMA_per_day, unique(data.2[,c(ID.colname, ID.colname.2), with = FALSE]),by = c(ID.colname.2))
       setkeyv(CMA_per_day, ID.colname)
 
       # get event information
@@ -641,21 +643,24 @@ browser()
         cbind(grouping = first(x$data[[grouping]]), x$event.info)
       })
       event_info <- rbindlist(event_info)
+      event_info <- merge(event_info, unique(data.2[,c(ID.colname, ID.colname.2), with = FALSE]),by = c(ID.colname.2))
       setkeyv(event_info, ID.colname)
 
       # create intersections of episodes
       episodes <- CMA_per_day[,episodes.intersections(episode.start, episode.end, "intersect"), by = ID.colname]
       episodes[,intersect.ID := seq_len(.N), by=ID.colname]
 
+      ifelse(ID.colname == ID.colname.2, ID.colnames <- ID.colname, ID.colnames <- c(ID.colname, ID.colname.2))
+
       CMA_per_day_intersect <- merge(CMA_per_day[,c("grouping",
-                                                    ID.colname,
+                                                    ID.colnames,
                                                     "episode.start",
                                                     "end.episode.gap.days",
                                                     "episode.duration",
                                                     "episode.end"), with = FALSE],
                                      episodes, by = ID.colname, allow.cartesian=TRUE)
 
-      CMA_per_day_intersect <- merge(CMA_per_day_intersect, event_info, by = c(ID.colname, "grouping"))
+      CMA_per_day_intersect <- merge(CMA_per_day_intersect, event_info, by = c(ID.colnames, "grouping"))
 
       CMA_per_day_intersect[,CMA := 0] # set availability to 0
 
@@ -663,7 +668,7 @@ browser()
       CMA_per_day_intersect[intersect.start >= episode.start & intersect.end <= episode.end, CMA := 1]
 
       # if the OW starts after the end of the intersection or ends before the start of an intersection, set CMA to NA
-      CMA_per_day_intersect[intersect.end <= .OBS.START.DATE | intersect.start >= .OBS.END.DATE, CMA := NA]
+      CMA_per_day_intersect[intersect.end < .OBS.START.DATE | intersect.start > .OBS.END.DATE, CMA := NA]
 
       # keep only one row per intersection
       CMA <- CMA_per_day_intersect[, .(CMA = max(CMA)), by = c(ID.colname,
