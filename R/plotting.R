@@ -37,14 +37,11 @@
 ############
 ## TODO ####
 #
-# float point precision in SVG
 # string height & width in SVG
 # make sure the image resizes well
 # convert IDs into class'es and use IDs only when really needed
 # check colors, etc, consistency
 # image dimensions (also for export)
-#
-# wrapper for conversion to R image
 #
 # HTML + CSS + JavaScript
 #
@@ -60,8 +57,35 @@
 }
 
 
+# # Draws shadowed/outlined text (taken directly from TeachingDemos to reduced the dependencies on other packages):
+# .shadow.text <- function(x, y=NULL, labels, col='white', bg='black', theta= seq(pi/4, 2*pi, length.out=8), r=0.1, ... )
+# {
+#
+#   xy <- xy.coords(x,y);
+#   xo <- r*strwidth('A');
+#   yo <- r*strheight('A');
+#
+#   for (i in theta) text( xy$x + cos(i)*xo, xy$y + sin(i)*yo, labels, col=bg, ... );
+#   text(xy$x, xy$y, labels, col=col, ... );
+# }
+
+# Draws text on a semi-transparent background:
+.shadow.text <- function(x, y=NULL, labels, col='white', bg='black', alpha=0.25, cex=1.0, ... )
+{
+  #browser()
+  xy <- xy.coords(x,y);
+  w <- strwidth(labels, cex=cex); h <- strheight(labels, cex=cex); w0 <- strwidth("0", cex=cex); h0 <- strheight("0", cex=cex);
+  rect(xy$x-w/2-w0/4, xy$y-h/2-h0/4, xy$x+w/2+w0/4, xy$y+h/2+h0/4, col=scales::alpha(bg, alpha=alpha), border=NA);
+  text(xy$x, xy$y, labels, col=col, cex=cex);
+}
+
+
 ## SVG special functions and constants ####
 
+.SVG.number <- function(n, prec=3)
+{
+  if( is.numeric(n) ) as.character(round(n,prec)) else n;
+}
 
 # Replace special characters with XML/HTML entities
 # Inspired by htmlspecialchars() in package "fun"
@@ -152,12 +176,12 @@
           if(!is.na(id)) c('id="',id,'" '),
 
           # The x and y coordinates of the bottom-left corner:
-          if(!is.na(x)) c('x="',x,'" '),
-          if(!is.na(y)) c('y="',y,'" '),
+          if(!is.na(x)) c('x="',.SVG.number(x),'" '),
+          if(!is.na(y)) c('y="',.SVG.number(y),'" '),
 
           # The width and height of the rectangle (either given directly or computed from the top-right corner coordinates):
-          if(!is.na(width)) c('width="',width,'" ') else if(!is.na(xend)) c('width="',(xend-x),'" '),
-          if(!is.na(height)) c('height="',height,'" ') else if(!is.na(yend)) c('height="',(yend-y),'" '),
+          if(!is.na(width))  c('width="', .SVG.number(width), '" ') else if(!is.na(xend)) c('width="',.SVG.number(xend-x),'" '),
+          if(!is.na(height)) c('height="',.SVG.number(height),'" ') else if(!is.na(yend)) c('height="',.SVG.number(yend-y),'" '),
 
           # Aesthetics:
           if(!is.na(stroke)) c('stroke="', .SVG.color(stroke), '" '),
@@ -225,8 +249,8 @@
            # The id (if any):
            if(!is.na(id)) c('id="',id,'" '),
 
-           # The cooridnates of the points as pairs separated by ',':
-           'points="', unlist(lapply(seq_along(x), function(i) c(x[i],",",y[i]," "))),'" ',
+           # The coordinates of the points as pairs separated by ',':
+           'points="', unlist(lapply(seq_along(x), function(i) c(.SVG.number(x[i]),",",.SVG.number(y[i])," "))),'" ',
 
            # Aesthetics:
            'fill="none" ',
@@ -274,10 +298,10 @@
              if(!is.na(id)) c('id="',id,'" '),
 
              # The cooridnates of the points:
-             'x1="', x[i], '" ',
-             'y1="', y[i], '" ',
-             'x2="', x[i+1], '" ',
-             'y2="', y[i+1], '" ',
+             'x1="', .SVG.number(x[i]), '" ',
+             'y1="', .SVG.number(y[i]), '" ',
+             'x2="', .SVG.number(x[i+1]), '" ',
+             'y2="', .SVG.number(y[i+1]), '" ',
 
              # Aesthetics:
              if(!is.na(stroke)) c('stroke="', .SVG.color(stroke), '" '),
@@ -342,7 +366,7 @@
             '<use xlink:href="#pch',pch[i],'" ',
 
             # The coordinates and size:
-            'transform="translate(',x[i],' ',y[i],') scale(',cex[i],')" ',
+            'transform="translate(',.SVG.number(x[i]),' ',.SVG.number(y[i]),') scale(',cex[i],')" ',
 
             # Aesthetics:
             if(!is.na(col[i])) c('stroke="', .SVG.color(col[i]), '" ', 'fill="', .SVG.color(col[i]), '" '),
@@ -406,7 +430,7 @@
             if(!is.na(id)) c('id="',id,'" '),
 
             # The coordinates:
-            'x="',x[i],'" y="',y[i],'" ',
+            'x="',.SVG.number(x[i]),'" y="',.SVG.number(y[i]),'" ',
 
             # The font:
             'font-family="',font[i],'" font-size="',font_size[i],'" ',
@@ -417,7 +441,7 @@
             if(!is.na(v.align[i]) && v.align[i]!="top") c('dominant-baseline="',switch(v.align[i], "center"="central", "bottom"="text-before-edge"),'" '),
 
             # Rotation:
-            if(!is.na(rotate[i])) c('transform="rotate(',rotate[i],' ',x[i],' ',y[i],')" '),
+            if(!is.na(rotate[i])) c('transform="rotate(',rotate[i],' ',.SVG.number(x[i]),' ',.SVG.number(y[i]),')" '),
 
             # Aesthetics:
             if(!is.na(col[i])) c('fill="', .SVG.color(col[i]), '" '),
@@ -506,7 +530,8 @@
                        highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                        show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for CMA8, the real observation window starts at a different date
                        alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
-                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                       rotate.text=-60,                 # some text (e.g., axis labels) may be rotated by this much degrees
+                       bw.plot=FALSE,                   # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                        min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
                        suppress.warnings=FALSE,         # suppress warnings?
@@ -1107,6 +1132,15 @@
                         "height"=strheight(tmp, units="inches", cex=cex.lab));
 
   left.margin <- (cur.mai <- par("mai"))[2]; # left margin in inches (and cache the current margins too)
+  if( .do.R ) # Rplot:
+  {
+    # Save the graphical params and restore them later:
+    old.par <- par(no.readonly=TRUE);
+
+    # Rotate the ID labels:
+    new.left.margin <- (y.label$height + (cos(-rotate.text*pi/180) * max(id.labels$width,na.rm=TRUE)) + strwidth("0000", units="inches", cex=cex.axis)); # ask for enough space
+    par(mai=c(cur.mai[1], new.left.margin, cur.mai[3], cur.mai[4]));
+  }
 
   # Vertical space needed for showing the partial CMAs:
   vert.space.cmas <- 0;
@@ -1181,7 +1215,6 @@
     dims.event.x          <- dims.chr.std*2; # the horizontal size of an event
     dims.event.y          <- (cex * dims.chr.std); # the vertical size of an event
     dims.day              <- ifelse(duration.total <= 90, 1, ifelse(duration.total <= 365, 7, ifelse(duration.total <= 3*365, 30, ifelse(duration.total <= 10*365, 90, 180)))); # how many days correpond to one horizontal user unit (depends on how many days there are in total)
-    rotate.text           <- -60; # (select) text rotation (in degrees)
     dims.axis.x           <- dims.chr.std + dims.chr.lab +
       (cos(-rotate.text*pi/180) * max(vapply(as.character(date.labels$string), function(s) .SVG.string.dims(s, font_size=dims.chr.axis)["width"], numeric(1)),na.rm=TRUE));
     dims.axis.y           <- dims.chr.std + dims.chr.lab +
@@ -1463,7 +1496,7 @@
         {
           rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window, y.cur - 0.5,
                adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window, y.cur + length(s.events) - 0.5,
-               col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
+               col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA); #, density=observation.window.density, angle=observation.window.angle);
         }
 
         if( .do.SVG ) # SVG:
@@ -1507,7 +1540,7 @@
             {
               rect(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window, y.cur - 0.5,
                    adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + correct.earliest.followup.window, y.cur + length(s.events) - 0.5,
-                   col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=real.obs.window.density, angle=real.obs.window.angle);
+                   col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA); #, density=real.obs.window.density, angle=real.obs.window.angle);
             }
 
             if( .do.SVG ) # SVG:
@@ -1740,12 +1773,27 @@
         if( cma$event.info$gap.days[i] > 0 )
           rect(adh.plot.space[2] + end.pi + correct.earliest.followup.window, i - char.height/2,
                adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window, i + char.height/2,
-               density=25, col=adjustcolor(col,alpha.f=0.5), border=col);
+               #density=25, col=adjustcolor(col,alpha.f=0.5),
+               col=NA, border=col);
       }
 
       if( .do.SVG ) # SVG:
       {
-        warning("SVG: Show event intervals: The end of the prescription: IMPLEMENT ME!\n");
+        svg.str <- c(svg.str,
+                     .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window),
+                               y=.scale.y.to.SVG.plot(y.cur) - dims.event.y/2,
+                               xend=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window),
+                               height=dims.event.y,
+                               stroke=col, fill=col, fill_opacity=0.2,
+                               id="event-interval-covered"),
+                     if( cma$event.info$gap.days[i] > 0 )
+                       .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window),
+                                 y=.scale.y.to.SVG.plot(y.cur) - dims.event.y/2,
+                                 xend=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window),
+                                 height=dims.event.y,
+                                 stroke=col, fill="none",
+                                 id="event-interval-not-covered")
+        );
       }
     }
 
@@ -2543,6 +2591,148 @@
   ## The legend ####
   ##
 
+  if( .do.R ) # Rplot:
+  {
+    .legend <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
+    {
+      # Legend rectangle:
+      if( do.plot ) rect(x, y, x + width, y + height, border=gray(0.6), lwd=2, col=rgb(0.99,0.99,0.99,legend.bkg.opacity));
+
+      cur.y <- y + height; # current y
+      max.width <- width; # maximum width
+
+      # Legend title:
+      if( do.plot ) text(x + width/2, cur.y, "Legend", pos=1, col=gray(0.3), cex=legend.cex.title);
+      cur.y <- cur.y - strheight("Legend", cex=legend.cex.title) - 3*legend.char.height; max.width <- max(max.width, strwidth("Legend", cex=legend.cex.title));
+
+      # Event:
+      if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event, col="black");
+      if( do.plot ) points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
+      if( do.plot ) points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
+
+      if( !plot.dose )
+      {
+        if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "duration", col="black", cex=legend.cex, pos=4);
+        cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration", cex=legend.cex));
+      } else
+      {
+        if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "duration (min. dose)", col="black", cex=legend.cex, pos=4);
+        cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration (min. dose)", cex=legend.cex));
+        if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event.max.dose, col="black");
+        if( do.plot ) points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
+        if( do.plot ) points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
+        if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "duration (max. dose)", col="black", cex=legend.cex, pos=4);
+        cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration (max. dose)", cex=legend.cex));
+      }
+
+      # No event:
+      if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.continuation, lwd=lwd.continuation, col=col.continuation);
+      if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "no event/connector", col="black", cex=legend.cex, pos=4);
+      cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("no event/connector", cex=legend.cex));
+
+      # Event intervals:
+      if( show.event.intervals )
+      {
+        if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor("black",alpha.f=0.5));
+        if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "days covered", col="black", cex=legend.cex, pos=4);
+        cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("days covered", cex=legend.cex));
+        if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=NA); #, col="black", density=25);
+        if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "gap days", col="black", cex=legend.cex, pos=4);
+        cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("gap days", cex=legend.cex));
+      }
+
+      # medication classes:
+      for( i in 1:length(cols) )
+      {
+        med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+        if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor(cols[i],alpha.f=0.5));
+        if( do.plot )
+        {
+          med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+          if( print.dose || plot.dose )
+          {
+            dose.for.cat <- (dose.range$category == med.class.name);
+            if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+            {
+              med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+            }
+          }
+          text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, med.class.name, col="black", cex=legend.cex, pos=4);
+        }
+        cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth(names(cols)[i], cex=legend.cex));
+      }
+      cur.y <- cur.y - 0.5*legend.char.height;
+
+      # Follow-up window:
+      if( highlight.followup.window )
+      {
+        if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=followup.window.col, lty="dotted", lwd=2, col=rgb(1,1,1,0.0));
+        if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "follow-up wnd.", col="black", cex=legend.cex, pos=4);
+        cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("follow-up wnd.", cex=legend.cex));
+      }
+
+      # Observation window:
+      if( highlight.observation.window )
+      {
+        if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
+        {
+          # CMA8 also has a "real" OW:
+          if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height,
+                             border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity)); #, density=observation.window.density, angle=observation.window.angle);
+          if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "theor. obs. wnd.", col="black", cex=legend.cex, pos=4);
+          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("theor. obs. wnd.", cex=legend.cex));
+          if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height,
+                             border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity)); #, density=real.obs.window.density, angle=real.obs.window.angle);
+          if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "real obs.wnd.", col="black", cex=legend.cex, pos=4);
+          cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("real obs.wnd.", cex=legend.cex));
+        } else
+        {
+          if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height,
+                             border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity)) #, density=observation.window.density, angle=observation.window.angle);
+          if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "observation wnd.", col="black", cex=legend.cex, pos=4);
+          cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("observation wnd.", cex=legend.cex));
+        }
+      }
+
+      # Required size:
+      return (c("width" =max.width + 5.0*legend.char.width,
+                "height"=(y + height - cur.y) + 1.0*legend.char.height));
+    }
+    if( show.legend )
+    {
+      # Character size for the legend:
+      legend.char.width <- strwidth("O",cex=legend.cex); legend.char.height <- strheight("O",cex=legend.cex);
+
+      legend.size <- .legend(do.plot=FALSE);
+      x <- legend.x; y <- legend.y;
+      if( is.na(x) || x == "right" )
+      {
+        x <- par("usr")[2] - legend.size["width"] - legend.char.width;
+      } else if( x == "left" )
+      {
+        x <- par("usr")[1] + legend.char.width;
+      } else if( !is.numeric(x) && length(x) != 1 )
+      {
+        x <- par("usr")[2] - legend.size["width"] - legend.char.width;
+      }
+      if( is.na(y) || y == "bottom" )
+      {
+        y <- par("usr")[3] + legend.char.height;
+      } else if( y == "top" )
+      {
+        y <- par("usr")[4] - legend.size["height"] - legend.char.height;
+      } else if( !is.numeric(y) && length(y) != 1 )
+      {
+        y <- par("usr")[3] + legend.char.height;
+      }
+      ret.val <- .legend(x, y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
+    }
+    else
+    {
+      ret.val <- c("width"=NA, "height"=NA);
+    }
+  }
+
   if( .do.SVG ) # SVG:
   {
     .legend <- function(x=0, y=0)
@@ -2764,6 +2954,11 @@
   ## Finish and possibly export the file(s) ####
   ##
 
+  if( .do.R ) # Rplot:
+  {
+    par(old.par); # restore graphical params
+  }
+
   if( .do.SVG ) # Close the <sgv> tag:
   {
     svg.str <- c(svg.str, '</svg>\n');
@@ -2917,15 +3112,6 @@
     }
   }
 
-
-  ##
-  ## Generate R plot ####
-  ##
-
-  if( generate.R.plot )
-  {
-    # Was an SVG already exported?
-  }
 
   # Return value:
   return (invisible(exported.file.names));
