@@ -20,8 +20,8 @@ plot_interactive_cma(data = NULL, ID = NULL, cma.class = c("simple",
   "rstudio")[1], use.system.browser = FALSE,
   get.colnames.fnc = function(d) names(d),
   get.patients.fnc = function(d, idcol) unique(d[[idcol]]),
-  get.data.for.patients.fnc = function(patientid, d, idcol) d[d[[idcol]]
-  \%in\% patientid, ], ...)
+  get.data.for.patients.fnc = function(patientid, d, idcol, cols = NA,
+  maxrows = NA) d[d[[idcol]] \%in\% patientid, ], ...)
 }
 \arguments{
 \item{data}{Usually a \emph{\code{data.frame}} containing the events (prescribing
@@ -138,8 +138,17 @@ listing the column names, all the patient IDs, and for retreiving the actual
 data for a (set of) patient ID(s). A fully worked example is described in
 the vignette detailing the access to standard databases storaging the
 patient information.
+For more info please see the online vignette \url{https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html}.
 }
 \examples{
 \dontrun{
-plot_interactive_cma(med.events);}
+plot_interactive_cma(med.events,
+                     ID.colname="PATIENT_ID",
+                     event.date.colname="DATE",
+                     event.duration.colname="DURATION",
+                     event.daily.dose.colname="PERDAY",
+                     medication.class.colname="CATEGORY");}
+}
+\seealso{
+The online vignette \url{https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html}.
 }

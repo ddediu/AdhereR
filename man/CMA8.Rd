@@ -21,7 +21,9 @@ CMA8(data = NULL, ID.colname = NA, event.date.colname = NA,
   gap.days.colname = "gap.days",
   force.NA.CMA.for.failed.patients = TRUE, parallel.backend = c("none",
   "multicore", "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)")[1],
-  parallel.threads = "auto", suppress.warnings = FALSE, ...)
+  parallel.threads = "auto", suppress.warnings = FALSE,
+  arguments.that.should.not.be.defined = c(carryover.within.obs.window =
+  TRUE, carryover.into.obs.window = TRUE), ...)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the events used to compute
@@ -125,6 +127,10 @@ threads, or a more complex specification of the SNOW cluster nodes for
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{arguments.that.should.not.be.defined}{a \emph{list} of argument names
+and pre-defined valuesfor which a warning should be thrown if passed to the
+function.}
 
 \item{...}{other possible parameters}
 }

@@ -13,15 +13,14 @@
   cex = 1, cex.axis = 0.75, cex.lab = 1, show.cma = TRUE,
   col.cats = rainbow, unspecified.category.label = "drug",
   lty.event = "solid", lwd.event = 2, pch.start.event = 15,
-  pch.end.event = 16, show.event.intervals = TRUE,
-  col.na = "lightgray", col.continuation = "black",
-  lty.continuation = "dotted", lwd.continuation = 1,
-  print.CMA = TRUE, CMA.cex = 0.5, plot.CMA = TRUE,
-  plot.CMA.as.histogram = TRUE, CMA.plot.ratio = 0.1,
-  CMA.plot.col = "lightgreen", CMA.plot.border = "darkgreen",
-  CMA.plot.bkg = "aquamarine", CMA.plot.text = CMA.plot.border,
-  highlight.followup.window = TRUE, followup.window.col = "green",
-  highlight.observation.window = TRUE,
+  pch.end.event = 16, col.na = "lightgray",
+  col.continuation = "black", lty.continuation = "dotted",
+  lwd.continuation = 1, print.CMA = TRUE, CMA.cex = 0.5,
+  plot.CMA = TRUE, plot.CMA.as.histogram = TRUE,
+  CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
+  CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
+  CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
+  followup.window.col = "green", highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
   observation.window.angle = -30, show.real.obs.window.start = TRUE,
   real.obs.window.density = 35, real.obs.window.angle = 30,
@@ -33,7 +32,8 @@
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
 plot}
 
-\item{...}{other possible parameters}
+\item{...}{other parameters (to be passed to the estimation and plotting of
+the simple CMA)}
 
 \item{patients.to.plot}{A vector of \emph{strings} containing the list of
 patient IDs to plot (a subset of those in the \code{cma} object), or
@@ -56,7 +56,7 @@ the beginning; if \code{align.all.patients == TRUE}, \code{show.period} is
 taken as "days".}
 
 \item{period.in.days}{The \emph{number} of days at which the regular grid is
-drawn.}
+drawn (or 0 for no grid).}
 
 \item{show.legend}{\emph{Logical}, should the legend be drawn?}
 
@@ -84,9 +84,6 @@ unspecified (generic) medication category.}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
-
-\item{show.event.intervals}{\emph{Logical}, should the actual event intervals
-be shown?}
 
 \item{col.na}{The colour used for missing event data.}
 
@@ -172,6 +169,11 @@ of patients.
 
 Finally, the y-axis shows the patient ID and possibly the CMA estimate as
 well.
+
+Any not explicitely defined arguments are passed to the simple CMA estimation
+and plotting function; therefore, for more info about possible estimation
+parameters plese see the help for the appropriate simple CMA, and for possible
+aesthetic tweaks, please see the help for their plotting.
 }
 \examples{
 \dontrun{
@@ -212,4 +214,9 @@ cmaE <- CMA_per_episode(CMA=CMA1,
                         date.format="\%m/\%d/\%Y"
                        );
 plot(cmaE, patients.to.plot=c("1","2"));}
+}
+\seealso{
+See the simple CMA estimation \code{\link[AdhereR]{CMA1}}
+to \code{\link[AdhereR]{CMA9}} and plotting \code{\link[AdhereR]{plot.CMA1}}
+functions for extra parameters.
 }

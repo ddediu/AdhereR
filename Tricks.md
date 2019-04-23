@@ -12,13 +12,16 @@ devtools::build(path="~/Google Drive/AdhereR/latest-package-for-testing/", binar
 
 ## Compress PDF vignettes while keeping (hyper)links
 
-When using PDF vignettes, the check system may complain that those PDFs are too bg and that one should use `tools::compactPDF(gs_quality = "ebook")` to compress them, but when doing so, the (hyper)links in the document are lost.
+When using PDF vignettes, the check system may complain that those PDFs are too big and that one should use `tools::compactPDF(gs_quality = "ebook")` to compress them, but when doing so, the (hyper)links in the document are lost.
 The solution is to pass an extra argument: `tools::compactPDF([PDF_FILE_NAME], gs_quality = "ebook", gs_extras="-dPrinted=false")` (see, for example, [here](https://tex.stackexchange.com/questions/456896/set-the-print-flag-on-links-with-hyperref-to-preserve-them-with-ghostscript-9) for details) .
 
 
 ## Make sure to install vignettes from `RStudio`
 
-As described [here](https://yihui.name/knitr/demo/vignette/), by default `devtools` do not install the vignettes; for that one should run `devtools::install(build_vignettes = TRUE)`.
+As described [here](https://yihui.name/knitr/demo/vignette/), by default `devtools` do not install the vignettes; for that one should run 
+```
+devtools::install(build_vignettes = TRUE)
+```
 
 
 ## HTML vignettes too big

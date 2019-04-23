@@ -6,20 +6,24 @@
 \usage{
 \method{plot}{CMA0}(x, ..., patients.to.plot = NULL, duration = NA,
   align.all.patients = FALSE, show.period = c("dates", "days")[2],
-  period.in.days = 90, show.legend = TRUE, legend.x = "bottomright",
-  legend.y = NULL, legend.bkg.opacity = 0.5, cex = 1,
-  cex.axis = 0.75, cex.lab = 1, col.cats = rainbow,
+  period.in.days = 90, show.legend = TRUE, legend.x = "right",
+  legend.y = "bottom", legend.bkg.opacity = 0.5, legend.cex = 0.75,
+  legend.cex.title = 1, cex = 1, cex.axis = 0.75, cex.lab = 1,
+  col.cats = rainbow, unspecified.category.label = "drug",
   lty.event = "solid", lwd.event = 2, pch.start.event = 15,
   pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
   print.dose.outline.col = "white", print.dose.centered = FALSE,
   plot.dose = FALSE, lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
   col.continuation = "black", lty.continuation = "dotted",
-  lwd.continuation = 1, col.na = "lightgray", events = NULL,
-  events.ID.colname = NA, events.start.colname = NA,
-  events.end.colname = NA, events.date.format = NA,
-  col.events = adjustcolor("gray20", alpha.f = 0.5), bw.plot = FALSE,
-  print.CMA = TRUE, plot.CMA = TRUE, CMA.plot.ratio = 0.1)
+  lwd.continuation = 1, col.na = "lightgray",
+  highlight.followup.window = TRUE, followup.window.col = "green",
+  highlight.observation.window = TRUE,
+  observation.window.col = "yellow", observation.window.density = 35,
+  observation.window.angle = -30, observation.window.opacity = 0.3,
+  bw.plot = FALSE, print.CMA = TRUE, plot.CMA = TRUE,
+  CMA.plot.ratio = 0.1, min.plot.size.in.characters.horiz = 10,
+  min.plot.size.in.characters.vert = 0.5, max.patients.to.plot = 100)
 }
 \arguments{
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
@@ -45,23 +49,29 @@ the beginning; if \code{align.all.patients == TRUE}, \code{show.period} is
 taken as "days".}
 
 \item{period.in.days}{The \emph{number} of days at which the regular grid is
-drawn.}
+drawn (or 0 for no grid).}
 
 \item{show.legend}{\emph{Logical}, should the legend be drawn?}
 
-\item{legend.x, legend.y}{where should the legend be drawn (please see
-\code{legend} for details).}
+\item{legend.x}{The position of the legend on the x axis; can be "left",
+"right" (default), or a \emph{numeric} value.}
 
-\item{legend.bkg.opacity}{\emph{numerc} value specifying the opacity of the
-legend's background.}
+\item{legend.y}{The position of the legend on the y axis; can be "bottom"
+(default), "top", or a \emph{numeric} value.}
 
-\item{cex, cex.axis, cex.lab}{\emph{numeric} values specifying the cex of the
-various types of text.}
+\item{legend.bkg.opacity}{A \emph{number} between 0.0 and 1.0 specifying the
+opacity of the legend background.}
+
+\item{cex, cex.axis, cex.lab, legend.cex, legend.cex.title}{\emph{numeric} values
+specifying the cex of the various types of text.}
 
 \item{col.cats}{A \emph{color} or a \emph{function} that specifies the single
 colour or the colour palette used to plot the different medication; by
 default \code{rainbow}, but we recommend, whenever possible, a
 colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.}
+
+\item{unspecified.category.label}{A \emph{string} giving the name of the
+unspecified (generic) medication category.}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
@@ -94,6 +104,17 @@ width).}
 
 \item{col.na}{The colour used for missing event data.}
 
+\item{highlight.followup.window}{\emph{Logical}, should the follow-up window
+be plotted?}
+
+\item{followup.window.col}{The follow-up window's colour.}
+
+\item{highlight.observation.window}{\emph{Logical}, should the observation
+window be plotted?}
+
+\item{observation.window.col, observation.window.density, observation.window.angle, observation.window.opacity}{Attributes of the observation window (colour, shading density, angle and
+opacity).}
+
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
 
@@ -103,7 +124,19 @@ width).}
 graphically?}
 
 \item{CMA.plot.ratio}{A \emph{number}, the proportion of the total horizontal
-plot space to be allocated to the CMA plot.}
+plot space to be allocated to the CMA plot.
+\emph{Numeric}, the minimum size of the plotting surface in characters;
+horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+referes to a single event.}
+
+\item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
+horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+referes to a single event.}
+
+\item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
+to plot.}
 }
 \description{
 Plots the events (prescribing or dispensing) data encapsulated in a basic
