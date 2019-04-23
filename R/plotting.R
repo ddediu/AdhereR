@@ -34,12 +34,10 @@
 #
 ################################################################################
 
-############
 ## TODO ####
 #
 # string height & width in SVG
 # make sure the image resizes well
-# convert IDs into class'es and use IDs only when really needed
 # check colors, etc, consistency
 # image dimensions (also for export)
 #
@@ -48,7 +46,6 @@
 # test
 # profile & optimise
 #
-############
 
 # Grayscale colors palette:
 .bw.colors <- function(n)
@@ -143,7 +140,7 @@
 
 .SVG.rect <- function(x=NA, y=NA, width=NA, height=NA, xend=NA, yend=NA,  # can accomodate both (wdith,height) and (xend,yend)
                       stroke=NA, stroke_width=NA, lty=NA, stroke_dasharray=NA, fill="white", fill_opacity=NA, other_params=NA, # styling attributes
-                      id=NA, comment=NA,  # ID and comment
+                      id=NA, class=NA, comment=NA,  # ID and comment
                       newline=TRUE, # should a newline be added at the end?
                       return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
@@ -172,8 +169,9 @@
           # The rect element:
           '<rect ',
 
-          # The id (if any):
+          # The id and class (if any):
           if(!is.na(id)) c('id="',id,'" '),
+          if(!is.na(class)) c('class="',class,'" '),
 
           # The x and y coordinates of the bottom-left corner:
           if(!is.na(x)) c('x="',.SVG.number(x),'" '),
@@ -203,7 +201,7 @@
 .SVG.lines <- function(x, y,  # the coordinates of the points (at least 2)
                        connected=FALSE, # are the lines connected or not?
                        stroke=NA, stroke_width=NA, lty=NA, stroke_dasharray=NA, other_params=NA, # styling attributes (may be one per line for connected==FALSE)
-                       id=NA, comment=NA,  # ID and comment
+                       id=NA, class=NA, comment=NA,  # ID and comment
                        newline=TRUE, # should a newline be added at the end?
                        return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
@@ -246,8 +244,9 @@
     r <- c(r,
            '<polyline ',
 
-           # The id (if any):
+           # The id and class (if any):
            if(!is.na(id)) c('id="',id,'" '),
+           if(!is.na(class)) c('class="',class,'" '),
 
            # The coordinates of the points as pairs separated by ',':
            'points="', unlist(lapply(seq_along(x), function(i) c(.SVG.number(x[i]),",",.SVG.number(y[i])," "))),'" ',
@@ -323,7 +322,7 @@
 
 .SVG.points <- function(x, y, pch=0,
                         col="black", cex=1.0, other_params=NA, # styling attributes
-                        id=NA, comment=NA,  # ID and comment
+                        id=NA, class=NA, comment=NA,  # ID and comment
                         newline=TRUE, # should a newline be added at the end?
                         return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
@@ -358,8 +357,9 @@
             # The element:
             '<g ',
 
-            # The id (if any):
+            # The id and class (if any):
             if(!is.na(id)) c('id="',id,'" '),
+            if(!is.na(class)) c('class="',class,'" '),
             '>',
 
             # Reuse the predefined symbol:
@@ -388,7 +388,7 @@
                       h.align=c(NA,"left","center","right")[1], v.align=c(NA,"top","center","bottom")[1], # alignment
                       rotate=NA, # rotation in degrees
                       other_params=NA, # styling attributes
-                      id=NA, comment=NA,  # ID and comment
+                      id=NA, class=NA, comment=NA,  # ID and comment
                       newline=TRUE, # should a newline be added at the end?
                       return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
@@ -426,8 +426,9 @@
             # The element:
             '<text ',
 
-            # The id (if any):
+            # The id and class (if any):
             if(!is.na(id)) c('id="',id,'" '),
+            if(!is.na(class)) c('class="',class,'" '),
 
             # The coordinates:
             'x="',.SVG.number(x[i]),'" y="',.SVG.number(y[i]),'" ',
@@ -543,11 +544,11 @@
 )
 {
 
-  ## DEBUG ##
+  ## DEBUG ####
   export.formats <- c("svg", "svg-and-html", "svg-in-html", "png", "webp", "ps", "pdf");
   export.formats.directory <- "~/Temp/tmp";
   generate.R.plot <- TRUE;
-  ## END DEBUG ##
+  ## END DEBUG ####
 
 
   # What sorts of plots to generate (use short names for short if statements):
@@ -627,7 +628,7 @@
                                 y=c(.scale.y.to.SVG.plot(y.mean - 2), .scale.y.to.SVG.plot(y.mean - 2 + 4*adh.y[j])),
                                 connected=FALSE,
                                 stroke=CMA.plot.border, stroke_width=1,
-                                id="cma-summary-plot")
+                                class="cma-summary-plot")
         );
       }
       if( 3*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
@@ -648,7 +649,7 @@
                                h.align=c("right","right","left"),
                                v.align="center",
                                rotate=c(-(90+rotate.text),-(90+rotate.text),-90),
-                               id="cma-summary-text")
+                               class="cma-summary-text")
         );
       }
     }
@@ -683,7 +684,7 @@
                               y=.scale.y.to.SVG.plot(y.mean - 2 + 4*adh.y),
                               connected=TRUE,
                               stroke=CMA.plot.border, stroke_width=1,
-                              id="cma-summary-plot")
+                              class="cma-summary-plot")
       );
       if( 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
       {
@@ -698,7 +699,7 @@
                                       sprintf("%.1f%%",100*adh.x.1)),
                                col=CMA.plot.text, font_size=dims.chr.cma,
                                h.align=c("right","right"), v.align="center", rotate=rotate.text,
-                               id="cma-summary-text")
+                               class="cma-summary-text")
         );
       }
     }
@@ -743,7 +744,7 @@
                                 y=c(.scale.y.to.SVG.plot(y.mean - 2), .scale.y.to.SVG.plot(y.mean - 2 + 4)),
                                 connected=FALSE,
                                 stroke=CMA.plot.border, stroke_width=2,
-                                id="cma-summary-plot")
+                                class="cma-summary-plot")
         );
       if( length(adh)*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
       {
@@ -755,7 +756,7 @@
                                text=sprintf("%.1f%%",100*adh),
                                col=CMA.plot.text, font_size=dims.chr.cma,
                                h.align=rep(c("right", "left"),times=length(adh))[1:length(adh)], v.align="center", rotate=rotate.text,
-                               id="cma-summary-text")
+                               class="cma-summary-text")
         );
       } else if( 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
       {
@@ -771,7 +772,7 @@
                                col=CMA.plot.text, font_size=dims.chr.cma,
                                h.align=c("right","right"), v.align="center",
                                rotate=c(-90,-90),
-                               id="cma-summary-text")
+                               class="cma-summary-text")
         );
       }
     }
@@ -1273,25 +1274,26 @@
                  ' version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n'); # the plotting surface
 
     # Reusable bits:
+    dce1 <- .SVG.number(dims.chr.event); dce2 <- .SVG.number(dims.chr.event/2); ndce2 <- .SVG.number(-dims.chr.event/2); dce3 <- .SVG.number(dims.chr.event/3); dce4 <- .SVG.number(dims.chr.event/4); # cache the various relative sizes used to draw the pch symbols
     svg.str <- c(svg.str,
                  # Predefined things to be used in the drawing:
                  '<defs>\n',
 
                  # The point symbols (pch) used for events etc:
                  # pch 0:
-                 '<g id="pch0" fill="none" stroke-width="1"> <rect x="',-dims.chr.event/2,'" y="',-dims.chr.event/2,'" width="',dims.chr.event,'" height="',dims.chr.event,'"/> </g>\n',
+                 '<g id="pch0" fill="none" stroke-width="1"> <rect x="',ndce2,'" y="',ndce2,'" width="',dce1,'" height="',dce1,'"/> </g>\n',
                  # pch 1:
-                 '<g id="pch1" fill="none" stroke-width="1"> <circle cx="0" cy="0" r="',dims.chr.event/2,'"/> </g>\n',
+                 '<g id="pch1" fill="none" stroke-width="1"> <circle cx="0" cy="0" r="',dce2,'"/> </g>\n',
                  # pch 2:
-                 '<g id="pch2" fill="none" stroke-width="1"> <polyline points="',-dims.chr.event/2,',',dims.chr.event/2,' 0,',-dims.chr.event/2,' ',dims.chr.event/2,',',dims.chr.event/2,' ',-dims.chr.event/2,',',dims.chr.event/2,'"/> </g>\n',
+                 '<g id="pch2" fill="none" stroke-width="1"> <polyline points="',ndce2,',',dce2,' 0,',ndce2,' ',dce2,',',dce2,' ',ndce2,',',dce2,'"/> </g>\n',
                  # pch 3:
-                 '<g id="pch3" fill="none" stroke-width="1"> <line x1="',-dims.chr.event/2,'" y1="0" x2="',dims.chr.event/2,'" y2="0"/> <line x1="0" y1="',-dims.chr.event/2,'" x2="0" y2="',dims.chr.event/2,'"/> </g>\n',
+                 '<g id="pch3" fill="none" stroke-width="1"> <line x1="',ndce2,'" y1="0" x2="',dce2,'" y2="0"/> <line x1="0" y1="',ndce2,'" x2="0" y2="',dce2,'"/> </g>\n',
                  # pch 4:
-                 '<g id="pch4" fill="none" stroke-width="1"> <line x1="',-dims.chr.event/2,'" y1="',dims.chr.event/2,'" x2="',dims.chr.event/2,'" y2="',-dims.chr.event/2,'"/> <line x1="',-dims.chr.event/2,'" y1="',-dims.chr.event/2,'" x2="',dims.chr.event/2,'" y2="',dims.chr.event/2,'"/> </g>\n',
+                 '<g id="pch4" fill="none" stroke-width="1"> <line x1="',ndce2,'" y1="',dce2,'" x2="',dce2,'" y2="',ndce2,'"/> <line x1="',ndce2,'" y1="',ndce2,'" x2="',dce2,'" y2="',dce2,'"/> </g>\n',
                  # pch 5:
-                 '<g id="pch5" fill="none" stroke-width="1"> <polyline points="',-dims.chr.event/2,',0 0,',-dims.chr.event/2,' ',dims.chr.event/2,',0 0,',dims.chr.event/2,' ',-dims.chr.event/2,',0"/> </g>\n',
+                 '<g id="pch5" fill="none" stroke-width="1"> <polyline points="',ndce2,',0 0,',ndce2,' ',dce2,',0 0,',dce2,' ',ndce2,',0"/> </g>\n',
                  # pch 6:
-                 '<g id="pch6" fill="none" stroke-width="1"> <polyline points="',-dims.chr.event/2,',',-dims.chr.event/2,' 0,',dims.chr.event/2,' ',dims.chr.event/2,',',-dims.chr.event/2,' ',-dims.chr.event/2,',',-dims.chr.event/2,'"/> </g>\n',
+                 '<g id="pch6" fill="none" stroke-width="1"> <polyline points="',ndce2,',',ndce2,' 0,',dce2,' ',dce2,',',ndce2,' ',ndce2,',',ndce2,'"/> </g>\n',
                  # pch 7:
                  '<g id="pch7" fill="none" stroke-width="1"> <use xlink:href="#pch0"/> <use xlink:href="#pch4"/> </g>\n',
                  # pch 8:
@@ -1309,23 +1311,23 @@
                  # pch 14:
                  '<g id="pch14" fill="none" stroke-width="1"> <use xlink:href="#pch0"/> <use xlink:href="#pch2"/> </g>\n',
                  # pch 15:
-                 '<g id="pch15" stroke-width="1"> <rect x="',-dims.chr.event/2,'" y="',-dims.chr.event/2,'" width="',dims.chr.event,'" height="',dims.chr.event,'"/> </g>\n',
+                 '<g id="pch15" stroke-width="1"> <rect x="',ndce2,'" y="',ndce2,'" width="',dce1,'" height="',dce1,'"/> </g>\n',
                  # pch 16:
-                 '<g id="pch16" stroke-width="1"> <circle cx="0" cy="0" r="',dims.chr.event/3,'"/> </g>\n',
+                 '<g id="pch16" stroke-width="1"> <circle cx="0" cy="0" r="',dce3,'"/> </g>\n',
                  # pch 17:
-                 '<g id="pch17" stroke-width="1"> <polyline points="',-dims.chr.event/2,',',dims.chr.event/2,' 0,',-dims.chr.event/2,' ',dims.chr.event/2,',',dims.chr.event/2,' ',-dims.chr.event/2,',',dims.chr.event/2,'"/> </g>\n',
+                 '<g id="pch17" stroke-width="1"> <polyline points="',ndce2,',',dce2,' 0,',ndce2,' ',dce2,',',dce2,' ',ndce2,',',dce2,'"/> </g>\n',
                  # pch 18:
-                 '<g id="pch18" stroke-width="1"> <polyline points="',-dims.chr.event/2,',0 0,',-dims.chr.event/2,' ',dims.chr.event/2,',0 0,',dims.chr.event/2,' ',-dims.chr.event/2,',0"/> </g>\n',
+                 '<g id="pch18" stroke-width="1"> <polyline points="',ndce2,',0 0,',ndce2,' ',dce2,',0 0,',dce2,' ',ndce2,',0"/> </g>\n',
                  # pch 19:
-                 '<g id="pch19" stroke-width="1"> <circle cx="0" cy="0" r="',dims.chr.event/2,'"/> </g>\n',
+                 '<g id="pch19" stroke-width="1"> <circle cx="0" cy="0" r="',dce2,'"/> </g>\n',
                  # pch 20:
-                 '<g id="pch20" stroke-width="1"> <circle cx="0" cy="0" r="',dims.chr.event/4,'"/> </g>\n',
+                 '<g id="pch20" stroke-width="1"> <circle cx="0" cy="0" r="',dce4,'"/> </g>\n',
                  # pch 26 ( < ):
-                 '<g id="pch26" fill="none" stroke-width="1"> <polyline points="0,',dims.chr.event/2,' ',-dims.chr.event/2,',0 0,',-dims.chr.event/2,' "/> </g>\n',
+                 '<g id="pch26" fill="none" stroke-width="1"> <polyline points="0,',dce2,' ',ndce2,',0 0,',ndce2,' "/> </g>\n',
                  # pch 27 ( > ):
-                 '<g id="pch27" fill="none" stroke-width="1"> <polyline points="0,',dims.chr.event/2,' ',dims.chr.event/2,',0 0,',-dims.chr.event/2,' "/> </g>\n',
+                 '<g id="pch27" fill="none" stroke-width="1"> <polyline points="0,',dce2,' ',dce2,',0 0,',ndce2,' "/> </g>\n',
                  # pch 28 ( | ):
-                 '<g id="pch28" fill="none" stroke-width="1"> <line x1="0" y1="',dims.chr.event/2,'" x2="0" y2="',-dims.chr.event/2,'"/> </g>\n',
+                 '<g id="pch28" fill="none" stroke-width="1"> <line x1="0" y1="',dce2,'" x2="0" y2="',ndce2,'"/> </g>\n',
 
                  '</defs>\n',
                  '\n');
@@ -1385,7 +1387,7 @@
     svg.str <- c(svg.str,
                  # Clear the area:
                  .SVG.rect(comment="Clear the whole plotting area",
-                           id="plotting-area-background",
+                           class="plotting-area-background",
                            x=0, y=0, width=dims.total.width, height=dims.total.height,
                            fill="white", stroke="none"),
                  '\n' # one empty line
@@ -1454,7 +1456,7 @@
                        .SVG.rect(x=.scale.x.to.SVG.plot(0), y=.scale.y.to.SVG.plot(y.cur - 0.5 + vspace.needed),
                                  width=dims.plot.width, height=.scale.height.to.SVG.plot(vspace.needed),
                                  fill=alternating.bands.cols[alternating.band.to.draw],
-                                 id="alternating-bands", comment="The alternating band")
+                                 class="alternating-bands", comment="The alternating band")
           );
         }
 
@@ -1485,7 +1487,7 @@
                                  width=.scale.width.to.SVG.plot(as.numeric(cmas$.FU.END.DATE[s.cmas[1]] - cmas$.FU.START.DATE[s.cmas[1]])),
                                  height=.scale.height.to.SVG.plot(length(s.events)),
                                  stroke=followup.window.col, stroke_width=2, lty="dashed", fill="none",
-                                 id="fuw", comment="The Follow-Up Window (FUW)")
+                                 class="fuw", comment="The Follow-Up Window (FUW)")
           );
         }
       }
@@ -1508,7 +1510,7 @@
                                  width=.scale.width.to.SVG.plot(as.numeric(cmas$.OBS.END.DATE[s.cmas[1]] - cmas$.OBS.START.DATE[s.cmas[1]])),
                                  height=.scale.height.to.SVG.plot(length(s.events)),
                                  stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                                 id="ow", comment="The Observation Window (OW)")
+                                 class="ow", comment="The Observation Window (OW)")
           );
         }
 
@@ -1552,7 +1554,7 @@
                                      width=.scale.width.to.SVG.plot(as.numeric(real.obs.window.end - real.obs.window.start)),
                                      height=.scale.height.to.SVG.plot(length(s.events)),
                                      stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                                     id="ow-real", comment="The 'real' Observation Window")
+                                     class="ow-real", comment="The 'real' Observation Window")
               );
             }
           }
@@ -1575,7 +1577,7 @@
         svg.str <- c(svg.str,
                      .SVG.text(x=(dims.plot.x - dims.chr.axis), y=.scale.y.to.SVG.plot(y.cur + vspace.needed/2), text=pid,
                                font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
-                               id="axis-values-y", comment="The y-axis labels")
+                               class="axis-values-y", comment="The y-axis labels")
         );
       }
 
@@ -1611,7 +1613,7 @@
                                         .scale.y.to.SVG.plot(y.mean + 2)),
                                     connected=FALSE,
                                     stroke=CMA.plot.col, stroke_width=1,
-                                    id="cma-drawing-area-background", comment="The CMA plot background")
+                                    class="cma-drawing-area-background", comment="The CMA plot background")
             );
           }
 
@@ -1676,13 +1678,13 @@
                                      width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(min(adh,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)),
                                      height=.scale.height.to.SVG.plot(2),
                                      stroke="none", fill=CMA.plot.col,
-                                     id="cma-estimate-bkg", comment="The CMA estimate backgound"),
+                                     class="cma-estimate-bkg", comment="The CMA estimate backgound"),
                            .SVG.rect(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
                                      y=.scale.y.to.SVG.plot(mean(s.events)+1),
                                      width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)),
                                      height=.scale.height.to.SVG.plot(2),
                                      stroke=CMA.plot.border, stroke_width=1, fill="none",
-                                     id="cma-estimate-bkg")
+                                     class="cma-estimate-bkg")
               );
             }
 
@@ -1712,7 +1714,7 @@
                                        y=.scale.y.to.SVG.plot(mean(s.events)),
                                        text=cma.string,
                                        col=CMA.plot.text, font_size=dims.chr.cma, h.align="center", v.align="center", rotate=-90,
-                                       id="cma-estimate-text", comment="The CMA estimate (as text)")
+                                       class="cma-estimate-text", comment="The CMA estimate (as text)")
                 );
               }
             }
@@ -1751,10 +1753,10 @@
                    # The begining of the event:
                    .SVG.points(x=.scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window), y=.scale.y.to.SVG.plot(y.cur),
                                pch=pch.start.event, col=col, cex=cex,
-                               id="event-start"),
+                               class="event-start"),
                    .SVG.points(x=.scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window), y=.scale.y.to.SVG.plot(y.cur),
                                pch=pch.end.event, col=col, cex=cex,
-                               id="event-start")
+                               class="event-start")
       );
     }
 
@@ -1785,14 +1787,14 @@
                                xend=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window),
                                height=dims.event.y,
                                stroke=col, fill=col, fill_opacity=0.2,
-                               id="event-interval-covered"),
+                               class="event-interval-covered"),
                      if( cma$event.info$gap.days[i] > 0 )
                        .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window),
                                  y=.scale.y.to.SVG.plot(y.cur) - dims.event.y/2,
                                  xend=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window),
                                  height=dims.event.y,
                                  stroke=col, fill="none",
-                                 id="event-interval-not-covered")
+                                 class="event-interval-not-covered")
         );
       }
     }
@@ -1847,7 +1849,7 @@
                               y=rep(.scale.y.to.SVG.plot(y.cur),2),
                               connected=FALSE,
                               stroke=col, stroke_width=seg.lwd,
-                              id="event-segment")
+                              class="event-segment")
       );
     }
 
@@ -1883,7 +1885,7 @@
                                font_size=dims.chr.std * cex.dose, h.align="center", v.align="center",
                                col=if(is.na(print.dose.col)) col else print.dose.col,
                                other_params=if(!is.na(print.dose.outline.col)) paste0(' stroke="',.SVG.color(print.dose.outline.col,return_string=TRUE),'" stroke-width="0.5"'),
-                               id="event-dose-text")
+                               class="event-dose-text")
         );
       }
     }
@@ -1921,7 +1923,7 @@
                                     .scale.y.to.SVG.plot(y.cur)),
                                 connected=TRUE,
                                 stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
-                                id="continuation-line")
+                                class="continuation-line")
         );
       }
     } else
@@ -1987,19 +1989,19 @@
                              .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.90),
                                        xend=.scale.x.to.SVG.plot(corrected.x.end[j]), yend=.scale.y.to.SVG.plot(ys[j] + 0.10),
                                        stroke="gray70", fill="white",
-                                       id="partial_cma_stacked_rect_bkg"),
+                                       class="partial_cma_stacked_rect_bkg"),
                              # The CMA estimate rect:
                              .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.90),
                                        xend=.scale.x.to.SVG.plot(corrected.x.start[j] + h[j]), yend=.scale.y.to.SVG.plot(ys[j] + 0.10),
                                        stroke=plot.partial.CMAs.as.stacked.col.border, fill=plot.partial.CMAs.as.stacked.col.bars,
-                                       id="partial_cma_stacked_rect_estimate"),
+                                       class="partial_cma_stacked_rect_estimate"),
                              # The numeric estimate:
                              if( print.CMA && dims.chr.cma <= dims.chr.event )
                              {
                                .SVG.text(.scale.x.to.SVG.plot(corrected.x.text[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.50),
                                          text=ppts$text[j], font_size=dims.chr.cma, col=plot.partial.CMAs.as.stacked.col.text,
                                          h.align="center", v.align="center",
-                                         id="partial_cma_stacked_text_estimate")
+                                         class="partial_cma_stacked_text_estimate")
                              }
                 );
               }
@@ -2048,13 +2050,13 @@
                                .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.end[j])),
                                           y=.scale.y.to.SVG.plot(c(y.cur + 0.5 + v[j], y.cur + 0.5 + v[j])),
                                           connected=FALSE, stroke=plot.partial.CMAs.as.overlapping.col.interval,
-                                          id="partial_cma_overlapping_segments"),
+                                          class="partial_cma_overlapping_segments"),
                                if(!is.na(y.norm.v[j])) .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.start[j],
                                                                                            corrected.x.end[j],   corrected.x.end[j])),
                                                                   y=.scale.y.to.SVG.plot(c(y.cur + 0.5 + v[j], y.cur + 0.5 + v[j] + y.norm.v[j],
                                                                                            y.cur + 0.5 + v[j], y.cur + 0.5 + v[j] + y.norm.v[j])),
                                                                   connected=FALSE, stroke=plot.partial.CMAs.as.overlapping.col.interval,
-                                                                  id="partial_cma_overlapping_segments")
+                                                                  class="partial_cma_overlapping_segments")
                   );
                 }
               }
@@ -2077,7 +2079,7 @@
                              .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(rep(y.cur + 1.0,length(corrected.x.text))), text=ppts$text,
                                        col=plot.partial.CMAs.as.overlapping.col.text, font_size=dims.chr.cma,
                                        h.align="center", v.align="center",
-                                       id="partial_cma_overlapping_text")
+                                       class="partial_cma_overlapping_text")
                 );
               }
             }
@@ -2124,7 +2126,7 @@
                                                                max.y.norm,                max.y.norm)),
                                       connected=FALSE,
                                       stroke="black", lty=c("solid", "solid", "dashed", "dashed"),
-                                      id="partial_cma_timeseries_axes")
+                                      class="partial_cma_timeseries_axes")
               );
             }
 
@@ -2143,7 +2145,7 @@
                              .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max)),
                                         y=.scale.y.to.SVG.plot(c(y.for.0perc,               y.for.0perc)),
                                         connected=FALSE, stroke="red", lty="dotted",
-                                        id="partial_cma_timeseries_0perc-line")
+                                        class="partial_cma_timeseries_0perc-line")
                 );
               }
             }
@@ -2163,7 +2165,7 @@
                              .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max)),
                                         y=.scale.y.to.SVG.plot(c(y.for.100perc,             y.for.100perc)),
                                         connected=FALSE, stroke="red", lty="dotted",
-                                        id="partial_cma_timeseries_100perc-line")
+                                        class="partial_cma_timeseries_100perc-line")
                 );
               }
             }
@@ -2195,14 +2197,14 @@
                                        y=.scale.y.to.SVG.plot(c(min.y.norm,                max.y.norm)),
                                        text=c(                sprintf("%.1f%%",100*min.y), sprintf("%.1f%%",100*max.y)),
                                        col="black", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
-                                       id="partial_cma_timeseries_axis_text"),
+                                       class="partial_cma_timeseries_axis_text"),
                              if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
                              {
                                .SVG.text(x=.scale.x.to.SVG.plot(corrected.x + x.start.min),
                                          y=.scale.y.to.SVG.plot(y.for.0perc),
                                          text="0%",
                                          col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
-                                         id="partial_cma_timeseries_axis_text")
+                                         class="partial_cma_timeseries_axis_text")
                              },
                              if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
                              {
@@ -2210,7 +2212,7 @@
                                          y=.scale.y.to.SVG.plot(y.for.100perc),
                                          text="100%",
                                          col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
-                                         id="partial_cma_timeseries_axis_text")
+                                         class="partial_cma_timeseries_axis_text")
                              }
                 );
               }
@@ -2258,7 +2260,7 @@
                                  .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.end[j])),
                                             y=.scale.y.to.SVG.plot(c(ppts$y.norm[j], ppts$y.norm[j])),
                                             stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
-                                            id="partial_cma_timeseries_lines"),
+                                            class="partial_cma_timeseries_lines"),
                                  if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
                                  {
                                    # The segment endings:
@@ -2266,7 +2268,7 @@
                                               y=.scale.y.to.SVG.plot(c(ppts$y.norm[j] - 0.2, ppts$y.norm[j] + 0.2, ppts$y.norm[j] - 0.2, ppts$y.norm[j] + 0.2)),
                                               connected=FALSE,
                                               stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
-                                              id="partial_cma_timeseries_lines")
+                                              class="partial_cma_timeseries_lines")
                                  } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
                                  {
                                    # The arrow endings:
@@ -2280,7 +2282,7 @@
                                                                        ppts$y.norm[j]       + 0.2, ppts$y.norm[j])),
                                               connected=FALSE,
                                               stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
-                                              id="partial_cma_timeseries_lines")
+                                              class="partial_cma_timeseries_lines")
                                  }
 
                     );
@@ -2306,7 +2308,7 @@
                                            xend=.scale.x.to.SVG.plot(corrected.x.end[j]), yend=.scale.y.to.SVG.plot(y.cur + 0.5),
                                            fill=plot.partial.CMAs.as.timeseries.col.interval, fill_opacity=plot.partial.CMAs.as.timeseries.alpha.interval,
                                            stroke=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted",
-                                           id="partial_cma_timeseries_rect")
+                                           class="partial_cma_timeseries_rect")
                     );
                   }
                 }
@@ -2328,11 +2330,11 @@
                              .SVG.lines(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm),
                                         connected=TRUE,
                                         stroke=plot.partial.CMAs.as.timeseries.col.dot, lty="solid",
-                                        id="partial_cma_timeseries_connecting_lines"),
+                                        class="partial_cma_timeseries_connecting_lines"),
                              # The points:
                              .SVG.points(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm),
                                          col=plot.partial.CMAs.as.timeseries.col.dot, cex=CMA.cex, pch=19,
-                                         id="partial_cma_timeseries_points")
+                                         class="partial_cma_timeseries_points")
                 );
               }
             }
@@ -2354,7 +2356,7 @@
                              .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm) + dims.chr.cma, text=ppts$text,
                                        col=plot.partial.CMAs.as.timeseries.col.text, font_size=dims.chr.cma,
                                        h.align="center", v.align="center",
-                                       id="partial_cma_timeseries_values")
+                                       class="partial_cma_timeseries_values")
                 );
               }
             }
@@ -2391,7 +2393,7 @@
                                 y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=2),
                                 connected=FALSE,
                                 stroke=CMA.plot.border, stroke_width=1, lty=c("solid", "dotted"),
-                                id="cma-drawing-area-guides-lines")
+                                class="cma-drawing-area-guides-lines")
         );
       }
     } else
@@ -2424,7 +2426,7 @@
                                width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)),
                                height=dims.plot.height,
                                stroke="none", fill=CMA.plot.bkg, fill_opacity=0.25,
-                               id="cma-drawing-area-bkg"),
+                               class="cma-drawing-area-bkg"),
 
                      # Vertical guides:
                      .SVG.lines(x=rep(c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
@@ -2434,31 +2436,31 @@
                                 y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=ifelse(adh.max > 1.0, 3, 2)),
                                 connected=FALSE,
                                 stroke=CMA.plot.border, stroke_width=1, lty=if(adh.max > 1.0) c("solid", "dotted", "solid") else "solid",
-                                id="cma-drawing-area-guides-lines"),
+                                class="cma-drawing-area-guides-lines"),
 
                      # Text guides:
                      .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), y=(dims.plot.y - dims.chr.axis/2),
                                text="0%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
-                               id="cma-drawing-area-guides-text"),
+                               class="cma-drawing-area-guides-text"),
                      if(adh.max > 1.0)
                      {
                        c(
                          .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)), y=(dims.plot.y - dims.chr.axis/2),
                                    text=sprintf("%.1f%%",adh.max*100), col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
-                                   id="cma-drawing-area-guides-text"),
+                                   class="cma-drawing-area-guides-text"),
                          if(dims.event.x*(.rescale.xcoord.for.CMA.plot(adh.max) - .rescale.xcoord.for.CMA.plot(1.0))/dims.day > 2.0*dims.chr.axis)
                          {
                            # Don't overcrowd the 100% and maximum CMA
                            .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y - dims.chr.axis/2),
                                      text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
-                                     id="cma-drawing-area-guides-text")
+                                     class="cma-drawing-area-guides-text")
                          }
                        )
                      } else
                      {
                        .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y - dims.chr.axis/2),
                                  text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
-                                 id="cma-drawing-area-guides-text")
+                                 class="cma-drawing-area-guides-text")
                      }
         );
       }
@@ -2507,22 +2509,22 @@
                            width=dims.plot.width,
                            height=dims.plot.height,
                            stroke="black", stroke_width=1, fill="none",
-                           id="bounding-box", comment="The bounding box"),
+                           class="bounding-box", comment="The bounding box"),
 
                  # The title:
                  .SVG.text(x=(dims.plot.x + dims.total.width)/2, y=dims.chr.title,
                            text=title.string, col="black", font="Arial", font_size=dims.chr.title, h.align="center", v.align="center",
-                           id="main-title", comment="The main title"),
+                           class="main-title", comment="The main title"),
 
                  # The y axis label:
                  .SVG.text(x=dims.chr.axis, y=dims.total.height/2,
                            text=as.character(y.label$string), col="black", font="Arial", font_size=dims.chr.lab, h.align="center", v.align="center", rotate=-90,
-                           id="axis-label-y", comment="The y-axis label"),
+                           class="axis-label-y", comment="The y-axis label"),
 
                  # The x axis label:
                  .SVG.text(x=(dims.plot.x + dims.total.width)/2, y=(dims.total.height - dims.chr.axis),
                            text=as.character(x.label), col="black", font="Arial", font_size=dims.chr.lab, h.align="center", v.align="center",
-                           id="axis-label-x", comment="The x-axis label")
+                           class="axis-label-x", comment="The x-axis label")
     );
   }
 
@@ -2567,21 +2569,21 @@
                    # Axis labels:
                    .SVG.text(x=xs, y=rep(ys, length(xs)),
                              text=as.character(date.labels$string), col="black", font="Arial", font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
-                             id="axis-values-x"),
+                             class="axis-values-x"),
 
                    # Axis ticks:
                    .SVG.lines(x=rep(xs,each=2),
                               y=dims.plot.y + dims.plot.height + rep(c(0, dims.chr.axis/2), times=length(xs)),
                               connected=FALSE,
                               stroke="black", stroke_width=1,
-                              id="axis-ticks-x"),
+                              class="axis-ticks-x"),
 
                    # Vertical dotted lines:
                    .SVG.lines(x=rep(xs,each=2),
                               y=dims.plot.y + rep(c(dims.plot.height, 0), times=length(xs)),
                               connected=FALSE,
                               stroke="gray50", stroke_width=1, lty="dotted",
-                              id="vertical-date-lines")
+                              class="vertical-date-lines")
       );
     }
   }
@@ -2751,7 +2753,7 @@
       # The legend title:
       l2 <- c(.SVG.text(x=lmx, y=lmy+lh+dims.chr.legend.title*2/3, text="Legend",
                         font_size=dims.chr.legend.title, font="Arial", h.align="left", v.align="center", col="gray30",
-                        id="legend-title"));
+                        class="legend-title"));
       lh <- lh + dims.chr.legend.title + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("Legend", font_size=dims.chr.legend.title)["width"]);
       lh <- lh + lnp*dims.chr.legend.title; # new para
 
@@ -2759,17 +2761,17 @@
       l2 <- c(l2,
               .SVG.lines(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
                          connected=FALSE, stroke="black", stroke_width=lwd.event, lty=lty.event,
-                         id="legend-events"),
+                         class="legend-events"),
               .SVG.points(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
                           pch=c(pch.start.event, pch.end.event),col="black", cex=legend.cex,
-                          id="legend-events"));
+                          class="legend-events"));
 
       if( !plot.dose )
       {
         l2 <- c(l2,
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="duration",
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                          id="legend-events"));
+                          class="legend-events"));
         lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       } else
       {
@@ -2777,20 +2779,20 @@
         l2 <- c(l2,
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="duration (min. dose)",
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                          id="legend-events"));
+                          class="legend-events"));
         lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration (min. dose)", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
 
         # Max dose:
         l2 <- c(l2,
                 .SVG.lines(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
                            connected=FALSE, stroke="black", stroke_width=lwd.event.max.dose, lty=lty.event,
-                           id="legend-events"),
+                           class="legend-events"),
                 .SVG.points(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
                             pch=c(pch.start.event, pch.end.event),col="black", cex=legend.cex,
-                            id="legend-events"),
+                            class="legend-events"),
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="duration (max. dose)",
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                          id="legend-events"));
+                          class="legend-events"));
         lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration (max. dose)", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       }
 
@@ -2798,10 +2800,10 @@
       l2 <- c(l2,
               .SVG.lines(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
                          connected=FALSE, stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
-                         id="legend-no-event"),
+                         class="legend-no-event"),
               .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="no event/connector",
                         col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                        id="legend-no-event"));
+                        class="legend-no-event"));
       lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("no event/connector", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       lh <- lh + lnp*dims.chr.legend.title; # new para
 
@@ -2811,18 +2813,18 @@
         l2 <- c(l2,
                 .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                           stroke="black", fill="black", fill_opacity=0.5,
-                          id="legend-interval"),
+                          class="legend-interval"),
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="days covered",
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                          id="legend-interval"));
+                          class="legend-interval"));
         lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("days covered", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
         l2 <- c(l2,
                 .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                           stroke="black", fill="none",
-                          id="legend-interval"),
+                          class="legend-interval"),
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="gap days",
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                          id="legend-interval"));
+                          class="legend-interval"));
         lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("gap days", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
         lh <- lh + lnp*dims.chr.legend.title; # new para
       }
@@ -2834,7 +2836,7 @@
         l2 <- c(l2,
                 .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                           stroke="black", fill=cols[i], fill_opacity=0.5,
-                          id="legend-medication-class"));
+                          class="legend-medication-class"));
         med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
         if( print.dose || plot.dose )
         {
@@ -2847,7 +2849,7 @@
         l2 <- c(l2,
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text=med.class.name,
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                          id="legend-medication-class"));
+                          class="legend-medication-class"));
         lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims(med.class.name, font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       }
       lh <- lh + lnp*dims.chr.legend.title; # new para
@@ -2858,10 +2860,10 @@
         l2 <- c(l2,
                 .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                           stroke=followup.window.col, fill="none", stroke_width=2, lty="dashed",
-                          id="legend-fuw"),
+                          class="legend-fuw"),
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="follow-up wnd.",
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                          id="legend-interval"));
+                          class="legend-interval"));
         lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("follow-up wnd", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       }
 
@@ -2874,34 +2876,34 @@
           l2 <- c(l2,
                   .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                             stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                            id="legend-ow-theoretical"),
+                            class="legend-ow-theoretical"),
                   .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="theor. obs. wnd.",
                             col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                            id="legend-ow-theoretical"));
+                            class="legend-ow-theoretical"));
           lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("theor. obs. wnd", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
           l2 <- c(l2,
                   .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                             stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                            id="legend-ow-real"),
+                            class="legend-ow-real"),
                   .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="real obs. wnd.",
                             col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                            id="legend-ow-real"));
+                            class="legend-ow-real"));
           lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("real obs. wnd.", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
         } else
         {
           l2 <- c(l2,
                   .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                             stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                            id="legend-ow"),
+                            class="legend-ow"),
                   .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text="observation wnd.",
                             col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                            id="legend-ow"));
+                            class="legend-ow"));
           lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
         }
       }
 
       # The legend background:
-      lbox <- .SVG.rect(x=0, y=0, width=lw+2*lmx, height=lh+2*lmy, stroke="gray60", stroke_width=2, fill="gray99", fill_opacity=legend.bkg.opacity, id="legend-background");
+      lbox <- .SVG.rect(x=0, y=0, width=lw+2*lmx, height=lh+2*lmy, stroke="gray60", stroke_width=2, fill="gray99", fill_opacity=legend.bkg.opacity, class="legend-background");
 
       # The legend position:
       if( is.null(x) || length(x) > 1 || is.na(x) || !(x %in% c("left", "center", "right") || is.numeric(x)) ) x <- "right";
@@ -2971,7 +2973,7 @@
       if( "svg" %in% export.formats ||
           "svg-and-html" %in% export.formats)
       {
-        # Stand-alone SVG file:
+        ## Export as stand-alone SVG file ####
         file.svg <- ifelse( is.na(export.formats.directory),
                             tempfile(export.formats.fileprefix, fileext=".svg"),
                             file.path(export.formats.directory, paste0(export.formats.fileprefix,".svg")) );
@@ -2983,7 +2985,8 @@
 
       if( "svg-and-html" %in% export.formats )
       {
-        # HTML and friends as stand-alone files (the SVG was already generated):
+        ## Export as HTML and friends as stand-alone files ####
+        #  (the SVG was already generated)
         file.html <- ifelse( is.na(export.formats.directory),
                              tempfile(export.formats.fileprefix, fileext=".html"),
                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".html")) );
@@ -3028,7 +3031,7 @@
 
       if( "svg-in-html" %in% export.formats )
       {
-        # Self-contained HTML document:
+        ## Export as self-contained HTML document ####
         html.prefix <- ifelse("svg-and-html" %in% export.formats,
                               paste0(export.formats.fileprefix,"-selfcontained"),
                               export.formats.fileprefix); # avoid conflicts between HTMLs
@@ -3062,6 +3065,7 @@
 
       if( any(c("png", "ps", "pdf", "webp") %in% export.formats) )
       {
+        ## Export to flat file formats (PNG, JPG, PS, PDF or WEBP) ####
         # Need to covert the SVG to one of these, so we need to export it (if not already exported):
         if( is.null(file.svg) )
         {
