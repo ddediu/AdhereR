@@ -545,9 +545,9 @@ CMA_polypharmacy <- function(data = data,
                              event.duration.colname = event.duration.colname,
                              medication.class.colname = medication.class.colname,
                              event.daily.dose.colname = event.daily.dose.colname,
-                             followup.window.start=followup.window.start.2,
+                             followup.window.start=followup.window.start,
                              followup.window.start.unit=followup.window.start.unit,
-                             followup.window.duration=followup.window.duration.2,
+                             followup.window.duration=followup.window.duration,
                              followup.window.duration.unit=followup.window.duration.unit,
                              observation.window.start=observation.window.start.2,
                              observation.window.start.unit=observation.window.start.unit,
@@ -616,9 +616,9 @@ CMA_polypharmacy <- function(data = data,
                              event.duration.colname = event.duration.colname,
                              medication.class.colname = medication.class.colname,
                              event.daily.dose.colname = event.daily.dose.colname,
-                             followup.window.start=followup.window.start.2,
+                             followup.window.start=followup.window.start,
                              followup.window.start.unit=followup.window.start.unit,
-                             followup.window.duration=followup.window.duration.2,
+                             followup.window.duration=followup.window.duration,
                              followup.window.duration.unit=followup.window.duration.unit,
                              observation.window.start=observation.window.start.2,
                              observation.window.start.unit=observation.window.start.unit,
@@ -628,14 +628,15 @@ CMA_polypharmacy <- function(data = data,
                              date.format=date.format,
                              suppress.warnings = TRUE)
 
-      browser()
+      # select ID.colnames
+      ifelse(ID.colname == ID.colname.2, ID.colnames <- ID.colname, ID.colnames <- c(ID.colname, ID.colname.2))
 
       # get CMA values
       CMA_per_day <- lapply(CMA_full_per_day, FUN = function(x){
         cbind(grouping = first(x$data[[grouping]]), x$CMA)
       })
       CMA_per_day <- rbindlist(CMA_per_day)
-      CMA_per_day <- merge(CMA_per_day, unique(data.2[,c(ID.colname, ID.colname.2), with = FALSE]),by = c(ID.colname.2))
+      CMA_per_day <- merge(CMA_per_day, unique(data.2[,c(ID.colnames), with = FALSE]),by = c(ID.colname.2))
       setkeyv(CMA_per_day, ID.colname)
 
       # get event information
@@ -643,14 +644,12 @@ CMA_polypharmacy <- function(data = data,
         cbind(grouping = first(x$data[[grouping]]), x$event.info)
       })
       event_info <- rbindlist(event_info)
-      event_info <- merge(event_info, unique(data.2[,c(ID.colname, ID.colname.2), with = FALSE]),by = c(ID.colname.2))
+      event_info <- merge(event_info, unique(data.2[,c(ID.colnames), with = FALSE]),by = c(ID.colname.2))
       setkeyv(event_info, ID.colname)
 
       # create intersections of episodes
       episodes <- CMA_per_day[,episodes.intersections(episode.start, episode.end, "intersect"), by = ID.colname]
       episodes[,intersect.ID := seq_len(.N), by=ID.colname]
-
-      ifelse(ID.colname == ID.colname.2, ID.colnames <- ID.colname, ID.colnames <- c(ID.colname, ID.colname.2))
 
       CMA_per_day_intersect <- merge(CMA_per_day[,c("grouping",
                                                     ID.colnames,
@@ -668,7 +667,7 @@ CMA_polypharmacy <- function(data = data,
       CMA_per_day_intersect[intersect.start >= episode.start & intersect.end <= episode.end, CMA := 1]
 
       # if the OW starts after the end of the intersection or ends before the start of an intersection, set CMA to NA
-      CMA_per_day_intersect[intersect.end < .OBS.START.DATE | intersect.start > .OBS.END.DATE, CMA := NA]
+      CMA_per_day_intersect[intersect.end <= .OBS.START.DATE | intersect.start >= .OBS.END.DATE, CMA := NA]
 
       # keep only one row per intersection
       CMA <- CMA_per_day_intersect[, .(CMA = max(CMA)), by = c(ID.colname,
@@ -688,17 +687,22 @@ CMA_polypharmacy <- function(data = data,
 
       # select unique episodes per patient
       CMA <- unique(na.omit(CMA, cols = "CMA"), by = c(ID.colname, "intersect.ID"))
+      CMA[, `:=` (.OBS.START.DATE = min(.OBS.START.DATE),
+                  .OBS.END.DATE = max(.OBS.END.DATE))]
 
       # adjust end of last episode and intersect.duration
       CMA[intersect.end > .OBS.END.DATE, `:=` (intersect.end = .OBS.END.DATE,
                                                intersect.duration = as.numeric(.OBS.END.DATE-intersect.start))]
 
-      CMA <- switch(as.character(polypharmacy.method),
-                    "DPPR" = unique(CMA[,.(CMA = sum(intersect.duration*prop.med.groups.available)/(as.numeric(.OBS.END.DATE-.OBS.START.DATE))), by = ID.colname]),
-                    "any" = unique(CMA[prop.med.groups.available > 0,.(CMA = sum(intersect.duration)/(as.numeric(.OBS.END.DATE-.OBS.START.DATE))), by = ID.colname]),
-                    "all" = unique(CMA[round(prop.med.groups.available,0) == 1,.(CMA = sum(intersect.duration)/(as.numeric(.OBS.END.DATE-.OBS.START.DATE))), by = ID.colname]));
+      # compute total duration of observation
+      .obs.duration <- sum(unique(CMA[,as.numeric(.OBS.END.DATE-.OBS.START.DATE), by = .(.OBS.END.DATE-.OBS.START.DATE)]$V1))
 
-      tmp <- list(CMA = CMA, event.info = event_info)
+      CMA_ret <- switch(as.character(polypharmacy.method),
+                    "DPPR" = unique(CMA[,.(CMA = sum(intersect.duration*prop.med.groups.available)/.obs.duration), by = c(ID.colname)]),
+                    "any" = unique(CMA[prop.med.groups.available > 0,.(CMA = sum(intersect.duration)/.obs.duration), by = ID.colname]),
+                    "all" = unique(CMA[round(prop.med.groups.available,0) == 1,.(CMA = sum(intersect.duration)/.obs.duration), by = ID.colname]));
+
+      tmp <- list(CMA = CMA_ret, event.info = event_info)
 
       return(tmp)
     }
