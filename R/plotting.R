@@ -2998,35 +2998,38 @@
                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".js")) );
         exported.file.names <- c(exported.file.names, file.html, file.css, file.js);
 
-        # Export HTML:
-        writeLines(c('<!DOCTYPE html>\n',
-                     '<html>\n',
-                     '<head>\n',
-                     ' <script type="text/javascript" src="',basename(file.js),'"></script>\n',
-                     ' <link rel="stylesheet" href="',basename(file.css),'">\n',
-                     '</head>\n',
-                     '<body>\n',
-                     '<img src="',basename(file.svg),'" height="600">\n',
-                     '</body>\n',
-                     '</html>'),
-                   file.html, sep="");
+        # Load the HTML template and replace generics by their actual values before saving it in the desired location:
+        html.template.path <- system.file('html-templates/html-template.html', package='AdhereR');
+        if( is.null(html.template.path) || html.template.path=="" )
+        {
+          warning("Cannot load the HTML template -- please reinstall the AdhereR package!\n");
+          return (invisible(NULL));
+        }
+        html.template <- readLines(html.template.path);
+        html.template <- sub("PATH-TO-JS",    basename(file.js),  html.template, fixed=TRUE); # JavaScript
+        html.template <- sub("PATH-TO-CSS",   basename(file.css), html.template, fixed=TRUE); # CSS
+        html.template <- sub("PATH-TO-IMAGE", basename(file.svg), html.template, fixed=TRUE); # SVG
+        if( TRUE )  html.template <- sub('<img class="adherence_plot" ', '<img class="adherence_plot" height="600" ', html.template, fixed=TRUE); # height (if defined)
+        if( FALSE ) html.template <- sub('<img class="adherence_plot" ', '<img class="adherence_plot" width="600" ', html.template, fixed=TRUE); # width (if defined)
+        writeLines(html.template, file.html, sep="");
 
         # Export CSS:
-        writeLines(c("/* This is a dummy CSS example */\n",
-                     "body {\n",
-                     "  margin: 25px;\n",
-                     "  background-color: rgb(240,240,240);\n",
-                     "  font-family: arial, sans-serif;\n",
-                     "  font-size: 14px;\n",
-                     "}\n"),
-                   file.css, sep="");
+        css.template.path <- system.file('html-templates/css-template.css', package='AdhereR');
+        if( is.null(css.template.path) || css.template.path=="" )
+        {
+          warning("Cannot load the CSS template -- please reinstall the AdhereR package!\n");
+          return (invisible(NULL));
+        }
+        file.copy(from=css.template.path, to=file.css, overwrite=TRUE, recursive=FALSE);
 
         # Export JS:
-        writeLines(c("function display()\n",
-                     "{\n",
-                     "alert('Hello World!');\n",
-                     "}\n"),
-                   file.js, sep="");
+        js.template.path <- system.file('html-templates/javascript-template.js', package='AdhereR');
+        if( is.null(js.template.path) || js.template.path=="" )
+        {
+          warning("Cannot load the JavaScript template -- please reinstall the AdhereR package!\n");
+          return (invisible(NULL));
+        }
+        file.copy(from=js.template.path, to=file.js, overwrite=TRUE, recursive=FALSE);
       }
 
       if( "svg-in-html" %in% export.formats )

@@ -1,0 +1,16 @@
+/* The CSS associated with the SVG */
+
+body {
+  margin: 25px;
+  background-color: rgb(240,240,240);
+  font-family: arial, sans-serif;
+  font-size: 14px;
+}
+
+h1 {
+  color: blue;
+}
+
+p {
+  color: red;
+}
