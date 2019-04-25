@@ -1,5 +1,5 @@
 ---
-title: "Compute event durations from different data sources"
+title: "Data preparation for computing adherence to medication in AdhereR: overview of the event_durations functions"
 author: "Samuel S. Allemann, Dan Dediu & Alex L. Dima"
 date: "`r Sys.Date()`"
 output: 
@@ -22,9 +22,9 @@ source("matching_function.R")
 knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg") 
 ```
 
-Adherence is defined as the agreement between prescribed and actual medication use. `AdhereR` estimates adherence based on durations for which medications are prescribed and/or dispensed. However, medications might not be prescribed or dispensed for a specific duration in all circumstances. Many healthcare settings allow for multiple refills of prescriptions, and medications might be dispensed in fixed pre-packed quantities rather than from bulk. Moreover, various events might affect supply durations after medications have been dispensed. Prescribed dosage might change between dispensing events, changing the original supply duration. Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be taken into account. In contrast, patients might not use their own supplies during certain periods (e.g., when hospitalised). When information about prescription and dispensing events and treatment interruptions is available, `AdhereR` can calculate actual supply durations, taking into account changes during the course of treatment.
+Adherence is defined as the agreement between prescribed and actual medication use. `AdhereR` estimates adherence based on durations for which medications are prescribed and/or dispensed. However, medications might not be prescribed or dispensed for a specific duration in all circumstances. Many healthcare settings allow for multiple refills of prescriptions, and medications might be dispensed in fixed pre-packed quantities rather than from bulk. Moreover, various events might affect supply durations after medications have been dispensed. Prescribed dosage might change between dispensing events, changing the original supply duration. Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be used. In contrast, patients might not use their own supplies during certain periods (e.g., when hospitalised). When such additional information about prescription and dispensing events and treatment interruptions is available, `AdhereR` can calculate actual supply durations, taking into account changes during the course of treatment.
 
-This vignette describes the function `compute_event_durations` and its arguments. We use the provided example datasets to illustrate the various options and their impact on the calculated durations.
+This vignette describes the functions `compute_event_durations`, `prune_event_durations`, and `cover_special_periods` and their arguments. We use the provided example datasets included in the dataset to illustrate the various options and their impact on the calculated durations.
 
 ## Definitions
 
@@ -41,24 +41,27 @@ Throughout `AdhereR`, we use the same terms and definitions. For a complete list
 - *Prescription renewal* = subsequent prescription events after initial prescription,
 - *Prescription duration* = number of days for which the medication should be used as prescribed,
 - *Treatment interruption* = stop of prescription for a period of time before prescription renewal,
-- *Prescription episode* = period of prescribed use deliminated by start and end date of prescribed use
+- *Prescription episode* = period of prescribed use delimited by start and end date of prescribed use
 
 ## Input data
 
-`AdhereR` is designed to use datasets that have already been extracted and prepared for processing, as described in the package vignette. To compute event durations, at least two separate datasets are required: *Dispensing events* and *Prescription events*. Additionally, periods for which medication is supplied but not documented in the dispensing dataset can be provided (e.g. *hospitalisation events*). Each of those datasets might require specific preparation steps to bring them into the format decribed below.
+`AdhereR` is designed to use datasets that have already been extracted and prepared for processing, as described in the package vignette. To compute event durations, at least two separate datasets are required: *Dispensing events* and *Prescription events*. Additionally, periods for which medication is supplied but not documented in the dispensing dataset can be provided (e.g. *hospitalisation events*). Each of those datasets might require specific preparation steps to bring them into the format described below.
 
 ### Dispensing data
 
-The minimum necessary dataset includes 4 variables for each dispensing event: *patient unique identifier*, *event date*, *medication type*, and *dispensed quantity*. *Medication type* can include multiple columns, which allows to distinguish medications on multiple levels. For example, one might want to differentiate between galenic forms of the same substance (e.g., tablets and inhalers of corticosteroids) and include both columns (substance and form) to describe *medication type*. The *dispensed quantity* could be the number of units dispensed (e.g., tablets), or a total number of subunits contained in each dispensed unit (e.g., milligrams in tablets). If multiple dosage forms for the same substance exist, it is useful to calculate the subunits because the dispensed dosage per unit might not correspond to the prescribed dosage per unit. For example, a prescription for *40 mg Atorvastatin 1 tablet daily* might be dispensed as 80 mg tablets with the instruction to use half of a tablet per day. 
+The minimum necessary dataset includes 4 variables for each dispensing event: *patient unique identifier*, *dispensing event date*, *medication type*, and *dispensed quantity*.
+
+*Medication type* can include multiple columns, which allows to distinguish medications on multiple levels. For example, one might want to differentiate between dosage forms of the same substance (e.g., tablets and inhalers of corticosteroids) and include both columns (substance and form) to describe *medication type*. The *dispensed quantity* could be the number of units dispensed (e.g., tablets), or a total number of subunits contained in each dispensed unit (e.g., milligrams in tablets). If multiple dosage forms for the same substance exist, it is useful to calculate the subunits because the dispensed dosage per unit might not correspond to the prescribed dosage per unit. For example, a prescription for *40 mg Atorvastatin 1 tablet daily* might be dispensed as 80 mg tablets with the instruction to use half of a tablet per day. 
 
 For demonstration purposes, we included a sample dataset containing dispensing events (one per row) for 16 patients over a period of roughly 24 months (1794 events in total). Each row represents an individual dispensing record for a specific dose of a specific medication for a patient at a given date. Six variables are included in this dataset:
 
 - patient unique identifier (`ID`), 
 - dispensing event date (`DATE.DISP`; from 1 July 2056 to 12 July 2058, in the "yyyy-mm-dd" ISO format), 
-- medication type (`ATC.CODE`; 49 different codes according to the Anatomical Therapeutic Chemical Classification [ATC] System),
-- dosage unit (`UNIT`; 57% MG, 12% MICROG, 31% UI),
-- dosage form (`FORM`; 12% INHALATION VAPOUR, 3% INJECTION, 13% METERED INHALER, 72% ORAL FORM), and
-- quantity (`TOTAL.DOSE`; median 20000, range 10-120000000). 
+- medication type 
+    + ATC code (`ATC.CODE`; 49 different codes according to the Anatomical Therapeutic Chemical Classification [ATC] System),
+    + dosage unit (`UNIT`; 57% MG, 12% MICROG, 31% UI),
+    + dosage form (`FORM`; 12% INHALATION VAPOUR, 3% INJECTION, 13% METERED INHALER, 72% ORAL FORM), and
+- dispensed quantity (`TOTAL.DOSE`; median 20000, range 10-120000000). 
 
 [Table 1](#Table-1) shows the first 10 rows of the dispensing events in the example dataset `durcomp.dispensing`. 
 
@@ -69,16 +72,19 @@ knitr::kable(head(durcomp.dispensing), caption = "<a name=\"Table-1\"></a>**Tabl
 
 ### Prescribing data
 
-The minimum necessary dataset includes 4 variables for each prescription event: *patient unique identifier*, *event date*, *medication type*, and *prescribed daily dose*. A *visit number* and *prescription duration* are optional. *Medication type* can include multiple columns, corresponding to the columns in the *dispensing dataset*. A duration will only be calculated if the information in all columns for the medication type are the same in dispensing and prescription events. Similar to the *dispensed quantity*, the *prescribed daily dose* could be the number of units prescribed per day (e.g., 2 tablets), or a total dosage to be taken daily (e.g., 40 mg). If a medication is prescribed for regular but not daily use, the dosage should be recalculated, e.g. in case of *70 mg once per week*, the *prescribed daily dose* should be 10 mg. **Important to note:** It is assumed that the prescribed daily dose can be accomodated with the dispensed medication. This requires careful consideration and exploratory analysis of the dispensed and prescribed dosage forms and posologies.  
+The minimum necessary dataset includes 4 variables for each prescription event: *patient unique identifier*, *prescription event date*, *medication type*, and *prescribed daily dose*. A *visit number* and *prescription duration* are optional.
+
+*Medication type* can include multiple columns, corresponding to the columns in the *dispensing dataset*. A duration will only be calculated if the information in all columns for the medication type are the same in dispensing and prescription events. Similar to the *dispensed quantity*, the *prescribed daily dose* could be the number of units prescribed per day (e.g., 2 tablets), or a total dosage to be taken daily (e.g., 40 mg). If a medication is prescribed for regular but not daily use, the dosage should be recalculated, e.g. in case of *70 mg once per week*, the *prescribed daily dose* should be 10 mg. **Important to note:** It is assumed that the prescribed daily dose can be accomodated with the dispensed medication, for example by splitting tablets. This requires careful consideration and exploratory analysis of the dispensed and prescribed dosage forms and posologies.  
 
 For demonstration purposes, we included a sample dataset containing prescription events (one per row) for 16 patients over a period of roughly 15 months (1502 events in total). Each row represents an individual prescription record for a specific dose of a specific medication for a patient at a given date. Eight variables are included in this dataset:
 
 - patient unique identifier (`ID`), 
 - prescription event date (`DATE.PRESC`; from 15 September 2056 to 30 December 2057, in the "yyyy-mm-dd" ISO format), 
 - visit number (`VISIT`; median 5, range 0-16), 
-- medication type (`ATC.CODE`; 43 different codes according to the Anatomical Therapeutic Chemical Classification [ATC] System),
-- dosage unit (`UNIT`; 50% MG, 10% MICROG, 40% UI),
-- dosage form (`FORM`; 18% INHALATION VAPOUR, 5% INJECTION, 13% METERED INHALER, 64% ORAL FORM), 
+- medication type 
+    + ATC code (`ATC.CODE`; 43 different codes according to the Anatomical Therapeutic Chemical Classification [ATC] System),
+    + dosage unit (`UNIT`; 50% MG, 10% MICROG, 40% UI),
+    + dosage form (`FORM`; 18% INHALATION VAPOUR, 5% INJECTION, 13% METERED INHALER, 64% ORAL FORM), 
 - prescription duration (`PRESC.DURATION`; median 30, range 30-90 days, 1437 `NA`'s), and
 - prescribed daily dose (`DAILY.DOSE`; median 600, range 0.07-8000000). 
 
@@ -91,7 +97,7 @@ knitr::kable(head(durcomp.prescribing), caption = "<a name=\"Table-2\"></a>**Tab
 
 ### Special periods (optional)
 
-During certain periods, medication use may differ from what is expected based on the available data. Typical examples of such periods are hospitalisations, holidays, incarcerations, or similar. If available, these periods can be taken into account during computation of durations. The minimum required information are: *patient unique identifier*, *start date*, and *end date* of special periods. Optional columns are *type* (indicating the type of special situation), *customized instructions* how to handle a specific period, and *medication class* (from those specified in dispensing and prescription datasets).
+During certain periods, medication use may differ from what is expected based on the available data. Typical examples of such periods are hospitalisations, holidays, incarcerations, or similar. If available, these periods can be taken into account during computation of event durations. The minimum required variables are: *patient unique identifier*, *start date*, and *end date* of special periods. Optional columns are *type* (indicating the type of special situation), *customized instructions* how to handle a specific period, and *medication class* (from those specified in dispensing and prescription datasets).
 
 For demonstration purposes, `AdhereR` uses a sample dataset containing hospitalization periods (one per row) for 10 patients over a period of roughly 18 months (28 events in total). Each row represents an individual hospitalisation period of a patient for whom event durations should be calculated. All column names must match the format provided in this example:
 
@@ -112,15 +118,15 @@ The compute_event_durations function provides various options regarding prescrip
 
 ### Special periods mapping and treatment interruptions
 
-During special periods and treatment interruptions, medication use may differ from daily life. The argument `special.periods.mapping` tells `AdhereR` what to do during such periods. Similarly, `trt.interruption` specifies handling of treatment interruptions (periods without prescription). There are 3 options that can be set globally:
+During special periods and treatment interruptions, medication use may differ from usual conditions. The argument `special.periods.mapping` tells `AdhereR` what to do during such periods. Similarly, `trt.interruption` specifies handling of treatment interruptions (periods without prescription). There are 3 options that can be set globally:
 
 - *continue* has no impact on durations and dispensing start dates: Patients are expected to continue using the existing supply as initially prescribed,
 - *discard* truncates supplies at the beginning of special period or treatment interruption and the remaining supply is discarded. This might be used if patients are asked to return unused medications after a limited treatment course (e.g. antibiotic treatments), 
-- *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will be added for the remaining duration. This might be used if patients are hospitalized and receive medications from hospital wards, but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. **CAVE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples below).**
+- *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will be added for the remaining duration. This might be used if patients are hospitalized and receive medications from hospital wards but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. **CAVE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples below).**
 
 In addition to the global options, both settings accept a column name in the dispensing dataset (for `trt.interruption`) or special periods dataset (for `special.periods.mapping`). The column can contain either of *continue*, *discard*, or *carryover* per medication type (for `trt.interruption`) or per special period type and/or medication type (for `special.periods.mapping`).
 
-Special periods may occur during prescription episodes or treatment interruptions and different types of special periods may co-occur. Treatment interrupstions are prioritized over other special periods: If a prescription ends and `trt.interruption = 'carryover'`, a different setting in `special.periods.mapping` has no effect during periods of treatment interruption. However, if a special period of type *continue* overlaps with another special period of type *carryover*, the setting of the period with the later start date is used.   
+Special periods may occur during prescription episodes or treatment interruptions and different types of special periods may co-occur. Treatment interruptions are prioritized over other special periods: If a prescription ends and `trt.interruption = 'carryover'`, a different setting in `special.periods.mapping` has no effect during periods of treatment interruption. However, if a special period of type *continue* overlaps with another special period of type *carryover*, the setting of the period with the later start date is used.   
 
 In [Figure 1](#Figure-1) below, the patient had frequent hospitalisation events (blue segments). By setting `trt.interruptions = "carryover"`, supplies available before the start of hospitalisation are truncated and a new event is created on the day of discharge for the remaining supply. 
 
@@ -218,7 +224,7 @@ special_episodes <- data.table(ID = c(1,1,1,1,1,1,1,1),
 knitr::kable(special_episodes)
 ```
 
-[Figure 2](#Figure-2) shows a hypothetical patient with one prescription and one dispensing event for 60 days. By providing the the above dataset as `special.periods = "special_episodes"` and setting `special.periods.mapping = "CUSTOM"`, the 60-day supply is truncated and restarted according to the most recent special period that hasn't ended yet.
+[Figure 2](#Figure-2) shows a hypothetical patient with one prescription and one dispensing event for 60 days. By providing the above dataset as `special.periods = "special_episodes"` and setting `special.periods.mapping = "CUSTOM"`, the 60-day supply is truncated and restarted according to the most recent special period that hasn't ended yet.
 
 ```{r, echo=TRUE, fig.show='hold', fig.cap = "**Figure 2:** CMA0 calculated for a patient with different types of special periods and special.periods.mapping = \"CUSTOM\". Bars at the top of the plot and shaded areas indicate special periods: Blue for 'continue' and Purple for 'carryover'.", fig.height=6, fig.width=8, out.width="100%"}
 disp.data = data.table(ID = c(1),
@@ -292,7 +298,7 @@ for(i in 1:nrow(special_episodes)){
 
 ### Force initial prescription
 
-If the dispensing dataset of a patient covers events with earlier dates than the first prescription events for this specific medication, `force.init.presc = TRUE` advances the date of the first prescritpion event to the date of the first dispensing event. For example, if prescribing data is only available during the observation window, but dispensing data covers a larger follow-up window, this setting allows the calculation of supply durations for carryover into the observation window. However, this only has an effect when the first prescription event is not limited in duration (as indicated in `presc.duration.colname`). This is to make sure that existing supplies of discontinued treatments are not carried over into the observation window.
+If the dispensing dataset of a patient covers events with earlier dates than the first prescription events for this specific medication, `force.init.presc = TRUE` advances the date of the first prescription event to the date of the first dispensing event. For example, if prescribing data is only available during the observation window, but dispensing data covers a larger follow-up window, this setting allows the calculation of supply durations for carryover into the observation window. However, this only has an effect when the first prescription event is not limited in duration (as indicated in `presc.duration.colname`). This is to make sure that existing supplies of discontinued treatments are not carried over into the observation window.
 
 In the example in [Figure 3](#Figure-3) below, the patient had dispensing events for Salbutamol (R03AC02) and Salmeterol (R03AC12) starting from 2056-07-31, but the first prescribing event for either of those was not before 2056-12-10. Because the prescriptions were not limited in duration, by setting `force.init.presc = TRUE`, durations for dispensing events before 2056-12-10 can be calculated.
 
@@ -341,7 +347,7 @@ plot(cma7, min.plot.size.in.characters.vert = 0)
 
 ### Force prescription renewal
 
-If a medication is not prescribed during any given prescription event for a patient, `force.prescription.renew = TRUE` will make sure that the prescription episode for this medication ends on the first visit without renewal. Alternatively, this can be set for each medication class separately by providing the name of a column containing the information in the dispensing dataset (logical, `TRUE`or `FALSE`). 
+If a medication is not prescribed during any given prescription event for a patient, `force.prescription.renew = TRUE` will make sure that the prescription episode for this medication ends on the first visit without renewal. Alternatively, this can be set for each medication class separately by providing the name of a column containing the information in the dispensing dataset (logical, `TRUE` or `FALSE`). 
 
 If prescriptions are not routinely prescribed during all visits, `force.prescription.renew` should be set to `FALSE`. This can also be the case if prescription data covers multiple prescribers, because treatments prescribed by one prescriber might continue even when not prescribed during a subsequent visit to another prescriber. 
 
@@ -416,7 +422,7 @@ for(i in 1:nrow(TEs)){
 
 ### Split on dosage change
 
-If the dosage changes before the end of a supply duration, `split.on.dosage.change = TRUE` creates a new event on the day of dosage change and recalculates the duration for the remaining supply. If patients are expected to finish the previous supply with the original dose and starting with the new dosage recommendation from the next supply onward, `split.on.dosage.change` should be set to `FALSE`. Alternatively, this can be set for each medication class separately by providing the name of a column containing the information in the dispensing dataset (logical, `TRUE`or `FALSE`).
+If the dosage changes before the end of a supply duration, `split.on.dosage.change = TRUE` creates a new event on the day of dosage change and recalculates the duration for the remaining supply. If patients are expected to finish the previous supply with the original dose and starting with the new dosage recommendation from the next supply onward, `split.on.dosage.change` should be set to `FALSE`. Alternatively, this can be set for each medication class separately by providing the name of a column containing the information in the dispensing dataset (logical, `TRUE` or `FALSE`).
 
 In [Figure 5](#Figure-5) below, the dosage for Insulin (NovoMix) changed while the patient still had an available supply. By setting `split.on.dosage.change = TRUE`, a new event is created on the day of dosage change (blue vertical lines).
 
@@ -468,7 +474,7 @@ segments(x0 = dosage.changes$days, y0 = dosage.changes$I, y1 = dosage.changes$I-
 
 ## Output values
 
-The output of `copute_event_durations` is a list containing all data required for CMA computations, plus additional information:
+The output of `compute_event_durations` is a list containing all data required for CMA computations, plus additional information:
 
 - `event_durations`: a `data.table` or `data.frame` with the following columns: 
     + `ID.colname`: the unique patient ID, as given by the `ID.colname` parameter.
@@ -610,7 +616,7 @@ for(i in 1:nrow(event_durations_list$special_periods)){
 
 ### Prune event durations after carryover
 
-Special periods an treatment interruptions of type *carryover* may lead to overestimation of implementation, e.g. if patients get a refill after discharge from hospital and don't continue to use their previous supply. Likewise, it may also lead to overestimation of persistence, e.g. when patients do in fact discontinue treatments after the end of a special period or treatment interruption. 
+Special periods and treatment interruptions of type *carryover* may lead to overestimation of implementation, e.g. if patients get a refill after discharge from hospital and don't continue to use their previous supply. Likewise, it may also lead to overestimation of persistence, e.g. when patients do in fact discontinue treatments after the end of a special period or treatment interruption. 
 
 To detect whether new dispensing events occur shortly after the end of a special period or treatment interruption in spite of a remaining supply, `AdhereR` offers the `prune_event_durations` function. It accepts the raw list output of `compute_event_durations` and additional arguments to specify event durations that need to be removed:
 
@@ -731,7 +737,7 @@ prune_event_durations <- function(data,
 
 ### Consider special periods as covered
 
-Without further processing of event_durations for CMA computations, special periods will appear as gaps, possibly leading to underestimation of implementation or even assumption of discontinuation and non-persistence. To consider such periods as covered, they can be added to the `event_durations` dataset. This can be achieved by merging the special periods with the `event_durations` dataset. This should be done after pruning with `prune_event_durations`. We can use rolling joins in `data.table` to identify special periods that are in proximity to already covered durations (Alex/Dan: should this be encapsulated in a separate function?):
+Without further processing of event_durations for CMA computations, special periods will appear as gaps, possibly leading to underestimation of implementation or even assumption of discontinuation and non-persistence. To consider such periods as covered, they can be added to the `event_durations` dataset, for example when it is assumed that hospitalized patients are adherent during the hospitalization period. This can be achieved by merging the special periods with the `event_durations` dataset. This should be done after pruning with `prune_event_durations`. We can use rolling joins in `data.table` to identify special periods that are in proximity to already covered durations (Alex/Dan: should this be encapsulated in a separate function?):
 
 ```{r results=FALSE}
 # select medication class of interest and compute event durations
@@ -923,6 +929,11 @@ knitr::kable(time_init)
 
 ## Conclusions
 
+-	functions presented here are CED, PED, [rolling thingy name of function],
+-	they prepare data for calculation of TE and CMA (and eventually time to init)
+-	the default use is when….
+-	Special cases are….
+-	Careful when using them for … 
 
 
 
