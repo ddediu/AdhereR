@@ -5,19 +5,32 @@
     <title>TEMPLATE</title>
 
     <!-- JavaScript -->
-    <script type="text/javascript" src="PATH-TO-JS"></script>
+    <script type="text/javascript" src="AdhereR-plot.js"></script>
 
     <!-- CSS -->
-    <link rel="stylesheet" href="PATH-TO-CSS">
+    <link rel="stylesheet" href="AdhereR-plot.css">
   </head>
 
   <body>
     <h1>Template HTML/CSS/JavaScript for SVG</h1>
     <p>This is just an example!</p>
 
-    <p><button id="demo" onclick="myFunction()">Click me!</button></p>
+    <p>
+			<button onclick='svg_change_bkg_color("yellow")'>Make background yellow!</button>
+			<button onclick='svg_change_bkg_color("white")'>Make background white!</button>
+		</p>
 
-    <img class="adherence_plot" src="PATH-TO-IMAGE"/>
+    <p>
+			<button onclick='svg_change_size(w="100px")'>Tiny</button>
+			<button onclick='svg_change_size(w="300px")'>Small</button>
+			<button onclick='svg_change_size(w="600px")'>Standard</button>
+			<button onclick='svg_change_size()'>Default</button>
+			<button onclick='svg_change_size(w="1000px")'>Big</button>
+			<button onclick='svg_change_size(w="10000px")'>Huge</button>
+		</p>
+
+    <!--img class="adherence_plot" src="AdhereR-plot.svg"/-->
+    <object id="adherence_plot" height="600px" data="AdhereR-plot.svg" type="image/svg+xml">Please use a modern browser!</object>
     <br>
   </body>
 </html>

@@ -1456,7 +1456,7 @@
                        .SVG.rect(x=.scale.x.to.SVG.plot(0), y=.scale.y.to.SVG.plot(y.cur - 0.5 + vspace.needed),
                                  width=dims.plot.width, height=.scale.height.to.SVG.plot(vspace.needed),
                                  fill=alternating.bands.cols[alternating.band.to.draw],
-                                 class="alternating-bands", comment="The alternating band")
+                                 class=paste0("alternating-bands-",alternating.band.to.draw), comment="The alternating band")
           );
         }
 
@@ -3009,9 +3009,11 @@
         html.template <- sub("PATH-TO-JS",    basename(file.js),  html.template, fixed=TRUE); # JavaScript
         html.template <- sub("PATH-TO-CSS",   basename(file.css), html.template, fixed=TRUE); # CSS
         html.template <- sub("PATH-TO-IMAGE", basename(file.svg), html.template, fixed=TRUE); # SVG
-        if( TRUE )  html.template <- sub('<img class="adherence_plot" ', '<img class="adherence_plot" height="600" ', html.template, fixed=TRUE); # height (if defined)
-        if( FALSE ) html.template <- sub('<img class="adherence_plot" ', '<img class="adherence_plot" width="600" ', html.template, fixed=TRUE); # width (if defined)
-        writeLines(html.template, file.html, sep="");
+        #if( TRUE )  html.template <- sub('<img class="adherence_plot" ', '<img class="adherence_plot" height="600" ', html.template, fixed=TRUE); # height (if defined)
+        #if( FALSE ) html.template <- sub('<img class="adherence_plot" ', '<img class="adherence_plot" width="600" ', html.template, fixed=TRUE); # width (if defined)
+        if( TRUE )  html.template <- sub('<object id="adherence_plot" ', '<object id="adherence_plot" height="600" ', html.template, fixed=TRUE); # height (if defined)
+        if( FALSE ) html.template <- sub('<object id="adherence_plot" ', '<object id="adherence_plot" width="600" ', html.template, fixed=TRUE); # width (if defined)
+        writeLines(html.template, file.html, sep="\n");
 
         # Export CSS:
         css.template.path <- system.file('html-templates/css-template.css', package='AdhereR');
