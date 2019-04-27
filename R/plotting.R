@@ -545,7 +545,7 @@
 {
 
   ## DEBUG ####
-  export.formats <- c("svg", "svg-and-html", "svg-in-html", "png", "webp", "ps", "pdf");
+  export.formats <- c("svg", "html", "png", "webp", "ps", "pdf");
   export.formats.directory <- "~/Temp/tmp";
   generate.R.plot <- TRUE;
   ## END DEBUG ####
@@ -2970,8 +2970,7 @@
     if( !is.null(export.formats) )
     {
       file.svg <- NULL;
-      if( "svg" %in% export.formats ||
-          "svg-and-html" %in% export.formats)
+      if( "svg" %in% export.formats )
       {
         ## Export as stand-alone SVG file ####
         file.svg <- ifelse( is.na(export.formats.directory),
@@ -2983,20 +2982,29 @@
         writeLines(c(svg.header, svg.str), file.svg, sep="");
       }
 
-      if( "svg-and-html" %in% export.formats )
+      if( "html" %in% export.formats )
       {
-        ## Export as HTML and friends as stand-alone files ####
-        #  (the SVG was already generated)
+        ## Export as self-contained HTML document ####
         file.html <- ifelse( is.na(export.formats.directory),
                              tempfile(export.formats.fileprefix, fileext=".html"),
                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".html")) );
-        file.css  <- ifelse( is.na(export.formats.directory),
-                             tempfile(export.formats.fileprefix, fileext=".css"),
-                             file.path(export.formats.directory, paste0(export.formats.fileprefix,".css")) );
-        file.js   <- ifelse( is.na(export.formats.directory),
-                             tempfile(export.formats.fileprefix, fileext=".js"),
-                             file.path(export.formats.directory, paste0(export.formats.fileprefix,".js")) );
-        exported.file.names <- c(exported.file.names, file.html, file.css, file.js);
+        exported.file.names <- c(exported.file.names, file.html);
+
+        # Load the CSS and JavaScript templates:
+        css.template.path <- system.file('html-templates/css-template.css', package='AdhereR');
+        if( is.null(css.template.path) || css.template.path=="" )
+        {
+          warning("Cannot load the CSS template -- please reinstall the AdhereR package!\n");
+          return (invisible(NULL));
+        }
+        js.template.path <- system.file('html-templates/javascript-template.js', package='AdhereR');
+        if( is.null(js.template.path) || js.template.path=="" )
+        {
+          warning("Cannot load the JavaScript template -- please reinstall the AdhereR package!\n");
+          return (invisible(NULL));
+        }
+        css.template <- readLines(css.template.path);
+        js.template  <- readLines(js.template.path);
 
         # Load the HTML template and replace generics by their actual values before saving it in the desired location:
         html.template.path <- system.file('html-templates/html-template.html', package='AdhereR');
@@ -3006,66 +3014,18 @@
           return (invisible(NULL));
         }
         html.template <- readLines(html.template.path);
-        html.template <- sub("PATH-TO-JS",    basename(file.js),  html.template, fixed=TRUE); # JavaScript
-        html.template <- sub("PATH-TO-CSS",   basename(file.css), html.template, fixed=TRUE); # CSS
-        html.template <- sub("PATH-TO-IMAGE", basename(file.svg), html.template, fixed=TRUE); # SVG
-        #if( TRUE )  html.template <- sub('<img class="adherence_plot" ', '<img class="adherence_plot" height="600" ', html.template, fixed=TRUE); # height (if defined)
-        #if( FALSE ) html.template <- sub('<img class="adherence_plot" ', '<img class="adherence_plot" width="600" ', html.template, fixed=TRUE); # width (if defined)
-        if( TRUE )  html.template <- sub('<object id="adherence_plot" ', '<object id="adherence_plot" height="600" ', html.template, fixed=TRUE); # height (if defined)
-        if( FALSE ) html.template <- sub('<object id="adherence_plot" ', '<object id="adherence_plot" width="600" ', html.template, fixed=TRUE); # width (if defined)
+        html.template <- sub('<script type="text/javascript" src="PATH-TO-JS"></script>',
+                             paste0('<script type="text/javascript">\n', paste0(js.template, collapse=""), '\n</script>'),
+                             html.template, fixed=TRUE); # JavaScript
+        html.template <- sub('<link rel="stylesheet" href="PATH-TO-CSS">',
+                             paste0('<style>\n', paste0(css.template, collapse=""), '\n</style>'),
+                             html.template, fixed=TRUE); # CSS
+        html.template <- sub('<object id="adherence_plot" data="PATH-TO-IMAGE" type="image/svg+xml">Please use a modern browser!</object>',
+                             paste0(paste0(svg.str, collapse=""), "\n"),
+                             html.template, fixed=TRUE); # SVG
+        #if( TRUE )  html.template <- sub('<object id="adherence_plot" ', '<object id="adherence_plot" height="600" ', html.template, fixed=TRUE); # height (if defined)
+        #if( FALSE ) html.template <- sub('<object id="adherence_plot" ', '<object id="adherence_plot" width="600" ', html.template, fixed=TRUE); # width (if defined)
         writeLines(html.template, file.html, sep="\n");
-
-        # Export CSS:
-        css.template.path <- system.file('html-templates/css-template.css', package='AdhereR');
-        if( is.null(css.template.path) || css.template.path=="" )
-        {
-          warning("Cannot load the CSS template -- please reinstall the AdhereR package!\n");
-          return (invisible(NULL));
-        }
-        file.copy(from=css.template.path, to=file.css, overwrite=TRUE, recursive=FALSE);
-
-        # Export JS:
-        js.template.path <- system.file('html-templates/javascript-template.js', package='AdhereR');
-        if( is.null(js.template.path) || js.template.path=="" )
-        {
-          warning("Cannot load the JavaScript template -- please reinstall the AdhereR package!\n");
-          return (invisible(NULL));
-        }
-        file.copy(from=js.template.path, to=file.js, overwrite=TRUE, recursive=FALSE);
-      }
-
-      if( "svg-in-html" %in% export.formats )
-      {
-        ## Export as self-contained HTML document ####
-        html.prefix <- ifelse("svg-and-html" %in% export.formats,
-                              paste0(export.formats.fileprefix,"-selfcontained"),
-                              export.formats.fileprefix); # avoid conflicts between HTMLs
-        file.html <- ifelse( is.na(export.formats.directory),
-                             tempfile(html.prefix, fileext=".html"),
-                             file.path(export.formats.directory, paste0(html.prefix,".html")) );
-        exported.file.names <- c(exported.file.names, file.html);
-
-        # Export HTML:
-        writeLines(c('<!DOCTYPE html>\n',
-                     '<html>\n',
-                     '<head>\n',
-                     ' <script>\b',
-                     "function display()\n",
-                     "{\n",
-                     "alert('Hello World!');\n",
-                     "}\n",
-                     '</script>\n',
-                     '<style>\n',
-                     '  body {background-color: powderblue;}\n',
-                     '  h1   {color: blue;}\n',
-                     '  p    {color: red;}\n',
-                     '</style>\n',
-                     '</head>\n',
-                     '<body>\n',
-                     svg.str,'\n',
-                     '</body>\n',
-                     '</html>'),
-                   file.html, sep="");
       }
 
       if( any(c("png", "ps", "pdf", "webp") %in% export.formats) )
