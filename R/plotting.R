@@ -1269,8 +1269,8 @@
 
     # SVG header:
     svg.str <- c(svg.str,
-                 '<svg viewBox="0 0 ',dims.total.width,' ',dims.total.height,'" ',
-                 #ifelse(generate.inline.SVG,'width="600" height="600"',''),
+                 '<svg ',
+                 'viewBox="0 0 ',dims.total.width,' ',dims.total.height,'" ',
                  ' version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n'); # the plotting surface
 
     # Reusable bits:
@@ -3015,16 +3015,22 @@
         }
         html.template <- readLines(html.template.path);
         html.template <- sub('<script type="text/javascript" src="PATH-TO-JS"></script>',
-                             paste0('<script type="text/javascript">\n', paste0(js.template, collapse=""), '\n</script>'),
+                             paste0('<script type="text/javascript">\n', paste0(js.template, collapse="\n"), '\n</script>'),
                              html.template, fixed=TRUE); # JavaScript
         html.template <- sub('<link rel="stylesheet" href="PATH-TO-CSS">',
-                             paste0('<style>\n', paste0(css.template, collapse=""), '\n</style>'),
+                             paste0('<style>\n', paste0(css.template, collapse="\n"), '\n</style>'),
                              html.template, fixed=TRUE); # CSS
+
+        # SVG:
+        svg.str.embedded <- c('<svg id="adherence_plot" ', # add id and (possibly) the dimensions to the <svg> tag
+                              if( TRUE ) 'height="600" ', # height (if defined)
+                              if( FALSE ) 'width="600" ', # width (if defined)
+                              svg.str[-1]);
         html.template <- sub('<object id="adherence_plot" data="PATH-TO-IMAGE" type="image/svg+xml">Please use a modern browser!</object>',
-                             paste0(paste0(svg.str, collapse=""), "\n"),
+                             paste0(paste0(svg.str.embedded, collapse=""), "\n"),
                              html.template, fixed=TRUE); # SVG
-        #if( TRUE )  html.template <- sub('<object id="adherence_plot" ', '<object id="adherence_plot" height="600" ', html.template, fixed=TRUE); # height (if defined)
-        #if( FALSE ) html.template <- sub('<object id="adherence_plot" ', '<object id="adherence_plot" width="600" ', html.template, fixed=TRUE); # width (if defined)
+
+        # Explort the self-contained HTML document:
         writeLines(html.template, file.html, sep="\n");
       }
 
