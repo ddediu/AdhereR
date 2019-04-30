@@ -1077,7 +1077,9 @@ compute_event_durations <- function(disp.data = NULL,
                                       "DISP.DATE",
                                       "DISP.START",
                                       "DURATION",
-                                      "DAILY.DOSE"), with = FALSE];
+                                      "DAILY.DOSE",
+                                      "episode.start",
+                                      "episode.end"), with = FALSE];
       medication_events[,SPECIAL.DURATION := 0];
 
       med_disp <- med_disp[DURATION == Inf | .out == 1 | .special.periods == 1];

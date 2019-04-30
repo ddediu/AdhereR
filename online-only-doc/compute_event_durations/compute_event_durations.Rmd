@@ -4,15 +4,15 @@ title: 'Data preparation for computing adherence to medication in AdhereR: overv
 author: "Samuel S. Allemann, Dan Dediu & Alex L. Dima"
 date: "`r Sys.Date()`"
 output:
+  word_document:
+    fig_caption: yes
+  github_document:
+    toc: yes
+    toc_depth: 3
   html_document:
     df_print: paged
     toc: yes
     toc_depth: '3'
-  github_document:
-    toc: yes
-    toc_depth: 3
-  word_document:
-    fig_caption: yes
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
@@ -20,7 +20,6 @@ library(AdhereR)
 library(data.table)
 
 source("../../R/matching_function.R")
-source("../../R/adherer.R")
 
 # Various Rmarkdown output options:
 # center figures and reduce their file size:
@@ -29,11 +28,11 @@ knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg")
 
 Adherence is defined as the agreement between prescribed and actual medication use. `AdhereR` estimates adherence based on durations for which medications are prescribed and/or dispensed. However, medications might not be prescribed or dispensed for a specific duration in all circumstances. Many healthcare settings allow for multiple refills of prescriptions, and medications might be dispensed in fixed pre-packed quantities rather than from bulk. Moreover, various events might affect supply durations after medications have been dispensed. Prescribed dosage might change between dispensing events, changing the original supply duration. Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be used. In contrast, patients might not use their own supplies during certain periods (e.g., when hospitalised). When such additional information about prescription and dispensing events and treatment interruptions is available, `AdhereR` can calculate actual supply durations, taking into account changes during the course of treatment.
 
-This vignette describes the functions `compute_event_durations`, `prune_event_durations`, and `cover_special_periods` and their arguments. We use the provided example datasets included in the dataset to illustrate the various options and their impact on the calculated durations.
+This vignette describes the functions `compute_event_durations` and its arguments. We also discuss the computation of adherence with the output of `compute_event_durations`, introducing the functions `prune_event_durations`, `cover_special_periods` and `time_to_initiation`. We use the provided example datasets included in the dataset to illustrate the various options and their impact on the calculated durations.
 
 ## Definitions
 
-Throughout `AdhereR`, we use the same terms and definitions. For a complete list, you may refer to the vignette of the package. Here we reiterate a selection of those terms and describe additional terms relevant for the context of this function:
+Throughout `AdhereR`, we use the same terms and definitions. For a complete list, you may refer to the [AdhereR: Adherence to Medications](https://cran.r-project.org/package=AdhereR/vignettes/AdhereR-overview.html) vignette. Here we reiterate a selection of those terms and describe additional terms relevant for the context of this function:
 
 - *CMA* = continuous multiple-interval measures of medication availability/gaps, representing various indicators of the quality of implementation,
 - *Medication event* = prescribing or dispensing record of a given medication for a given patient; usually includes the patient’s unique identifier, an event date, and a duration,
@@ -127,7 +126,7 @@ The output of `compute_event_durations` is a list containing all data required f
     + `medication.class.colnames`:  the column(s) with classes/types/groups of medication, as given by the `medication.class.colnames` parameter.
     + `total.dose.colname`: the total dispensed quantity, as given by the `total.dose.colname` parameter.
     + `presc.daily.dose.colname`: the prescribed daily dose, as given by the `presc.daily.dose.colname` parameter.
-    + `DISP.START`: the start date of the dispensing event, either the same as in `disp.date.colnema` or a later date in case of dosage changes or treatment interruptions/hospitalisations.
+    + `DISP.START`: the start date of the dispensing event, either the same as in `disp.date.colname` or a later date in case of dosage changes or treatment interruptions/hospitalisations.
     + `DURATION`: the calculated duration of the supply, based on the total dispensed dose and the prescribed daily dose, starting from the `DISP.START` date.
     + `SPECIAL.DURATION`: the number of days *during* the current duration affected by special durations or treatment interruptions of type "continue"
     + `CARRYOVER.DURATION`: the number of days *after* the current duration affected by special durations or treatment interruptions of type "carryover"
@@ -164,6 +163,7 @@ In addition, the output contains all the arguments to the function call:
 - `force.presc.renew`
 - `trt.interruption`
 - `split.on.dosage.change`
+
 
 ```{r}
 # use compute_event_duration with the included example dataset and default settings
@@ -779,7 +779,92 @@ prune_event_durations <- function(data,
 
 ## Consider special periods as covered
 
-Without further processing of event_durations for CMA computations, special periods will appear as gaps, possibly leading to underestimation of implementation or even assumption of discontinuation and non-persistence. To consider such periods as covered, they can be added to the `event_durations` dataset, for example when it is assumed that hospitalized patients are adherent during the hospitalization period. This can be achieved by merging the special periods with the `event_durations` dataset. This should be done after pruning with `prune_event_durations`. We can use rolling joins in `data.table` to identify special periods that are in proximity to already covered durations (Alex/Dan: should this be encapsulated in a separate function?):
+Without further processing of event_durations for CMA computations, special periods will appear as gaps, possibly leading to underestimation of implementation or even assumption of discontinuation and non-persistence. To consider such periods as covered, they can be added to the `event_durations` dataset, for example when it is assumed that hospitalized patients are adherent during the hospitalization period. This can be achieved by merging the special periods with the `event_durations` dataset. This should be done after pruning with `prune_event_durations`. 
+
+AdhereR offers the `cover_special_periods` function to identify special periods that are in proximity to already covered durations and adds an additional event for these durations. It requires at least the following arguments:
+
+- `events.data`: a *data.frame* or *data.table* with the event durations,
+- `special.periods.data`: a *data.frame* or *data.table* with the special periods,
+- `ID.colname`: the unique patient ID, 
+- `disp.start.colname`: the start date of the medication event, 
+- `duration.colname`: the calculated duration for the medication event, 
+- `medication.class.colnames`:  the column(s) with classes/types/groups of medication, 
+- `days.before`: an *integer*, the number of days before the start of a special period within which an event duration must end to consider the special period as covered,
+- `days.after`: an *integer*, the number of days after a special period within which an event duration must start to consider the special period as covered,
+- `date.forma`: a *string* with the date format.
+
+The function output is the `event.data` dataset with the additional durations for special periods covered.
+
+```{r, echo = FALSE}
+
+cover_special_periods <- function(events.data,
+                                  special.periods.data,
+                                  ID.colname,
+                                  disp.start.colname,
+                                  duration.colname,
+                                  medication.class.colnames,
+                                  days.before,
+                                  days.after,
+                                  date.format
+                                  ){
+  
+  setnames(special.periods.data, 
+           old = c(ID.colname),
+           new = c("ID"))
+  
+  setnames(events.data,
+           old = c(ID.colname, disp.start.colname, duration.colname),
+           new = c("ID", "DISP.START", "DURATION"))
+  
+# set join date to the beginning of special durations
+events.data[, join_date := DISP.START+DURATION]
+special.periods.data[, join_date := DATE.IN]
+
+# key by ID and join date
+setkeyv(events.data, cols = c("ID", "join_date"))
+setkeyv(special.periods.data, cols = c("ID", "join_date"))
+
+# select durations ending within x days before the start of a special period
+dt1 <- na.omit(special.periods.data[events.data, roll = -days.before], cols = "DATE.IN")
+dt1 <- dt1[,c("ID", "DATE.IN", "DATE.OUT", medication.class.colnames, "SPECIAL.DURATION" #, events.data_list$presc.daily.dose.colname
+              ), with = FALSE] # only keep necessary columns
+
+# set join date to the end of special durations
+events.data[, join_date := DISP.START]
+special.periods.data[, join_date := DATE.OUT]
+
+# key by ID and join date
+setkeyv(events.data, cols = c("ID", "join_date"))
+setkeyv(special.periods.data, cols = c("ID", "join_date"))
+
+# select durations beginning within 7 days after the end of a special period
+dt2 <- na.omit(special.periods.data[events.data, roll = days.after], cols = "DATE.OUT")
+dt2 <- dt2[,c("ID", "DATE.IN", "DATE.OUT", medication.class.colnames, "SPECIAL.DURATION"), with = FALSE] # only keep necessary columns
+
+# merge dt1 and dt2 and select unique rows
+dt_merge <- unique(merge(dt1,
+                         dt2,
+                         all=FALSE,
+                         by = c("ID", "DATE.IN", "DATE.OUT", "SPECIAL.DURATION", medication.class.colnames)))
+
+# change column names
+setnames(dt_merge,
+         old = c("DATE.IN", "SPECIAL.DURATION"),
+         new = c("DISP.START", "DURATION"))
+
+
+events.data <- rbind(events.data, dt_merge, fill = TRUE)
+
+# change back to original column names
+setnames(events.data,
+         old = c("ID", "DISP.START", "DURATION"),
+         new = c(ID.colname, disp.start.colname, duration.colname))
+
+return(events.data)
+
+}
+```
+
 
 ```{r results=FALSE}
 # select medication class of interest and compute event durations
@@ -813,53 +898,26 @@ event_durations <- prune_event_durations(event_durations_list,
                                          keep.all = FALSE # remove flagged events from dataset
                                          )
 
-# get special periods dataset
-special_periods <- event_durations_list$special_periods
-
-# set join date to the beginning of special durations
-event_durations[, join_date := DISP.START+DURATION]
-special_periods[, join_date := DATE.IN]
-
-# key by ID and join date
-setkeyv(event_durations, cols = c(event_durations_list$ID.colname, "join_date"))
-setkeyv(special_periods, cols = c(event_durations_list$ID.colname, "join_date"))
-
-# select durations ending within 7 days before the start of a special period
-dt1 <- na.omit(special_periods[event_durations, roll = -7], cols = "DATE.IN")
-dt1 <- dt1[,c(event_durations_list$ID.colname, "DATE.IN", "DATE.OUT", "ATC.CODE", "SPECIAL.DURATION", event_durations_list$presc.daily.dose.colname), with = FALSE] # only keep necessary columns, including daily dose
-
-# set join date to the end of special durations
-event_durations[, join_date := DISP.START]
-special_periods[, join_date := DATE.OUT]
-
-# key by ID and join date
-setkeyv(event_durations, cols = c(event_durations_list$ID.colname, "join_date"))
-setkeyv(special_periods, cols = c(event_durations_list$ID.colname, "join_date"))
-
-# select durations beginning within 7 days after the end of a special period
-dt2 <- na.omit(special_periods[event_durations, roll = 7], cols = "DATE.OUT")
-dt2 <- dt2[,c(event_durations_list$ID.colname, "DATE.IN", "DATE.OUT", "ATC.CODE", "SPECIAL.DURATION"), with = FALSE] # only keep necessary columns, including flag for pruning
-
-# merge dt1 and dt2 and select unique rows
-dt_merge <- unique(merge(dt1,
-                         dt2,
-                         all=FALSE,
-                         by = c(event_durations_list$ID.colname, "DATE.IN", "DATE.OUT", "SPECIAL.DURATION", "ATC.CODE")))
-
-# change column names
-setnames(dt_merge,
-         old = c("DATE.IN", "SPECIAL.DURATION"),
-         new = c("DISP.START", "DURATION"))
+# cover special periods
+event_durations_covered <- cover_special_periods(events.data = event_durations,
+                                                 special.periods.data = event_durations_list$special_periods,
+                                                 ID.colname = "ID",
+                                                 disp.start.colname = "DISP.START",
+                                                 duration.colname = "DURATION",
+                                                 medication.class.colnames = "ATC.CODE",
+                                                 days.before = 7,
+                                                 days.after = 7,
+                                                 date.format = "%Y-%m-%d"
+                                                 )
 
 
-event_durations <- rbind(event_durations, dt_merge, fill = TRUE)
 ```
 
 [Figure 7](#Figure-7) shows the same plot as [Figure 1](#Figure-1), but with pruned durations and added events for special durations.
 
 ```{r, echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-7\"></a>**Figure 7:** CMA0 calculated for a patient with trt.interruption = \"carryover\", carryover events pruned and special durations covered.", fig.height=6, fig.width=8, out.width="100%"}
 # same plot as in Figure 1
-cma0 <- CMA0(event_durations,
+cma0 <- CMA0(event_durations_covered,
              ID.colname = "ID",
              event.date.colname = "DISP.START",
              event.duration.colname = "DURATION",
@@ -869,15 +927,15 @@ cma0 <- CMA0(event_durations,
              observation.window.start = as.Date("2057-01-01"),
              observation.window.duration = 365)
 
-event_durations[,I := .I]
+event_durations_covered[,I := .I]
 
 plot(cma0, min.plot.size.in.characters.vert = 0, show.legend = FALSE)
 for(i in 1:nrow(durcomp.hospitalisation[ID == 3])){
 
   first_event <- as.Date("2056-07-01")
 
-  bottom = head(event_durations[,I],1)
-  top = tail(event_durations[,I],1)
+  bottom = head(event_durations_covered[,I],1)
+  top = tail(event_durations_covered[,I],1)
   start = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.IN"]]-first_event)
   end = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.OUT"]]-first_event)
 
@@ -897,6 +955,9 @@ During periods without prescriptions (treatment interruptions) or certain specia
 - `episode.end`: the episode end date.
 
 ```{r, echo = FALSE}
+
+source("../../R/adherer.R")
+
 # select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[grepl("J01EE01", ATC.CODE)],
                                                 presc.data = durcomp.prescribing[grepl("J01EE01", ATC.CODE)],
@@ -945,7 +1006,8 @@ df_cma_episode <- CMA_per_episode(data = event_durations[DURATION > 0],
                                followup.window.start = as.Date("2056-01-01"),
                                followup.window.duration = 3*365,
                                observation.window.start = as.Date("2057-01-01"),
-                               observation.window.duration = 365)
+                               observation.window.duration = 365,
+                               suppress.warnings = TRUE)
 
 cma_episode <- getCMA(df_cma_episode)
 
@@ -953,7 +1015,42 @@ knitr::kable(cma_episode)
 ```
 
 CMA calculations for precomputed episodes do not necessarily reflect implementation. Delayed initiation and early discontinuation (non-persistence) may reduce CMA values. Non-persistence can be identified by looking at `end.episode.gap.days` in the output of `CMA_per_episodes`, which indicates how many days before the end of an episode are not covered.
-Delayed initiation becomes evident when we calculate time to initiation for the same data: 
+
+Delayed initiation becomes evident when we calculate time to initiation for the same data. The function `time_to_initiation` calculates the time between the start of a prescription episode and the first dispensing event, taking into account multiple variables to differentiate between treatments. It requires at least the following input:
+
+- `presc.data`: A *data.frame* or *data.table* containing
+the prescription episodes. Must contain, at a minimum, the patient unique ID,
+one medication identifier, and the start date of the prescription episode, and might
+also contain additional columns to identify and group medications (the actual
+column names are defined in the `medication.class.colnames` parameter).
+- `disp.data`: A *data.frame* or *data.table* containing
+the dispensing events. Must contain, at a minimum, the patient unique ID, one
+medication identifier, the dispensing date, and might also contain additional
+columns to identify and group medications (the actual column names are defined
+in the `medication.class.colnames` parameter).
+- `ID.colname`: A *string*, the name of the column in `presc.data`
+and `disp.data` containing the unique patient ID, or `NA` if not defined.
+- `presc.start.colname`:  A *string*, the name of the column in
+`presc.data` containing the prescription date (in the format given in
+the `date.format` parameter), or `NA` if not defined.
+- `disp.date.colname`: A *string*, the name of the column in
+`disp.data` containing the dispensing date (in the format given in
+the `date.format` parameter), or `NA` if not defined.
+- `date.format`: A *string* giving the format of the dates used in
+the `data` and the other parameters; see the `format` parameters
+of the `as.Date` function for details (NB, this concerns
+only the dates given as strings and not as `Date` objects).
+- `medication.class.colnames`: A *Vector* of *strings*, the
+name(s) of the column(s) in `data` containing the classes/types/groups of
+medication, or `NA` if not defined.
+
+Its output is a data.frame or data.table with the following columns:
+
+- `ID.colname`: the unique patient ID, as given by the ID.colname parameter.
+- `medication.class.colnames`: the column(s) with classes/types/groups of medication, as given by the medication.class.colnames parameter.
+- `episode.start`: the start date of a prescription episode,
+- `first.disp`: the date of the first dispensing event in an episode,
+- `time.to.initiation`: the difference in days between the first dispensing date and the first prescription date per episode.
 
 ```{r, echo = TRUE}
 time_init <- time_to_initiation(presc.data = prescription_episodes,
@@ -971,8 +1068,8 @@ knitr::kable(time_init)
 
 ## Conclusions
 
--	functions presented here are CED, PED, [rolling thingy name of function],
--	they prepare data for calculation of TE and CMA (and eventually time to init)
+
+-	functions presented here are `compute_event_durations`, `prune_event_durations`, `cover_special_periods`, and `time_to_initiation` to prepare data for calculation of TE, CMA, and eventually `time_to_inititation`
 -	the default use is when….
 -	Special cases are….
 -	Careful when using them for … 
