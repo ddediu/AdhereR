@@ -293,8 +293,9 @@
       r <- c(r,
              '<line ',
 
-             # The id (if any):
+             # The id and class (if any):
              if(!is.na(id)) c('id="',id,'" '),
+             if(!is.na(class)) c('class="',class,'" '),
 
              # The cooridnates of the points:
              'x1="', .SVG.number(x[i]), '" ',
@@ -545,14 +546,14 @@
 {
 
   ## DEBUG ####
-  export.formats <- c("svg", "html", "png", "webp", "ps", "pdf");
+  export.formats <- c("html");
   export.formats.directory <- "~/Temp/tmp";
   generate.R.plot <- TRUE;
   ## END DEBUG ####
 
 
   # What sorts of plots to generate (use short names for short if statements):
-  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "svg-and-html", "svg-in-html", "png", "webp", "ps", "pdf") %in% export.formats));
+  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "png", "webp", "ps", "pdf") %in% export.formats));
   if( !.do.R && !.do.SVG )
   {
     # Nothing to plot!
@@ -1577,7 +1578,7 @@
         svg.str <- c(svg.str,
                      .SVG.text(x=(dims.plot.x - dims.chr.axis), y=.scale.y.to.SVG.plot(y.cur + vspace.needed/2), text=pid,
                                font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
-                               class="axis-values-y", comment="The y-axis labels")
+                               class="axis-labels-y", comment="The y-axis labels")
         );
       }
 
@@ -2519,12 +2520,12 @@
                  # The y axis label:
                  .SVG.text(x=dims.chr.axis, y=dims.total.height/2,
                            text=as.character(y.label$string), col="black", font="Arial", font_size=dims.chr.lab, h.align="center", v.align="center", rotate=-90,
-                           class="axis-label-y", comment="The y-axis label"),
+                           class="axis-name-y", comment="The y-axis label"),
 
                  # The x axis label:
                  .SVG.text(x=(dims.plot.x + dims.total.width)/2, y=(dims.total.height - dims.chr.axis),
                            text=as.character(x.label), col="black", font="Arial", font_size=dims.chr.lab, h.align="center", v.align="center",
-                           class="axis-label-x", comment="The x-axis label")
+                           class="axis-name-x", comment="The x-axis label")
     );
   }
 
@@ -2569,7 +2570,7 @@
                    # Axis labels:
                    .SVG.text(x=xs, y=rep(ys, length(xs)),
                              text=as.character(date.labels$string), col="black", font="Arial", font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
-                             class="axis-values-x"),
+                             class="axis-labels-x"),
 
                    # Axis ticks:
                    .SVG.lines(x=rep(xs,each=2),

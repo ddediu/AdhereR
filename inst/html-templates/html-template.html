@@ -16,30 +16,26 @@
     <p>This is just an example!</p>
 
     <p>
-			<button onclick='c=adh_svg.get_bkg_color(); adh_svg.set_bkg_color((c != "white") ? "white" : "yellow")'>Toggle background color!</button>
+			<button onclick='adh_svg.set_plot_size(w="100px")'>Tiny</button>
+			<button onclick='adh_svg.set_plot_size(w="300px")'>Small</button>
+			<button onclick='adh_svg.set_plot_size(w="600px")'>Standard</button>
+			<button onclick='adh_svg.set_plot_size()'>Default</button>
+			<button onclick='adh_svg.set_plot_size(w="1000px")'>Big</button>
+			<button onclick='adh_svg.set_plot_size(w="10000px")'>Huge</button>
 		</p>
 
     <p>
-			<button onclick='adh_svg.change_plot_size(w="100px")'>Tiny</button>
-			<button onclick='adh_svg.change_plot_size(w="300px")'>Small</button>
-			<button onclick='adh_svg.change_plot_size(w="600px")'>Standard</button>
-			<button onclick='adh_svg.change_plot_size()'>Default</button>
-			<button onclick='adh_svg.change_plot_size(w="1000px")'>Big</button>
-			<button onclick='adh_svg.change_plot_size(w="10000px")'>Huge</button>
+			<button onclick='x=adh_svg.get_bkg_color(); adh_svg.set_bkg_color((x != "white") ? "white" : "yellow")'>Toggle background color!</button>
+
+			<button onclick='adh_svg.show_alternating_bands(!adh_svg.is_visible_alternating_bands())'>Toggle alternating bands!</button>
+
+			<button onclick='x=adh_svg.is_visible_axis_names(); adh_svg.show_axis_names(!x["x"], !x["y"])'>Toggle axes names!</button>
+
+			<button onclick='x=adh_svg.is_visible_axis_labels(); adh_svg.show_axis_labels(!x["x"], !x["y"])'>Toggle axes labels!</button>
 		</p>
 
     <p>
-			<button onclick='adh_svg.show_alternating_bands(true)'>Show alternating bands!</button>
-			<button onclick='adh_svg.show_alternating_bands(false)'>Hide alternating bands!</button>
-		</p>
-
-    <p>
-			<button onclick='adh_svg.show_axis_labels(true, "x")'>Show x-axis labels!</button>
-			<button onclick='adh_svg.show_axis_labels(false, "x")'>Hide x-axis labels!</button>
-			<button onclick='adh_svg.show_axis_labels(true, "y")'>Show y-axis labels!</button>
-			<button onclick='adh_svg.show_axis_labels(false, "y")'>Hide y-axis labels!</button>
-			<button onclick='adh_svg.show_axis_labels(true, "both")'>Show both axis labels!</button>
-			<button onclick='adh_svg.show_axis_labels(false, "both")'>Hide both axis labels!</button>
+			<button onclick='adh_svg.show_legend(!adh_svg.is_visible_legend())'>Toggle legend!</button>
 		</p>
 
     <!--img class="adherence_plot" src="PATH-TO-IMAGE"/-->
