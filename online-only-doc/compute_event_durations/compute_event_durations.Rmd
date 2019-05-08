@@ -66,7 +66,7 @@ For demonstration purposes, we included a sample dataset containing dispensing e
     + ATC code (`ATC.CODE`; 49 different codes according to the Anatomical Therapeutic Chemical Classification [ATC] System),
     + dosage unit (`UNIT`; 57% MG, 12% MICROG, 31% UI),
     + dosage form (`FORM`; 12% INHALATION VAPOUR, 3% INJECTION, 13% METERED INHALER, 72% ORAL FORM), and
-- dispensed quantity (`TOTAL.DOSE`; median 20000, range 10-120000000). 
+- dispensed quantity (`TOTAL.DOSE`; median 20,000, range 10-120,000,000). 
 
 [Table 1](#Table-1) shows the first 10 rows of the dispensing events in the example dataset `durcomp.dispensing`. 
 
@@ -79,7 +79,9 @@ knitr::kable(head(durcomp.dispensing), caption = "<a name=\"Table-1\"></a>**Tabl
 
 The minimum necessary dataset includes 4 variables for each prescription event: *patient unique identifier*, *prescription event date*, *medication type*, and *prescribed daily dose*. A *visit number* and *prescription duration* are optional.
 
-*Medication type* can include multiple columns, corresponding to the columns in the *dispensing dataset*. A duration will only be calculated if the information in all columns for the medication type are the same in dispensing and prescription events. Similar to the *dispensed quantity*, the *prescribed daily dose* could be the number of units prescribed per day (e.g., 2 tablets), or a total dosage to be taken daily (e.g., 40 mg). If a medication is prescribed for regular but not daily use, the dosage should be recalculated, e.g. in case of *70 mg once per week*, the *prescribed daily dose* should be 10 mg. **Important to note:** It is assumed that the prescribed daily dose can be accomodated with the dispensed medication, for example by splitting tablets. This requires careful consideration and exploratory analysis of the dispensed and prescribed dosage forms and posologies.  
+*Medication type* can include multiple columns, corresponding to the columns in the *dispensing dataset*. A duration will only be calculated if the information in all columns for the medication type are the same in dispensing and prescription events. Similar to the *dispensed quantity*, the *prescribed daily dose* could be the number of units prescribed per day (e.g., 2 tablets), or a total dosage to be taken daily (e.g., 40 mg). If a medication is prescribed for regular but not daily use, the dosage should be recalculated, e.g. in case of *70 mg once per week*, the *prescribed daily dose* should be 10 mg. 
+
+**IMPORTANT TO NOTE: It is assumed that the prescribed daily dose can be accomodated with the dispensed medication, for example by splitting tablets. This requires careful consideration and exploratory analysis of the dispensed and prescribed dosage forms and posologies.**   
 
 For demonstration purposes, we included a sample dataset containing prescription events (one per row) for 16 patients over a period of roughly 15 months (1502 events in total). Each row represents an individual prescription record for a specific dose of a specific medication for a patient at a given date. Eight variables are included in this dataset:
 
@@ -90,7 +92,7 @@ For demonstration purposes, we included a sample dataset containing prescription
     + ATC code (`ATC.CODE`; 43 different codes according to the Anatomical Therapeutic Chemical Classification [ATC] System),
     + dosage unit (`UNIT`; 50% MG, 10% MICROG, 40% UI),
     + dosage form (`FORM`; 18% INHALATION VAPOUR, 5% INJECTION, 13% METERED INHALER, 64% ORAL FORM), 
-- prescription duration (`PRESC.DURATION`; median 30, range 30-90 days, 1437 `NA`'s), and
+- prescription duration (`PRESC.DURATION`; median 30, range 30-90 days, 1437 not provided (`NA`), and
 - prescribed daily dose (`DAILY.DOSE`; median 600, range 0.07-8000000). 
 
 [Table 2](#Table-2) shows the first 10 rows of the prescription events in the example dataset `durcomp.prescribing`. 
@@ -102,7 +104,7 @@ knitr::kable(head(durcomp.prescribing), caption = "<a name=\"Table-2\"></a>**Tab
 
 ### Special periods (optional)
 
-During certain periods, medication use may differ from what is expected based on the available data. Typical examples of such periods are hospitalisations, holidays, incarcerations, or similar. If available, these periods can be taken into account during computation of event durations. The minimum required variables are: *patient unique identifier*, *start date*, and *end date* of special periods. Optional columns are *type* (indicating the type of special situation), *customized instructions* how to handle a specific period, and *medication class* (from those specified in dispensing and prescription datasets).
+During certain periods, medication use may differ from what is expected based on the available data. Typical examples of such periods are hospitalisations, holidays, incarcerations, or similar. If available, these periods can be taken into account during computation of event durations. The minimum required variables are: *patient unique identifier*, *start date*, and *end date* of special periods. Optional columns are *type* (indicating the type of special period), *customised instructions* how to handle a specific period (explained below), and *medication class* (from those specified in dispensing and prescription datasets).
 
 For demonstration purposes, `AdhereR` uses a sample dataset containing hospitalization periods (one per row) for 10 patients over a period of roughly 18 months (28 events in total). Each row represents an individual hospitalisation period of a patient for whom event durations should be calculated. All column names must match the format provided in this example:
 
@@ -196,7 +198,9 @@ During special periods and treatment interruptions, medication use may differ fr
 
 - *continue* has no impact on durations and dispensing start dates: Patients are expected to continue using the existing supply as initially prescribed,
 - *discard* truncates supplies at the beginning of special period or treatment interruption and the remaining supply is discarded. This might be used if patients are asked to return unused medications after a limited treatment course (e.g. antibiotic treatments), 
-- *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will be added for the remaining duration. This might be used if patients are hospitalized and receive medications from hospital wards but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. **CAVE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples below).**
+- *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will be added for the remaining duration. This might be used if patients are hospitalized and receive medications from hospital wards but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. 
+
+**IMPORTANT TO NOTE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples below).**
 
 In addition to the global options, both settings accept a column name in the dispensing dataset (for `trt.interruption`) or special periods dataset (for `special.periods.mapping`). The column can contain either of *continue*, *discard*, or *carryover* per medication type (for `trt.interruption`) or per special period type and/or medication type (for `special.periods.mapping`).
 
@@ -261,38 +265,56 @@ for(i in 1:nrow(durcomp.hospitalisation[ID == 3])){
 Let's consider a hypothetical scenario with a lot of overlapping special periods.
 
 ```{r, echo = FALSE}
-special_episodes <- data.table(ID = c(1,1,1,1,1,1,1,1),
-                               DATE.IN = c("2000-01-02",
-                                           "2000-01-11",
-                                           "2000-01-21",
-                                           "2000-02-01",
-                                           "2000-02-11",
-                                           "2000-02-15",
-                                           "2000-02-16",
-                                           "2000-03-01"),
-                               DATE.OUT = c("2000-01-30",
-                                            "2000-03-20",
-                                            "2000-02-28",
-                                            "2000-03-10",
-                                            "2000-02-21",
-                                            "2000-02-18",
-                                            "2000-02-17",
-                                            "2000-03-05"),
+# special_episodes <- data.table(ID = c(1,1,1,1,1,1,1,1),
+#                                DATE.IN = c("2000-01-02",
+#                                            "2000-01-11",
+#                                            "2000-01-21",
+#                                            "2000-02-01",
+#                                            "2000-02-11",
+#                                            "2000-02-15",
+#                                            "2000-02-16",
+#                                            "2000-03-01"),
+#                                DATE.OUT = c("2000-01-30",
+#                                             "2000-03-20",
+#                                             "2000-02-28",
+#                                             "2000-03-10",
+#                                             "2000-02-21",
+#                                             "2000-02-18",
+#                                             "2000-02-17",
+#                                             "2000-03-05"),
+#                                TYPE = c("HOSP",
+#                                         "HOLIDAY",
+#                                         "HOSP",
+#                                         "HOSP",
+#                                         "REHAB",
+#                                         "HOLIDAY",
+#                                         "REHAB",
+#                                         "HOSP"),
+#                                CUSTOM = c("carryover",
+#                                           "continue",
+#                                           "carryover",
+#                                           "continue",
+#                                           "carryover",
+#                                           "continue",
+#                                           "carryover",
+#                                           "carryover"))
+
+special_episodes <- data.table(ID = c(1,1,1,1),
+                               DATE.IN = c("2000-01-15",
+                                           "2000-01-25",
+                                           "2000-03-01",
+                                           "2000-03-05"),
+                               DATE.OUT = c("2000-02-05",
+                                            "2000-02-20",
+                                            "2000-03-15",
+                                            "2000-03-10"),
                                TYPE = c("HOSP",
-                                        "HOLIDAY",
-                                        "HOSP",
-                                        "HOSP",
                                         "REHAB",
                                         "HOLIDAY",
-                                        "REHAB",
                                         "HOSP"),
                                CUSTOM = c("carryover",
                                           "continue",
-                                          "carryover",
                                           "continue",
-                                          "carryover",
-                                          "continue",
-                                          "carryover",
                                           "carryover"))
 
 knitr::kable(special_episodes)
@@ -358,7 +380,7 @@ for(i in 1:nrow(special_episodes)){
   special_episodes[,`:=` (DATE.IN = as.Date(DATE.IN),
                           DATE.OUT = as.Date(DATE.OUT))]
 
-  bottom = nrow(event_durations)+i/10
+  bottom = nrow(event_durations)+i/nrow(event_durations)
   top = bottom+0.1
   start = as.numeric(special_episodes[[i, "DATE.IN"]]-first_event)
   end = as.numeric(special_episodes[[i, "DATE.OUT"]]-first_event)
@@ -372,7 +394,9 @@ for(i in 1:nrow(special_episodes)){
 
 ### Force initial prescription
 
-If the dispensing dataset of a patient covers events with earlier dates than the first prescription events for this specific medication, `force.init.presc = TRUE` advances the date of the first prescription event to the date of the first dispensing event. For example, if prescribing data is only available during the observation window, but dispensing data covers a larger follow-up window, this setting allows the calculation of supply durations for carryover into the observation window. However, this only has an effect when the first prescription event is not limited in duration (as indicated in `presc.duration.colname`). This is to make sure that existing supplies of discontinued treatments are not carried over into the observation window.
+If the dispensing dataset of a patient covers events with earlier dates than the first prescription events for this specific medication, `force.init.presc = TRUE` advances the date of the first prescription event to the date of the first dispensing event. For example, if prescribing data is only available during the observation window, but dispensing data covers a larger follow-up window, this setting allows the calculation of supply durations for carryover into the observation window. 
+
+**IMPORTANT TO NOTE: This only applies if the first prescription event is not limited in duration (as indicated in `presc.duration.colname`). This is to avoid assumptions about the true start date and duration of such prescriptions.**
 
 In the example in [Figure 3](#Figure-3) below, the patient had dispensing events for Salbutamol (R03AC02) and Salmeterol (R03AC12) starting from 2056-07-31, but the first prescribing event for either of those was not before 2056-12-10. Because the prescriptions were not limited in duration, by setting `force.init.presc = TRUE`, durations for dispensing events before 2056-12-10 can be calculated.
 
@@ -419,7 +443,7 @@ plot(cma7, min.plot.size.in.characters.vert = 0)
 
 ### Force prescription renewal
 
-If a medication is not prescribed during any given prescription event for a patient, `force.prescription.renew = TRUE` will make sure that the prescription episode for this medication ends on the first visit without renewal. Alternatively, this can be set for each medication class separately by providing the name of a column containing the information in the dispensing dataset (logical, `TRUE` or `FALSE`). 
+If a medication is not prescribed during any given visit for a patient, `force.prescription.renew = TRUE` will make sure that the prescription episode for this medication ends on the first visit without renewal. Alternatively, this can be set for each medication class separately by providing the name of a column containing the information in the dispensing dataset (logical, `TRUE` or `FALSE`). 
 
 If prescriptions are not routinely prescribed during all visits, `force.prescription.renew` should be set to `FALSE`. This can also be the case if prescription data covers multiple prescribers, because treatments prescribed by one prescriber might continue even when not prescribed during a subsequent visit to another prescriber. 
 
