@@ -7506,6 +7506,13 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                   summary=NA);
   if( is.null(ret.val) ) return (NULL);
 
+  # retain only necessary columns of data
+  data <- data[,c(ID.colname,
+                  event.date.colname,
+                  event.duration.colname,
+                  event.daily.dose.colname,
+                  medication.class.colname), with = FALSE]
+
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -7559,6 +7566,8 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                                return.data.table=TRUE);
 
     } else {
+
+      # various checks
 
       # Convert treat.epi to data.table, cache event dat as Date objects, and key by patient ID and event date
       treat.epi <- as.data.table(treat.epi);
