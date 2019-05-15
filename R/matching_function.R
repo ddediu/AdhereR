@@ -163,8 +163,9 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' With \emph{discard}, durations are truncated at the beginning of special periods and the
 #' remaining quantity is discarded. With \emph{carryover}, durations are truncated
 #' at the beginning of a special period and a new event with the remaining duration
-#' is created after the end of the end of the special period. With \emph{custom}, the
-#' mapping has to be included in \emph{\code{special.periods.data}}.
+#' is created after the end of the special period. With \emph{custom}, the
+#' mapping has to be included in \emph{\code{special.periods.data}} as a column
+#' named \code{"custom"}.
 #' @param ID.colname A \emph{string}, the name of the column in \code{disp.data},
 #' \code{presc.data}, and \code{special.periods.data} containing the unique patient ID.
 #' @param presc.date.colname A \emph{string}, the name of the column in
@@ -1376,9 +1377,6 @@ if(progress.bar == TRUE)  close(pb)
 #' @param data A \emph{\code{list}}, the output of `compute_event_durations`.
 #' @param include A \emph{\code{Vector}} of \emph{strings} indicating whether to include
 #' special periods and/or treatment interruptions.
-#' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
-#' name(s) of the column(s) in the \code{event_durations} element of \code{data} to
-#' identify medication classes. Defaults to the columns used in \code{compute_event_durations}.
 #' @param days.within.out.date.1 event durations from before the special period or
 #' treatment interruptions are removed if there is a new dispensing event within the
 #' number of days after the end of a special period. If \emph{integer} the number of days,
@@ -1470,33 +1468,6 @@ prune_event_durations <- function(data,
     return (NULL);
   }
 
-  if( !inherits(data$special_periods, "data.frame") )
-    {
-      if( !suppress.warnings ) warning("The special_periods element in data must be of type 'data.frame'!\n");
-      return (NULL);
-    }
-  if( nrow(data$special_periods) < 1 )
-    {
-      if( !suppress.warnings ) warning("The special_periods element in data must have at least one row!\n");
-      return (NULL);
-    }
-  if(!all(c(data$ID.colname, "DATE.IN", "DATE.OUT") %in% colnames(data$special_periods)))
-    {
-      if( !suppress.warnings ) warning(paste0("The special_periods element in data must contain at least all
-                                                columns with the names '", data$ID.colname, "', 'DATE.IN', and 'DATE.OUT'.\n
-                                                Please refer to the documentation for more information.\n"));
-      return (NULL);
-    }
-  # if(!all(colnames(data$special_periods) %in% c(data$ID.colname, "DATE.IN", "DATE.OUT", "TYPE", medication.class.colnames, "SPECIAL.DURATION", "CUSTOM")))
-  #   {
-  #     if( !suppress.warnings ) warning(paste0("The special periods data can only contain columns
-  #                                               with the names \"", data$ID.colname, "\", \"DATE.IN\", \"DATE.OUT\", \"TYPE\", ",
-  #                                             paste(shQuote(medication.class.colnames), collapse = ", "), ", \"SPECIAL.DURATION\", \"CUSTOM\", and a column with
-  #                                               customized instructions how to handle a specific period.\n
-  #                                               Please refer to the documentation for more information.\n"));
-  #     return (NULL);
-  #   }
-
 browser()
 
   # include parameter valid
@@ -1515,19 +1486,55 @@ browser()
   end_dates <- NULL
 
   if("special periods" %in% include){
-    special_periods <- data$special_periods
 
     # check for carryover status
+    if( !data$special.periods.mapping %in% c("carryover", "custom") )
+    {
+      if( !suppress.warnings ) warning(paste0("This function only applies to special periods of type 'carryover', but special periods are of type '", data$special.periods.mapping, "'!\n"));
+      return (NULL);
+    }
 
+    # get special periods
+    special_periods <- data$special_periods
+
+    # check carryover status with custom mapping
+    if( data$special.periods.mapping == "custom" ) {
+      if( nrow(special_periods[custom == "carryover"]) == 0)
+      {
+        if( !suppress.warnings ) warning(paste0("This function only applies to special periods of type 'carryover', but no special periods of this type occur in the data!\n"));
+        return (NULL);
+      }
+
+      special_periods <- special_periods[custom == "carryover"]
+
+    }
+
+    if( !inherits(data$special_periods, "data.frame") )
+    {
+      if( !suppress.warnings ) warning("The special_periods element in data must be of type 'data.frame'!\n");
+      return (NULL);
+    }
+    if( nrow(data$special_periods) < 1 )
+    {
+      if( !suppress.warnings ) warning("The special_periods element in data must have at least one row!\n");
+      return (NULL);
+    }
+    if(!all(c(data$ID.colname, "DATE.IN", "DATE.OUT") %in% colnames(data$special_periods)))
+    {
+      if( !suppress.warnings ) warning(paste0("The special_periods element in data must contain at least all
+                                              columns with the names '", data$ID.colname, "', 'DATE.IN', and 'DATE.OUT'.\n
+                                              Please refer to the documentation for more information.\n"));
+      return (NULL);
+    }
 
     # extract end dates
-    end_dates <- unique(data.table(ID = special_periods[[data$ID.colname]],
-                                   DATE.OUT = special_periods[["DATE.OUT"]]))
+    end_dates <- unique(special_periods)
+    setnames(end_dates)
 
   }
   if("treatment interruptions" %in% include){
     presc_episodes <- data$prescription_episodes
-    trt_interruptions <- presc_episodes[shift(episode.end, n = 1, type = "lag") < episode.start, .SD, by = c(data$ID.colname, medication.class.colnames)]
+    trt_interruptions <- presc_episodes[shift(episode.end, n = 1, type = "lag") < episode.start, .SD, by = c(data$ID.colname, data$medication.class.colnames)]
 
     # extract end dates
     end_dates <- unique(rbind(end_dates,
@@ -1562,7 +1569,7 @@ browser()
     disp.within.1[get(data$disp.date.colname) < DATE.OUT & get(data$disp.date.colname) < DISP.START, .from.carryover := 1]
 
     # identify new events
-    disp.within.1[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, medication.class.colnames, "DATE.OUT")]
+    disp.within.1[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, data$medication.class.colnames, "DATE.OUT")]
 
     # mark events for removal if they are from carryover and at least one new event is present within the specified period
     disp.remove.1 <- disp.within.1[.from.carryover == 1 & .new.events > 0, .prune.event := 1]
@@ -1591,7 +1598,7 @@ browser()
     disp.within.2[get(data$disp.date.colname) < DATE.OUT & get(data$disp.date.colname) < DISP.START, .from.carryover := 1]
 
     # identify new events
-    disp.within.2[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, medication.class.colnames, "DATE.OUT")]
+    disp.within.2[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, data$medication.class.colnames, "DATE.OUT")]
 
     # mark events for removal if they are from carryover and no new events are present
     disp.remove.2 <- disp.within.2[.from.carryover == 1 & .new.events == 0, .prune.event := 1]
@@ -1607,7 +1614,7 @@ browser()
   disp.remove <- rbind(disp.remove.1, disp.remove.2)
 
   # merge with event_durations
-  event_durations_prune <- merge(event_durations[, join_date := NULL], disp.remove[, c(data$ID.colname, medication.class.colnames, data$disp.date.colname, "DISP.START", "DURATION", ".prune.event"), with = FALSE], by = c(data$ID.colname, medication.class.colnames, data$disp.date.colname, "DISP.START", "DURATION"), all.x = TRUE)
+  event_durations_prune <- merge(event_durations[, join_date := NULL], disp.remove[, c(data$ID.colname, data$medication.class.colnames, data$disp.date.colname, "DISP.START", "DURATION", ".prune.event"), with = FALSE], by = c(data$ID.colname, data$medication.class.colnames, data$disp.date.colname, "DISP.START", "DURATION"), all.x = TRUE)
 
   if(keep.all == FALSE) {
 
