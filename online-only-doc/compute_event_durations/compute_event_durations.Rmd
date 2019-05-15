@@ -4,15 +4,15 @@ title: 'Data preparation for computing adherence to medication in AdhereR: overv
 author: "Samuel S. Allemann, Dan Dediu & Alex L. Dima"
 date: "`r Sys.Date()`"
 output:
-  word_document:
-    fig_caption: yes
-  github_document:
-    toc: yes
-    toc_depth: 3
   html_document:
     df_print: paged
     toc: yes
     toc_depth: '3'
+  github_document:
+    toc: yes
+    toc_depth: 3
+  word_document:
+    fig_caption: yes
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
@@ -33,7 +33,7 @@ The core `AdhereR` functions estimate adherence based on durations for which med
 Various events might affect supply durations after medications have been dispensed. Prescribed dosage might change between dispensing events, changing the original supply duration. Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be used. In contrast, patients might not use their own supplies during certain periods (e.g., when hospitalised). `AdhereR` takes into account dosage changes, special periods, and treatment interruptions.
 
 
-This vignette describes the functions `compute_event_durations` and its arguments. We also discuss the computation of adherence with the output of `compute_event_durations`, introducing the functions `prune_event_durations`, `cover_special_periods` and `time_to_initiation`. We use the provided example datasets included in the dataset to illustrate the various options and their impact on the calculated durations.
+This vignette describes the functions `compute_event_durations` and its arguments. We use the provided example datasets included in the package to illustrate the various options and their impact on the calculated durations. We also discuss the computation of adherence with the output of `compute_event_durations`, introducing the functions `prune_event_durations`, `cover_special_periods` and `time_to_initiation`. 
 
 ## Definitions
 
@@ -125,87 +125,85 @@ knitr::kable(head(durcomp.hospitalisation), caption = "<a name=\"Table-3\"></a>*
 
 ## Function arguments
 
-
 The function arguments for `compute_event_durations` are: 
 
-- disp.data A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
-the dispensing events. Must contain, at a minimum, the patient unique ID, one
+- `disp.data`: A *data.frame* or *data.table* containing
+the dispensing events (see above). Must contain, at a minimum, the patient unique ID, one
 medication identifier, the dispensing date, and total dispensed dose, and might
 also contain additional columns to identify and group medications (the actual
-column names are defined in the \emph{\code{medication.class.colnames}} parameter).
-- presc.data A \emph{\code{data.frame}} containing the prescribing events.
+column names are defined in the `medication.class.colnames` parameter).
+- `presc.data`: A *data.frame* or *data.table* containing the prescribing events (see above).
 Must contain, at a minimum, the same unique patient ID and medication identifier(s)
 as the dispensing data, the prescription date, the daily prescribed dose, and the
 prescription duration. Optionally, it might also contain a visit number.
-- special.periods.data Optional, \emph{\code{NULL}} or a \emph{\code{data.frame}}
-containing the information about special periods (e.g., hospitalizations or other situations
-where medication use may differ, e.g. during incarcerations or holidays). Must contain the same unique
+- `special.periods.data`: Optional, `NULL` or a *data.frame* or *data.table*
+containing the information about special periods (see above). Must contain the same unique
 patient ID as dispensing and prescription data, the start and end dates of the special
-periods with the exact column names \emph{\code{DATE.IN}} and \emph{\code{DATE.OUT}}.
-Optional columns are \emph{\code{TYPE}} (indicating the type of special situation),
+periods with the exact column names `DATE.IN` and `DATE.OUT`.
+Optional columns are `TYPE` (indicating the type of special situation),
 customized instructions how to handle a specific period (see
-\code{special.periods.mapping}), and any of those specified in \code{medication.class.colnames}}.
-- @param special.periods.mapping can be either of \emph{continue}, \emph{discard},
-\emph{carryover}, or \emph{custom}. It indicates how to handle durations during special periods.
-With \emph{continue}, special periods have no effect on durations and event start dates.
-With \emph{discard}, durations are truncated at the beginning of special periods and the
-remaining quantity is discarded. With \emph{carryover}, durations are truncated
+`special.periods.mapping`), and any of those specified in `medication.class.colnames`.
+- `special.periods.mapping`: Can be either of *continue*, *discard*,
+*carryover*, or *custom*. It indicates how to handle durations during special periods.
+With *continue*, special periods have no effect on durations and event start dates.
+With *discard*, durations are truncated at the beginning of special periods and the
+remaining quantity is discarded. With *carryover*, durations are truncated
 at the beginning of a special period and a new event with the remaining duration
-is created after the end of the end of the special period. With \emph{custom}, the
-mapping has to be included in \emph{\code{special.periods.data}}.
-- ID.colname A \emph{string}, the name of the column in \code{disp.data},
-\code{presc.data}, and \code{special.periods.data} containing the unique patient ID.
-- presc.date.colname A \emph{string}, the name of the column in
-\code{presc.data} containing the prescription date (in the format given in
-the \code{date.format} parameter).
-- disp.date.colname A \emph{string}, the name of the column in
-\code{disp.data} containing the dispensing date (in the format given in
-the \code{date.format} parameter).
-- date.format A \emph{string} giving the format of the dates used in
-the \code{data} and the other parameters; see the \code{format} parameters
-of the \code{\link[base]{as.Date}} function for details (NB, this concerns
-only the dates given as strings and not as \code{Date} objects).
-- medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
-name(s) of the column(s) in \code{disp.data} and \code{presc.data} containing
+is created after the end of the end of the special period. With *custom*, the
+mapping has to be included in *special.periods.data*. See details below.
+- `ID.colname`: A *string*, the name of the column in `disp.data`,
+`resc.data`, and `special.periods.data` containing the unique patient ID.
+- `presc.date.colname`: A *string*, the name of the column in
+`presc.data` containing the prescription date (in the format given in
+the `date.format` parameter).
+- `disp.date.colname`: A *string*, the name of the column in
+`disp.data` containing the dispensing date (in the format given in
+the `date.format` parameter).
+- `date.format`: A *string* giving the format of the dates used in
+the `data` and the other parameters; see the `format` parameters
+of the `as.Date` function for details (NB, this concerns
+only the dates given as strings and not as `Date` objects).
+- `medication.class.colnames`: A *Vector* of *strings*, the
+name(s) of the column(s) in `disp.data` and `presc.data` containing
 the classes/types/groups of medication.
-- total.dose.colname A \emph{string}, the name of the column in
-\code{disp.data} containing the total dispensed dose as \code{numeric} (e.g.
-\code{500} for 10 tablets of 50 mg).
-- presc.daily.dose.colname A \emph{string}, the name of the column in
-\code{presc.data} containing the daily prescribed dose as \code{numeric} (e.g.
-\code{50} for 50 mg once per day, or 25 for 50 mg once ever 2 days).
-- presc.duration.colname A \emph{string}, the name of the column in
-\code{presc.data} containing the duration of the prescription as \code{numeric}
-or \code{NA} if duration is unknown.
-- visit.colname A \emph{string}, the name of the column in
-\code{presc.data} containing the number of the visit or a new column name if the
+- `total.dose.colname`: A *string*, the name of the column in
+`disp.data` containing the total dispensed dose as `numeric` (e.g.
+`500` for 10 tablets of 50 mg).
+- `presc.daily.dose.colname`: A *string*, the name of the column in
+`presc.data` containing the daily prescribed dose as `numeric` (e.g.
+`50` for 50 mg once per day, or 25 for 50 mg once ever 2 days).
+- `presc.duration.colname`: A *string*, the name of the column in
+`presc.data` containing the duration of the prescription as `numeric`
+or `NA` if duration is unknown.
+- `visit.colname`: A *string*, the name of the column in
+`presc.data` containing the number of the visit or a new column name if the
 prescribing data does not contain such a column.
-- force.init.presc \emph{Logical}. If \code{TRUE} advance the date of the
+- `force.init.presc`: *Logical*. If `TRUE` advance the date of the
 first prescription event to the date of the first dispensing event, if the first
 prescription event is after the first dispensing event for a specific medication.
 Only if the first prescription event is not limited in duration (as indicated in
-the \code{presc.duration.colname}).
-- force.presc.renew \emph{Logical} or \emph{string}. If \code{TRUE} require
+the `presc.duration.colname`). See details below.
+- `force.presc.renew`: *Logical* or *string*. If `TRUE` require
 a new prescription for all medications for every prescription event (visit),
-otherwise prescriptions end on the first visit without renewal. If \emph{string},
-the name of the column in \emph{disp.data} containing the \code{Logical} for each
-medication class separatly.
-- trt.interruption \emph can be either of \emph{"continue"}, \emph{"discard"},
-\emph{"carryover"}, or a \emph{string}. It indicates how to handle durations during
-treatment interruptions (see \code{special.periods.mapping}).
-If \emph{string}, the name of the (\emph{character}) column in \emph{disp.data}
-containing the information (\emph{"continue"}, \emph{"discard"}, or \emph{"carryover"})
-for each medication class separatly.
-- split.on.dosage.change \emph{Logical} or \emph{string}. If \code{TRUE}
+otherwise prescriptions end on the first visit without renewal. If *string*,
+the name of the column in *disp.data* containing the `Logical` for each
+medication class separatly. See details below.
+- `trt.interruption`: Can be either of *"continue"*, *"discard"*,
+*"carryover"*, or a *string*. It indicates how to handle durations during
+treatment interruptions (see `special.periods.mapping`).
+If *string*, the name of the (*character*) column in *disp.data*
+containing the information (*"continue"*, *"discard"*, or *"carryover"*)
+for each medication class separatly. See details below.
+- `split.on.dosage.change`: *Logical* or *string*. If `TRUE`
 split the dispensing event on days with dosage change and create a new event with
-the new dosage for the remaining supply. If \emph{string}, the name of the column
-containing the \code{Logical} in \emph{disp.data} for each medication class separatly.
-Important if carryover should be considered later on.
-- suppress.warnings \emph{Logical}, if \code{TRUE} don't show any warnings.
-- return.data.table \emph{Logical}, if \code{TRUE} return a
-\code{data.table} object, otherwise a \code{data.frame}.
-- progress.bar \emph{Logical}, if \code{TRUE} show a progress bar.
-- ... other possible parameters.
+the new dosage for the remaining supply. If *string*, the name of the column
+containing the `Logical` in *disp.data* for each medication class separatly.
+Important if carryover should be considered later on. See details below.
+- `suppress.warnings`: *Logical*, if `TRUE` don't show any warnings.
+- `return.data.table`: *Logical*, if `TRUE` return a
+`data.table` object, otherwise a `data.frame`.
+- `progress.bar`: *Logical*, if `TRUE` show a progress bar.
+- `...`: other possible parameters.
 
 In the following paragraphs, we discuss the various options regarding special periods and treatment interruption, prescription start and renewal, and dosage changes.
 
@@ -215,9 +213,7 @@ During special periods and treatment interruptions, medication use may differ fr
 
 - *continue* has no impact on durations and dispensing start dates: Patients are expected to continue using the existing supply as initially prescribed,
 - *discard* truncates supplies at the beginning of special period or treatment interruption and the remaining supply is discarded. This might be used if patients are asked to return unused medications after a limited treatment course (e.g. antibiotic treatments), 
-- *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will be added for the remaining duration. This might be used if patients are hospitalized and receive medications from hospital wards but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. 
-
-**IMPORTANT TO NOTE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples below).**
+- *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will be added for the remaining duration. This might be used if patients are hospitalized and receive medications from hospital wards but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. **IMPORTANT TO NOTE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples below).**
 
 In addition to the global options, both settings accept a column name in the dispensing dataset (for `trt.interruption`) or special periods dataset (for `special.periods.mapping`). The column can contain either of *continue*, *discard*, or *carryover* per medication type (for `trt.interruption`) or per special period type and/or medication type (for `special.periods.mapping`).
 
@@ -443,6 +439,10 @@ event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[I
 
 event_durations <- event_durations_list$event_durations
 
+first_presc <- min(durcomp.prescribing[ID == 14 & grepl("R03AC", ATC.CODE)]$DATE.PRESC)
+
+first_presc_plot <- 73+as.numeric(first_presc-as.Date("2056-07-31"))
+
 cma7 <- CMA7(event_durations[DURATION > 0],
              ID.colname = "ID",
              event.date.colname = "DISP.START",
@@ -455,7 +455,10 @@ cma7 <- CMA7(event_durations[DURATION > 0],
              observation.window.start = as.Date("2057-01-01"),
              observation.window.duration = 365)
 
-plot(cma7, min.plot.size.in.characters.vert = 0)
+plot(cma7, min.plot.size.in.characters.vert = 0, show.period = "dates", highlight.followup.window = FALSE)
+abline(v = first_presc_plot )
+points(x = first_presc_plot , y = nrow(event_durations[DURATION > 0]), pch = 25, bg = "black")
+text(x = first_presc_plot+1 , nrow(event_durations[DURATION > 0]), "First prescription", pos = 4)
 ```
 
 ### Force prescription renewal
@@ -471,7 +474,7 @@ In [Table 4](#Table-4) and [Figure 4](#Figure-4) below, the medication (a leukot
 knitr::kable(durcomp.prescribing[ID == 9 & grepl("R03DC03", ATC.CODE)], caption = "<a name=\"Table-4\"></a>**Table 4:** Prescription events for example patient.");
 ```
 
-```{r, echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-4\"></a>**Figure 4:** CMA0 calculated for a patient with force.presc.renew = TRUE", fig.height=6, fig.width=8, out.width="100%"}
+```{r, echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-4\"></a>**Figure 4:** CMA0 calculated for a leukotriene receptor antagonist with force.presc.renew = TRUE. Triangles on top indicate visits (grey: not prescribed, blue: prescribed). Pale yellow areas with dashed outline indicate prescription episodes.", fig.height=6, fig.width=8, out.width="100%"}
 
 # compute event durations for all medications for a patient to cover all visits
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 9],
@@ -498,7 +501,9 @@ event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[I
 event_durations <- event_durations_list$event_durations
 
 # subset to events with duration > 0 and medication of interest
-event_durations <- event_durations[DURATION > 0 & grepl("R03DC03", ATC.CODE)]
+event_durations <- event_durations[DURATION > 0 & grepl("R03DC03", ATC.CODE) & DISP.START >= as.Date("2057-01-01") & DISP.START < as.Date("2057-01-01") + 365]
+all_presc_events <- unique(durcomp.prescribing[ID == 9, .(DATE.PRESC, VISIT)])
+presc_events <- unique(durcomp.prescribing[ID == 9 & grepl("R03DC03", ATC.CODE), .(DATE.PRESC, VISIT)])
 
 # compute CMA0
 cma0 <- CMA0(event_durations,
@@ -521,7 +526,7 @@ TEs <- na.omit(TEs) #omit TEs with NA
 event_durations[,I := .I]
 
 # plot CMA0
-plot(cma0, min.plot.size.in.characters.vert = 0, show.legend = FALSE)
+plot(cma0, min.plot.size.in.characters.vert = 0, show.legend = FALSE, show.period = "dates", highlight.followup.window = FALSE, highlight.observation.window = FALSE)
 # add treatment episodes
 for(i in 1:nrow(TEs)){
   bottom = head(event_durations[,I],1)
@@ -531,15 +536,18 @@ for(i in 1:nrow(TEs)){
   offset = min(TEs[["episode.start"]], na.rm = TRUE)-min(event_durations[["DISP.START"]], na.rm = TRUE)
 
   rect(xleft=start+offset, xright=end+offset, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(1,1,0,alpha = 0.2), border = "black", lty = "dashed", lwd = 0.1)}
+points(x = as.numeric(all_presc_events[,DATE.PRESC-as.Date("2057-01-27")])+26 , y = rep(10.5, nrow(all_presc_events)), pch = 25, bg = "grey")
+points(x = as.numeric(presc_events[,DATE.PRESC-as.Date("2057-01-27")])+26 , y = rep(10.5, nrow(presc_events)), pch = 25, bg = "blue")
+
 ```
 
 ### Split on dosage change
 
 If the dosage changes before the end of a supply duration, `split.on.dosage.change = TRUE` creates a new event on the day of dosage change and recalculates the duration for the remaining supply. If patients are expected to finish the previous supply with the original dose and starting with the new dosage recommendation from the next supply onward, `split.on.dosage.change` should be set to `FALSE`. Alternatively, this can be set for each medication class separately by providing the name of a column containing the information in the dispensing dataset (logical, `TRUE` or `FALSE`).
 
-In [Figure 5](#Figure-5) below, the dosage for Insulin (NovoMix) changed while the patient still had an available supply. By setting `split.on.dosage.change = TRUE`, a new event is created on the day of dosage change (blue vertical lines).
+In [Figure 5](#Figure-5) below, the dosage for Insulin (NovoMix) changed while the patient still had an available supply. By setting `split.on.dosage.change = TRUE`, a new event is created on the day of dosage change.
 
-```{r, echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5:** CMA0 calculated for a patient with split.on.dosage.change = TRUE", fig.height=6, fig.width=8, out.width="100%"}
+```{r, echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5:** CMA0 calculated for a patient with split.on.dosage.change = TRUE. Numbers represent dosage in milligrams. Blue vertical lines indicate dates of dosage change.", fig.height=6, fig.width=8, out.width="100%"}
 
 # select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 7 & grepl("A10AB", ATC.CODE)],
@@ -581,7 +589,7 @@ event_durations[DURATION > 0, I := .I]
 dosage.changes <- event_durations[DISP.START != DATE.DISP, .(days = as.numeric(DISP.START-as.Date("2056-07-01")),
                                                              I = I)]
 
-plot(cma0, min.plot.size.in.characters.vert = 0,print.dose = TRUE, show.legend = FALSE)
+plot(cma0, min.plot.size.in.characters.vert = 0,print.dose = TRUE, show.legend = FALSE, highlight.followup.window = FALSE, highlight.observation.window = FALSE)
 segments(x0 = dosage.changes$days, y0 = dosage.changes$I, y1 = dosage.changes$I-1, lwd = 2, col = "blue")
 ```
 
@@ -890,7 +898,7 @@ prune_event_durations <- function(data,
 
 ### Consider special periods as covered
 
-Without further processing of event_durations for CMA computations, special periods will appear as gaps, possibly leading to underestimation of implementation or even assumption of discontinuation and non-persistence. To consider such periods as covered, they can be added to the `event_durations` dataset, for example when it is assumed that hospitalized patients are adherent during the hospitalization period. This can be achieved by merging the special periods with the `event_durations` dataset. This should be done after pruning with `prune_event_durations`. 
+Without further processing of event_durations for CMA computations, special periods will appear as gaps, possibly leading to underestimation of implementation or even assumption of discontinuation and non-persistence. To consider such periods as covered, they can be added to the `event_durations` dataset, for example when it is assumed that hospitalized patients are adherent during the hospitalization period. This can be achieved by merging the special periods with the `event_durations` dataset and should be done after pruning with `prune_event_durations`. 
 
 AdhereR offers the `cover_special_periods` function to identify special periods that are in proximity to already covered durations and adds an additional event for these durations. It requires at least the following arguments:
 
@@ -902,7 +910,7 @@ AdhereR offers the `cover_special_periods` function to identify special periods 
 - `medication.class.colnames`:  the column(s) with classes/types/groups of medication, 
 - `days.before`: an *integer*, the number of days before the start of a special period within which an event duration must end to consider the special period as covered,
 - `days.after`: an *integer*, the number of days after a special period within which an event duration must start to consider the special period as covered,
-- `date.forma`: a *string* with the date format.
+- `date.format`: a *string* with the date format.
 
 The function output is the `event.data` dataset with the additional durations for special periods covered.
 
@@ -1018,8 +1026,7 @@ event_durations_covered <- cover_special_periods(events.data = event_durations,
                                                  medication.class.colnames = "ATC.CODE",
                                                  days.before = 7,
                                                  days.after = 7,
-                                                 date.format = "%Y-%m-%d"
-                                                 )
+                                                 date.format = "%Y-%m-%d")
 
 
 ```
@@ -1054,9 +1061,9 @@ for(i in 1:nrow(durcomp.hospitalisation[ID == 3])){
 ```
 
 
-### Exclude special periods and treatment interruptions from CMA computations
+### Compute CMA with precomputed episodes
 
-During periods without prescriptions (treatment interruptions) or certain special episodes, it might not be meaninful to calculate a CMA at all. In these instances, it might be advisable to use `CMA_per_episode` with precomputed episodes, e.g. prescription episodes from the output of `compute_event_durations`. Precomputed episodes can be specified with the `treat.epi` parameter in `CMA_per_episode`. The episodes have to be a `data.frame` or `data.table` with the following columns:
+Periods without prescriptions (treatment interruptions) or certain special episodes should be excluded from CMA computations to avoid under-estimation of adherence. In these instances `CMA_per_episode` can be used with precomputed episodes, e.g. prescription episodes from the output of `compute_event_durations`. Precomputed episodes can be specified with the `treat.epi` parameter in `CMA_per_episode`. The episodes have to be a `data.frame` or `data.table` with the following columns:
 
 - `ID.colname`: the patient ID,
 - `medication.class.colname`: the medication class used for CMA computations,
@@ -1066,9 +1073,12 @@ During periods without prescriptions (treatment interruptions) or certain specia
 - `episode.end`: the episode end date.
 
 ```{r, echo = FALSE}
-
 source("../../R/adherer.R")
+```
 
+The prescription episodes in the output of `compute_event_durations` come in the correct format to use with `CMA_per_episode`: 
+
+```{r, echo = TRUE}
 # select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[grepl("J01EE01", ATC.CODE)],
                                                 presc.data = durcomp.prescribing[grepl("J01EE01", ATC.CODE)],
@@ -1081,7 +1091,7 @@ event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[g
                                                 presc.daily.dose.colname = "DAILY.DOSE",
                                                 presc.duration.colname = "PRESC.DURATION",
                                                 visit.colname = "VISIT",
-                                                force.init.presc = TRUE,
+                                                force.init.presc = FALSE,
                                                 force.presc.renew = TRUE,
                                                 split.on.dosage.change = TRUE,
                                                 trt.interruption = "carryover",
@@ -1089,7 +1099,7 @@ event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[g
                                                 return.data.table = TRUE,
                                                 progress.bar = FALSE)
                                            
-# get event durations and prescription epoisodes
+# get event durations and prescription episodes
 event_durations <- copy(event_durations_list$event_durations)
 prescription_episodes <- copy(event_durations_list$prescription_episodes)
 
@@ -1101,9 +1111,9 @@ treatment_episodes[is.na(episode.duration), episode.duration := as.numeric(episo
 
 # drop unnecessary columns
 treatment_episodes[,`:=` (ATC.CODE = NULL,
-                             UNIT = NULL,
-                             FORM = NULL,
-                             DAILY.DOSE = NULL)]
+                          UNIT = NULL,
+                          FORM = NULL,
+                          DAILY.DOSE = NULL)]
 
 # compute CMA per episode
 df_cma_episode <- CMA_per_episode(data = event_durations[DURATION > 0],
@@ -1120,10 +1130,14 @@ df_cma_episode <- CMA_per_episode(data = event_durations[DURATION > 0],
                                observation.window.duration = 365,
                                suppress.warnings = TRUE)
 
+# get CMA per episode
 cma_episode <- getCMA(df_cma_episode)
 
+# display as markdown table
 knitr::kable(cma_episode)
 ```
+
+### Compute time to initiation
 
 CMA calculations for precomputed episodes do not necessarily reflect implementation. Delayed initiation and early discontinuation (non-persistence) may reduce CMA values. Non-persistence can be identified by looking at `end.episode.gap.days` in the output of `CMA_per_episodes`, which indicates how many days before the end of an episode are not covered.
 
@@ -1174,16 +1188,17 @@ time_init <- time_to_initiation(presc.data = prescription_episodes,
                                 suppress.warnings = FALSE,
                                 return.data.table = TRUE)
 
+# display as markdown table
 knitr::kable(time_init)
 ```
 
 ## Conclusions
 
+In this vignette, we presented the `AdhereR` functions `compute_event_durations`, `prune_event_durations`, `cover_special_periods`, and `time_to_initiation`. These functions aim to assist with the preparation and exploration of EHD for adherence estimation.
 
--	functions presented here are `compute_event_durations`, `prune_event_durations`, `cover_special_periods`, and `time_to_initiation` to prepare data for calculation of TE, CMA, and eventually `time_to_inititation`
--	the default use is when….
--	Special cases are….
--	Careful when using them for … 
+The functions can be used when information about the medication prescribed and dispensed to a patient in a given time period are available from different data sources and can be linked via a common identifiers for patients and medications. The `compute_event_durations` functions is especially useful when medications are not be prescribed or dispensed for a specific duration but dispensed quantities and prescribed daily dosages are available. The functions `prune_event_durations` and `cover_special_periods` are especially useful when dates of special periods (e.g., hospitalizations) or treatment interruptions are available. The function `time_to_initiation` helps to further distinguish between initiation and implementation.
+
+Various parameters allow for flexible and transparent customization of the functions to many situations and needs. Before applying the functions to large datasets, users should carefully explore their data for all medications included.
 
 
 
