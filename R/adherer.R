@@ -7197,7 +7197,7 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' dosage and medication type (the actual column names are defined in the
 #' following four parameters).
 #' @param treat.epi A \emph{\code{data.frame}} containing the treatment episodes.
-#' Must contain the patient ID (\code{ID.colname}), the episode unique ID
+#' Must contain the patient ID (as given in \code{ID.colname}), the episode unique ID
 #' (increasing sequentially, \code{episode.ID}), the episode start date
 #' (\code{episode.start}), the episode duration in days (\code{episode.duration}),
 #' and the episode end date (\code{episode.end}).

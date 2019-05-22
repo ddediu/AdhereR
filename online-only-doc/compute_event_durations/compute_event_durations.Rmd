@@ -1,18 +1,23 @@
 ---
-title: 'Data preparation for computing adherence to medication in AdhereR: overview
-  of the event_durations functions'
+title: 'Data preparation for computing adherence to medication in AdhereR'
 author: "Samuel S. Allemann, Dan Dediu & Alex L. Dima"
 date: "`r Sys.Date()`"
 output:
-  html_document:
-    df_print: paged
+  rmarkdown::html_vignette: 
     toc: yes
-    toc_depth: '3'
+    toc_depth: 4
   github_document:
     toc: yes
-    toc_depth: 3
+    toc_depth: 4
   word_document:
     fig_caption: yes
+fig_caption: yes
+vignette: >
+  %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{Data preparation for computing adherence to medication in AdhereR}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+    chunk_output_type: console
 ---
 
 ```{r setup, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
@@ -26,7 +31,13 @@ source("../../R/matching_function.R")
 knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg") 
 ```
 
-Adherence to medication is defined as the agreement between prescribed and actual medication use. Adherence metrics are often computed from electronic healthcare data (EHD) based on a single data source, such as pharmacy dispensing, or other administrative data. However, information about the medication prescribed and dispensed to a patient in a given time period may be found in different data sources, which become increasingly accessible for linking and thus for a more precise description of adherence patterns.
+```{css, echo = FALSE}
+.ba-slider{position:relative;overflow:hidden}.ba-slider img{width:100%;display:block;max-width:none}.ba-slider .resize{position:absolute;top:0;left:0;height:100%;width:50%;overflow:hidden}.ba-slider .handle{position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:rgba(0,0,0,.5);cursor:ew-resize}.ba-slider .handle:after{position:absolute;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;content:'\21d4';color:#fff;font-weight:700;font-size:36px;text-align:center;line-height:64px;background:#ffb800;border:1px solid #e6a600;border-radius:50%;transition:all .3s ease;box-shadow:0 2px 6px rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.5),inset 0 60px 50px -30px #ffd466}.ba-slider .handle.ba-draggable:after{width:48px;height:48px;margin:-24px 0 0 -24px;line-height:50px;font-size:30px}
+```
+
+## Introduction
+
+Adherence to medication is defined as the agreement between prescribed and actual medication use. Adherence metrics are often computed from electronic healthcare data (EHD) based on a single data source, such as pharmacy dispensing, or other administrative data [Dima & Dediu, 2017](#Ref-Dima2017). However, information about the medication prescribed and dispensed to a patient in a given time period may be found in different data sources, which become increasingly accessible for linking and thus for a more precise description of adherence patterns.
 
 The core `AdhereR` functions estimate adherence based on durations for which medications have been prescribed and/or dispensed. However, medications might not be prescribed or dispensed for a specific duration in all circumstances. Many healthcare settings allow for multiple refills of prescriptions, and medications might be dispensed in fixed pre-packed quantities rather than from bulk. `AdhereR` can compute event durations based on prescribed and dispensed quantities.
 
@@ -58,15 +69,15 @@ Throughout `AdhereR`, we use the same terms and definitions. For a complete list
 
 ### Dispensing data
 
-The minimum necessary dataset includes 4 variables for each dispensing event: *patient unique identifier*, *dispensing event date*, *medication type*, and *dispensed quantity*.
+The minimum necessary dataset includes 4 variables for each dispensing event: *patient unique identifier*, *dispensing event date*, *medication class*, and *dispensed quantity*.
 
-*Medication type* can include multiple columns, which allows to distinguish medications on multiple levels. For example, one might want to differentiate between dosage forms of the same substance (e.g., tablets and inhalers of corticosteroids) and include both columns (substance and form) to describe *medication type*. The *dispensed quantity* could be the number of units dispensed (e.g., tablets), or a total number of subunits contained in each dispensed unit (e.g., milligrams in tablets). If multiple dosage forms for the same substance exist, it is useful to calculate the subunits because the dispensed dosage per unit might not correspond to the prescribed dosage per unit. For example, a prescription for *40 mg Atorvastatin 1 tablet daily* might be dispensed as 80 mg tablets with the instruction to use half of a tablet per day. 
+*medication class* can include multiple columns, which allows to distinguish medications on multiple levels. For example, one might want to differentiate between dosage forms of the same substance (e.g., tablets and inhalers of corticosteroids) and include both columns (substance and form) to describe *medication class*. The *dispensed quantity* could be the number of units dispensed (e.g., tablets), or a total number of subunits contained in each dispensed unit (e.g., milligrams in tablets). If multiple dosage forms for the same substance exist, it is useful to calculate the subunits because the dispensed dosage per unit might not correspond to the prescribed dosage per unit. For example, a prescription for *40 mg Atorvastatin 1 tablet daily* might be dispensed as 80 mg tablets with the instruction to use half of a tablet per day. 
 
 For demonstration purposes, we included a sample dataset containing dispensing events (one per row) for 16 patients over a period of roughly 24 months (1794 events in total). Each row represents an individual dispensing record for a specific dose of a specific medication for a patient at a given date. Six variables are included in this dataset:
 
 - patient unique identifier (`ID`), 
 - dispensing event date (`DATE.DISP`; from 1 July 2056 to 12 July 2058, in the "yyyy-mm-dd" ISO format), 
-- medication type 
+- medication class 
     + ATC code (`ATC.CODE`; 49 different codes according to the Anatomical Therapeutic Chemical Classification [ATC] System),
     + dosage unit (`UNIT`; 57% MG, 12% MICROG, 31% UI),
     + dosage form (`FORM`; 12% INHALATION VAPOUR, 3% INJECTION, 13% METERED INHALER, 72% ORAL FORM), and
@@ -81,9 +92,9 @@ knitr::kable(head(durcomp.dispensing), caption = "<a name=\"Table-1\"></a>**Tabl
 
 ### Prescribing data
 
-The minimum necessary dataset includes 4 variables for each prescription event: *patient unique identifier*, *prescription event date*, *medication type*, and *prescribed daily dose*. A *visit number* and *prescription duration* are optional.
+The minimum necessary dataset includes 4 variables for each prescription event: *patient unique identifier*, *prescription event date*, *medication class*, and *prescribed daily dose*. A *visit number* and *prescription duration* are optional.
 
-*Medication type* can include multiple columns, corresponding to the columns in the *dispensing dataset*. A duration will only be calculated if the information in all columns for the medication type are the same in dispensing and prescription events. Similar to the *dispensed quantity*, the *prescribed daily dose* could be the number of units prescribed per day (e.g., 2 tablets), or a total dosage to be taken daily (e.g., 40 mg). If a medication is prescribed for regular but not daily use, the dosage should be recalculated, e.g. in case of *70 mg once per week*, the *prescribed daily dose* should be 10 mg. 
+*medication class* can include multiple columns, corresponding to the columns in the *dispensing dataset*. A duration will only be calculated if the information in all columns for the medication class are the same in dispensing and prescription events. Similar to the *dispensed quantity*, the *prescribed daily dose* could be the number of units prescribed per day (e.g., 2 tablets), or a total dosage to be taken daily (e.g., 40 mg). If a medication is prescribed for regular but not daily use, the dosage should be recalculated, e.g. in case of *70 mg once per week*, the *prescribed daily dose* should be 10 mg. 
 
 **IMPORTANT TO NOTE: It is assumed that the prescribed daily dose can be accomodated with the dispensed medication, for example by splitting tablets. This requires careful consideration and exploratory analysis of the dispensed and prescribed dosage forms and posologies.**   
 
@@ -92,7 +103,7 @@ For demonstration purposes, we included a sample dataset containing prescription
 - patient unique identifier (`ID`), 
 - prescription event date (`DATE.PRESC`; from 15 September 2056 to 30 December 2057, in the "yyyy-mm-dd" ISO format), 
 - visit number (`VISIT`; median 5, range 0-16), 
-- medication type 
+- medication class 
     + ATC code (`ATC.CODE`; 43 different codes according to the Anatomical Therapeutic Chemical Classification [ATC] System),
     + dosage unit (`UNIT`; 50% MG, 10% MICROG, 40% UI),
     + dosage form (`FORM`; 18% INHALATION VAPOUR, 5% INJECTION, 13% METERED INHALER, 64% ORAL FORM), 
@@ -215,7 +226,7 @@ During special periods and treatment interruptions, medication use may differ fr
 - *discard* truncates supplies at the beginning of special period or treatment interruption and the remaining supply is discarded. This might be used if patients are asked to return unused medications after a limited treatment course (e.g. antibiotic treatments), 
 - *carryover* truncates supplies at the beginning of a special period or treatment interruption, but the remaining supply is carried over until the end of the interruption and a new event will be added for the remaining duration. This might be used if patients are hospitalized and receive medications from hospital wards but are expected to continue using their previously available supplies after discharge. Similarly, if patients have repeat prescriptions for short durations and are expected to use supplies from previous courses. **IMPORTANT TO NOTE: When using this setting, the computed durations may need additional processing before CMA calculations (see examples below).**
 
-In addition to the global options, both settings accept a column name in the dispensing dataset (for `trt.interruption`) or special periods dataset (for `special.periods.mapping`). The column can contain either of *continue*, *discard*, or *carryover* per medication type (for `trt.interruption`) or per special period type and/or medication type (for `special.periods.mapping`).
+In addition to the global options, both settings accept a column name in the dispensing dataset (for `trt.interruption`) or special periods dataset (for `special.periods.mapping`). The column can contain either of *continue*, *discard*, or *carryover* per medication class (for `trt.interruption`) or per special period type and/or medication class (for `special.periods.mapping`).
 
 Special periods may occur during prescription episodes or treatment interruptions and different types of special periods may co-occur. Treatment interruptions are prioritized over other special periods: If a prescription ends and `trt.interruption = 'carryover'`, a different setting in `special.periods.mapping` has no effect during periods of treatment interruption. However, if a special period of type *continue* overlaps with another special period of type *carryover*, the setting of the period with the later start date is used.   
 
@@ -547,9 +558,9 @@ If the dosage changes before the end of a supply duration, `split.on.dosage.chan
 
 In [Figure 5](#Figure-5) below, the dosage for Insulin (NovoMix) changed while the patient still had an available supply. By setting `split.on.dosage.change = TRUE`, a new event is created on the day of dosage change.
 
-```{r, echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5:** CMA0 calculated for a patient with split.on.dosage.change = TRUE. Numbers represent dosage in milligrams. Blue vertical lines indicate dates of dosage change.", fig.height=6, fig.width=8, out.width="100%"}
+```{r, include=FALSE}
 
-# select medication class of interest and compute event durations
+# select medication class of interest and compute event durations with split.on.dosage.change = TRUE
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 7 & grepl("A10AB", ATC.CODE)],
                                            presc.data = durcomp.prescribing[ID == 7 & grepl("A10AB", ATC.CODE)],
                                            special.periods.data = durcomp.hospitalisation,
@@ -588,10 +599,63 @@ event_durations[DURATION > 0, I := .I]
 
 dosage.changes <- event_durations[DISP.START != DATE.DISP, .(days = as.numeric(DISP.START-as.Date("2056-07-01")),
                                                              I = I)]
-
-plot(cma0, min.plot.size.in.characters.vert = 0,print.dose = TRUE, show.legend = FALSE, highlight.followup.window = FALSE, highlight.observation.window = FALSE)
+svg("plots/fig5a.svg", width = 8, height = 6)
+plot(cma0, min.plot.size.in.characters.vert = 0,print.dose = TRUE,show.legend = FALSE, highlight.followup.window = FALSE, highlight.observation.window = FALSE)
 segments(x0 = dosage.changes$days, y0 = dosage.changes$I, y1 = dosage.changes$I-1, lwd = 2, col = "blue")
+dev.off()
+
+# select medication class of interest and compute event durations with split.on.dosage.change = FALSE
+event_durations_list_2 <- compute_event_durations(disp.data = durcomp.dispensing[ID == 7 & grepl("A10AB", ATC.CODE)],
+                                           presc.data = durcomp.prescribing[ID == 7 & grepl("A10AB", ATC.CODE)],
+                                           special.periods.data = durcomp.hospitalisation,
+                                           special.periods.mapping = "continue",
+                                           ID.colname = "ID",
+                                           presc.date.colname = "DATE.PRESC",
+                                           disp.date.colname = "DATE.DISP",
+                                           date.format = "%Y-%m-%d",
+                                           medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
+                                           total.dose.colname = "TOTAL.DOSE",
+                                           presc.daily.dose.colname = "DAILY.DOSE",
+                                           presc.duration.colname = "PRESC.DURATION",
+                                           visit.colname = "VISIT",
+                                           force.init.presc = TRUE,
+                                           force.presc.renew = TRUE,
+                                           split.on.dosage.change = FALSE,
+                                           trt.interruption = "continue",
+                                           suppress.warnings = FALSE,
+                                           return.data.table = TRUE,
+                                           progress.bar = FALSE);
+
+event_durations <- event_durations_list_2$event_durations
+
+cma0_FALSE <- CMA0(event_durations[DURATION > 0],
+             ID.colname = "ID",
+             event.date.colname = "DISP.START",
+             event.duration.colname = "DURATION",
+             event.daily.dose.colname = "DAILY.DOSE",
+             medication.class.colname = "ATC.CODE",
+             followup.window.start = as.Date("2056-07-01"),
+             followup.window.duration = 2*365,
+             observation.window.start = as.Date("2057-01-01"),
+             observation.window.duration = 365)
+
+svg("plots/fig5b.svg", width = 8, height = 6)
+plot(cma0_FALSE, min.plot.size.in.characters.vert = 0,print.dose = TRUE,show.legend = FALSE, highlight.followup.window = FALSE, highlight.observation.window = FALSE)
+dev.off()
+
 ```
+
+<!--html_preserve-->
+<div class="ba-slider">
+   <img src="plots/fig5b.svg">
+   <div class="resize">
+       <img src="plots/fig5a.svg">
+   </div>
+   <span class="handle"></span>
+</div>
+<a name="Figure-5"></a><strong>Figure 5: </strong>CMA0 calculated for a patient with split.on.dosage.change = TRUE (left) or FALSE (right). Numbers represent dosage in milligrams. Blue vertical lines indicate dates of dosage change. Drag the slider to reveal the differences.
+<!--/html_preserve-->
+
 
 ## Output values
 
@@ -665,11 +729,11 @@ durations
 
 ## Computing CMA with the output of compute_event_durations
 
-In principle the output of `compute_event_durations` can be used for CMA computation as described in the main vignette. However, there are some specificities to consider.
+In principle the output of `compute_event_durations` can be used directly for CMA computation as described in the main vignette (after removing rows with zero or missing durations). However, there are some specificities to consider.
 
 ### Medication class
 
-In `compute_event_durations`, multiple columns to specify medication classes can be provided. This is especially useful when different formulations or brands of the same medication need to be matched between dispensing and prescribing data. This way, polypharmacy regimens with multiple different treatments per patient can be processed. For CMA computations, only one column can be used for the medication type. If information from multiple columns should be considered, the content of these columns can be pasted together in a new column.
+In `compute_event_durations`, one or multiple columns to specify medication classes can be provided. Using multiple columns is especially useful when different formulations or brands of the same medication need to be matched between dispensing and prescribing data. This is in contrast to CMA computations (for single medications), where only one column for the medication class can be specified. 
 
 ### Event date
 
@@ -677,8 +741,7 @@ The `event_durations` dataset has two columns that can be used as event date: `d
 
 [Figure 6](#Figure-6) shows CMA7-plots of the same `event_durations`, on top with `event.date.colname = "DATE.DISP"` and below with `event.date.colname = "DISP.START"`. The observation window (OW) begins and ends during special periods of type *carryover* (blue areas). With `event.date.colname = "DISP.START"`, part of a supply is pushed into the OW and another supply is partially pushed out of the OW. 
 
-```{r, echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6:** CMA7 calculated with event.date.colname = \"DATE.DISP\" (top) and event.date.colname = \"DISP.START\" (bottom) for an observation period starting and ending during special periods with carryover.", fig.height=6, fig.width=8, out.width="100%"}
-
+```{r, include=FALSE}
 # select medication class of interest and compute event durations
 event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
                                            presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
@@ -727,6 +790,7 @@ cma7_2 <- CMA7(event_durations[DURATION > 0],
 
 event_durations[,I := .I]
 
+svg("plots/fig6a.svg", width = 8, height = 6)
 plot(cma7, min.plot.size.in.characters.vert = 0, show.legend = FALSE)
 for(i in 1:nrow(event_durations_list$special_periods)){
 
@@ -738,9 +802,10 @@ for(i in 1:nrow(event_durations_list$special_periods)){
   end = as.numeric(event_durations_list$special_periods[[i, "DATE.OUT"]]-first_event) + 72.5
 
   rect(xleft=start, xright=end, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(0,0,1,alpha = 0.5), border = NULL)
-  
-  }
+}
+dev.off()
 
+svg("plots/fig6b.svg", width = 8, height = 6)
 plot(cma7_2, min.plot.size.in.characters.vert = 0, show.legend = FALSE)
 for(i in 1:nrow(event_durations_list$special_periods)){
 
@@ -754,20 +819,32 @@ for(i in 1:nrow(event_durations_list$special_periods)){
   rect(xleft=start, xright=end, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(0,0,1,alpha = 0.5), border = NULL)
   
   }
-
+dev.off()
 ```
 
-### Prune event durations after carryover
+<!--html_preserve-->
+<div class="ba-slider">
+   <img src="plots/fig6b.svg">
+   <div class="resize">
+       <img src="plots/fig6a.svg">
+   </div>
+   <span class="handle"></span>
+</div>
+<a name="Figure-6"></a><strong>Figure 6: </strong>CMA7 calculated with event.date.colname = "DATE.DISP" (left) and event.date.colname = "DISP.START" (right) for an observation period starting and ending during special periods with carryover. Drag the slider to reveal the differences.
+<!--/html_preserve-->
 
-Special periods and treatment interruptions of type *carryover* may lead to overestimation of implementation, e.g. if patients get a refill after discharge from hospital and don't continue to use their previous supply. Likewise, it may also lead to overestimation of persistence, e.g. when patients do in fact discontinue treatments after the end of a special period or treatment interruption. 
 
-To detect whether new dispensing events occur shortly after the end of a special period or treatment interruption in spite of a remaining supply, `AdhereR` offers the `prune_event_durations` function. It accepts the raw list output of `compute_event_durations` and additional arguments to specify event durations that need to be removed:
+### Prune event durations
+
+Dosage changes, special periods and treatment interruptions of type *carryover* may lead to overestimation of implementation, e.g. if patients get a refill after discharge from hospital and don't continue to use their previous supply. Likewise, it may also lead to overestimation of persistence, e.g. when patients do in fact discontinue treatments after the end of a special period or treatment interruption. 
+
+To detect whether new dispensing events occur shortly after a dosage change or the end of a special period or treatment interruption in spite of a remaining supply, `AdhereR` offers the `prune_event_durations` function. It accepts the raw list output of `compute_event_durations` and additional arguments to specify event durations that need to be removed:
 
 - `data`: a *list*, the output of `compute_event_durations`,
-- `include`: indicates whether to include special periods and/or treatment interruptions,
+- `include`: indicates whether to include dosage changes, special periods and/or treatment interruptions,
 - `medication.class.colnames`: indicate columns in `event_durations` to identify medication classes. Defaults to the columns used in `compute_event_durations`,
-- `days.within.out.date.1`: event durations from before the special period or treatment interruptions are removed if there is a new dispensing event within the number of days after the end of a special period. If `integer` the number of days, if `string` the column name containing the number of days,
-- `days.within.out.date.2`: event durations from before the special period are removed if there is *NO* new dispensing event within the number of days after the end of a special period. If `integer` the number of days, if `string` the column name containing the number of days,
+- `days.within.out.date.1`: durations after dosage change or carryover supply from before the special period or treatment interruptions are removed if there is a new dispensing event within the number of days after the end of a special period. If `integer` the number of days, if `string` the column name containing the number of days,
+- `days.within.out.date.2`: durations after dosage change or carryover supply from before the special period are removed if there is *NO* new dispensing event within the number of days after the end of a special period. If `integer` the number of days, if `string` the column name containing the number of days,
 - `keep.all`: *Logical*, should events be kept and marked for removal? If `TRUE`, a new column `.prune.event` will be added to the `event_durations`, if `FALSE` these events will be removed.
 
 The function output is the pruned `event_durations` dataset.
@@ -1200,5 +1277,14 @@ The functions can be used when information about the medication prescribed and d
 
 Various parameters allow for flexible and transparent customization of the functions to many situations and needs. Before applying the functions to large datasets, users should carefully explore their data for all medications included.
 
+## References
 
+<a name="Ref-Dima2017"></a>Dima A.L., Dediu D. (2017) [Computation of adherence to medication and visualization of medication histories in R with *AdhereR*: Towards transparent and reproducible use of electronic healthcare data](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0174426). *PLoS ONE* **12**(4): e0174426. [doi:10.1371/journal.pone.0174426](https://doi.org/10.1371/journal.pone.0174426).
 
+<!--html_preserve-->
+<script type="text/javascript" src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
+<script type="text/javascript" src="js/before-after.min.js"></script>
+<script type="text/javascript">
+  $('.ba-slider').beforeAfter();
+</script>
+<!--/html_preserve-->

@@ -163,9 +163,8 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' With \emph{discard}, durations are truncated at the beginning of special periods and the
 #' remaining quantity is discarded. With \emph{carryover}, durations are truncated
 #' at the beginning of a special period and a new event with the remaining duration
-#' is created after the end of the special period. With \emph{custom}, the
-#' mapping has to be included in \emph{\code{special.periods.data}} as a column
-#' named \code{"custom"}.
+#' is created after the end of the end of the special period. With \emph{custom}, the
+#' mapping has to be included in \emph{\code{special.periods.data}}.
 #' @param ID.colname A \emph{string}, the name of the column in \code{disp.data},
 #' \code{presc.data}, and \code{special.periods.data} containing the unique patient ID.
 #' @param presc.date.colname A \emph{string}, the name of the column in
@@ -757,7 +756,7 @@ compute_event_durations <- function(disp.data = NULL,
           # if current dispensing event is after end of last prescription date, don't calculate a duration (only when last prescription indicates termination)
         } else
         {
-          #select prescription episodes ending after the original dispensing date and add the one immediately before
+          #select prescription episodes ending after the original dispensing date
           episodes <- med_presc[orig.disp.date < episode.end | is.na(episode.end), which = TRUE];
 
           # if the current dispensing event is after the last prescription episode, don't calculate a duration
@@ -775,6 +774,27 @@ compute_event_durations <- function(disp.data = NULL,
             presc.dose.i <- 0; # initialize prescibed dose as 0
             disp.start.date.i <- orig.disp.date; #start date of dispensing event
 
+            #select prescription episodes ending after the original dispensing date and add the one immediately before
+            curr_med_presc <- copy(med_presc)
+
+            # if supply should be finished with original dose, collapse consecutive episodes with dosage > 0
+            if(split.on.dosage.change == FALSE){
+
+              curr_med_presc[(orig.disp.date < episode.end | is.na(episode.end)) & DAILY.DOSE > 0,POS.DOSE := 1]
+              curr_med_presc[,.episode := rleidv(.SD, cols = "POS.DOSE")]
+
+              curr_med_presc[POS.DOSE == 1,episode.start := head(episode.start,1), by = .episode]; # first start date per episode
+              curr_med_presc[POS.DOSE == 1,episode.end:= tail(episode.end,1), by = .episode]; # last end date per episode
+              curr_med_presc[POS.DOSE == 1,DAILY.DOSE:= head(DAILY.DOSE,1), by = .episode]; # first dosage per episode
+
+              curr_med_presc <- unique(curr_med_presc, by = c("episode.start", "episode.end"), fromLast = TRUE);
+              curr_med_presc[,.episode := rleidv(curr_med_presc, cols = c("episode.start", "episode.end"))];
+
+              #select prescription episodes ending after the original dispensing date
+              episodes <- curr_med_presc[orig.disp.date < episode.end | is.na(episode.end), which = TRUE];
+
+              }
+
             rm.trt.episode <- FALSE; # will be set to TRUE in case of calculations during treatment interruptions
 
             stop <- 0;
@@ -783,13 +803,13 @@ compute_event_durations <- function(disp.data = NULL,
             for(episode in episodes)
             {
 
-              presc.dose.i <- med_presc[[episode,"DAILY.DOSE"]]; # prescribed daily dose
+              presc.dose.i <- curr_med_presc[[episode,"DAILY.DOSE"]]; # prescribed daily dose
 
               if(presc.dose.i == 0) # if event happens during treatment interruption (prescribed dose = 0), check what to do
               {
                 if(trt.interruption == "continue") # if trt.interruption is set to continue, continue with last prescribed dose
                 {
-                  presc.dose.i <- med_presc[[episode-1,"DAILY.DOSE"]];
+                  presc.dose.i <- curr_med_presc[[episode-1,"DAILY.DOSE"]];
 
                   rm.trt.episode <- TRUE; # make sure that prescription start- and end date are removed at the end
                 } else if(trt.interruption == "discard") # if trt.interruption is set to discard, don't calculate anything
@@ -811,8 +831,8 @@ compute_event_durations <- function(disp.data = NULL,
                 }
               }
 
-              start.episode <- med_presc[episode,episode.start];
-              end.episode <- med_presc[episode,episode.end];
+              start.episode <- curr_med_presc[episode,episode.start];
+              end.episode <- curr_med_presc[episode,episode.end];
 
               # if it is not the first episode, adjust supply start date to prescription start date
               if(episode != episodes[1]) disp.start.date.i <- start.episode;
@@ -843,7 +863,7 @@ compute_event_durations <- function(disp.data = NULL,
                                         fill = TRUE);
 
                     break;
-                  } else if( duration.i == sum.duration) # if supply is equal to the sum of durations
+                  } else if( duration.i == sum.duration ) # if supply is equal to the sum of durations
                   {
                     med_event <-  rbind(med_event,
                                         cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
@@ -884,7 +904,7 @@ compute_event_durations <- function(disp.data = NULL,
                 stop <- 1;
               } else {
                 episode <- episode + 1; # get next prescription episode
-                next.presc.dose <- med_presc[[episode,"DAILY.DOSE"]]; # get next episode's dosage
+                next.presc.dose <- curr_med_presc[[episode,"DAILY.DOSE"]]; # get next episode's dosage
 
                 # if there is a treatment interruption and trt.interruption is set to continue, stop
                 if( next.presc.dose == 0 & trt.interruption == "continue" ) stop <- 1;
@@ -1107,6 +1127,7 @@ compute_event_durations <- function(disp.data = NULL,
         med_disp[DISP.DATE >= med_presc[i,episode.start] & (DISP.DATE < med_presc[i,episode.end] | is.na(med_presc[i,episode.end])),
                  c("episode.start", "episode.end", "DAILY.DOSE") := list(med_presc[i,episode.start], med_presc[i,episode.end],med_presc[i,DAILY.DOSE])];
       }
+
       med_disp[,DURATION := (TOTAL.DOSE)/(DAILY.DOSE)];
       med_disp[,`:=` (DISP.START = DISP.DATE,
                       DISP.END = DISP.DATE+DURATION)];
@@ -1377,6 +1398,9 @@ if(progress.bar == TRUE)  close(pb)
 #' @param data A \emph{\code{list}}, the output of `compute_event_durations`.
 #' @param include A \emph{\code{Vector}} of \emph{strings} indicating whether to include
 #' special periods and/or treatment interruptions.
+#' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
+#' name(s) of the column(s) in the \code{event_durations} element of \code{data} to
+#' identify medication classes. Defaults to the columns used in \code{compute_event_durations}.
 #' @param days.within.out.date.1 event durations from before the special period or
 #' treatment interruptions are removed if there is a new dispensing event within the
 #' number of days after the end of a special period. If \emph{integer} the number of days,
@@ -1468,7 +1492,32 @@ prune_event_durations <- function(data,
     return (NULL);
   }
 
-browser()
+  if( !inherits(data$special_periods, "data.frame") )
+    {
+      if( !suppress.warnings ) warning("The special_periods element in data must be of type 'data.frame'!\n");
+      return (NULL);
+    }
+  if( nrow(data$special_periods) < 1 )
+    {
+      if( !suppress.warnings ) warning("The special_periods element in data must have at least one row!\n");
+      return (NULL);
+    }
+  if(!all(c(data$ID.colname, "DATE.IN", "DATE.OUT") %in% colnames(data$special_periods)))
+    {
+      if( !suppress.warnings ) warning(paste0("The special_periods element in data must contain at least all
+                                                columns with the names '", data$ID.colname, "', 'DATE.IN', and 'DATE.OUT'.\n
+                                                Please refer to the documentation for more information.\n"));
+      return (NULL);
+    }
+  # if(!all(colnames(data$special_periods) %in% c(data$ID.colname, "DATE.IN", "DATE.OUT", "TYPE", medication.class.colnames, "SPECIAL.DURATION", "CUSTOM")))
+  #   {
+  #     if( !suppress.warnings ) warning(paste0("The special periods data can only contain columns
+  #                                               with the names \"", data$ID.colname, "\", \"DATE.IN\", \"DATE.OUT\", \"TYPE\", ",
+  #                                             paste(shQuote(medication.class.colnames), collapse = ", "), ", \"SPECIAL.DURATION\", \"CUSTOM\", and a column with
+  #                                               customized instructions how to handle a specific period.\n
+  #                                               Please refer to the documentation for more information.\n"));
+  #     return (NULL);
+  #   }
 
   # include parameter valid
 
@@ -1486,60 +1535,30 @@ browser()
   end_dates <- NULL
 
   if("special periods" %in% include){
-
-    # check for carryover status
-    if( !data$special.periods.mapping %in% c("carryover", "custom") )
-    {
-      if( !suppress.warnings ) warning(paste0("This function only applies to special periods of type 'carryover', but special periods are of type '", data$special.periods.mapping, "'!\n"));
-      return (NULL);
-    }
-
-    # get special periods
     special_periods <- data$special_periods
 
-    # check carryover status with custom mapping
-    if( data$special.periods.mapping == "custom" ) {
-      if( nrow(special_periods[custom == "carryover"]) == 0)
-      {
-        if( !suppress.warnings ) warning(paste0("This function only applies to special periods of type 'carryover', but no special periods of this type occur in the data!\n"));
-        return (NULL);
-      }
-
-      special_periods <- special_periods[custom == "carryover"]
-
-    }
-
-    if( !inherits(data$special_periods, "data.frame") )
-    {
-      if( !suppress.warnings ) warning("The special_periods element in data must be of type 'data.frame'!\n");
-      return (NULL);
-    }
-    if( nrow(data$special_periods) < 1 )
-    {
-      if( !suppress.warnings ) warning("The special_periods element in data must have at least one row!\n");
-      return (NULL);
-    }
-    if(!all(c(data$ID.colname, "DATE.IN", "DATE.OUT") %in% colnames(data$special_periods)))
-    {
-      if( !suppress.warnings ) warning(paste0("The special_periods element in data must contain at least all
-                                              columns with the names '", data$ID.colname, "', 'DATE.IN', and 'DATE.OUT'.\n
-                                              Please refer to the documentation for more information.\n"));
-      return (NULL);
-    }
-
     # extract end dates
-    end_dates <- unique(special_periods)
-    setnames(end_dates)
+    end_dates <- unique(data.table(ID = special_periods[[data$ID.colname]],
+                                   DATE.OUT = special_periods[["DATE.OUT"]]))
 
   }
   if("treatment interruptions" %in% include){
     presc_episodes <- data$prescription_episodes
-    trt_interruptions <- presc_episodes[shift(episode.end, n = 1, type = "lag") < episode.start, .SD, by = c(data$ID.colname, data$medication.class.colnames)]
+    trt_interruptions <- presc_episodes[shift(episode.end, n = 1, type = "lag") < episode.start, .SD, by = c(data$ID.colname, medication.class.colnames)]
 
     # extract end dates
     end_dates <- unique(rbind(end_dates,
                               data.table(ID = trt_interruptions[[data$ID.colname]],
                                          DATE.OUT = trt_interruptions[["episode.start"]])))
+  }
+  if("dosage changes" %in% include) {
+    dosage_changes <- presc_episodes[shift(episode.start, n = 1, type = "lead") == episode.end, .SD, by = c(data$ID.colname, medication.class.colnames)]
+
+    # extract end dates
+    end_dates <- unique(rbind(end_dates,
+                              data.table(ID = dosage_changes[[data$ID.colname]],
+                                         DATE.OUT = dosage_changes[["episode.start"]])))
+
   }
 
   # create new variable for join date
@@ -1550,7 +1569,7 @@ browser()
   setkeyv(event_durations, cols = c(data$ID.colname, "join_date"))
   setkeyv(end_dates, cols = c(data$ID.colname, "join_date"))
 
-  # identify events with carryover to remove from the event_durations dataset
+  # identify events to remove from the event_durations dataset
   disp.remove.1 <- NULL
   if(!is.na(days.within.out.date.1)) {
 
@@ -1565,13 +1584,13 @@ browser()
 
     }
 
-    # identify carryover durations from previous events
+    # identify durations from previous events
     disp.within.1[get(data$disp.date.colname) < DATE.OUT & get(data$disp.date.colname) < DISP.START, .from.carryover := 1]
 
     # identify new events
-    disp.within.1[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, data$medication.class.colnames, "DATE.OUT")]
+    disp.within.1[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, medication.class.colnames, "DATE.OUT")]
 
-    # mark events for removal if they are from carryover and at least one new event is present within the specified period
+    # mark events for removal if they are from previous events and at least one new event is present within the specified period
     disp.remove.1 <- disp.within.1[.from.carryover == 1 & .new.events > 0, .prune.event := 1]
 
     disp.remove.1 <- disp.remove.1[.prune.event == 1]
@@ -1593,17 +1612,17 @@ browser()
                                                                                                         "DATE.OUT",
                                                                                                         data$disp.date.colname))
     }
-
-    # identify carryover durations from previous events
+    browser()
+    # identify durations from previous events
     disp.within.2[get(data$disp.date.colname) < DATE.OUT & get(data$disp.date.colname) < DISP.START, .from.carryover := 1]
 
     # identify new events
-    disp.within.2[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, data$medication.class.colnames, "DATE.OUT")]
+    disp.within.2[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, medication.class.colnames, "DATE.OUT")]
 
-    # mark events for removal if they are from carryover and no new events are present
+    # mark events for removal if they are from previous and no new events are present
     disp.remove.2 <- disp.within.2[.from.carryover == 1 & .new.events == 0, .prune.event := 1]
 
-    # in case of multiple carryover durations from the same dispensing event, mark previous carryover durations according to last carryover duration
+    # in case of multiple new durations from the same dispensing event, mark previous new durations according to last new duration
     disp.remove.2[.from.carryover == 1,.prune.event := last(.prune.event), by = c(data$disp.date.colname)]
 
     disp.remove.2 <- disp.remove.2[.prune.event == 1]
@@ -1614,7 +1633,7 @@ browser()
   disp.remove <- rbind(disp.remove.1, disp.remove.2)
 
   # merge with event_durations
-  event_durations_prune <- merge(event_durations[, join_date := NULL], disp.remove[, c(data$ID.colname, data$medication.class.colnames, data$disp.date.colname, "DISP.START", "DURATION", ".prune.event"), with = FALSE], by = c(data$ID.colname, data$medication.class.colnames, data$disp.date.colname, "DISP.START", "DURATION"), all.x = TRUE)
+  event_durations_prune <- merge(event_durations[, join_date := NULL], disp.remove[, c(data$ID.colname, medication.class.colnames, data$disp.date.colname, "DISP.START", "DURATION", ".prune.event"), with = FALSE], by = c(data$ID.colname, medication.class.colnames, data$disp.date.colname, "DISP.START", "DURATION"), all.x = TRUE)
 
   if(keep.all == FALSE) {
 

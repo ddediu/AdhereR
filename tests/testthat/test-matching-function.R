@@ -371,8 +371,8 @@ test_that("enforcing of prescription reneval can be turned off", {
 
 # Test with split.on.dosage.change = FALSE
 test_that("consideration of dosage changes can be turned off", {
-  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3],
-                                               presc.data = durcomp.prescribing[ID == 3],
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 7],
+                                               presc.data = durcomp.prescribing[ID == 7],
                                                special.periods.data = NULL,
                                                ID.colname = "ID",
                                                presc.date.colname = "DATE.PRESC",
@@ -392,8 +392,8 @@ test_that("consideration of dosage changes can be turned off", {
 
   test_results <- test_results_list$event_durations
 
-  expect_equal(dim(test_results), c(103,13))
-  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 3289) #correct sum of durations
+  expect_equal(dim(test_results), c(222,13))
+  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 6854) #correct sum of durations
 })
 
 # Test with trt.interruption = discard
