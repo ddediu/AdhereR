@@ -156,8 +156,8 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' periods with the exact column names \emph{\code{DATE.IN}} and \emph{\code{DATE.OUT}}.
 #' Optional columns are \emph{\code{TYPE}} (indicating the type of special situation),
 #' customized instructions how to handle a specific period (see
-#' \code{special.periods.mapping}), and any of those specified in \code{medication.class.colnames}}.
-#' @param special.periods.mapping can be either of \emph{continue}, \emph{discard},
+#' \code{special.periods.method}), and any of those specified in \code{medication.class.colnames}}.
+#' @param special.periods.method can be either of \emph{continue}, \emph{discard},
 #' \emph{carryover}, or \emph{custom}. It indicates how to handle durations during special periods.
 #' With \emph{continue}, special periods have no effect on durations and event start dates.
 #' With \emph{discard}, durations are truncated at the beginning of special periods and the
@@ -204,7 +204,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' medication class separatly.
 #' @param trt.interruption \emph can be either of \emph{"continue"}, \emph{"discard"},
 #' \emph{"carryover"}, or a \emph{string}. It indicates how to handle durations during
-#' treatment interruptions (see \code{special.periods.mapping}).
+#' treatment interruptions (see \code{special.periods.method}).
 #' If \emph{string}, the name of the (\emph{character}) column in \emph{disp.data}
 #' containing the information (\emph{"continue"}, \emph{"discard"}, or \emph{"carryover"})
 #' for each medication class separatly.
@@ -261,7 +261,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'  \item \code{special_periods}: A code{data.table} or code{data.frame}, the \code{special.periods.data}
 #'   with an additional column \code{SPECIAL.DURATION}: the number of days
 #'   between \code{DATE.IN} and \code{DATE.OUT}
-#' \item \code{special.periods.mapping} as given by the \code{special.periods.mapping} parameter.
+#' \item \code{special.periods.method} as given by the \code{special.periods.method} parameter.
 #' \item \code{ID.colname} the name of the columns containing
 #'  the unique patient ID, as given by the \code{ID.colname} parameter.
 #' \item \code{presc.date.colname} the name of the column in
@@ -321,7 +321,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 compute_event_durations <- function(disp.data = NULL,
                                     presc.data = NULL,
                                     special.periods.data = NULL,
-                                    special.periods.mapping = trt.interruption,
+                                    special.periods.method = trt.interruption,
                                     ID.colname,
                                     presc.date.colname,
                                     disp.date.colname,
@@ -394,7 +394,7 @@ compute_event_durations <- function(disp.data = NULL,
         return (NULL);
       }
 
-      # if(!all(colnames(special.periods.data) %in% c(ID.colname, "DATE.IN", "DATE.OUT", "TYPE", special.periods.mapping, medication.class.colnames)))
+      # if(!all(colnames(special.periods.data) %in% c(ID.colname, "DATE.IN", "DATE.OUT", "TYPE", special.periods.method, medication.class.colnames)))
       # {
       #   if( !suppress.warnings ) warning(paste0("The special periods data can only contain columns
       #                                           with the names \"", ID.colname, "\", \"DATE.IN\", \"DATE.OUT\", \"TYPE\", ",
@@ -404,17 +404,17 @@ compute_event_durations <- function(disp.data = NULL,
       #   return (NULL);
       # }
 
-      if( !special.periods.mapping %in% c("continue", "discard", "carryover") && !special.periods.mapping %in% names(special.periods.data))
+      if( !special.periods.method %in% c("continue", "discard", "carryover") && !special.periods.method %in% names(special.periods.data))
       {
-        if( !suppress.warnings ) warning(paste0("special.periods.mapping must be either of 'continue', 'discard',
+        if( !suppress.warnings ) warning(paste0("special.periods.method must be either of 'continue', 'discard',
                                                 'carryover', or a column name in the special periods data!\n"));
         return (NULL);
       }
-      if(special.periods.mapping %in% names(special.periods.data) && any(!unique(special.periods.data[[special.periods.mapping]] %in% c("continue", "discard", "carryover"))))
+      if(special.periods.method %in% names(special.periods.data) && any(!unique(special.periods.data[[special.periods.method]] %in% c("continue", "discard", "carryover"))))
       {
-        unexpected.values <- unique(special.periods.data[[special.periods.mapping]][!special.periods.data[[special.periods.mapping]] %in% c("continue", "discard", "carryover")])
+        unexpected.values <- unique(special.periods.data[[special.periods.method]][!special.periods.data[[special.periods.method]] %in% c("continue", "discard", "carryover")])
 
-        if( !suppress.warnings ) warning(paste0("Column special.periods.mapping='",special.periods.mapping, "' in special periods data contains unexpected values: ",
+        if( !suppress.warnings ) warning(paste0("Column special.periods.method='",special.periods.method, "' in special periods data contains unexpected values: ",
                                                 unexpected.values,"\n"));
         return (NULL);
       }
@@ -572,12 +572,12 @@ compute_event_durations <- function(disp.data = NULL,
                                               DATE.IN.colname = "DATE.IN",
                                               DATE.OUT.colname = "DATE.OUT",
                                               TYPE.colname = "TYPE",
-                                              CUSTOM.colname = special.periods.mapping)
+                                              CUSTOM.colname = special.periods.method)
           {
 
           if(CUSTOM.colname %in% colnames(data)){
             setnames(data, old = CUSTOM.colname, new = "CUSTOM")
-          } else { data[,CUSTOM := special.periods.mapping]}
+          } else { data[,CUSTOM := special.periods.method]}
 
 
           # convert dates
@@ -1364,7 +1364,7 @@ if(progress.bar == TRUE)  close(pb)
   list("event_durations" = events_output_durations,
        "prescription_episodes" = events_output_prescriptions,
        "special_periods" = special.periods.data,
-       "special.periods.mapping" = special.periods.mapping,
+       "special.periods.method" = special.periods.method,
        "ID.colname" = ID.colname,
        "presc.date.colname" = presc.date.colname,
        "disp.date.colname" = disp.date.colname,
@@ -1426,7 +1426,7 @@ if(progress.bar == TRUE)  close(pb)
 #' event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
 #'                                                 presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
 #'                                                 special.periods.data = durcomp.hospitalisation[ID == 3],
-#'                                                 special.periods.mapping = "carryover",
+#'                                                 special.periods.method = "carryover",
 #'                                                 ID.colname = "ID",
 #'                                                 presc.date.colname = "DATE.PRESC",
 #'                                                 disp.date.colname = "DATE.DISP",
@@ -1696,7 +1696,7 @@ prune_event_durations <- function(data,
 #' event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
 #'                                                 presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
 #'                                                 special.periods.data = durcomp.hospitalisation[ID == 3],
-#'                                                 special.periods.mapping = "carryover",
+#'                                                 special.periods.method = "carryover",
 #'                                                 ID.colname = "ID",
 #'                                                 presc.date.colname = "DATE.PRESC",
 #'                                                 disp.date.colname = "DATE.DISP",
