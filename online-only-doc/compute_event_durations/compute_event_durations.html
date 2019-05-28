@@ -1562,14 +1562,29 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <p>The functions can be used when information about the medication prescribed and dispensed to a patient in a given time period are available from different data sources and can be linked via a common identifiers for patients and medications. The <code>compute_event_durations</code> functions is especially useful when medications are not be prescribed or dispensed for a specific duration but dispensed quantities and prescribed daily dosages are available. The functions <code>prune_event_durations</code> and <code>cover_special_periods</code> are especially useful when dates of special periods (e.g., hospitalizations) or treatment interruptions are available. The function <code>time_to_initiation</code> helps to further distinguish between initiation and implementation.</p>
 <p>Various parameters allow for flexible and transparent customization of the functions to many situations and needs. Before applying the functions to large datasets, users should carefully explore their data for all medications included.</p>
 
+</div>
+  
+    <!-- dynamically load befor-after slider for compatibility with self-contained -->
+  <script>
+      (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "http://code.jquery.com/jquery-2.1.3.min.js";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+          (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://cdn.jotfor.ms/before-after/before-after.min.js";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+  </script>
+
 <script type="text/javascript" src="http://code.jquery.com/jquery-2.1.3.min.js"></script>
 <script type="text/javascript" src="https://cdn.jotfor.ms/before-after/before-after.min.js"></script>
 <script type="text/javascript">
   $('.ba-slider').beforeAfter();
 </script>
-
-</div>
-
 
 
 <!-- dynamically load mathjax for compatibility with self-contained -->
