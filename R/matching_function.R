@@ -180,6 +180,11 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' @param visit.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the number of the visit or a new column name if the
 #' prescribing data does not contain such a column.
+#' @param split.on.dosage.change \emph{Logical} or \emph{string}. If \code{TRUE}
+#' split the dispensing event on days with dosage change and create a new event with
+#' the new dosage for the remaining supply. If \emph{string}, the name of the column
+#' containing the \code{Logical} in \emph{disp.data} for each medication class separatly.
+#' Important if carryover should be considered later on.
 #' @param force.init.presc \emph{Logical}. If \code{TRUE} advance the date of the
 #' first prescription event to the date of the first dispensing event, if the first
 #' prescription event is after the first dispensing event for a specific medication.
@@ -204,11 +209,6 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' at the beginning of a special period and a new event with the remaining duration
 #' is created after the end of the end of the special period. With \emph{custom}, the
 #' mapping has to be included in \emph{\code{special.periods.data}}.
-#' @param split.on.dosage.change \emph{Logical} or \emph{string}. If \code{TRUE}
-#' split the dispensing event on days with dosage change and create a new event with
-#' the new dosage for the remaining supply. If \emph{string}, the name of the column
-#' containing the \code{Logical} in \emph{disp.data} for each medication class separatly.
-#' Important if carryover should be considered later on.
 #' @param date.format A \emph{string} giving the format of the dates used in
 #' the \code{data} and the other parameters; see the \code{format} parameters
 #' of the \code{\link[base]{as.Date}} function for details (NB, this concerns
@@ -288,6 +288,9 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' \code{presc.duration.colname} parameter.
 #' \item \code{visit.colname} the name of the column containing the number of the visit,
 #'  as given by the \code{visit.colname} parameter
+#' \item \code{split.on.dosage.change} whether to split the dispensing event on days with dosage changes
+#'  and create a new event with the new dosage for the remaining supply, as given by the
+#' \code{split.on.dosage.change} parameter.
 #' \item \code{force.init.presc} whether the date of the first prescription event was set back
 #' to the date of the first dispensing event, when the first prescription event was after the
 #' first dispensing event for a specific medication, as given by the \code{force.init.presc} parameter.
@@ -296,9 +299,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' \item \code{trt.interruption} how durations during treatment interruptions were handled, as given
 #' by the \code{trt.interruption} parameter.
 #' \item \code{special.periods.method} as given by the \code{special.periods.method} parameter.
-#' \item \code{split.on.dosage.change} whether to split the dispensing event on days with dosage changes
-#'  and create a new event with the new dosage for the remaining supply, as given by the
-#'   \code{split.on.dosage.change} parameter.
+
 #' }
 #' @examples
 #' event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
@@ -313,11 +314,11 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'                                            presc.daily.dose.colname = "DAILY.DOSE",
 #'                                            presc.duration.colname = "episode.duration",
 #'                                            visit.colname = "VISIT",
+#'                                            split.on.dosage.change = TRUE,
 #'                                            force.init.presc = TRUE,
 #'                                            force.presc.renew = TRUE,
 #'                                            trt.interruption = "continue",
 #'                                            special.periods.method = "continue",
-#'                                            split.on.dosage.change = TRUE,
 #'                                            date.format = "%Y-%m-%d",
 #'                                            suppress.warnings = FALSE,
 #'                                            return.data.table = TRUE);
@@ -333,11 +334,11 @@ compute_event_durations <- function(disp.data = NULL,
                                     presc.daily.dose.colname,
                                     presc.duration.colname,
                                     visit.colname,
+                                    split.on.dosage.change = TRUE,
                                     force.init.presc = FALSE,
                                     force.presc.renew = FALSE,
                                     trt.interruption = c("continue", "discard", "carryover")[1],
                                     special.periods.method = trt.interruption,
-                                    split.on.dosage.change = TRUE,
                                     date.format = "%d.%m.%Y",
                                     suppress.warnings = FALSE,
                                     return.data.table = FALSE,
@@ -1417,11 +1418,11 @@ if(progress.bar == TRUE)  close(pb)
        "presc.daily.dose.colname"  = presc.daily.dose.colname,
        "presc.duration.colname" = presc.duration.colname,
        "visit.colname"  = visit.colname,
+       "split.on.dosage.change" = split.on.dosage.change,
        "force.init.presc" = force.init.presc,
        "force.presc.renew" = force.presc.renew,
        "trt.interruption" = trt.interruption,
-       "special.periods.method" = special.periods.method,
-       "split.on.dosage.change" = split.on.dosage.change);
+       "special.periods.method" = special.periods.method);
 
 }
 
