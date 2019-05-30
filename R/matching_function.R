@@ -828,6 +828,8 @@ compute_event_durations <- function(disp.data = NULL,
                   start.episode <- curr_med_presc[episode-1,episode.start];
                   end.episode <- curr_med_presc[episode-1,episode.end];
 
+                  stop <- 1;
+
                   # rm.trt.episode <- TRUE; # make sure that prescription start- and end date are removed at the end
                 } else if(trt.interruption == "discard") # if trt.interruption is set to discard, don't calculate anything
                 {
@@ -848,13 +850,14 @@ compute_event_durations <- function(disp.data = NULL,
                 }
               }
 
+              #if(curr_disp$DISP.DATE == as.Date("2057-10-20")) browser()
               # if disp.start.date.i is after end.episode date, go to next episode.
-              if(!is.na(end.episode) & disp.start.date.i >= end.episode) {
+              if( !is.na(curr_med_presc[episode,episode.end]) & disp.start.date.i >= curr_med_presc[episode,episode.end] ) {
                 next;
               }
 
               # if it is not the first episode, adjust supply start date to prescription start date
-              if(episode != episodes[1]) disp.start.date.i <- start.episode;
+              if(episode != episodes[1]) disp.start.date.i <- curr_med_presc[episode,episode.start];
 
               duration.i <- total.dose.i/presc.dose.i; # calculate duration
 
@@ -918,7 +921,7 @@ compute_event_durations <- function(disp.data = NULL,
               # check various parameters to decide wheter to stop or continue
 
               # check if end of supply is before end of episode OR last row of prescription episodes is reached
-              if( disp.end.date.i < end.episode | episode == last(episodes) )
+              if( disp.end.date.i < curr_med_presc[episode,episode.end] | episode == last(episodes) )
               {
                 stop <- 1;
               } else {
@@ -1412,7 +1415,6 @@ if(progress.bar == TRUE)  close(pb)
        "ID.colname" = ID.colname,
        "presc.date.colname" = presc.date.colname,
        "disp.date.colname" = disp.date.colname,
-       "date.format" = date.format,
        "medication.class.colnames" = medication.class.colnames,
        "total.dose.colname" = total.dose.colname,
        "presc.daily.dose.colname"  = presc.daily.dose.colname,
@@ -1422,7 +1424,8 @@ if(progress.bar == TRUE)  close(pb)
        "force.init.presc" = force.init.presc,
        "force.presc.renew" = force.presc.renew,
        "trt.interruption" = trt.interruption,
-       "special.periods.method" = special.periods.method);
+       "special.periods.method" = special.periods.method,
+       "date.format" = date.format);
 
 }
 

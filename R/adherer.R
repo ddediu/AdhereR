@@ -7513,7 +7513,6 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                   event.daily.dose.colname,
                   medication.class.colname), with = FALSE]
 
-
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
                                   ID.colname=NULL,
@@ -7575,7 +7574,6 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                         episode.end = as.Date(episode.end,format=date.format)
                         )]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
       setkeyv(treat.epi, c(ID.colname, "episode.ID")); # key (and sorting) by patient and episode ID
-
 
     }
 
@@ -7693,6 +7691,10 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                    parallel.threads=1,
                    suppress.warnings=suppress.warnings,
                    ...);
+
+    # adjust episode start- and end dates
+    treat.epi[, `:=` (episode.start = .INTERSECT.EPISODE.OBS.WIN.START,
+                      episode.end = .INTERSECT.EPISODE.OBS.WIN.END)]
 
     # Add back the patient and episode IDs:
     tmp <- as.data.table(merge(cma$CMA, treat.epi)[,c(ID.colname, "episode.ID", "episode.start", "end.episode.gap.days", "episode.duration", "episode.end", "CMA")]);

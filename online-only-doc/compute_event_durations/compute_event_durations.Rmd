@@ -462,7 +462,6 @@ points(x = as.numeric(presc_events[,DATE.PRESC-as.Date("2057-01-27")])+26 , y = 
 
 ```
 
-
 #### Special periods methods and treatment interruptions
 
 During special periods and treatment interruptions, medication use may differ from usual conditions. The argument `special.periods.method` tells `AdhereR` what to do during such periods. Similarly, `trt.interruption` specifies handling of treatment interruptions (periods without prescription). There are 3 options that can be set globally:

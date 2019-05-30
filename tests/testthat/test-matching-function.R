@@ -31,9 +31,9 @@ context("Matching functions")
 
 # Test output format
 test_that("output format is correct", {
-  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing,
-                                               presc.data = durcomp.prescribing,
-                                               special.periods.data = durcomp.hospitalisation,
+  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 1],
+                                               presc.data = durcomp.prescribing[ID == 1],
+                                               special.periods.data = durcomp.hospitalisation[ID == 1],
                                                special.periods.mapping = "continue",
                                                ID.colname = "ID",
                                                presc.date.colname = "DATE.PRESC",
@@ -398,7 +398,7 @@ test_that("consideration of dosage changes can be turned off", {
   test_results <- test_results_list$event_durations
 
   expect_equal(dim(test_results), c(221,13))
-  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 6878) #correct sum of durations
+  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 6854) #correct sum of durations
 })
 
 # Test with trt.interruption = discard
@@ -656,7 +656,7 @@ test_results <- prune_event_durations(test_results_list,
                                       days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods
                                       keep.all = TRUE)
 
-expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 3) #correct sum of pruned events
+expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 2) #correct sum of pruned events
 })
 
 #########################################################################################
@@ -829,6 +829,39 @@ test_that("output format for time_to_initiation is correct", {
 })
 
 test_that("dimensions for time_to_initiation is correct", {
+  event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[grepl("J01EE01", ATC.CODE)],
+                                                  presc.data = durcomp.prescribing[grepl("J01EE01", ATC.CODE)],
+                                                  ID.colname = "ID",
+                                                  presc.date.colname = "DATE.PRESC",
+                                                  disp.date.colname = "DATE.DISP",
+                                                  date.format = "%Y-%m-%d",
+                                                  medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
+                                                  total.dose.colname = "TOTAL.DOSE",
+                                                  presc.daily.dose.colname = "DAILY.DOSE",
+                                                  presc.duration.colname = "PRESC.DURATION",
+                                                  visit.colname = "VISIT",
+                                                  force.init.presc = FALSE,
+                                                  force.presc.renew = TRUE,
+                                                  split.on.dosage.change = TRUE,
+                                                  trt.interruption = "carryover",
+                                                  suppress.warnings = FALSE,
+                                                  return.data.table = TRUE,
+                                                  progress.bar = FALSE)
+
+  # get event durations and prescription episodes
+  event_durations <- copy(event_durations_list$event_durations)
+  prescription_episodes <- copy(event_durations_list$prescription_episodes)
+
+  test_results <- time_to_initiation(presc.data = prescription_episodes,
+                                     disp.data = event_durations,
+                                     ID.colname = "ID",
+                                     presc.start.colname = "episode.start",
+                                     disp.date.colname = "DATE.DISP",
+                                     medication.class.colnames = c("ATC.CODE"),
+                                     date.format = "%Y-%m-%d",
+                                     suppress.warnings = FALSE,
+                                     return.data.table = TRUE)
+
   expect_equal(dim(test_results), c(21,5))
   expect_equal(round(sum(test_results$time.to.initiation, na.rm=TRUE), 0), 240) #correct sum of durations
   expect_equal(round(min(test_results$time.to.initiation, na.rm=TRUE), 0), 0) #correct minimum of durations
