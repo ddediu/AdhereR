@@ -7197,7 +7197,7 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' dosage and medication type (the actual column names are defined in the
 #' following four parameters).
 #' @param treat.epi A \emph{\code{data.frame}} containing the treatment episodes.
-#' Must contain the patient ID (\code{ID.colname}), the episode unique ID
+#' Must contain the patient ID (as given in \code{ID.colname}), the episode unique ID
 #' (increasing sequentially, \code{episode.ID}), the episode start date
 #' (\code{episode.start}), the episode duration in days (\code{episode.duration}),
 #' and the episode end date (\code{episode.end}).
@@ -7506,6 +7506,12 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                   summary=NA);
   if( is.null(ret.val) ) return (NULL);
 
+  # retain only necessary columns of data
+  data <- data[,c(ID.colname,
+                  event.date.colname,
+                  event.duration.colname,
+                  event.daily.dose.colname,
+                  medication.class.colname), with = FALSE]
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -7560,13 +7566,14 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
 
     } else {
 
+      # various checks
+
       # Convert treat.epi to data.table, cache event dat as Date objects, and key by patient ID and event date
       treat.epi <- as.data.table(treat.epi);
       treat.epi[, `:=` (episode.start = as.Date(episode.start,format=date.format),
                         episode.end = as.Date(episode.end,format=date.format)
                         )]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
       setkeyv(treat.epi, c(ID.colname, "episode.ID")); # key (and sorting) by patient and episode ID
-
 
     }
 
@@ -7684,6 +7691,10 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                    parallel.threads=1,
                    suppress.warnings=suppress.warnings,
                    ...);
+
+    # adjust episode start- and end dates
+    treat.epi[, `:=` (episode.start = .INTERSECT.EPISODE.OBS.WIN.START,
+                      episode.end = .INTERSECT.EPISODE.OBS.WIN.END)]
 
     # Add back the patient and episode IDs:
     tmp <- as.data.table(merge(cma$CMA, treat.epi)[,c(ID.colname, "episode.ID", "episode.start", "end.episode.gap.days", "episode.duration", "episode.end", "CMA")]);
