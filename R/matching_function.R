@@ -156,7 +156,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' periods with the exact column names \emph{\code{DATE.IN}} and \emph{\code{DATE.OUT}}.
 #' Optional columns are \emph{\code{TYPE}} (indicating the type of special situation),
 #' customized instructions how to handle a specific period (see
-#' \code{special.periods.method}), and any of those specified in \code{medication.class.colnames}}.
+#' \code{special.periods.method}), and any of those specified in \code{medication.class.colnames}.
 #' @param ID.colname A \emph{string}, the name of the column in \code{disp.data},
 #' \code{presc.data}, and \code{special.periods.data} containing the unique patient ID.
 #' @param presc.date.colname A \emph{string}, the name of the column in

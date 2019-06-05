@@ -7482,6 +7482,9 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     return (NULL);
   }
 
+  ## Force data to data.table
+  #if( !inherits(data,"data.table") ) data <- as.data.table(data);
+
   # Create the return value skeleton and check consistency:
   ret.val <- CMA0(data,
                   ID.colname=ID.colname,
@@ -7506,12 +7509,13 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                   summary=NA);
   if( is.null(ret.val) ) return (NULL);
 
-  # retain only necessary columns of data
-  data <- data[,c(ID.colname,
-                  event.date.colname,
-                  event.duration.colname,
-                  event.daily.dose.colname,
-                  medication.class.colname), with = FALSE]
+  ## retain only necessary columns of data
+  #data <- data[,c(ID.colname,
+  #                event.date.colname,
+  #                event.duration.colname,
+  #                event.daily.dose.colname,
+  #                medication.class.colname),
+  #             with=FALSE];
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -8568,7 +8572,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                   # As semi-transparent rectangles:
                   rect(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, y.cur + 0.5,
                        adh.plot.space[2] + ppts$end + correct.earliest.followup.window, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                       col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
+                       col=alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
                        border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
                 }
               }

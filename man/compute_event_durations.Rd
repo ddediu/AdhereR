@@ -26,6 +26,15 @@ Must contain, at a minimum, the same unique patient ID and medication identifier
 as the dispensing data, the prescription date, the daily prescribed dose, and the
 prescription duration. Optionally, it might also contain a visit number.}
 
+\item{special.periods.data}{Optional, \emph{\code{NULL}} or a \emph{\code{data.frame}}
+containing the information about special periods (e.g., hospitalizations or other situations
+where medication use may differ, e.g. during incarcerations or holidays). Must contain the same unique
+patient ID as dispensing and prescription data, the start and end dates of the special
+periods with the exact column names \emph{\code{DATE.IN}} and \emph{\code{DATE.OUT}}.
+Optional columns are \emph{\code{TYPE}} (indicating the type of special situation),
+customized instructions how to handle a specific period (see
+\code{special.periods.method}), and any of those specified in \code{medication.class.colnames}.}
+
 \item{ID.colname}{A \emph{string}, the name of the column in \code{disp.data},
 \code{presc.data}, and \code{special.periods.data} containing the unique patient ID.}
 
