@@ -3,26 +3,32 @@
 \docType{data}
 \name{durcomp.hospitalisation}
 \alias{durcomp.hospitalisation}
-\title{Example hospitalization events for 10 patients.}
+\title{Example special periods for 10 patients.}
 \format{A data frame with 28 rows and 3 variables:
 \describe{
-  \item{ID}{\emph{integer} here; patient unique identifier. Can also
-  be \emph{string}}.
+  \item{ID}{\emph{Integer} here; patient unique identifier. Can also
+  be \emph{string}.}
   \item{DATE.IN}{\emph{Date} here;the start of the hospitalization period, by default in the
   yyyy-mm-dd format.Can also be \emph{string}.}
   \item{DATE.OUT}{\emph{Date};the end of the hospitalization period, by default in the
   yyyy-mm-dd format. Can also be \emph{string}.}
+  \item{TYPE}{\emph{Character}; describes the type of situation, e.g. "hospitalization"
+  or "holiday". Used to categorize different types of situations where use might differ
+  from "normal" periods.}
+  \item{CUSTOM}{\emph{Character}; can be either \emph{continue}, \emph{discard}, or
+  \emph{carryover} (see function arguments in \code{compute_event_duration}).}
 }}
 \usage{
 durcomp.hospitalisation
 }
 \description{
-A sample dataset containing hospitalization periods (one per row) for 10 patients
+A sample dataset containing special periods (one per row) for 10 patients
 over a period of roughly 18 months (28 events in total).
 This is the appropriate format to compute event durations with the
-\code{compute_event_durations} function. Each row represent an individual hospitalization period
-of a patient for whom event durations should be calculated. Besides hospitalizations, this could
-cover other situations where patients may not use their own supply, e.g. during incarcerations.
+\code{compute_event_durations} function. Each row represents an individual special period of type
+"hospitalization" of a patient for whom event durations should be calculated.
+Besides hospitalizations, this could cover other situations
+where medication use may differ, e.g. during incarcerations or holidays.
 All column names must match the format provided in this example.
 }
 \keyword{datasets}

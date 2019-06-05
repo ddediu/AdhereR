@@ -195,7 +195,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' otherwise prescriptions end on the first visit without renewal. If \emph{string},
 #' the name of the column in \emph{disp.data} containing the \code{Logical} for each
 #' medication class separatly.
-#' @param trt.interruption \emph can be either of \emph{"continue"}, \emph{"discard"},
+#' @param trt.interruption can be either of \emph{"continue"}, \emph{"discard"},
 #' \emph{"carryover"}, or a \emph{string}. It indicates how to handle durations during
 #' treatment interruptions (see \code{special.periods.method}).
 #' If \emph{string}, the name of the (\emph{character}) column in \emph{disp.data}
@@ -299,7 +299,6 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' \item \code{trt.interruption} how durations during treatment interruptions were handled, as given
 #' by the \code{trt.interruption} parameter.
 #' \item \code{special.periods.method} as given by the \code{special.periods.method} parameter.
-
 #' }
 #' @examples
 #' event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
@@ -1466,7 +1465,6 @@ if(progress.bar == TRUE)  close(pb)
 #' \code{data.table} object, otherwise a \code{data.frame}.
 #' @param ... other possible parameters.
 #' @return A \code{data.frame} or \code{data.table}, the pruned event_durations.
-#' }
 #' @examples
 #' # select medication class of interest and compute event durations
 #' event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],

@@ -5,13 +5,14 @@
 \title{Computation of event durations.}
 \usage{
 compute_event_durations(disp.data = NULL, presc.data = NULL,
-  hosp.data = NULL, ID.colname, presc.date.colname, disp.date.colname,
-  date.format = "\%d.\%m.\%Y", medication.class.colnames,
-  total.dose.colname, presc.daily.dose.colname, presc.duration.colname,
-  visit.colname, force.init.presc = FALSE, force.presc.renew = FALSE,
-  split.on.dosage.change = TRUE, trt.interruption = c("continue",
-  "discard", "carryover")[1], suppress.warnings = FALSE,
-  return.data.table = FALSE, ...)
+  special.periods.data = NULL, ID.colname, presc.date.colname,
+  disp.date.colname, medication.class.colnames, total.dose.colname,
+  presc.daily.dose.colname, presc.duration.colname, visit.colname,
+  split.on.dosage.change = TRUE, force.init.presc = FALSE,
+  force.presc.renew = FALSE, trt.interruption = c("continue",
+  "discard", "carryover")[1], special.periods.method = trt.interruption,
+  date.format = "\%d.\%m.\%Y", suppress.warnings = FALSE,
+  return.data.table = FALSE, progress.bar = TRUE, ...)
 }
 \arguments{
 \item{disp.data}{A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
@@ -25,15 +26,8 @@ Must contain, at a minimum, the same unique patient ID and medication identifier
 as the dispensing data, the prescription date, the daily prescribed dose, and the
 prescription duration. Optionally, it might also contain a visit number.}
 
-\item{hosp.data}{Optional, \emph{\code{NULL}} or a \emph{\code{data.frame}}
-containing the hospitalization periods (or other situations where patients may not
-use their own supply, e.g. during incarcerations). Must contain the same unique
-patient ID as dispensing and prescription data, and the start and end dates of the
-hospitalizations with the exact column names \emph{\code{DATE.IN}} and
-\emph{\code{DATE.OUT}}.}
-
 \item{ID.colname}{A \emph{string}, the name of the column in \code{disp.data},
-\code{presc.data}, and \code{hosp.data} containing the unique patient ID.}
+\code{presc.data}, and \code{special.periods.data} containing the unique patient ID.}
 
 \item{presc.date.colname}{A \emph{string}, the name of the column in
 \code{presc.data} containing the prescription date (in the format given in
@@ -42,11 +36,6 @@ the \code{date.format} parameter).}
 \item{disp.date.colname}{A \emph{string}, the name of the column in
 \code{disp.data} containing the dispensing date (in the format given in
 the \code{date.format} parameter).}
-
-\item{date.format}{A \emph{string} giving the format of the dates used in
-the \code{data} and the other parameters; see the \code{format} parameters
-of the \code{\link[base]{as.Date}} function for details (NB, this concerns
-only the dates given as strings and not as \code{Date} objects).}
 
 \item{medication.class.colnames}{A \emph{\code{Vector}} of \emph{strings}, the
 name(s) of the column(s) in \code{disp.data} and \code{presc.data} containing
@@ -68,6 +57,12 @@ or \code{NA} if duration is unknown.}
 \code{presc.data} containing the number of the visit or a new column name if the
 prescribing data does not contain such a column.}
 
+\item{split.on.dosage.change}{\emph{Logical} or \emph{string}. If \code{TRUE}
+split the dispensing event on days with dosage change and create a new event with
+the new dosage for the remaining supply. If \emph{string}, the name of the column
+containing the \code{Logical} in \emph{disp.data} for each medication class separatly.
+Important if carryover should be considered later on.}
+
 \item{force.init.presc}{\emph{Logical}. If \code{TRUE} advance the date of the
 first prescription event to the date of the first dispensing event, if the first
 prescription event is after the first dispensing event for a specific medication.
@@ -77,59 +72,121 @@ the \code{presc.duration.colname}).}
 \item{force.presc.renew}{\emph{Logical} or \emph{string}. If \code{TRUE} require
 a new prescription for all medications for every prescription event (visit),
 otherwise prescriptions end on the first visit without renewal. If \emph{string},
-the name of the column containing the \code{Logical} for each medication class
-separatly.}
+the name of the column in \emph{disp.data} containing the \code{Logical} for each
+medication class separatly.}
 
-\item{split.on.dosage.change}{\emph{Logical} or \emph{string}. If \code{TRUE}
-split the dispensing event on days with dosage change and create a new event with
-the new dosage for the remaining supply. If \emph{string}, the name of the column
-containing the \code{Logical} for each medication class separatly. Important if
-carryover should be considered later on.}
+\item{trt.interruption}{can be either of \emph{"continue"}, \emph{"discard"},
+\emph{"carryover"}, or a \emph{string}. It indicates how to handle durations during
+treatment interruptions (see \code{special.periods.method}).
+If \emph{string}, the name of the (\emph{character}) column in \emph{disp.data}
+containing the information (\emph{"continue"}, \emph{"discard"}, or \emph{"carryover"})
+for each medication class separatly.}
 
-\item{trt.interruption}{can be either \emph{continue}, \emph{discard}, or
-\emph{carryover}, and indicates how to handle supplies affected by treatment
-interruptions or hospitalizations. With \emph{continue}, interruptions have
-no effect on durations and dispensing start dates. With \emph{discard}, supplies
-are truncated at the beginning of an interruption or hospitalization and the
-remaining supply is discarded. With \emph{carryover}, supplies are truncated
-at the beginning of an interruption or hospitalization and a new dispensing
-start event with the remaining supply is created after the end of the interruption
-or hospitalization.}
+\item{special.periods.method}{can be either of \emph{continue}, \emph{discard},
+\emph{carryover}, or \emph{custom}. It indicates how to handle durations during special periods.
+With \emph{continue}, special periods have no effect on durations and event start dates.
+With \emph{discard}, durations are truncated at the beginning of special periods and the
+remaining quantity is discarded. With \emph{carryover}, durations are truncated
+at the beginning of a special period and a new event with the remaining duration
+is created after the end of the end of the special period. With \emph{custom}, the
+mapping has to be included in \emph{\code{special.periods.data}}.}
+
+\item{date.format}{A \emph{string} giving the format of the dates used in
+the \code{data} and the other parameters; see the \code{format} parameters
+of the \code{\link[base]{as.Date}} function for details (NB, this concerns
+only the dates given as strings and not as \code{Date} objects).}
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any warnings.}
 
 \item{return.data.table}{\emph{Logical}, if \code{TRUE} return a
 \code{data.table} object, otherwise a \code{data.frame}.}
 
+\item{progress.bar}{\emph{Logical}, if \code{TRUE} show a progress bar.}
+
 \item{...}{other possible parameters.}
 }
 \value{
-A \code{data.frame} or \code{data.table} with the following columns:
+A \code{list} with the following elements:
 \itemize{
- \item \code{ID.colname} the unique patient ID, as given by the \code{ID.colname}
- parameter.
- \item \code{medication.class.colnames} the column(s) with classes/types/groups
- of medication, as given by the \code{medication.class.colnames} parameter.
- \item \code{total.dose.colname} the total dispensed dose, as given by the
- \code{total.dose.colname} parameter.
- \item \code{disp.date.colname} the date of the dispensing event, as given by
- the \code{disp.date.colnema} parameter.
- \item \code{DISP.START} the start date of the dispensing event, either the
- same as in \code{disp.date.colnema} or a later date in case of dosage changes
- or treatment interruptions/hospitalizations.
- \item \code{presc.daily.dose.colname} the prescribed daily dose, as given by
- the \code{presc.daily.dose.colname} parameter.
- \item \code{DURATION} the calculated duration of the supply, based on the total
- dispensed dose and the prescribed daily dose, starting from the \code{DISP.START}
- date.
- \item \code{START.PRESC} the start date of the prescription episode.
- \item \code{END.PRESC} the end date of the prescription episode.
- \item \code{HOSP.DURATION} the number of days during the current supply period
- affected by hospitalizations.
- \item \code{tot.presc.interruptions} the total number of prescription interruptions
- per patient for a specific medication.
- \item \code{tot.dosage.changes} the total number of dosage changes per patient
- for a specific medication.
+ \item \code{event_durations}: A \code{data.table} or \code{data.frame} with the following columns:
+   \itemize{
+     \item \code{ID.colname} the unique patient ID, as given by the \code{ID.colname}
+     parameter.
+     \item \code{disp.date.colname} the date of the dispensing event, as given by
+     the \code{disp.date.colnema} parameter.
+     \item \code{medication.class.colnames} the column(s) with classes/types/groups
+     of medication, as given by the \code{medication.class.colnames} parameter.
+     \item \code{total.dose.colname} the total dispensed dose, as given by the
+     \code{total.dose.colname} parameter.
+     \item \code{presc.daily.dose.colname} the prescribed daily dose, as given by
+     the \code{presc.daily.dose.colname} parameter.
+     \item \code{DISP.START} the start date of the dispensing event, either the
+     same as in \code{disp.date.colname} or a later date in case of dosage changes
+     or treatment interruptions/hospitalizations.
+     \item \code{DURATION} the calculated duration of the supply, based on the total
+     dispensed dose and the prescribed daily dose, starting from the \code{DISP.START}
+     date.
+     \item \code{episode.start}: the start date of the current prescription episode.
+     \item \code{episode.end}: the end date of the current prescription episode.
+     Can be before the start date of the dispensing event if dispensed during a treatment interruption.
+     \item \code{SPECIAL.DURATION} the number of days \emph{during} the current duration affected
+     by special durations or treatment interruptions of type "continue".
+     \item \code{CARRYOVER.DURATION} the number of days \emph{after} the current duration affected
+     by special durations or treatment interruptions of type "carryover".
+     \item \code{tot.presc.interruptions} the total number of prescription interruptions
+     per patient for a specific medication.
+     \item \code{tot.dosage.changes} the total number of dosage changes per patient
+     for a specific medication.
+     }
+ \item \code{prescription_episodes}: A code{data.table} or code{data.frame} with the following columns:
+   \itemize{
+     \item \code{ID.colname}: the unique patient ID, as given by the \code{ID.colname} parameter.
+     \item \code{medication.class.colnames}:  the column(s) with classes/types/groups of medication,
+      as given by the \code{medication.class.colnames} parameter.
+     \item \code{presc.daily.dose.colname}: the prescribed daily dose, as given by the
+     \code{presc.daily.dose.colname} parameter.
+     \item \code{episode.start}: the start date of the prescription episode.
+     \item \code{episode.duration}: the duration of the prescription episode in days.
+     \item \code{episode.end}: the end date of the prescription episode.
+     }
+ \item \code{special_periods}: A code{data.table} or code{data.frame}, the \code{special.periods.data}
+  with an additional column \code{SPECIAL.DURATION}: the number of days
+  between \code{DATE.IN} and \code{DATE.OUT}
+\item \code{ID.colname} the name of the columns containing
+ the unique patient ID, as given by the \code{ID.colname} parameter.
+\item \code{presc.date.colname} the name of the column in
+\code{presc.data} containing the prescription date, as given in the \code{presc.date.colname}
+parameter.
+\item \code{disp.date.colname}  the name of the column in
+\code{disp.data} containing the dispensing date, as given in the \code{disp.date.colname}
+parameter.
+\item \code{date.format} the format of the dates, as given by the
+ \code{date.format} parameter.
+\item \code{medication.class.colnames} the name(s) of the column(s) in \code{disp.data}
+ and \code{presc.data} containing the classes/types/groups of medication, as given by the
+ \code{medication.class.colnames} parameter.
+\item \code{total.dose.colname} the name of the column in
+\code{disp.data} containing the total dispensed dose, as given by the
+\code{total.dose.colname} parameter.
+\item \code{presc.daily.dose.colname} the name of the column in
+\code{presc.data} containing the daily prescribed dose, as given by the
+\code{presc.daily.dose.colname} parameter.
+\item \code{presc.duration.colname} the name of the column in
+\code{presc.data} containing the duration of the prescription, as given by the
+\code{presc.duration.colname} parameter.
+\item \code{visit.colname} the name of the column containing the number of the visit,
+ as given by the \code{visit.colname} parameter
+\item \code{split.on.dosage.change} whether to split the dispensing event on days with dosage changes
+ and create a new event with the new dosage for the remaining supply, as given by the
+\code{split.on.dosage.change} parameter.
+\item \code{force.init.presc} whether the date of the first prescription event was set back
+to the date of the first dispensing event, when the first prescription event was after the
+first dispensing event for a specific medication, as given by the \code{force.init.presc} parameter.
+\item \code{force.presc.renew} whether a new prescription was required for all medications for every
+prescription event (visit), as given by the \code{force.presc.renew} parameter.
+\item \code{trt.interruption} how durations during treatment interruptions were handled, as given
+by the \code{trt.interruption} parameter.
+\item \code{special.periods.method} as given by the \code{special.periods.method} parameter.
 }
 }
 \description{
@@ -151,21 +208,22 @@ various parameters for flexible adjustments.
 \examples{
 event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
                                            presc.data = durcomp.prescribing,
-                                           hosp.data = durcomp.hospitalisation,
+                                           special.periods.data = durcomp.hospitalisation,
                                            ID.colname = "ID",
                                            presc.date.colname = "DATE.PRESC",
                                            disp.date.colname = "DATE.DISP",
-                                           date.format = "\%Y-\%m-\%d",
                                            medication.class.colnames = c("ATC.CODE",
                                            "UNIT", "FORM"),
                                            total.dose.colname = "TOTAL.DOSE",
                                            presc.daily.dose.colname = "DAILY.DOSE",
-                                           presc.duration.colname = "PRESC.DURATION",
+                                           presc.duration.colname = "episode.duration",
                                            visit.colname = "VISIT",
+                                           split.on.dosage.change = TRUE,
                                            force.init.presc = TRUE,
                                            force.presc.renew = TRUE,
-                                           split.on.dosage.change = TRUE,
                                            trt.interruption = "continue",
+                                           special.periods.method = "continue",
+                                           date.format = "\%Y-\%m-\%d",
                                            suppress.warnings = FALSE,
                                            return.data.table = TRUE);
 }

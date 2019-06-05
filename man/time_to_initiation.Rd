@@ -11,8 +11,8 @@ time_to_initiation(presc.data = NULL, disp.data = NULL,
 }
 \arguments{
 \item{presc.data}{A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
-the prescription events. Must contain, at a minimum, the patient unique ID,
-one medication identifier, and the start date of the prescription, and might
+the prescription episodes. Must contain, at a minimum, the patient unique ID,
+one medication identifier, and the start date of the prescription episode, and might
 also contain additional columns to identify and group medications (the actual
 column names are defined in the \emph{\code{medication.class.colnames}} parameter).}
 
@@ -57,23 +57,23 @@ A \code{data.frame} or \code{data.table} with the following columns:
  parameter.
  \item \code{medication.class.colnames} the column(s) with classes/types/groups
  of medication, as given by the  \code{medication.class.colnames} parameter.
- \item \code{first.presc} the date of the first prescription event.
+ \item \code{episode.start} the date of the first prescription event.
  \item \code{first.disp} the date of the first dispensing event.
  \item \code{time.to.initiation} the difference in days between the first
  dispensing date and the  first prescription date.
 }
 }
 \description{
-Computes the time between the first prescription event and the first dispensing
+Computes the time between the start of a prescription episode and the first dispensing
 event for each medication class.
 }
 \details{
-The period between the first prescription event and the first dose administration
+The period between the start of a prescription episode and the first dose administration
 may impact health outcomes differently than omitting doses once on treatment or
 interrupting medication for longer periods of time. Primary non-adherence (not
 acquiring the first prescription) or delayed initiation may have a negative
 impact on health outcomes. The function \code{time_to_initiation} calculates
-the time between the first prescription and the first dispensing event, taking
+the time between the start of a prescription episode and the first dispensing event, taking
 into account multiple variables to differentiate between treatments.
 }
 \examples{

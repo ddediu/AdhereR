@@ -23,7 +23,7 @@
   dispensing events.}
   \item{UNIT}{\emph{integer}; the unit of the prescribed dose. This is optional and can be used
   as a separate variable to match between prescription and dispensing events.}
-  \item{PRESC.DURATION}{\emph{numeric}; the duration (in days) for which the prescription
+  \item{episode.duration}{\emph{numeric}; the duration (in days) for which the prescription
   is intended. Can be \code{NA} if the prescription is continuous without a fixed end date.}
   \item{DAILY.DOSE}{\emph{numeric}; the daily dose prescribed during this event (e.g., \code{50} for 1 tablet
   of 50 mg per day or \code{25} for 1 tablet of 50 mg every two days).}
@@ -35,9 +35,9 @@ durcomp.prescribing
 A sample dataset containing prescription events (one per row) for 16 patients
 over a period of roughly 15 months (1502 events in total).
 This is the appropriate format to compute event durations with the
-\code{compute_event_durations} function. Each row represent an individual prescription
+\code{compute_event_durations} function. Each row represents an individual prescription
 record for a specific dose of a specific medication for a patient at a given date.
 Visit number and Duration are optional, and more than one column to group medications
-can be supplied (such as Form or Unit).
+can be supplied (such as ATC Code, Form or Unit).
 }
 \keyword{datasets}
