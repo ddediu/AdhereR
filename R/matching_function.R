@@ -1432,7 +1432,7 @@ if(progress.bar == TRUE)  close(pb)
 
 #' Prune event durations.
 #'
-#' Flags or removes new dispensing events occuring shortly after dosage changes, the end of a special period,
+#' Flags or removes leftover supply durations after dosage changes, the end of a special period,
 #' or treatment interruption.
 #' The function accepts the raw list output of \code{compute_event_durations} and additional arguments
 #' to specify event durations that need to be removed.

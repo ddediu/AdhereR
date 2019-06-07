@@ -839,12 +839,13 @@ dev.off()
 
 Dosage changes, special periods, and treatment interruptions of type *carryover* may lead to overestimation of implementation, e.g. if patients get a refill after discharge from hospital and don't continue to use their previous supply. Likewise, it may also lead to overestimation of persistence, e.g. when patients do in fact discontinue treatments after the end of a special period or treatment interruption. 
 
-To detect whether new dispensing events occur shortly after a dosage change or the end of a special period or treatment interruption in spite of a remaining supply, `AdhereR` offers the `prune_event_durations` function. It accepts the raw list output of `compute_event_durations` and additional arguments to specify event durations that need to be removed:
+To correct for these situations,`AdhereR` offers the `prune_event_durations` function. The function looks for new dispensing events within a user-specified time after dosage changes, special periods, or treatment interruptions and flags or removes leftover supply from previous dispensing events within the same period.  
+It accepts the raw list output of `compute_event_durations` and additional arguments to specify event durations that need to be removed:
 
 - `data`: a *list*, the output of `compute_event_durations`,
-- `include`: indicates whether to include dosage changes, special periods, and/or treatment interruptions,
+- `include`: indicates whether to include dosage changes, special periods, and/or treatment interruptions. The function only works for special periods and treatment interruptions of type *carryover*,
 - `medication.class.colnames`: indicate columns in `event_durations` to identify medication classes. Defaults to the columns used in `compute_event_durations`,
-- `days.within.out.date.1`: durations after dosage change or carryover supply from before the special period or treatment interruptions are removed if there is a new dispensing event within the number of days after the dosage change or end of the special period/treatment interruption., 
+- `days.within.out.date.1`: durations after dosage change or carryover supply from before the special period or treatment interruptions are removed if there is a new dispensing event within the number of days after the dosage change or end of the special period/treatment interruption, 
 - `days.within.out.date.2`: durations after dosage change or carryover supply from before the special period are removed if there is *NO* new dispensing event within the number of days after the dosage change or end of the special period/treatment interruption.,
 - `keep.all`: *Logical*, should events be kept and marked for removal? If `TRUE`, a new column `.prune.event` will be added to the `event_durations`, if `FALSE` these events will be removed.
 
