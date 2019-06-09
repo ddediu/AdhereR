@@ -46,7 +46,7 @@ warnings.}
 A \code{data.frame} or \code{data.table}, the pruned event_durations.
 }
 \description{
-Flags or removes new dispensing events occuring shortly after dosage changes, the end of a special period,
+Flags or removes leftover supply durations after dosage changes, the end of a special period,
 or treatment interruption.
 The function accepts the raw list output of \code{compute_event_durations} and additional arguments
 to specify event durations that need to be removed.
@@ -59,14 +59,19 @@ patients discontinue treatments after the end of a special period or treatment i
 }
 \examples{
 # select medication class of interest and compute event durations
-event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
-                                                presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
-                                                special.periods.data = durcomp.hospitalisation[ID == 3],
+disp_data <- durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)]
+presc_data <- durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)]
+
+event_durations_list <- compute_event_durations(disp.data = disp_data,
+                                                presc.data = presc_data,
+                                                special.periods.data = durcomp.hospitalisation,
                                                 ID.colname = "ID",
                                                 presc.date.colname = "DATE.PRESC",
                                                 disp.date.colname = "DATE.DISP",
                                                 date.format = "\%Y-\%m-\%d",
-                                                medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
+                                                medication.class.colnames = c("ATC.CODE",
+                                                                              "UNIT",
+                                                                              "FORM"),
                                                 total.dose.colname = "TOTAL.DOSE",
                                                 presc.daily.dose.colname = "DAILY.DOSE",
                                                 presc.duration.colname = "PRESC.DURATION",
@@ -81,9 +86,9 @@ event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[I
                                                 progress.bar = FALSE)
 
 event_durations <- prune_event_durations(event_durations_list,
-                                         include = c("special periods"), # only consider special periods
+                                         include = c("special periods"),
                                          medication.class.colnames = "ATC.CODE",
-                                         days.within.out.date.1 = 7, # flag carryover durations if there are new events within 7 days after the end of special periods
-                                         days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods
-                                         keep.all = FALSE) # remove flagged events from dataset
+                                         days.within.out.date.1 = 7,
+                                         days.within.out.date.2 = 30,
+                                         keep.all = FALSE)
 }
