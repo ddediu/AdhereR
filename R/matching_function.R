@@ -20,11 +20,15 @@
 
 
 # Declare some variables as global to avoid NOTEs during package building:
-globalVariables(c("DATE.IN", "DATE.OUT",
-                  "DATE.PRESC", "episode.start", "episode.end",
-                  "DURATION", "SPECIAL.DURATION",
+globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
+                  "episode.start", "episode.end", "VISIT",
+                  "DURATION", "SPECIAL.DURATION", ".PRESC.DURATION",
                   "DAILY.DOSE", "TOTAL.DOSE",
-                  "DISP.START", "DISP.END",
+                  "DISP.START", "DISP.END", "DISP.EVENT",
+                  "CARRYOVER.DURATION", "INT.DURATION",
+                  "CUSTOM", "DATE", "active.episode",
+                  ".drop", ".interval", "SPECIAL.PERIOD", "POS.DOSE",
+                  "join_date", ".prune.event", ".from.carryover", ".new.events", "EVENT",
                   "cum.duration", ".episode", ".out", ".special.periods", "time.to.initiation", "first.disp", "episode.start",
                   "debug.mode"));
 
@@ -58,7 +62,7 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'   dispensing events.}
 #'   \item{UNIT}{\emph{integer}; the unit of the prescribed dose. This is optional and can be used
 #'   as a separate variable to match between prescription and dispensing events.}
-#'   \item{episode.duration}{\emph{numeric}; the duration (in days) for which the prescription
+#'   \item{PRESC.DURATION}{\emph{numeric}; the duration (in days) for which the prescription
 #'   is intended. Can be \code{NA} if the prescription is continuous without a fixed end date.}
 #'   \item{DAILY.DOSE}{\emph{numeric}; the daily dose prescribed during this event (e.g., \code{50} for 1 tablet
 #'   of 50 mg per day or \code{25} for 1 tablet of 50 mg every two days).}
@@ -114,11 +118,6 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'   yyyy-mm-dd format.Can also be \emph{string}.}
 #'   \item{DATE.OUT}{\emph{Date};the end of the hospitalization period, by default in the
 #'   yyyy-mm-dd format. Can also be \emph{string}.}
-#'   \item{TYPE}{\emph{Character}; describes the type of situation, e.g. "hospitalization"
-#'   or "holiday". Used to categorize different types of situations where use might differ
-#'   from "normal" periods.}
-#'   \item{CUSTOM}{\emph{Character}; can be either \emph{continue}, \emph{discard}, or
-#'   \emph{carryover} (see function arguments in \code{compute_event_duration}).}
 #' }
 "durcomp.hospitalisation"
 
@@ -159,18 +158,18 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' \code{special.periods.method}), and any of those specified in \code{medication.class.colnames}.
 #' @param ID.colname A \emph{string}, the name of the column in \code{disp.data},
 #' \code{presc.data}, and \code{special.periods.data} containing the unique patient ID.
-#' @param presc.date.colname A \emph{string}, the name of the column in
-#' \code{presc.data} containing the prescription date (in the format given in
-#' the \code{date.format} parameter).
-#' @param disp.date.colname A \emph{string}, the name of the column in
-#' \code{disp.data} containing the dispensing date (in the format given in
-#' the \code{date.format} parameter).
 #' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
 #' name(s) of the column(s) in \code{disp.data} and \code{presc.data} containing
 #' the classes/types/groups of medication.
+#' @param disp.date.colname A \emph{string}, the name of the column in
+#' \code{disp.data} containing the dispensing date (in the format given in
+#' the \code{date.format} parameter).
 #' @param total.dose.colname A \emph{string}, the name of the column in
 #' \code{disp.data} containing the total dispensed dose as \code{numeric} (e.g.
 #' \code{500} for 10 tablets of 50 mg).
+#' @param presc.date.colname A \emph{string}, the name of the column in
+#' \code{presc.data} containing the prescription date (in the format given in
+#' the \code{date.format} parameter).
 #' @param presc.daily.dose.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the daily prescribed dose as \code{numeric} (e.g.
 #' \code{50} for 50 mg once per day, or 25 for 50 mg once ever 2 days).
@@ -266,20 +265,18 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #'   between \code{DATE.IN} and \code{DATE.OUT}
 #' \item \code{ID.colname} the name of the columns containing
 #'  the unique patient ID, as given by the \code{ID.colname} parameter.
-#' \item \code{presc.date.colname} the name of the column in
-#' \code{presc.data} containing the prescription date, as given in the \code{presc.date.colname}
-#' parameter.
-#' \item \code{disp.date.colname}  the name of the column in
-#' \code{disp.data} containing the dispensing date, as given in the \code{disp.date.colname}
-#' parameter.
-#' \item \code{date.format} the format of the dates, as given by the
-#'  \code{date.format} parameter.
 #' \item \code{medication.class.colnames} the name(s) of the column(s) in \code{disp.data}
 #'  and \code{presc.data} containing the classes/types/groups of medication, as given by the
 #'  \code{medication.class.colnames} parameter.
+#' \item \code{disp.date.colname}  the name of the column in
+#' \code{disp.data} containing the dispensing date, as given in the \code{disp.date.colname}
+#' parameter.
 #' \item \code{total.dose.colname} the name of the column in
 #' \code{disp.data} containing the total dispensed dose, as given by the
 #' \code{total.dose.colname} parameter.
+#' \item \code{presc.date.colname} the name of the column in
+#' \code{presc.data} containing the prescription date, as given in the \code{presc.date.colname}
+#' parameter.
 #' \item \code{presc.daily.dose.colname} the name of the column in
 #' \code{presc.data} containing the daily prescribed dose, as given by the
 #' \code{presc.daily.dose.colname} parameter.
@@ -299,6 +296,8 @@ globalVariables(c("DATE.IN", "DATE.OUT",
 #' \item \code{trt.interruption} how durations during treatment interruptions were handled, as given
 #' by the \code{trt.interruption} parameter.
 #' \item \code{special.periods.method} as given by the \code{special.periods.method} parameter.
+#' \item \code{date.format} the format of the dates, as given by the
+#'  \code{date.format} parameter.
 #' }
 #' @examples
 #' event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
@@ -345,8 +344,7 @@ compute_event_durations <- function(disp.data = NULL,
                                     ...)
 {
 
-  presc.data <- copy(presc.data)
-  disp.data <- copy(disp.data)
+
 
   # Preconditions:
   {
@@ -477,6 +475,13 @@ compute_event_durations <- function(disp.data = NULL,
       return (NULL);
     }
 
+    if( visit.colname %in% colnames(presc.data) ) {
+      if(anyNA(presc.data[[visit.colname]])){
+        if( !suppress.warnings ) warning(paste0("Column visit.colname='",visit.colname,"' cannot contain missing values!\n"));
+        return (NULL);
+      }
+    }
+
     if( !is.logical(force.presc.renew) && !force.presc.renew %in% names(disp.data) )
     {
       if( !suppress.warnings ) warning(paste0("Column force.presc.renew='",force.presc.renew,"' must appear in the dispensing data!\n"));
@@ -517,55 +522,75 @@ compute_event_durations <- function(disp.data = NULL,
       return (NULL);
     }
 
-    # convert column names
-    setnames(presc.data,
-             old = c(ID.colname,
-                     presc.date.colname,
-                     presc.daily.dose.colname,
-                     presc.duration.colname),
-             new = c("ID",
-                     "PRESC.DATE",
-                     "DAILY.DOSE",
-                     "episode.duration"))
+  }
 
-    setnames(disp.data,
-             old = c(ID.colname,
-                     disp.date.colname,
-                     total.dose.colname),
-             new = c("ID",
-                     "DISP.DATE",
-                     "TOTAL.DOSE"))
+  ## Force data to data.table
+  if( !inherits(disp.data,"data.table") ) disp.data <- as.data.table(disp.data);
+  if( !inherits(presc.data,"data.table") ) presc.data <- as.data.table(presc.data);
 
-    # convert dates
-    disp.data[,DISP.DATE := as.Date(DISP.DATE, format = date.format)];
-    presc.data[,PRESC.DATE := as.Date(PRESC.DATE, format = date.format)];
-    if(!is.null(special.periods.data))
+  # copy datasets
+  disp.data.copy <- copy(disp.data)
+  presc.data.copy <- copy(presc.data)
+
+  # convert column names
+  setnames(presc.data.copy,
+           old = c(ID.colname,
+                   presc.date.colname,
+                   presc.daily.dose.colname,
+                   presc.duration.colname),
+           new = c("ID",
+                   "PRESC.DATE",
+                   "DAILY.DOSE",
+                   "episode.duration"))
+
+  setnames(disp.data.copy,
+           old = c(ID.colname,
+                   disp.date.colname,
+                   total.dose.colname),
+           new = c("ID",
+                   "DISP.DATE",
+                   "TOTAL.DOSE"))
+
+  # convert dates
+  disp.data.copy[,DISP.DATE := as.Date(DISP.DATE, format = date.format)];
+  presc.data.copy[,PRESC.DATE := as.Date(PRESC.DATE, format = date.format)];
+  if(!is.null(special.periods.data))
+  {  ## Force data to data.table
+    if( !inherits(special.periods.data,"data.table") ) special.periods.data <- as.data.table(special.periods.data);
+
+    # copy datasets
+    special.periods.data.copy <- copy(special.periods.data)
+
+    setnames(special.periods.data.copy,
+             old = c(ID.colname),
+             new = c("ID"))
+
+    special.periods.data.copy[,`:=` (DATE.IN = as.Date(DATE.IN, format = date.format),
+                                DATE.OUT = as.Date(DATE.OUT, format = date.format))];
+
+    special.periods.data.copy[,SPECIAL.DURATION := as.numeric(DATE.OUT-DATE.IN)];
+  }
+
+  # force medication class to character
+  for(class.colname in medication.class.colnames)
+  {
+    if(inherits(disp.data.copy[[class.colname]], "factor"))
     {
-      setnames(special.periods.data,
-               old = c(ID.colname),
-               new = c("ID"))
-
-      special.periods.data[,`:=` (DATE.IN = as.Date(DATE.IN, format = date.format),
-                                  DATE.OUT = as.Date(DATE.OUT, format = date.format))];
-
-      special.periods.data[,SPECIAL.DURATION := as.numeric(DATE.OUT-DATE.IN)];
+      disp.data.copy[,(class.colname) := as.character(get(class.colname))];
     }
 
-    # force medication class to character
-    for(class.colname in medication.class.colnames)
+    if(inherits(presc.data.copy[[class.colname]], "factor"))
     {
-      if(inherits(disp.data[[class.colname]], "factor"))
-      {
-        disp.data[,(class.colname) := as.character(get(class.colname))];
-      }
-
-      if(inherits(presc.data[[class.colname]], "factor"))
-      {
-        presc.data[,(class.colname) := as.character(get(class.colname))];
-      }
+      presc.data.copy[,(class.colname) := as.character(get(class.colname))];
     }
+  }
 
-      }
+  # add prescription duration column if NA is provided
+  if( is.na(presc.duration.colname) )
+  {
+    presc.data.copy[,.PRESC.DURATION := NA]
+    presc.duration.colname <- ".PRESC.DURATION"
+  }
 
   # helper function to process each patient
   process_patient <- function(pat)
@@ -849,7 +874,6 @@ compute_event_durations <- function(disp.data = NULL,
                 }
               }
 
-              #if(curr_disp$DISP.DATE == as.Date("2057-10-20")) browser()
               # if disp.start.date.i is after end.episode date, go to next episode.
               if( !is.na(curr_med_presc[episode,episode.end]) & disp.start.date.i >= curr_med_presc[episode,episode.end] ) {
                 next;
@@ -999,7 +1023,7 @@ compute_event_durations <- function(disp.data = NULL,
       med_special.periods_events <- copy(special.periods_events)
       if( !is.null(special.periods.data) )
       {
-        special.colnames <- intersect(medication.class.colnames, colnames(special.periods.data))
+        special.colnames <- intersect(medication.class.colnames, colnames(special.periods.data.copy))
 
         if( length(special.colnames) > 0 ) {
           setkeyv(special.periods_events, special.colnames);
@@ -1244,18 +1268,18 @@ compute_event_durations <- function(disp.data = NULL,
     if(exists("debug.mode") && debug.mode==TRUE) print(paste("Patient:",pat));
 
     # subset data to patient
-    pat_disp <- disp.data[ID == pat, c("ID",
+    pat_disp <- disp.data.copy[ID == pat, c("ID",
                                        "DISP.DATE",
                                        medication.class.colnames,
                                        "TOTAL.DOSE"), with = FALSE];
 
-    pat_presc <- presc.data[ID == pat, c("ID",
+    pat_presc <- presc.data.copy[ID == pat, c("ID",
                                          "PRESC.DATE",
                                          medication.class.colnames,
                                          "DAILY.DOSE",
                                          "episode.duration"), with = FALSE];
-    if(visit.colname %in% colnames(presc.data)){
-      pat_presc <- cbind(presc.data[ID == pat, visit.colname, with = FALSE], pat_presc);
+    if(visit.colname %in% colnames(presc.data.copy)){
+      pat_presc <- cbind(presc.data.copy[ID == pat, visit.colname, with = FALSE], pat_presc);
     };
     # sort by DCI
     setkeyv(pat_disp, cols = medication.class.colnames);
@@ -1273,7 +1297,7 @@ compute_event_durations <- function(disp.data = NULL,
     presc_no_disp <- presc_unique[!disp_unique];
 
     #create visits if not supplied
-    if( !visit.colname %in% colnames(presc.data) )
+    if( !visit.colname %in% colnames(presc.data.copy) )
     {
       presc_events <- unique(pat_presc[,"PRESC.DATE"]);
       presc_events[,(visit.colname) := 0:(nrow(presc_events)-1)];
@@ -1281,7 +1305,7 @@ compute_event_durations <- function(disp.data = NULL,
       setorderv(pat_presc, medication.class.colnames);
     } else
     {
-      presc_events <- unique(pat_presc[,.(PRESC.DATE, VISIT)]); # extract prescription instances
+      presc_events <- unique(pat_presc[,c("PRESC.DATE", visit.colname), with = FALSE]); # extract prescription instances
     }
 
     # if duplicate visit numbers for different dates or vice versa, throw an error
@@ -1296,7 +1320,7 @@ compute_event_durations <- function(disp.data = NULL,
     # extract special periods
     if( !is.null(special.periods.data) )
     {
-      special.periods_events <- special.periods.data[ID == pat];
+      special.periods_events <- special.periods.data.copy[ID == pat];
     } else
     {
       special.periods_events <- data.table(NULL);
@@ -1329,7 +1353,7 @@ compute_event_durations <- function(disp.data = NULL,
   }
 
   # extract IDs of all patients present in dispensing and prescription database
-  disp_presc_IDs <- sort(intersect(disp.data[["ID"]], presc.data[["ID"]]));
+  disp_presc_IDs <- sort(intersect(disp.data.copy[["ID"]], presc.data.copy[["ID"]]));
 
   # progress bar
   if(progress.bar == TRUE) {
@@ -1337,8 +1361,8 @@ compute_event_durations <- function(disp.data = NULL,
   }
 
   # apply process_patient function
-  setkeyv(disp.data, cols = "ID");
-  setkeyv(presc.data, cols = "ID");
+  setkeyv(disp.data.copy, cols = "ID");
+  setkeyv(presc.data.copy, cols = "ID");
 
   events_output_list <- lapply(disp_presc_IDs, FUN = function(i) process_patient(pat = i));
 
@@ -1386,8 +1410,8 @@ if(progress.bar == TRUE)  close(pb)
 
   # only return special periods for selected patients
   if(!is.null(special.periods.data)) {
-    special.periods.data <- special.periods.data[get(ID.colname) %in% disp_presc_IDs]
-  }
+    special.periods.data.copy <- special.periods.data.copy[get(ID.colname) %in% disp_presc_IDs]
+  } else {special.periods.data.copy <- NULL}
 
   # set order of column names
   opt_cols <- c("SPECIAL.DURATION","tot.presc.interruptions","tot.dosage.changes","CARRYOVER.DURATION")
@@ -1412,10 +1436,10 @@ if(progress.bar == TRUE)  close(pb)
        "prescription_episodes" = events_output_prescriptions,
        "special_periods" = special.periods.data,
        "ID.colname" = ID.colname,
-       "presc.date.colname" = presc.date.colname,
-       "disp.date.colname" = disp.date.colname,
        "medication.class.colnames" = medication.class.colnames,
+       "disp.date.colname" = disp.date.colname,
        "total.dose.colname" = total.dose.colname,
+       "presc.date.colname" = presc.date.colname,
        "presc.daily.dose.colname"  = presc.daily.dose.colname,
        "presc.duration.colname" = presc.duration.colname,
        "visit.colname"  = visit.colname,
@@ -1467,14 +1491,19 @@ if(progress.bar == TRUE)  close(pb)
 #' @return A \code{data.frame} or \code{data.table}, the pruned event_durations.
 #' @examples
 #' # select medication class of interest and compute event durations
-#' event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
-#'                                                 presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
-#'                                                 special.periods.data = durcomp.hospitalisation[ID == 3],
+#' disp_data <- durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)]
+#' presc_data <- durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)]
+#'
+#' event_durations_list <- compute_event_durations(disp.data = disp_data,
+#'                                                 presc.data = presc_data,
+#'                                                 special.periods.data = durcomp.hospitalisation,
 #'                                                 ID.colname = "ID",
 #'                                                 presc.date.colname = "DATE.PRESC",
 #'                                                 disp.date.colname = "DATE.DISP",
 #'                                                 date.format = "%Y-%m-%d",
-#'                                                 medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
+#'                                                 medication.class.colnames = c("ATC.CODE",
+#'                                                                               "UNIT",
+#'                                                                               "FORM"),
 #'                                                 total.dose.colname = "TOTAL.DOSE",
 #'                                                 presc.daily.dose.colname = "DAILY.DOSE",
 #'                                                 presc.duration.colname = "PRESC.DURATION",
@@ -1489,11 +1518,11 @@ if(progress.bar == TRUE)  close(pb)
 #'                                                 progress.bar = FALSE)
 #'
 #' event_durations <- prune_event_durations(event_durations_list,
-#'                                          include = c("special periods"), # only consider special periods
+#'                                          include = c("special periods"),
 #'                                          medication.class.colnames = "ATC.CODE",
-#'                                          days.within.out.date.1 = 7, # flag carryover durations if there are new events within 7 days after the end of special periods
-#'                                          days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods
-#'                                          keep.all = FALSE) # remove flagged events from dataset
+#'                                          days.within.out.date.1 = 7,
+#'                                          days.within.out.date.2 = 30,
+#'                                          keep.all = FALSE)
 #' @export
 prune_event_durations <- function(data,
                                   include = c("special periods", "treatment interruptions", "dosage changes"),
@@ -1506,73 +1535,80 @@ prune_event_durations <- function(data,
                                   ...){
 
   ## Preconditions
+  {
+    # data class and dimensions
+    if( !inherits(data, "list") )
+    {
+      if( !suppress.warnings ) warning("The data must be a of type 'list'!\n");
+      return (NULL);
+    }
 
-  # data class and dimensions
-  if( !inherits(data, "list") )
-  {
-    if( !suppress.warnings ) warning("The data must be a of type 'list'!\n");
-    return (NULL);
-  }
+    if( !inherits(data$event_durations, "data.frame") )
+    {
+      if( !suppress.warnings ) warning("The event_durations element in data must be of type 'data.frame'!\n");
+      return (NULL);
+    }
+    if( nrow(data$event_durations) < 1 )
+    {
+      if( !suppress.warnings ) warning("The event_durations element in data must have at least one row!\n");
+      return (NULL);
+    }
 
-  if( !inherits(data$event_durations, "data.frame") )
-  {
-    if( !suppress.warnings ) warning("The event_durations element in data must be of type 'data.frame'!\n");
-    return (NULL);
-  }
-  if( nrow(data$event_durations) < 1 )
-  {
-    if( !suppress.warnings ) warning("The event_durations element in data must have at least one row!\n");
-    return (NULL);
-  }
+    if( !inherits(data$prescription_episodes, "data.frame") )
+    {
+      if( !suppress.warnings ) warning("The prescription_episodes element in data must be of type 'data.frame'!\n");
+      return (NULL);
+    }
+    if( nrow(data$prescription_episodes) < 1 )
+    {
+      if( !suppress.warnings ) warning("The prescription_episodes element in data must have at least one row!\n");
+      return (NULL);
+    }
 
-  if( !inherits(data$prescription_episodes, "data.frame") )
-  {
-    if( !suppress.warnings ) warning("The prescription_episodes element in data must be of type 'data.frame'!\n");
-    return (NULL);
-  }
-  if( nrow(data$prescription_episodes) < 1 )
-  {
-    if( !suppress.warnings ) warning("The prescription_episodes element in data must have at least one row!\n");
-    return (NULL);
-  }
-
-  if( !inherits(data$special_periods, "data.frame") )
+    if( !inherits(data$special_periods, "data.frame") )
     {
       if( !suppress.warnings ) warning("The special_periods element in data must be of type 'data.frame'!\n");
       return (NULL);
     }
-  if( nrow(data$special_periods) < 1 )
+    if( nrow(data$special_periods) < 1 )
     {
       if( !suppress.warnings ) warning("The special_periods element in data must have at least one row!\n");
       return (NULL);
     }
-  if(!all(c(data$ID.colname, "DATE.IN", "DATE.OUT") %in% colnames(data$special_periods)))
+    if(!all(c(data$ID.colname, "DATE.IN", "DATE.OUT") %in% colnames(data$special_periods)))
     {
       if( !suppress.warnings ) warning(paste0("The special_periods element in data must contain at least all columns with the names '", data$ID.colname, "', 'DATE.IN', and 'DATE.OUT'.\n Please refer to the documentation for more information.\n"));
       return (NULL);
     }
 
-  # include parameter valid
+    # include parameter valid
 
-  if(any(!include %in% c("special periods", "treatment interruptions", "dosage changes")))
-  {
-    if( !suppress.warnings ) warning("The included elements in include = '", include, "' can only be 'special periods', 'treatment interruptions', and/or 'dosage changes'\n");    return (NULL);
-  }
+    if(any(!include %in% c("special periods", "treatment interruptions", "dosage changes")))
+    {
+      if( !suppress.warnings ) warning("The included elements in include = '", include, "' can only be 'special periods', 'treatment interruptions', and/or 'dosage changes'\n");    return (NULL);
+    }
 
-  # days.within.out.date parameters valid
-  if( is.na(days.within.out.date.1) || is.null(days.within.out.date.1) || length(days.within.out.date.1) != 1 || !is.numeric(days.within.out.date.1) || days.within.out.date.1 < 0 )
-  {
-    if( !suppress.warnings ) warning("The 'days.within.out.date.1' argument must be a positive number of days after a special period!\n")
-    return (NULL);
-  }
-  if( is.na(days.within.out.date.2) || is.null(days.within.out.date.2) || length(days.within.out.date.2) != 1 || !is.numeric(days.within.out.date.2) || days.within.out.date.2 < 0 )
-  {
-    if( !suppress.warnings ) warning("The 'days.within.out.date.2' argument must be a positive number of days after a special period!\n")
-    return (NULL);
+    # days.within.out.date parameters valid
+    if( is.na(days.within.out.date.1) || is.null(days.within.out.date.1) || length(days.within.out.date.1) != 1 || !is.numeric(days.within.out.date.1) || days.within.out.date.1 < 0 )
+    {
+      if( !suppress.warnings ) warning("The 'days.within.out.date.1' argument must be a positive number of days after a special period!\n")
+      return (NULL);
+    }
+    if( is.na(days.within.out.date.2) || is.null(days.within.out.date.2) || length(days.within.out.date.2) != 1 || !is.numeric(days.within.out.date.2) || days.within.out.date.2 < 0 )
+    {
+      if( !suppress.warnings ) warning("The 'days.within.out.date.2' argument must be a positive number of days after a special period!\n")
+      return (NULL);
+    }
   }
 
   # extract data from output list
   event_durations <- data$event_durations
+
+  ## Force data to data.table
+  if( !inherits(event_durations,"data.table") )
+  {
+    event_durations <- as.data.table(event_durations);
+  }
 
   # medication class colnames in dataset
   if( any(!is.na(medication.class.colnames) & !(medication.class.colnames %in% names(event_durations))) ) # deal with the possibility of multiple column names
@@ -1580,9 +1616,6 @@ prune_event_durations <- function(data,
     if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames=",paste0("'",medication.class.colnames,"'",collapse=",")," must appear in the event_durations data!\n"));
     return (NULL);
   }
-
-
-
 
   if(".prune.event" %in% colnames(event_durations)) {
     event_durations[,.prune.event := NULL]
@@ -1729,6 +1762,11 @@ prune_event_durations <- function(data,
 
   } else { output <- event_durations_prune }
 
+  if( !return.data.table )
+  {
+    output <- as.data.frame(output);
+  }
+
   return(output)
 
 }
@@ -1779,15 +1817,20 @@ prune_event_durations <- function(data,
 #' durations for special periods covered.
 #' @examples
 #' # select medication class of interest and compute event durations
-#' event_durations_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
-#'                                                 presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
-#'                                                 special.periods.data = durcomp.hospitalisation[ID == 3],
+#' disp_data <- durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)]
+#' presc_data <- durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)]
+#'
+#' event_durations_list <- compute_event_durations(disp.data = disp_data,
+#'                                                 presc.data = presc_data,
+#'                                                 special.periods.data = durcomp.hospitalisation,
 #'                                                 special.periods.method = "carryover",
 #'                                                 ID.colname = "ID",
 #'                                                 presc.date.colname = "DATE.PRESC",
 #'                                                 disp.date.colname = "DATE.DISP",
 #'                                                 date.format = "%Y-%m-%d",
-#'                                                 medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
+#'                                                 medication.class.colnames = c("ATC.CODE",
+#'                                                                               "UNIT",
+#'                                                                               "FORM"),
 #'                                                 total.dose.colname = "TOTAL.DOSE",
 #'                                                 presc.daily.dose.colname = "DAILY.DOSE",
 #'                                                 presc.duration.colname = "PRESC.DURATION",
@@ -1801,11 +1844,11 @@ prune_event_durations <- function(data,
 #'                                                 progress.bar = FALSE)
 #'
 #' event_durations <- prune_event_durations(event_durations_list,
-#'                                          include = c("special periods"), # only consider special periods
+#'                                          include = c("special periods"),
 #'                                          medication.class.colnames = "ATC.CODE",
-#'                                          days.within.out.date.1 = 7, # flag carryover durations if there are new events within 7 days after the end of special periods
-#'                                          days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods
-#'                                          keep.all = FALSE) # remove flagged events from dataset
+#'                                          days.within.out.date.1 = 7,
+#'                                          days.within.out.date.2 = 30,
+#'                                          keep.all = TRUE)
 #'
 #' # cover special periods
 #' event_durations_covered <- cover_special_periods(events.data = event_durations,
@@ -1832,145 +1875,166 @@ cover_special_periods <- function(events.data,
                                   ...){
 
   # Preconditions
-  # events.data class and dimensions:
-  if( inherits(events.data, "matrix") ) events.data <- as.data.table(events.data); # convert matrix to data.table
-  if( !inherits(events.data, "data.frame") )
   {
-    if( !suppress.warnings ) warning("The events data must be of type 'data.frame'!\n");
-    return (NULL);
-  }
-  if( nrow(events.data) < 1 )
-  {
-    if( !suppress.warnings ) warning("The events data must have at least one row!\n");
-    return (NULL);
+    # events.data class and dimensions:
+    if( inherits(events.data, "matrix") ) events.data <- as.data.table(events.data); # convert matrix to data.table
+    if( !inherits(events.data, "data.frame") )
+    {
+      if( !suppress.warnings ) warning("The events data must be of type 'data.frame'!\n");
+      return (NULL);
+    }
+    if( nrow(events.data) < 1 )
+    {
+      if( !suppress.warnings ) warning("The events data must have at least one row!\n");
+      return (NULL);
+    }
+
+    # special period data class and dimensions:
+    if( inherits(special.periods.data, "matrix") ) special.periods.data <- as.data.table(special.periods.data); # convert matrix to data.table
+    if( !inherits(special.periods.data, "data.frame") )
+    {
+      if( !suppress.warnings ) warning("The special periods data must be of type 'data.frame'!\n");
+      return (NULL);
+    }
+    if( nrow(special.periods.data) < 1 )
+    {
+      if( !suppress.warnings ) warning("The special periods data must have at least one row!\n");
+      return (NULL);
+    }
+    if(!all(c(ID.colname, "DATE.IN", "DATE.OUT") %in% colnames(special.periods.data)))
+    {
+      if( !suppress.warnings ) warning(paste0("The special periods data must contain at least all
+                                              columns with the names '", ID.colname, "', 'DATE.IN', and 'DATE.OUT'.\n
+                                              Please refer to the documentation for more information.\n"));
+      return (NULL);
+    }
+
+    # the column names must exist in dispensing and prescription data:
+    if( !is.na(ID.colname) && !(ID.colname %in% names(events.data)) )
+    {
+      if( !suppress.warnings ) warning(paste0("Column ID.colname='",ID.colname,"' must appear in the events data!\n"));
+      return (NULL);
+    }
+
+    if( !is.na(disp.start.colname) && !(disp.start.colname %in% names(events.data)) )
+    {
+      if( !suppress.warnings ) warning(paste0("Column disp.start.colname='",disp.start.colname,"' must appear in the events data!\n"));
+      return (NULL);
+    }
+    if(anyNA(events.data[[disp.start.colname]])){
+      if( !suppress.warnings ) warning(paste0("Column disp.start.colname='",disp.start.colname,"' cannot contain missing values!\n"));
+      return (NULL);
+    }
+
+    if( any(!is.na(medication.class.colnames) & !(medication.class.colnames %in% names(events.data)) ) ) # deal with the possibility of multiple column names
+    {
+      if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames=",paste0("'",medication.class.colnames,"'",collapse=",")," must appear in the events data!\n"));
+      return (NULL);
+    }
+
+    if( !is.na(duration.colname) && !(duration.colname %in% names(events.data)) )
+    {
+      if( !suppress.warnings ) warning(paste0("Column duration.colname='",duration.colname,"' must appear in the events data!\n"));
+      return (NULL);
+    }
+
+    # days before and after
+    if( is.na(days.before) || is.null(days.before) || length(days.before) != 1 || !is.numeric(days.before) || days.before < 0 )
+    {
+      if( !suppress.warnings ) warning("The 'days.before' argument must be a positive number of days before a special period!\n")
+      return (NULL);
+    }
+    if( is.na(days.after) || is.null(days.after) || length(days.after) != 1 || !is.numeric(days.after) || days.after < 0 )
+    {
+      if( !suppress.warnings ) warning("The 'days.after' argument must be a positive number of days after a special period!\n")
+      return (NULL);
+    }
+
+    if( is.na(date.format) || is.null(date.format) || length(date.format) != 1 || !is.character(date.format) )
+    {
+      if( !suppress.warnings ) warning(paste0("The date format must be a single string!\n"));
+      return (NULL);
+    }
   }
 
-  # special period data class and dimensions:
-  if( inherits(special.periods.data, "matrix") ) special.periods.data <- as.data.table(special.periods.data); # convert matrix to data.table
-  if( !inherits(special.periods.data, "data.frame") )
+  events.data.copy <- copy(events.data)
+  special.periods.data.copy <- copy(special.periods.data)
+
+  ## Force data to data.table
+  if( !inherits(events.data.copy,"data.table") )
   {
-    if( !suppress.warnings ) warning("The special periods data must be of type 'data.frame'!\n");
-    return (NULL);
+    events.data.copy <- as.data.table(events.data.copy);
   }
-  if( nrow(special.periods.data) < 1 )
+  if( !inherits(special.periods.data.copy,"data.table") )
   {
-    if( !suppress.warnings ) warning("The special periods data must have at least one row!\n");
-    return (NULL);
-  }
-  if(!all(c(ID.colname, "DATE.IN", "DATE.OUT") %in% colnames(special.periods.data)))
-  {
-    if( !suppress.warnings ) warning(paste0("The special periods data must contain at least all
-                                            columns with the names '", ID.colname, "', 'DATE.IN', and 'DATE.OUT'.\n
-                                            Please refer to the documentation for more information.\n"));
-    return (NULL);
+    special.periods.data.copy <- as.data.table(special.periods.data.copy);
   }
 
-  # the column names must exist in dispensing and prescription data:
-  if( !is.na(ID.colname) && !(ID.colname %in% names(events.data)) )
-  {
-    if( !suppress.warnings ) warning(paste0("Column ID.colname='",ID.colname,"' must appear in the events data!\n"));
-    return (NULL);
-  }
-
-  if( !is.na(disp.start.colname) && !(disp.start.colname %in% names(events.data)) )
-  {
-    if( !suppress.warnings ) warning(paste0("Column disp.start.colname='",disp.start.colname,"' must appear in the events data!\n"));
-    return (NULL);
-  }
-  if(anyNA(events.data[[disp.start.colname]])){
-    if( !suppress.warnings ) warning(paste0("Column disp.start.colname='",disp.start.colname,"' cannot contain missing values!\n"));
-    return (NULL);
-  }
-
-  if( any(!is.na(medication.class.colnames) & !(medication.class.colnames %in% names(events.data)) ) ) # deal with the possibility of multiple column names
-  {
-    if( !suppress.warnings ) warning(paste0("Column(s) medication.class.colnames=",paste0("'",medication.class.colnames,"'",collapse=",")," must appear in the events data!\n"));
-    return (NULL);
-  }
-
-  if( !is.na(duration.colname) && !(duration.colname %in% names(events.data)) )
-  {
-    if( !suppress.warnings ) warning(paste0("Column duration.colname='",duration.colname,"' must appear in the events data!\n"));
-    return (NULL);
-  }
-
-  # days before and after
-  if( is.na(days.before) || is.null(days.before) || length(days.before) != 1 || !is.numeric(days.before) || days.before < 0 )
-  {
-    if( !suppress.warnings ) warning("The 'days.before' argument must be a positive number of days before a special period!\n")
-    return (NULL);
-  }
-  if( is.na(days.after) || is.null(days.after) || length(days.after) != 1 || !is.numeric(days.after) || days.after < 0 )
-  {
-    if( !suppress.warnings ) warning("The 'days.after' argument must be a positive number of days after a special period!\n")
-    return (NULL);
-  }
-
-  if( is.na(date.format) || is.null(date.format) || length(date.format) != 1 || !is.character(date.format) )
-  {
-    if( !suppress.warnings ) warning(paste0("The date format must be a single string!\n"));
-    return (NULL);
-  }
-
-  events.data <- copy(events.data)
-  special.periods.data <- copy(special.periods.data)
-
-  setnames(events.data,
+  setnames(events.data.copy,
            old = c(ID.colname, disp.start.colname, duration.colname),
            new = c("ID", "DISP.START", "DURATION"))
 
-  setnames(special.periods.data,
+  setnames(special.periods.data.copy,
            old = c(ID.colname),
            new = c("ID"))
 
   # set join date to the beginning of special durations
-  events.data[, join_date := DISP.START+DURATION]
-  special.periods.data[, join_date := DATE.IN]
+  events.data.copy[, join_date := DISP.START+DURATION]
+  special.periods.data.copy[, join_date := DATE.IN]
 
   # key by ID and join date
-  setkeyv(events.data, cols = c("ID", "join_date"))
-  setkeyv(special.periods.data, cols = c("ID", "join_date"))
+  setkeyv(events.data.copy, cols = c("ID", "join_date"))
+  setkeyv(special.periods.data.copy, cols = c("ID", "join_date"))
 
-  # select durations ending within x days before the start of a special period
-  dt1 <- na.omit(special.periods.data[events.data, roll = -days.before], cols = "DATE.IN")
-  dt1 <- dt1[,c("ID", "DATE.IN", "DATE.OUT", medication.class.colnames, "SPECIAL.DURATION" #, events.data_list$presc.daily.dose.colname
+  # select special periods with event durations ending within x days before the start of a special period
+  dt1 <- na.omit(special.periods.data.copy[events.data.copy, roll = -days.before], cols = "DATE.IN")
+  dt1 <- dt1[,c("ID", "DATE.IN", "DATE.OUT", medication.class.colnames, "SPECIAL.DURATION" #, events.data.copy_list$presc.daily.dose.colname
   ), with = FALSE] # only keep necessary columns
 
   # set join date to the end of special durations
-  events.data[, join_date := DISP.START]
-  special.periods.data[, join_date := DATE.OUT]
+  events.data.copy[, join_date := DISP.START]
+  special.periods.data.copy[, join_date := DATE.OUT]
 
   # key by ID and join date
-  setkeyv(events.data, cols = c("ID", "join_date"))
-  setkeyv(special.periods.data, cols = c("ID", "join_date"))
+  setkeyv(events.data.copy, cols = c("ID", "join_date"))
+  setkeyv(special.periods.data.copy, cols = c("ID", "join_date"))
 
-  # select durations beginning within 7 days after the end of a special period
-  dt2 <- na.omit(special.periods.data[events.data, roll = days.after], cols = "DATE.OUT")
+  # select special periods with event durations beginning within x days after the end of a special period
+  dt2 <- na.omit(special.periods.data.copy[events.data.copy, roll = days.after], cols = "DATE.OUT")
   dt2 <- dt2[,c("ID", "DATE.IN", "DATE.OUT", medication.class.colnames, "SPECIAL.DURATION"), with = FALSE] # only keep necessary columns
 
-  # merge dt1 and dt2 and select unique rows
-  dt_merge <- unique(merge(dt1,
-                           dt2,
-                           all=FALSE,
-                           by = c("ID", "DATE.IN", "DATE.OUT", "SPECIAL.DURATION", medication.class.colnames)))
+  # combine dt1 and dt2 and select unique rows
+  dt_all <- unique(rbind(dt1, dt2))
 
+  if( sum(dt_all$SPECIAL.DURATION != 0) )
+  {
+    if( !suppress.warnings ) warning(paste0("The events data contains already (partially) covered special periods ('SPECIAL.DURATION' > 0)!\n"));
+    return (NULL);
+  }
+
+  dt_all[,SPECIAL.DURATION := as.numeric(DATE.OUT-DATE.IN)]
 
   # change column names
-  setnames(dt_merge,
+  setnames(dt_all,
            old = c("DATE.IN", "SPECIAL.DURATION"),
            new = c("DISP.START", "DURATION"))
 
-  events.data <- rbind(events.data, dt_merge, fill = TRUE)
+  output <- rbind(events.data.copy, dt_all, fill = TRUE)
 
-  events.data[,`:=`(join_date = NULL,
-                    DATE.OUT = NULL)]
+  output[,`:=`(join_date = NULL,
+               DATE.OUT = NULL)]
 
   # change back to original column names
-  setnames(events.data,
+  setnames(output,
            old = c("ID", "DISP.START", "DURATION"),
            new = c(ID.colname, disp.start.colname, duration.colname))
 
-  return(events.data)
+  if( !return.data.table )
+  {
+    output <- as.data.frame(output);
+  }
+
+  return(output)
 
 }
 
