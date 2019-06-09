@@ -1002,6 +1002,15 @@
   names(cols) <- categories;
   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
 
+  if( .do.SVG )
+  {
+    # Map category names to standardized category ids to be stored as class attributes; this mapping will be exported as a JavaScript dictionary in the HTML container(if any):
+    categories.to.classes <- paste0("med-class-",1:length(categories)); names(categories.to.classes) <- categories;
+    .map.category.to.class <- function( category ) ifelse( is.na(category), categories.to.classes[1],
+                                                           ifelse( category %in% names(categories.to.classes), categories.to.classes[category],
+                                                                   categories.to.classes[1]) );
+  }
+
 
   ##
   ## Doses ####
@@ -1736,9 +1745,11 @@
     if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
     {
       col <- .map.category.to.color(unspecified.category.label);
+      if( .do.SVG ) med.class.svg <- NA;
     } else
     {
       col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
+      if( .do.SVG ) med.class.svg <- .map.category.to.class(cma$data[i,cma$medication.class.colname]);
     }
 
     if( .do.R ) # Rplot:
@@ -1754,10 +1765,11 @@
                    # The begining of the event:
                    .SVG.points(x=.scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window), y=.scale.y.to.SVG.plot(y.cur),
                                pch=pch.start.event, col=col, cex=cex,
-                               class="event-start"),
+                               class=paste0("event-start",if(!is.na(med.class.svg)) paste0("-",med.class.svg))),
+                   # The end of the event:
                    .SVG.points(x=.scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window), y=.scale.y.to.SVG.plot(y.cur),
                                pch=pch.end.event, col=col, cex=cex,
-                               class="event-start")
+                               class=paste0("event-end",if(!is.na(med.class.svg)) paste0("-",med.class.svg)))
       );
     }
 
@@ -1788,14 +1800,14 @@
                                xend=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window),
                                height=dims.event.y,
                                stroke=col, fill=col, fill_opacity=0.2,
-                               class="event-interval-covered"),
+                               class=paste0("event-interval-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg))),
                      if( cma$event.info$gap.days[i] > 0 )
                        .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window),
                                  y=.scale.y.to.SVG.plot(y.cur) - dims.event.y/2,
                                  xend=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window),
                                  height=dims.event.y,
                                  stroke=col, fill="none",
-                                 class="event-interval-not-covered")
+                                 class=paste0("event-interval-not-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)))
         );
       }
     }
@@ -1850,7 +1862,7 @@
                               y=rep(.scale.y.to.SVG.plot(y.cur),2),
                               connected=FALSE,
                               stroke=col, stroke_width=seg.lwd,
-                              class="event-segment")
+                              class=paste0("event-segment",if(!is.na(med.class.svg)) paste0("-",med.class.svg)))
       );
     }
 
@@ -1886,7 +1898,7 @@
                                font_size=dims.chr.std * cex.dose, h.align="center", v.align="center",
                                col=if(is.na(print.dose.col)) col else print.dose.col,
                                other_params=if(!is.na(print.dose.outline.col)) paste0(' stroke="',.SVG.color(print.dose.outline.col,return_string=TRUE),'" stroke-width="0.5"'),
-                               class="event-dose-text")
+                               class=paste0("event-dose-text",if(!is.na(med.class.svg)) paste0("-",med.class.svg)))
         );
       }
     }
@@ -1924,7 +1936,7 @@
                                     .scale.y.to.SVG.plot(y.cur)),
                                 connected=TRUE,
                                 stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
-                                class="continuation-line")
+                                class=paste0("continuation-line",if(!is.na(med.class.svg)) paste0("-",med.class.svg)))
         );
       }
     } else
@@ -3006,6 +3018,13 @@
         }
         css.template <- readLines(css.template.path);
         js.template  <- readLines(js.template.path);
+
+        # Add the medication categories to class names mapping as a dictionary:
+        js.template <- c(js.template,
+                         '// Mapping between medication categories and -med-class-X class names\n',
+                         'adh_svg["medication_classes"] = {\n',
+                         paste0('  "',names(categories.to.classes),'" : "',categories.to.classes,'"',collapse=",\n"),
+                         '\n};\n\n');
 
         # Load the HTML template and replace generics by their actual values before saving it in the desired location:
         html.template.path <- system.file('html-templates/html-template.html', package='AdhereR');
