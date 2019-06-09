@@ -23,7 +23,7 @@
   dispensing events.}
   \item{UNIT}{\emph{integer}; the unit of the prescribed dose. This is optional and can be used
   as a separate variable to match between prescription and dispensing events.}
-  \item{episode.duration}{\emph{numeric}; the duration (in days) for which the prescription
+  \item{PRESC.DURATION}{\emph{numeric}; the duration (in days) for which the prescription
   is intended. Can be \code{NA} if the prescription is continuous without a fixed end date.}
   \item{DAILY.DOSE}{\emph{numeric}; the daily dose prescribed during this event (e.g., \code{50} for 1 tablet
   of 50 mg per day or \code{25} for 1 tablet of 50 mg every two days).}
