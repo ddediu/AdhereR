@@ -163,20 +163,18 @@ A \code{list} with the following elements:
   between \code{DATE.IN} and \code{DATE.OUT}
 \item \code{ID.colname} the name of the columns containing
  the unique patient ID, as given by the \code{ID.colname} parameter.
-\item \code{presc.date.colname} the name of the column in
-\code{presc.data} containing the prescription date, as given in the \code{presc.date.colname}
-parameter.
-\item \code{disp.date.colname}  the name of the column in
-\code{disp.data} containing the dispensing date, as given in the \code{disp.date.colname}
-parameter.
-\item \code{date.format} the format of the dates, as given by the
- \code{date.format} parameter.
 \item \code{medication.class.colnames} the name(s) of the column(s) in \code{disp.data}
  and \code{presc.data} containing the classes/types/groups of medication, as given by the
  \code{medication.class.colnames} parameter.
+\item \code{disp.date.colname}  the name of the column in
+\code{disp.data} containing the dispensing date, as given in the \code{disp.date.colname}
+parameter.
 \item \code{total.dose.colname} the name of the column in
 \code{disp.data} containing the total dispensed dose, as given by the
 \code{total.dose.colname} parameter.
+\item \code{presc.date.colname} the name of the column in
+\code{presc.data} containing the prescription date, as given in the \code{presc.date.colname}
+parameter.
 \item \code{presc.daily.dose.colname} the name of the column in
 \code{presc.data} containing the daily prescribed dose, as given by the
 \code{presc.daily.dose.colname} parameter.
@@ -196,6 +194,8 @@ prescription event (visit), as given by the \code{force.presc.renew} parameter.
 \item \code{trt.interruption} how durations during treatment interruptions were handled, as given
 by the \code{trt.interruption} parameter.
 \item \code{special.periods.method} as given by the \code{special.periods.method} parameter.
+\item \code{date.format} the format of the dates, as given by the
+ \code{date.format} parameter.
 }
 }
 \description{
