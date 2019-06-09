@@ -7665,7 +7665,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                           return.data.table=TRUE);
 
       episode.gap.days <- data.epi2[which(.EVENT.WITHIN.FU.WINDOW), c(ID.colname, "episode.ID", gap.days.colname), by = c(ID.colname, "episode.ID"), with = FALSE]; # gap days during the follow-up window
-      end.episode.gap.days <- episode.gap.days[,.(end.episode.gap.days = last(get(gap.days.colname))), by = c(ID.colname, "episode.ID")]; # gap days during the last event
+      end.episode.gap.days <- episode.gap.days[,c("end.episode.gap.days") := list(last(get(gap.days.colname))), by = c(ID.colname, "episode.ID")]; # gap days during the last event
 
       treat.epi <- merge(treat.epi, end.episode.gap.days, all.x = TRUE, by = c(ID.colname, "episode.ID")); # merge end.episode.gap.days back to data.epi
 
@@ -8572,7 +8572,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                   # As semi-transparent rectangles:
                   rect(adh.plot.space[2] + ppts$start + correct.earliest.followup.window, y.cur + 0.5,
                        adh.plot.space[2] + ppts$end + correct.earliest.followup.window, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                       col=alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
+                       col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
                        border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
                 }
               }
