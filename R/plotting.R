@@ -140,7 +140,7 @@
 
 .SVG.rect <- function(x=NA, y=NA, width=NA, height=NA, xend=NA, yend=NA,  # can accomodate both (wdith,height) and (xend,yend)
                       stroke=NA, stroke_width=NA, lty=NA, stroke_dasharray=NA, fill="white", fill_opacity=NA, other_params=NA, # styling attributes
-                      id=NA, class=NA, comment=NA,  # ID and comment
+                      id=NA, class=NA, comment=NA, tooltip=NA,  # ID, comment and tooltip
                       newline=TRUE, # should a newline be added at the end?
                       return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
@@ -151,6 +151,8 @@
     # Nothing to plot!
     if( return_string ) return ("") else return (NULL);
   }
+
+  if(!is.na(tooltip)) tooltip <- .SVG.specialchars.2.XMLentities(tooltip); # make sure special chars in tooltip are treated correctly
 
   # Process lty first:
   if( !is.na(lty) )
@@ -190,8 +192,9 @@
           # Other parameters:
           if(!is.na(other_params)) other_params,
 
-          # Close the element:
-          '/>',
+          # Close the element (and add optional tooltip):
+          if(!is.na(tooltip)) c('>',' <title>', tooltip, '</title>', '</rect>') else '/>', # the tooltip title must be first child
+
           # Add ending newline (if so required):
           if(newline) '\n'
         );
@@ -201,7 +204,7 @@
 .SVG.lines <- function(x, y,  # the coordinates of the points (at least 2)
                        connected=FALSE, # are the lines connected or not?
                        stroke=NA, stroke_width=NA, lty=NA, stroke_dasharray=NA, other_params=NA, # styling attributes (may be one per line for connected==FALSE)
-                       id=NA, class=NA, comment=NA,  # ID and comment
+                       id=NA, class=NA, comment=NA, tooltip=NA,  # ID, comment and tooltip
                        newline=TRUE, # should a newline be added at the end?
                        return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
@@ -212,6 +215,8 @@
     warning("The line point coodinates must be of the same length >= 2.\n");
     if( return_string ) return ("") else return (NULL);
   }
+
+  if(!is.na(tooltip)) tooltip <- .SVG.specialchars.2.XMLentities(tooltip); # make sure special chars in tooltip are treated correctly
 
   r <-  c(# The initial comment (if any):
     if(!is.na(comment)) .SVG.comment(comment));
@@ -259,8 +264,9 @@
            # Other parameters:
            if(!is.na(other_params)) other_params,
 
-           # Close the element:
-           '/>',
+           # Close the element (and add optional tooltip):
+           if(!is.na(tooltip)) c('>',' <title>', tooltip, '</title>', '</polyline>') else '/>', # the tooltip title must be first child
+
            # Add ending newline (if so required):
            if(newline) '\n'
     );
@@ -310,8 +316,9 @@
              # Other parameters:
              if(!is.na(other_params)) other_params,
 
-             # Close the element:
-             '/>',
+             # Close the element (and add optional tooltip):
+             if(!is.na(tooltip)) c('>',' <title>', tooltip, '</title>', '</line>') else '/>', # the tooltip title must be first child
+
              # Add ending newline (if so required):
              if(newline) '\n'
       );
@@ -323,7 +330,7 @@
 
 .SVG.points <- function(x, y, pch=0,
                         col="black", cex=1.0, other_params=NA, # styling attributes
-                        id=NA, class=NA, comment=NA,  # ID and comment
+                        id=NA, class=NA, comment=NA, tooltip=NA,  # ID, comment and tooltip
                         newline=TRUE, # should a newline be added at the end?
                         return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
@@ -334,6 +341,8 @@
     warning("There must be at least on point.\n");
     return (NULL);
   }
+
+  if(!is.na(tooltip)) tooltip <- .SVG.specialchars.2.XMLentities(tooltip); # make sure special chars in tooltip are treated correctly
 
   # Make sure the point attributes are correctly distributed:
   if( length(pch) != length(x) ) pch <- rep(pch[1], length(x));
@@ -350,7 +359,7 @@
   x <- x[s]; y <- y[s]; pch <- pch[s]; col <- col[s]; cex <- cex[s]; # Keep only the non-missing points
 
   r <-  c(# The initial comment (if any):
-    if(!is.na(comment)) .SVG.comment(comment));
+          if(!is.na(comment)) .SVG.comment(comment));
 
   for(i in seq_along(x))
   {
@@ -362,6 +371,9 @@
             if(!is.na(id)) c('id="',id,'" '),
             if(!is.na(class)) c('class="',class,'" '),
             '>',
+
+            # Add optional tooltip:
+            if(!is.na(tooltip)) c(' <title>', tooltip, '</title>'), # the tooltip title must be first child
 
             # Reuse the predefined symbol:
             '<use xlink:href="#pch',pch[i],'" ',
@@ -376,6 +388,7 @@
 
             # Close the element:
             '/></g>',
+
             # Add ending newline (if so required):
             if(newline) '\n'
     );
@@ -389,7 +402,7 @@
                       h.align=c(NA,"left","center","right")[1], v.align=c(NA,"top","center","bottom")[1], # alignment
                       rotate=NA, # rotation in degrees
                       other_params=NA, # styling attributes
-                      id=NA, class=NA, comment=NA,  # ID and comment
+                      id=NA, class=NA, comment=NA, tooltip=NA,  # ID, comment and tooltip
                       newline=TRUE, # should a newline be added at the end?
                       return_string=FALSE # return a singe string or a vector of strings to be concatenated later?
 )
@@ -400,6 +413,8 @@
     warning("There must be at least one text and the number of texts should matche the number of coordinates.\n");
     return (NULL);
   }
+
+  if(!is.na(tooltip)) tooltip <- .SVG.specialchars.2.XMLentities(tooltip); # make sure special chars in tooltip are treated correctly
 
   # Make sure the attributes are correctly distributed:
   if( length(col) != length(x) ) col <- rep(col[1], length(x));
@@ -450,11 +465,14 @@
             # Other parameters:
             if(!is.na(other_params)) other_params,
 
-            # Close the element:
-            '>',
+            # Close the tag:
+            '> ',
 
             # The text:
             .SVG.specialchars.2.XMLentities(text[i]),
+
+            # Add optional tooltip:
+            if(!is.na(tooltip)) c(' <title>', tooltip, '</title>', '</text>'), # the tooltip title must be first child
 
             # Close it:
             '</text>',
@@ -1496,8 +1514,8 @@
                                  y=.scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5),
                                  width=.scale.width.to.SVG.plot(as.numeric(cmas$.FU.END.DATE[s.cmas[1]] - cmas$.FU.START.DATE[s.cmas[1]])),
                                  height=.scale.height.to.SVG.plot(length(s.events)),
-                                 stroke=followup.window.col, stroke_width=2, lty="dashed", fill="none",
-                                 class="fuw", comment="The Follow-Up Window (FUW)")
+                                 stroke=followup.window.col, stroke_width=2, lty="dashed", fill="white", fill_opacity=0.0, # fully transparent but tooltips also work
+                                 class="fuw", comment="The Follow-Up Window (FUW)", tooltip="Follow-Up Window (FUW)")
           );
         }
       }
@@ -1520,7 +1538,7 @@
                                  width=.scale.width.to.SVG.plot(as.numeric(cmas$.OBS.END.DATE[s.cmas[1]] - cmas$.OBS.START.DATE[s.cmas[1]])),
                                  height=.scale.height.to.SVG.plot(length(s.events)),
                                  stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                                 class="ow", comment="The Observation Window (OW)")
+                                 class="ow", comment="The Observation Window (OW)", tooltip="Observation Window (OW)")
           );
         }
 
@@ -1564,7 +1582,7 @@
                                      width=.scale.width.to.SVG.plot(as.numeric(real.obs.window.end - real.obs.window.start)),
                                      height=.scale.height.to.SVG.plot(length(s.events)),
                                      stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                                     class="ow-real", comment="The 'real' Observation Window")
+                                     class="ow-real", comment="The 'real' Observation Window", tooltip="'Real' Observation Window")
               );
             }
           }
@@ -1765,11 +1783,13 @@
                    # The begining of the event:
                    .SVG.points(x=.scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window), y=.scale.y.to.SVG.plot(y.cur),
                                pch=pch.start.event, col=col, cex=cex,
-                               class=paste0("event-start",if(!is.na(med.class.svg)) paste0("-",med.class.svg))),
+                               class=paste0("event-start",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                               tooltip=med.class.svg),
                    # The end of the event:
                    .SVG.points(x=.scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window), y=.scale.y.to.SVG.plot(y.cur),
                                pch=pch.end.event, col=col, cex=cex,
-                               class=paste0("event-end",if(!is.na(med.class.svg)) paste0("-",med.class.svg)))
+                               class=paste0("event-end",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                               tooltip=med.class.svg)
       );
     }
 
@@ -1800,14 +1820,16 @@
                                xend=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window),
                                height=dims.event.y,
                                stroke=col, fill=col, fill_opacity=0.2,
-                               class=paste0("event-interval-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg))),
+                               class=paste0("event-interval-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                               tooltip=med.class.svg),
                      if( cma$event.info$gap.days[i] > 0 )
                        .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window),
                                  y=.scale.y.to.SVG.plot(y.cur) - dims.event.y/2,
                                  xend=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window),
                                  height=dims.event.y,
                                  stroke=col, fill="none",
-                                 class=paste0("event-interval-not-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)))
+                                 class=paste0("event-interval-not-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                                 tooltip=med.class.svg)
         );
       }
     }
@@ -1862,7 +1884,8 @@
                               y=rep(.scale.y.to.SVG.plot(y.cur),2),
                               connected=FALSE,
                               stroke=col, stroke_width=seg.lwd,
-                              class=paste0("event-segment",if(!is.na(med.class.svg)) paste0("-",med.class.svg)))
+                              class=paste0("event-segment",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                              tooltip=med.class.svg)
       );
     }
 
@@ -1898,7 +1921,8 @@
                                font_size=dims.chr.std * cex.dose, h.align="center", v.align="center",
                                col=if(is.na(print.dose.col)) col else print.dose.col,
                                other_params=if(!is.na(print.dose.outline.col)) paste0(' stroke="',.SVG.color(print.dose.outline.col,return_string=TRUE),'" stroke-width="0.5"'),
-                               class=paste0("event-dose-text",if(!is.na(med.class.svg)) paste0("-",med.class.svg)))
+                               class=paste0("event-dose-text",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                               tooltip=med.class.svg)
         );
       }
     }
@@ -1936,7 +1960,8 @@
                                     .scale.y.to.SVG.plot(y.cur)),
                                 connected=TRUE,
                                 stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
-                                class=paste0("continuation-line",if(!is.na(med.class.svg)) paste0("-",med.class.svg)))
+                                class=paste0("continuation-line",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                                tooltip=med.class.svg)
         );
       }
     } else
@@ -2400,6 +2425,14 @@
       if( .do.SVG ) # SVG:
       {
         svg.str <- c(svg.str,
+                     # Background:
+                     .SVG.rect(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
+                               y=dims.plot.y,
+                               width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)),
+                               height=dims.plot.height,
+                               stroke="none", fill=CMA.plot.bkg, fill_opacity=0.25,
+                               class="cma-drawing-area-bkg", tooltip="CMA estimate"),
+
                      # Vertical guides:
                      .SVG.comment("The vertical guides for the CMA drawing area"),
                      .SVG.lines(x=rep(c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0))), each=2),
@@ -2439,7 +2472,7 @@
                                width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)),
                                height=dims.plot.height,
                                stroke="none", fill=CMA.plot.bkg, fill_opacity=0.25,
-                               class="cma-drawing-area-bkg"),
+                               class="cma-drawing-area-bkg", tooltip="CMA estimate"),
 
                      # Vertical guides:
                      .SVG.lines(x=rep(c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
@@ -2532,12 +2565,12 @@
                  # The y axis label:
                  .SVG.text(x=dims.chr.axis, y=dims.total.height/2,
                            text=as.character(y.label$string), col="black", font="Arial", font_size=dims.chr.lab, h.align="center", v.align="center", rotate=-90,
-                           class="axis-name-y", comment="The y-axis label"),
+                           class="axis-name-y", comment="The y-axis label", tooltip="Y axis: patients, events and (possibly) CMA estimates"),
 
                  # The x axis label:
                  .SVG.text(x=(dims.plot.x + dims.total.width)/2, y=(dims.total.height - dims.chr.axis),
                            text=as.character(x.label), col="black", font="Arial", font_size=dims.chr.lab, h.align="center", v.align="center",
-                           class="axis-name-x", comment="The x-axis label")
+                           class="axis-name-x", comment="The x-axis label", tooltip="X axis: the events ordered in time (from left to right)")
     );
   }
 
@@ -2776,7 +2809,7 @@
                          connected=FALSE, stroke="black", stroke_width=lwd.event, lty=lty.event,
                          class="legend-events"),
               .SVG.points(x=c(lmx, lmx + 3*dims.chr.legend), y=c(lmy+lh, lmy+lh),
-                          pch=c(pch.start.event, pch.end.event),col="black", cex=legend.cex,
+                          pch=c(pch.start.event, pch.end.event), col="black", cex=legend.cex,
                           class="legend-events"));
 
       if( !plot.dose )
@@ -2846,11 +2879,12 @@
       for( i in 1:length(cols) )
       {
         med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+        med.class.name.svg <- .map.category.to.class(med.class.name);
         l2 <- c(l2,
                 .SVG.rect(x=lmx, y=lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                           stroke="black", fill=cols[i], fill_opacity=0.5,
-                          class="legend-medication-class"));
-        med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+                          class=paste0("legend-medication-class-rect", if(med.class.name != "<missing>") paste0("-",med.class.name.svg) )));
+        #med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
         if( print.dose || plot.dose )
         {
           dose.for.cat <- (dose.range$category == med.class.name);
@@ -2862,7 +2896,7 @@
         l2 <- c(l2,
                 .SVG.text(x=lmx + 4*dims.chr.legend, y=lmy+lh, text=med.class.name,
                           col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                          class="legend-medication-class"));
+                          class=paste0("legend-medication-class-label", if(med.class.name != "<missing>") paste0("-",med.class.name.svg) )));
         lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims(med.class.name, font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       }
       lh <- lh + lnp*dims.chr.legend.title; # new para

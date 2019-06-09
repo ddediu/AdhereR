@@ -306,6 +306,8 @@ var adh_svg = { // begin namespace
       //x_segment = svg.getElementsByClassName("event-segment"); // not used for the getter
       //x_dose = svg.getElementsByClassName("event-dose-text"); // not used for the getter
       //x_continuation = svg.getElementsByClassName("continuation-line"); // not used for the getter
+      //x_legend_rect = svg.getElementsByClassName("legend-medication-class-rect"); // not used for the getter
+      //x_legend_text = svg.getElementsByClassName("legend-medication-class-label"); // not used for the getter
     } else {
       // Get the given medication class
       m_id = adh_svg.get_id_for_medication_class(m);
@@ -317,6 +319,8 @@ var adh_svg = { // begin namespace
       //x_segment = svg.getElementsByClassName("event-segment-" + m_id); // not used for the getter
       //x_dose = svg.getElementsByClassName("event-dose-text-" + m_id); // not used for the getter
       //x_continuation = svg.getElementsByClassName("continuation-line-" + m_id); // not used for the getter
+      //x_legend_rect = svg.getElementsByClassName("legend-medication-class-rect-" + m_id); // not used for the getter
+      //x_legend_text = svg.getElementsByClassName("legend-medication-class-label-" + m_id); // not used for the getter
     }
 
     if( x_start.length > 0 ) {
@@ -344,6 +348,8 @@ var adh_svg = { // begin namespace
       x_segment = svg.getElementsByClassName("event-segment");
       x_dose = svg.getElementsByClassName("event-dose-text");
       x_continuation = svg.getElementsByClassName("continuation-line");
+      x_legend_rect = svg.getElementsByClassName("legend-medication-class-rect");
+      x_legend_text = svg.getElementsByClassName("legend-medication-class-label");
     } else {
       // Get the given medication class:
       m_id = adh_svg.get_id_for_medication_class(m);
@@ -355,6 +361,8 @@ var adh_svg = { // begin namespace
       x_segment = svg.getElementsByClassName("event-segment-" + m_id);
       x_dose = svg.getElementsByClassName("event-dose-text-" + m_id);
       x_continuation = svg.getElementsByClassName("continuation-line-" + m_id);
+      x_legend_rect = svg.getElementsByClassName("legend-medication-class-rect-" + m_id);
+      x_legend_text = svg.getElementsByClassName("legend-medication-class-label-" + m_id);
     }
 
     for(i=0; i < x_start.length;        i++) x_start[i].style.visibility        = show ? "visible" : "hidden";
@@ -364,6 +372,8 @@ var adh_svg = { // begin namespace
     for(i=0; i < x_segment.length;      i++) x_segment[i].style.visibility      = show ? "visible" : "hidden";
     for(i=0; i < x_dose.length;         i++) x_dose[i].style.visibility         = show ? "visible" : "hidden";
     for(i=0; i < x_continuation.length; i++) x_continuation[i].style.visibility = show ? "visible" : "hidden";
+    for(i=0; i < x_legend_rect.length;  i++) x_legend_rect[i].style.stroke      = show ? "Black"   : "LightGray";
+    for(i=0; i < x_legend_text.length;  i++) x_legend_text[i].style.fill        = show ? "Black"   : "LightGray";
   }
 
 }; // end namespace
