@@ -763,12 +763,13 @@ test_that("dimensions for cover_special_periods is correct", {
                                         medication.class.colnames = "ATC.CODE",
                                         days.before = 7,
                                         days.after = 7,
-                                        date.format = "%Y-%m-%d")
+                                        date.format = "%Y-%m-%d",
+                                        return.data.table = TRUE)
 
-  expect_equal(dim(test_results), c(22,15))
-  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 0), 432) #correct sum of durations
+  expect_equal(dim(test_results), c(23,15))
+  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 0), 439) #correct sum of durations
   expect_equal(round(min(test_results$DURATION, na.rm=TRUE), 0), 1) #correct minimum of durations
-  expect_equal(round(mean(test_results$DURATION, na.rm=TRUE), 4), 19.6364) #correct mean of durations
+  expect_equal(round(mean(test_results$DURATION, na.rm=TRUE), 3), 19.087) #correct mean of durations
   expect_equal(round(max(test_results$DURATION, na.rm=TRUE), 0), 52) #correct maximum of durations
 
 })
