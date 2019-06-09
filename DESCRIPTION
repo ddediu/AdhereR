@@ -11,8 +11,7 @@ Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
 Author: Dan Dediu [aut, cre],
         Alexandra Dima [aut],
         Samuel Allemann [aut]
-Maintainer:	Samuel Allemann <samuel.allemann@gmx.ch>,
-			Dan Dediu <ddediu@gmail.com>
+Maintainer: Dan Dediu <ddediu@gmail.com>
 Description: Computation of adherence to medications from Electronic Health care 
     Data and visualization of individual medication histories and adherence 
     patterns. The package implements a set of S3 classes and
