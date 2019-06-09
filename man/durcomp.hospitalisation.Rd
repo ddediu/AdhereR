@@ -12,11 +12,6 @@
   yyyy-mm-dd format.Can also be \emph{string}.}
   \item{DATE.OUT}{\emph{Date};the end of the hospitalization period, by default in the
   yyyy-mm-dd format. Can also be \emph{string}.}
-  \item{TYPE}{\emph{Character}; describes the type of situation, e.g. "hospitalization"
-  or "holiday". Used to categorize different types of situations where use might differ
-  from "normal" periods.}
-  \item{CUSTOM}{\emph{Character}; can be either \emph{continue}, \emph{discard}, or
-  \emph{carryover} (see function arguments in \code{compute_event_duration}).}
 }}
 \usage{
 durcomp.hospitalisation
