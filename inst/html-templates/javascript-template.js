@@ -59,15 +59,16 @@ var adh_svg = { // begin namespace
    * @param {String} attr  The SVG attribute name.
    * @param {String} val   The attribute's new value.
    * @param {String} elem_type  Some types of elements require a special mapping to CSS (e.g., fonts).
+   * @param {Boolean} force_svg_attr  If true, set the SVG attribute avan if not yet defined (needed in some cases for some browsers).
    */
-  set_svg_attribute : function(elem, attr, val, elem_type=null) {
+  set_svg_attribute : function(elem, attr, val, elem_type=null, force_svg_attr=true) {
     if( !elem ) {
       return;
     } else {
       // Local function dealing with a single element at a time:
       function _set_svg_attribute_for_element(elem, attr, val, elem_type=null) {
-        if( elem.hasAttribute(attr) ) {
-          return elem.setAttribute(attr, val);
+        if( force_svg_attr || elem.hasAttribute(attr) ) {
+          elem.setAttribute(attr, val);
         } else
         {
           // SVG attribute may require translation to CSS:
