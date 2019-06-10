@@ -15,23 +15,116 @@ var adh_svg = { // begin namespace
 
 
   /**
+   * Given an SVG element and an attribute, return the attribute's value
+   * @param {String} elem  The SVG element.
+   * @param {String} attr  The SVG attribute name.
+   * @param {String} elem_type  Some types of elements require a special mapping to CSS (e.g., fonts).
+   * @return {String}   the attribute value.
+   */
+  get_svg_attribute : function(elem, attr, elem_type=null) {
+    if( !elem ) {
+      return undefined;
+    } else {
+      if( elem.length > 0 ) elem = elem[0]; //assume that for arrays the first element is enough
+
+      if( elem.hasAttribute(attr) ) {
+        return elem.getAttribute(attr);
+      } else
+      {
+        // SVG attribute may require translation to CSS:
+        switch(attr) {
+          case "fill":
+            if( elem_type == "font" ) {
+              return !elem.style.color ? undefined : elem.style.color;
+            } else {
+              return !elem.style.fill ? undefined : elem.style.fill;
+            }
+            break;
+          case "font-size":
+            return !elem.style.fontSize ? undefined : elem.style.fontSize;
+            break;
+          case "visibility":
+            return !elem.style.visibility ? undefined : elem.style.visibility;
+            break;
+          default:
+            return undefined;
+        }
+      }
+    }
+  },
+
+  /**
+   * Given an SVG element, an attribute and a vlue, set the attribute's value
+   * @param {String} elem  The SVG element.
+   * @param {String} attr  The SVG attribute name.
+   * @param {String} val   The attribute's new value.
+   * @param {String} elem_type  Some types of elements require a special mapping to CSS (e.g., fonts).
+   */
+  set_svg_attribute : function(elem, attr, val, elem_type=null) {
+    if( !elem ) {
+      return;
+    } else {
+      // Local function dealing with a single element at a time:
+      function _set_svg_attribute_for_element(elem, attr, val, elem_type=null) {
+        if( elem.hasAttribute(attr) ) {
+          return elem.setAttribute(attr, val);
+        } else
+        {
+          // SVG attribute may require translation to CSS:
+          switch(attr) {
+            case "fill":
+              if( elem_type == "font" ) {
+                elem.style.color = val;
+              } else {
+                elem.style.fill = val;
+              }
+              break;
+            case "font-size":
+              elem.style.fontSize = val;
+              break;
+            case "visibility":
+              elem.style.visibility = val;
+              break;
+          }
+        }
+      }
+
+      if( elem.length > 0 ) {
+        for(i=0; i<elem.length; i++) _set_svg_attribute_for_element(elem[i], attr, val, elem_type);
+      } else {
+        _set_svg_attribute_for_element(elem, attr, val, elem_type);
+      }
+    }
+  },
+
+
+  /**
+   * Is an SVG element (or array thereof) visible?
+   * @param {String}  elem  The SVG element.
+   * @return {Boolean} True if visible.
+   */
+  is_visible_svg_element : function(elem) {
+    return adh_svg.get_svg_attribute(elem, "visibility") != "hidden"; //  assume visible unless explicitely hidden...
+  },
+
+  /**
+   * Show/hide one (or more) SVG element(s).
+   * @param {String}  elem  The SVG element(s).
+   * @param {Boolean} show  If true, show it, otherwise hide it.
+   */
+  show_svg_element : function(elem, show=true) {
+    adh_svg.set_svg_attribute(elem, "visibility", show ? "visible" : "hidden");
+  },
+
+
+  /**
    * Get the SVG image's backgound color.
    * @return {String}   the background color (or None).
    */
   get_bkg_color : function() {
     svg = document.getElementById(adh_svg.plot_id);
     plotting_areas = svg.getElementsByClassName("plotting-area-background");
-    if( plotting_areas.length > 0 ) { // there should be only one plotting area
-      if( plotting_areas[0].hasAttribute("fill") ) {
-        return plotting_areas[0].getAttribute("fill");
-      } else
-      {
-        return plotting_areas[0].style.fill;
-      }
-    } else
-    {
-      return undefined;
-    }
+    return adh_svg.get_svg_attribute(plotting_areas, "fill");
   },
 
   /**
@@ -42,14 +135,7 @@ var adh_svg = { // begin namespace
   set_bkg_color : function(c) {
     svg = document.getElementById(adh_svg.plot_id);
     plotting_areas = svg.getElementsByClassName("plotting-area-background");
-    if( plotting_areas.length > 0 ) {
-      if( plotting_areas[0].hasAttribute("fill") ) { // there should be only one plotting area
-        plotting_areas[0].setAttribute("fill", c);
-      } else
-      {
-        plotting_areas[0].style.fill = c; // there should be only one plotting area
-      }
-    }
+    adh_svg.set_svg_attribute(plotting_areas, "fill", c);
   },
 
 
@@ -82,11 +168,7 @@ var adh_svg = { // begin namespace
   is_visible_alternating_bands : function() {
     svg = document.getElementById(adh_svg.plot_id);
     alt_bands = svg.querySelectorAll('[class^="alternating-bands-"]');
-    if( alt_bands.length > 0 ) {
-      return alt_bands[0].style.visibility ? alt_bands[0].style.visibility == "visible" : true; // if CSS visibility is not set, assume it is visible
-    } else {
-      return false;
-    }
+    return adh_svg.is_visible_svg_element(alt_bands);
   },
 
   /**
@@ -97,7 +179,7 @@ var adh_svg = { // begin namespace
   show_alternating_bands : function(show=true) {
     svg = document.getElementById(adh_svg.plot_id);
     alt_bands = svg.querySelectorAll('[class^="alternating-bands-"]');
-    for(i=0; i < alt_bands.length; i++) alt_bands[i].style.visibility = show ? "visible" : "hidden";
+    adh_svg.show_svg_element(alt_bands, show);
   },
 
 
@@ -108,10 +190,8 @@ var adh_svg = { // begin namespace
   is_visible_axis_names : function() {
     svg = document.getElementById(adh_svg.plot_id);
     ret_val = {"x":false, "y":false}; // the return value
-    x = svg.getElementsByClassName("axis-name-x");
-    if(x.length > 0) ret_val["x"] = (x[0].style.visibility ? x[0].style.visibility == "visible" : true); // if CSS visibility is not set, assume it is visible
-    y = svg.getElementsByClassName("axis-name-y");
-    if(y.length > 0) ret_val["y"] = (y[0].style.visibility ? y[0].style.visibility == "visible" : true); // if CSS visibility is not set, assume it is visible
+    x = svg.getElementsByClassName("axis-name-x"); ret_val["x"] = adh_svg.is_visible_svg_element(x);
+    y = svg.getElementsByClassName("axis-name-y"); ret_val["y"] = adh_svg.is_visible_svg_element(y);
     return ret_val;
   },
 
@@ -123,10 +203,8 @@ var adh_svg = { // begin namespace
    */
   show_axis_names : function(show_x=true, show_y=true) {
     svg = document.getElementById(adh_svg.plot_id);
-    x = svg.getElementsByClassName("axis-name-x");
-    if(x.length > 0) x[0].style.visibility = show_x ? "visible" : "hidden"; // there should be only one x-axis name
-    y = svg.getElementsByClassName("axis-name-y");
-    if(y.length > 0) y[0].style.visibility = show_y ? "visible" : "hidden"; // there should be only one y-axis name
+    x = svg.getElementsByClassName("axis-name-x"); adh_svg.show_svg_element(x, show_x);
+    y = svg.getElementsByClassName("axis-name-y"); adh_svg.show_svg_element(y, show_y);
   },
 
 
@@ -137,10 +215,8 @@ var adh_svg = { // begin namespace
   is_visible_axis_labels : function() {
     svg = document.getElementById(adh_svg.plot_id);
     ret_val = {"x":false, "y":false}; // the return value
-    x = svg.getElementsByClassName("axis-labels-x");
-    if(x.length > 0) ret_val["x"] = (x[0].style.visibility ? x[0].style.visibility == "visible" : true); // if CSS visibility is not set, assume it is visible
-    y = svg.getElementsByClassName("axis-labels-y");
-    if(y.length > 0) ret_val["y"] = (y[0].style.visibility ? y[0].style.visibility == "visible" : true); // if CSS visibility is not set, assume it is visible
+    x = svg.getElementsByClassName("axis-labels-x"); ret_val["x"] = adh_svg.is_visible_svg_element(x);
+    y = svg.getElementsByClassName("axis-labels-y"); ret_val["y"] = adh_svg.is_visible_svg_element(y);
     return ret_val;
   },
 
@@ -152,14 +228,9 @@ var adh_svg = { // begin namespace
    */
   show_axis_labels : function(show_x=true, show_y=true) {
     svg = document.getElementById(adh_svg.plot_id);
-    x = svg.getElementsByClassName("axis-labels-x");
-    ticks = svg.getElementsByClassName("axis-ticks-x");
-    for(i=0; i < x.length; i++) {
-      x[i].style.visibility = show_x ? "visible" : "hidden"; // for each label
-      ticks[i].style.visibility = show_x ? "visible" : "hidden"; // there should be exactly one tick for each label
-    }
-    y = svg.getElementsByClassName("axis-labels-y");
-    for(i=0; i < y.length; i++) y[i].style.visibility = show_y ? "visible" : "hidden"; // for each label
+    x = svg.getElementsByClassName("axis-labels-x");    adh_svg.show_svg_element(x, show_x);
+    ticks = svg.getElementsByClassName("axis-ticks-x"); adh_svg.show_svg_element(ticks, show_x);
+    y = svg.getElementsByClassName("axis-labels-y");    adh_svg.show_svg_element(y, show_y);
   },
 
 
@@ -170,11 +241,7 @@ var adh_svg = { // begin namespace
   is_visible_legend : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = svg.getElementById("legend");
-    if(!x) {
-      return false; // no legend, so it's not visible!
-    } else {
-      return x.style.visibility ? x.style.visibility == "visible" : true; // if CSS visibility is not set, assume it is visible
-    }
+    return adh_svg.is_visible_svg_element(x);
   },
 
   /**
@@ -185,10 +252,7 @@ var adh_svg = { // begin namespace
   show_legend : function(show=true) {
     svg = document.getElementById(adh_svg.plot_id);
     x = svg.getElementById("legend");
-    if(x) { // there's a legend
-      x.style.visibility = show ? "visible" : "hidden"; // for each label
-    }
-    // otherwise, nothing to do...
+    adh_svg.show_svg_element(x, show);
   },
 
 
@@ -199,11 +263,7 @@ var adh_svg = { // begin namespace
   is_visible_title : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = svg.getElementsByClassName("main-title");
-    if( x.length > 0 ) {
-      return x[0].style.visibility ? x[0].style.visibility == "visible" : true; // if CSS visibility is not set, assume it is visible
-    } else {
-      return false;
-    }
+    return adh_svg.is_visible_svg_element(x);
   },
 
   /**
@@ -214,7 +274,7 @@ var adh_svg = { // begin namespace
   show_title : function(show=true) {
     svg = document.getElementById(adh_svg.plot_id);
     x = svg.getElementsByClassName("main-title");
-    for(i=0; i < x.length; i++) x[i].style.visibility = show ? "visible" : "hidden";
+    adh_svg.show_svg_element(x, show);
   },
 
 
@@ -225,17 +285,7 @@ var adh_svg = { // begin namespace
   get_font_size_title : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = svg.getElementsByClassName("main-title");
-    if( x.length > 0 ) {
-      if( x[0].hasAttribute("font-size") )  {
-        return x[0].getAttribute("font-size");
-      } else if( x[0].style.fontSize ) {
-        return x[0].style.fontSize;
-      } else {
-        return undefined;
-      }
-    } else {
-      return undefined;
-    }
+    return adh_svg.get_svg_attribute(x[0], "font-size");
   },
 
   /**
@@ -246,13 +296,7 @@ var adh_svg = { // begin namespace
   set_font_size_title : function(s="16px") {
     svg = document.getElementById(adh_svg.plot_id);
     x = svg.getElementsByClassName("main-title");
-    for(i=0; i < x.length; i++) {
-      if( x[i].hasAttribute("font-size") ) {
-        x[i].setAttribute("font-size", s);
-      } else {
-        x[i].style.fontSize = s;
-      }
-    }
+    adh_svg.set_svg_attribute(x, "font-size", s);
   },
 
 
@@ -300,34 +344,14 @@ var adh_svg = { // begin namespace
     if( !adh_svg.are_medication_classes_defined() ) {
       // No medication classes defined
       x_start = svg.getElementsByClassName("event-start");
-      //x_end = svg.getElementsByClassName("event-end"); // not used for the getter
-      //x_covered = svg.getElementsByClassName("event-interval-covered"); // not used for the getter
-      //x_notcovered = svg.getElementsByClassName("event-interval-not-covered"); // not used for the getter
-      //x_segment = svg.getElementsByClassName("event-segment"); // not used for the getter
-      //x_dose = svg.getElementsByClassName("event-dose-text"); // not used for the getter
-      //x_continuation = svg.getElementsByClassName("continuation-line"); // not used for the getter
-      //x_legend_rect = svg.getElementsByClassName("legend-medication-class-rect"); // not used for the getter
-      //x_legend_text = svg.getElementsByClassName("legend-medication-class-label"); // not used for the getter
     } else {
       // Get the given medication class
       m_id = adh_svg.get_id_for_medication_class(m);
       if( !m_id ) return false; // cannot get the ID, so it's not visible by definition
       x_start = svg.getElementsByClassName("event-start-" + m_id);
-      //x_end = svg.getElementsByClassName("event-end-" + m_id); // not used for the getter
-      //x_covered = svg.getElementsByClassName("event-interval-covered-" + m_id); // not used for the getter
-      //x_notcovered = svg.getElementsByClassName("event-interval-not-covered-" + m_id); // not used for the getter
-      //x_segment = svg.getElementsByClassName("event-segment-" + m_id); // not used for the getter
-      //x_dose = svg.getElementsByClassName("event-dose-text-" + m_id); // not used for the getter
-      //x_continuation = svg.getElementsByClassName("continuation-line-" + m_id); // not used for the getter
-      //x_legend_rect = svg.getElementsByClassName("legend-medication-class-rect-" + m_id); // not used for the getter
-      //x_legend_text = svg.getElementsByClassName("legend-medication-class-label-" + m_id); // not used for the getter
     }
 
-    if( x_start.length > 0 ) {
-      return x_start[0].style.visibility ? x_start[0].style.visibility == "visible" : true; // if CSS visibility is not set, assume it is visible
-    } else {
-      return false;
-    }
+    return adh_svg.is_visible_svg_element(x_start);
   },
 
   /**
@@ -365,15 +389,16 @@ var adh_svg = { // begin namespace
       x_legend_text = svg.getElementsByClassName("legend-medication-class-label-" + m_id);
     }
 
-    for(i=0; i < x_start.length;        i++) x_start[i].style.visibility        = show ? "visible" : "hidden";
-    for(i=0; i < x_end.length;          i++) x_end[i].style.visibility          = show ? "visible" : "hidden";
-    for(i=0; i < x_covered.length;      i++) x_covered[i].style.visibility      = show ? "visible" : "hidden";
-    for(i=0; i < x_notcovered.length;   i++) x_notcovered[i].style.visibility   = show ? "visible" : "hidden";
-    for(i=0; i < x_segment.length;      i++) x_segment[i].style.visibility      = show ? "visible" : "hidden";
-    for(i=0; i < x_dose.length;         i++) x_dose[i].style.visibility         = show ? "visible" : "hidden";
-    for(i=0; i < x_continuation.length; i++) x_continuation[i].style.visibility = show ? "visible" : "hidden";
-    for(i=0; i < x_legend_rect.length;  i++) x_legend_rect[i].style.stroke      = show ? "Black"   : "LightGray";
-    for(i=0; i < x_legend_text.length;  i++) x_legend_text[i].style.fill        = show ? "Black"   : "LightGray";
+    adh_svg.show_svg_element(x_start, show);
+    adh_svg.show_svg_element(x_end, show);
+    adh_svg.show_svg_element(x_covered, show);
+    adh_svg.show_svg_element(x_notcovered, show);
+    adh_svg.show_svg_element(x_segment, show);
+    adh_svg.show_svg_element(x_dose, show);
+    adh_svg.show_svg_element(x_continuation, show);
+
+    adh_svg.set_svg_attribute(x_legend_rect, "stroke", show ? "Black" : "LightGray");
+    adh_svg.set_svg_attribute(x_legend_text, "fill",   show ? "Black" : "LightGray", elem_type="font");
   }
 
 }; // end namespace
