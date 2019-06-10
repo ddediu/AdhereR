@@ -25,7 +25,7 @@
 		</p>
 
     <p>
-			<button onclick='x=adh_svg.get_bkg_color(); adh_svg.set_bkg_color((x != "white" && x != "rgb(255,255,255)") ? "white" : "yellow")'>Toggle background color!</button>
+			<button onclick='x=adh_svg.get_bkg_color(); adh_svg.set_bkg_color((x != "white" && x != "rgb(255,255,255)" && x != "rgb(255, 255, 255)") ? "white" : "yellow")'>Toggle background color!</button>
 
 			<button onclick='adh_svg.show_alternating_bands(!adh_svg.is_visible_alternating_bands())'>Toggle alternating bands!</button>
 
@@ -34,7 +34,7 @@
 			<button onclick='x=adh_svg.is_visible_axis_labels(); adh_svg.show_axis_labels(!x["x"], !x["y"])'>Toggle axes labels!</button>
 
 			<button onclick='adh_svg.show_title(!adh_svg.is_visible_title())'>Toggle title!</button>
-			<button onclick='x=adh_svg.get_font_size_title(); adh_svg.set_font_size_title(x=="15" ? "18" : "15")'>Toggle title font size!</button>
+			<button onclick='x=adh_svg.get_font_size_title(); adh_svg.set_font_size_title(x=="15" || x=="15px" ? "18px" : "15px")'>Toggle title font size!</button>
 		</p>
 
     <p>
