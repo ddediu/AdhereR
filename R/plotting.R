@@ -193,7 +193,7 @@
           if(!is.na(other_params)) other_params,
 
           # Close the element (and add optional tooltip):
-          if(!is.na(tooltip)) c('>',' <title>', tooltip, '</title>', '</rect>') else '/>', # the tooltip title must be first child
+          if(!is.na(tooltip)) c('>',' <title>', tooltip, '</title>', '</rect>') else '></rect>', # the tooltip title must be first child
 
           # Add ending newline (if so required):
           if(newline) '\n'
@@ -265,7 +265,7 @@
            if(!is.na(other_params)) other_params,
 
            # Close the element (and add optional tooltip):
-           if(!is.na(tooltip)) c('>',' <title>', tooltip, '</title>', '</polyline>') else '/>', # the tooltip title must be first child
+           if(!is.na(tooltip)) c('>',' <title>', tooltip, '</title>', '</polyline>') else '></polyline>', # the tooltip title must be first child
 
            # Add ending newline (if so required):
            if(newline) '\n'
@@ -317,7 +317,7 @@
              if(!is.na(other_params)) other_params,
 
              # Close the element (and add optional tooltip):
-             if(!is.na(tooltip)) c('>',' <title>', tooltip, '</title>', '</line>') else '/>', # the tooltip title must be first child
+             if(!is.na(tooltip)) c('>',' <title>', tooltip, '</title>', '</line>') else '></line>', # the tooltip title must be first child
 
              # Add ending newline (if so required):
              if(newline) '\n'
@@ -387,7 +387,7 @@
             if(!is.na(other_params)) other_params,
 
             # Close the element:
-            '/></g>',
+            '></use></g>',
 
             # Add ending newline (if so required):
             if(newline) '\n'
@@ -472,7 +472,7 @@
             .SVG.specialchars.2.XMLentities(text[i]),
 
             # Add optional tooltip:
-            if(!is.na(tooltip)) c(' <title>', tooltip, '</title>', '</text>'), # the tooltip title must be first child
+            if(!is.na(tooltip)) c(' <title>', tooltip, '</title>'), # the tooltip title must be first child
 
             # Close it:
             '</text>',
@@ -587,11 +587,13 @@
   ##   - font size is relative to the viewBox
   ##
 
-  # The SVG header and string (body):
-  svg.header <- c('<?xml version="1.0" standalone="no"?>\n',
-                  '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n');
-  svg.str <- NULL;
-
+  if( .do.SVG )
+  {
+    # The SVG header and string (body):
+    svg.header <- c('<?xml version="1.0" standalone="no"?>\n',
+                    '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n');
+    svg.str <- NULL;
+  }
 
   ##
   ## Set-up, checks and local functions ####
@@ -1301,6 +1303,12 @@
                  'viewBox="0 0 ',dims.total.width,' ',dims.total.height,'" ',
                  ' version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n'); # the plotting surface
 
+    # Comments, notes and clarifications:
+    svg.str <- c(svg.str,
+                 .SVG.comment("This is the self-contained SVG plot.", newpara=TRUE));
+    svg.str <- c(svg.str,
+                 .SVG.comment("NOTE: due to compatilibity issues with Internet Explorer, we use explicit closing tags."));
+
     # Reusable bits:
     dce1 <- .SVG.number(dims.chr.event); dce2 <- .SVG.number(dims.chr.event/2); ndce2 <- .SVG.number(-dims.chr.event/2); dce3 <- .SVG.number(dims.chr.event/3); dce4 <- .SVG.number(dims.chr.event/4); # cache the various relative sizes used to draw the pch symbols
     svg.str <- c(svg.str,
@@ -1308,54 +1316,55 @@
                  '<defs>\n',
 
                  # The point symbols (pch) used for events etc:
+                 # (we use explicit tag closing as otherwise Internet Explorer generates warning HTML1500)
                  # pch 0:
-                 '<g id="pch0" fill="none" stroke-width="1"> <rect x="',ndce2,'" y="',ndce2,'" width="',dce1,'" height="',dce1,'"/> </g>\n',
+                 '<g id="pch0" fill="none" stroke-width="1"> <rect x="',ndce2,'" y="',ndce2,'" width="',dce1,'" height="',dce1,'"></rect> </g>\n',
                  # pch 1:
-                 '<g id="pch1" fill="none" stroke-width="1"> <circle cx="0" cy="0" r="',dce2,'"/> </g>\n',
+                 '<g id="pch1" fill="none" stroke-width="1"> <circle cx="0" cy="0" r="',dce2,'"></circle> </g>\n',
                  # pch 2:
-                 '<g id="pch2" fill="none" stroke-width="1"> <polyline points="',ndce2,',',dce2,' 0,',ndce2,' ',dce2,',',dce2,' ',ndce2,',',dce2,'"/> </g>\n',
+                 '<g id="pch2" fill="none" stroke-width="1"> <polyline points="',ndce2,',',dce2,' 0,',ndce2,' ',dce2,',',dce2,' ',ndce2,',',dce2,'"></polyline> </g>\n',
                  # pch 3:
-                 '<g id="pch3" fill="none" stroke-width="1"> <line x1="',ndce2,'" y1="0" x2="',dce2,'" y2="0"/> <line x1="0" y1="',ndce2,'" x2="0" y2="',dce2,'"/> </g>\n',
+                 '<g id="pch3" fill="none" stroke-width="1"> <line x1="',ndce2,'" y1="0" x2="',dce2,'" y2="0"></line> <line x1="0" y1="',ndce2,'" x2="0" y2="',dce2,'"></line> </g>\n',
                  # pch 4:
-                 '<g id="pch4" fill="none" stroke-width="1"> <line x1="',ndce2,'" y1="',dce2,'" x2="',dce2,'" y2="',ndce2,'"/> <line x1="',ndce2,'" y1="',ndce2,'" x2="',dce2,'" y2="',dce2,'"/> </g>\n',
+                 '<g id="pch4" fill="none" stroke-width="1"> <line x1="',ndce2,'" y1="',dce2,'" x2="',dce2,'" y2="',ndce2,'"></line> <line x1="',ndce2,'" y1="',ndce2,'" x2="',dce2,'" y2="',dce2,'"></line> </g>\n',
                  # pch 5:
-                 '<g id="pch5" fill="none" stroke-width="1"> <polyline points="',ndce2,',0 0,',ndce2,' ',dce2,',0 0,',dce2,' ',ndce2,',0"/> </g>\n',
+                 '<g id="pch5" fill="none" stroke-width="1"> <polyline points="',ndce2,',0 0,',ndce2,' ',dce2,',0 0,',dce2,' ',ndce2,',0"></polyline> </g>\n',
                  # pch 6:
-                 '<g id="pch6" fill="none" stroke-width="1"> <polyline points="',ndce2,',',ndce2,' 0,',dce2,' ',dce2,',',ndce2,' ',ndce2,',',ndce2,'"/> </g>\n',
+                 '<g id="pch6" fill="none" stroke-width="1"> <polyline points="',ndce2,',',ndce2,' 0,',dce2,' ',dce2,',',ndce2,' ',ndce2,',',ndce2,'"></polyline> </g>\n',
                  # pch 7:
-                 '<g id="pch7" fill="none" stroke-width="1"> <use xlink:href="#pch0"/> <use xlink:href="#pch4"/> </g>\n',
+                 '<g id="pch7" fill="none" stroke-width="1"> <use xlink:href="#pch0"></use> <use xlink:href="#pch4"></use> </g>\n',
                  # pch 8:
-                 '<g id="pch8" fill="none" stroke-width="1"> <use xlink:href="#pch3"/> <use xlink:href="#pch4"/> </g>\n',
+                 '<g id="pch8" fill="none" stroke-width="1"> <use xlink:href="#pch3"></use> <use xlink:href="#pch4"></use> </g>\n',
                  # pch 9:
-                 '<g id="pch9" fill="none" stroke-width="1"> <use xlink:href="#pch3"/> <use xlink:href="#pch5"/> </g>\n',
+                 '<g id="pch9" fill="none" stroke-width="1"> <use xlink:href="#pch3"></use> <use xlink:href="#pch5"></use> </g>\n',
                  # pch 10:
-                 '<g id="pch10" fill="none" stroke-width="1"> <use xlink:href="#pch3"/> <use xlink:href="#pch1"/> </g>\n',
+                 '<g id="pch10" fill="none" stroke-width="1"> <use xlink:href="#pch3"></use> <use xlink:href="#pch1"></use> </g>\n',
                  # pch 11:
-                 '<g id="pch11" fill="none" stroke-width="1"> <use xlink:href="#pch2"/> <use xlink:href="#pch6"/> </g>\n',
+                 '<g id="pch11" fill="none" stroke-width="1"> <use xlink:href="#pch2"></use> <use xlink:href="#pch6"></use> </g>\n',
                  # pch 12:
-                 '<g id="pch12" fill="none" stroke-width="1"> <use xlink:href="#pch0"/> <use xlink:href="#pch3"/> </g>\n',
+                 '<g id="pch12" fill="none" stroke-width="1"> <use xlink:href="#pch0"></use> <use xlink:href="#pch3"></use> </g>\n',
                  # pch 13:
-                 '<g id="pch13" fill="none" stroke-width="1"> <use xlink:href="#pch1"/> <use xlink:href="#pch4"/> </g>\n',
+                 '<g id="pch13" fill="none" stroke-width="1"> <use xlink:href="#pch1"></use> <use xlink:href="#pch4"></use> </g>\n',
                  # pch 14:
-                 '<g id="pch14" fill="none" stroke-width="1"> <use xlink:href="#pch0"/> <use xlink:href="#pch2"/> </g>\n',
+                 '<g id="pch14" fill="none" stroke-width="1"> <use xlink:href="#pch0"></use> <use xlink:href="#pch2"></use> </g>\n',
                  # pch 15:
-                 '<g id="pch15" stroke-width="1"> <rect x="',ndce2,'" y="',ndce2,'" width="',dce1,'" height="',dce1,'"/> </g>\n',
+                 '<g id="pch15" stroke-width="1"> <rect x="',ndce2,'" y="',ndce2,'" width="',dce1,'" height="',dce1,'"></rect> </g>\n',
                  # pch 16:
-                 '<g id="pch16" stroke-width="1"> <circle cx="0" cy="0" r="',dce3,'"/> </g>\n',
+                 '<g id="pch16" stroke-width="1"> <circle cx="0" cy="0" r="',dce3,'"></circle> </g>\n',
                  # pch 17:
-                 '<g id="pch17" stroke-width="1"> <polyline points="',ndce2,',',dce2,' 0,',ndce2,' ',dce2,',',dce2,' ',ndce2,',',dce2,'"/> </g>\n',
+                 '<g id="pch17" stroke-width="1"> <polyline points="',ndce2,',',dce2,' 0,',ndce2,' ',dce2,',',dce2,' ',ndce2,',',dce2,'"></polyline> </g>\n',
                  # pch 18:
-                 '<g id="pch18" stroke-width="1"> <polyline points="',ndce2,',0 0,',ndce2,' ',dce2,',0 0,',dce2,' ',ndce2,',0"/> </g>\n',
+                 '<g id="pch18" stroke-width="1"> <polyline points="',ndce2,',0 0,',ndce2,' ',dce2,',0 0,',dce2,' ',ndce2,',0"></polyline> </g>\n',
                  # pch 19:
-                 '<g id="pch19" stroke-width="1"> <circle cx="0" cy="0" r="',dce2,'"/> </g>\n',
+                 '<g id="pch19" stroke-width="1"> <circle cx="0" cy="0" r="',dce2,'"></circle> </g>\n',
                  # pch 20:
-                 '<g id="pch20" stroke-width="1"> <circle cx="0" cy="0" r="',dce4,'"/> </g>\n',
+                 '<g id="pch20" stroke-width="1"> <circle cx="0" cy="0" r="',dce4,'"></circle> </g>\n',
                  # pch 26 ( < ):
-                 '<g id="pch26" fill="none" stroke-width="1"> <polyline points="0,',dce2,' ',ndce2,',0 0,',ndce2,' "/> </g>\n',
+                 '<g id="pch26" fill="none" stroke-width="1"> <polyline points="0,',dce2,' ',ndce2,',0 0,',ndce2,' "></polyline> </g>\n',
                  # pch 27 ( > ):
-                 '<g id="pch27" fill="none" stroke-width="1"> <polyline points="0,',dce2,' ',dce2,',0 0,',ndce2,' "/> </g>\n',
+                 '<g id="pch27" fill="none" stroke-width="1"> <polyline points="0,',dce2,' ',dce2,',0 0,',ndce2,' "></polyline> </g>\n',
                  # pch 28 ( | ):
-                 '<g id="pch28" fill="none" stroke-width="1"> <line x1="0" y1="',dce2,'" x2="0" y2="',ndce2,'"/> </g>\n',
+                 '<g id="pch28" fill="none" stroke-width="1"> <line x1="0" y1="',dce2,'" x2="0" y2="',ndce2,'"></line> </g>\n',
 
                  '</defs>\n',
                  '\n');
@@ -2987,7 +2996,7 @@
               '</g>\n',
               '</defs>\n',
               # Display it as desired:
-              '<use xlink:href="#legend" transform="translate(',x,' ',y,')"/>\n');
+              '<use xlink:href="#legend" transform="translate(',x,' ',y,')"></use>\n');
 
       # Insert the legend background where it should be:
       return (c(l1, lbox, l2));
