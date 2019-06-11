@@ -300,7 +300,8 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #'  \code{date.format} parameter.
 #' }
 #' @examples
-#' event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
+#' \dontrun{
+#' event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
 #'                                            presc.data = durcomp.prescribing,
 #'                                            special.periods.data = durcomp.hospitalisation,
 #'                                            ID.colname = "ID",
@@ -310,7 +311,7 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #'                                            "UNIT", "FORM"),
 #'                                            total.dose.colname = "TOTAL.DOSE",
 #'                                            presc.daily.dose.colname = "DAILY.DOSE",
-#'                                            presc.duration.colname = "episode.duration",
+#'                                            presc.duration.colname = "PRESC.DURATION",
 #'                                            visit.colname = "VISIT",
 #'                                            split.on.dosage.change = TRUE,
 #'                                            force.init.presc = TRUE,
@@ -320,6 +321,7 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #'                                            date.format = "%Y-%m-%d",
 #'                                            suppress.warnings = FALSE,
 #'                                            return.data.table = TRUE);
+#'        }
 #' @export
 compute_event_durations <- function(disp.data = NULL,
                                     presc.data = NULL,
@@ -1400,7 +1402,7 @@ compute_event_durations <- function(disp.data = NULL,
            new = c(ID.colname,
                    presc.daily.dose.colname)
   )
-if(progress.bar == TRUE)  close(pb)
+if(progress.bar == TRUE) { close(pb) }
 
   if( !return.data.table )
   {
@@ -1490,6 +1492,7 @@ if(progress.bar == TRUE)  close(pb)
 #' @param ... other possible parameters.
 #' @return A \code{data.frame} or \code{data.table}, the pruned event_durations.
 #' @examples
+#' \dontrun{
 #' # select medication class of interest and compute event durations
 #'
 #' disp_data <- durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)]
@@ -1526,6 +1529,7 @@ if(progress.bar == TRUE)  close(pb)
 #'                                          days.within.out.date.1 = 7,
 #'                                          days.within.out.date.2 = 30,
 #'                                          keep.all = FALSE)
+#'        }
 #' @export
 prune_event_durations <- function(data,
                                   include = c("special periods", "treatment interruptions", "dosage changes"),
@@ -1818,6 +1822,7 @@ prune_event_durations <- function(data,
 #' @return A \code{data.frame} or \code{data.table}, the \code{events.data} with the additional
 #' durations for special periods covered.
 #' @examples
+#' \dontrun{
 #' # select medication class of interest and compute event durations
 #' disp_data <- durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)]
 #' presc_data <- durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)]
@@ -1863,6 +1868,7 @@ prune_event_durations <- function(data,
 #'                                                  days.before = 7,
 #'                                                  days.after = 7,
 #'                                                  date.format = "%Y-%m-%d")
+#'        }
 #' @export
 cover_special_periods <- function(events.data,
                                   special.periods.data,

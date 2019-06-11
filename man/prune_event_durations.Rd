@@ -58,6 +58,7 @@ their previous supply. Likewise, it may also lead to overestimation of persisten
 patients discontinue treatments after the end of a special period or treatment interruption.
 }
 \examples{
+\dontrun{
 # select medication class of interest and compute event durations
 
 disp_data <- durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)]
@@ -94,4 +95,5 @@ event_durations <- prune_event_durations(event_durations_list,
                                          days.within.out.date.1 = 7,
                                          days.within.out.date.2 = 30,
                                          keep.all = FALSE)
+       }
 }

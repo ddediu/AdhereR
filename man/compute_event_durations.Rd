@@ -215,7 +215,8 @@ supply durations, taking into account the aforementioned situations and providin
 various parameters for flexible adjustments.
 }
 \examples{
-event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
+\dontrun{
+event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
                                            presc.data = durcomp.prescribing,
                                            special.periods.data = durcomp.hospitalisation,
                                            ID.colname = "ID",
@@ -225,7 +226,7 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
                                            "UNIT", "FORM"),
                                            total.dose.colname = "TOTAL.DOSE",
                                            presc.daily.dose.colname = "DAILY.DOSE",
-                                           presc.duration.colname = "episode.duration",
+                                           presc.duration.colname = "PRESC.DURATION",
                                            visit.colname = "VISIT",
                                            split.on.dosage.change = TRUE,
                                            force.init.presc = TRUE,
@@ -235,4 +236,5 @@ event_durations <- compute_event_durations(disp.data = durcomp.dispensing[1:3,],
                                            date.format = "\%Y-\%m-\%d",
                                            suppress.warnings = FALSE,
                                            return.data.table = TRUE);
+       }
 }

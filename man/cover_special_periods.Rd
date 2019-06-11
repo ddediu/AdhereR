@@ -66,6 +66,7 @@ during the hospitalization period. This function should be used after pruning wi
 \code{prune_event_durations}.
 }
 \examples{
+\dontrun{
 # select medication class of interest and compute event durations
 disp_data <- durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)]
 presc_data <- durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)]
@@ -111,4 +112,5 @@ event_durations_covered <- cover_special_periods(events.data = event_durations,
                                                  days.before = 7,
                                                  days.after = 7,
                                                  date.format = "\%Y-\%m-\%d")
+       }
 }
