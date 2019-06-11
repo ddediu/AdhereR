@@ -157,23 +157,19 @@ Optional columns are `TYPE` (indicating the type of special situation),
 customized instructions how to handle a specific period (see
 `special.periods.method`), and any of those specified in `medication.class.colnames`.
 - `ID.colname`: A *string*, the name of the column in `disp.data`,
-`resc.data`, and `special.periods.data` containing the unique patient ID.
-- `presc.date.colname`: A *string*, the name of the column in
-`presc.data` containing the prescription date (in the format given in
-the `date.format` parameter).
-- `disp.date.colname`: A *string*, the name of the column in
-`disp.data` containing the dispensing date (in the format given in
-the `date.format` parameter).
-- `date.format`: A *string* giving the format of the dates used in
-the `data` and the other parameters; see the `format` parameters
-of the `as.Date` function for details (NB, this concerns
-only the dates given as strings and not as `Date` objects).
+`presc.data`, and `special.periods.data` containing the unique patient ID.
 - `medication.class.colnames`: A *Vector* of *strings*, the
 name(s) of the column(s) in `disp.data` and `presc.data` containing
 the classes/types/groups of medication.
+- `disp.date.colname`: A *string*, the name of the column in
+`disp.data` containing the dispensing date (in the format given in
+the `date.format` parameter).
 - `total.dose.colname`: A *string*, the name of the column in
 `disp.data` containing the total dispensed dose as `numeric` (e.g.
 `500` for 10 tablets of 50 mg).
+- `presc.date.colname`: A *string*, the name of the column in
+`presc.data` containing the prescription date (in the format given in
+the `date.format` parameter).
 - `presc.daily.dose.colname`: A *string*, the name of the column in
 `presc.data` containing the daily prescribed dose as `numeric` (e.g.
 `50` for 50 mg once per day, or 25 for 50 mg once ever 2 days).
@@ -212,6 +208,10 @@ remaining quantity is discarded. With *carryover*, durations are truncated
 at the beginning of a special period and a new event with the remaining duration
 is created after the end of the end of the special period. With *custom*, the
 mapping has to be included in *special.periods.data*. See details below.
+- `date.format`: A *string* giving the format of the dates used in
+the `data` and the other parameters; see the `format` parameters
+of the `as.Date` function for details (NB, this concerns
+only the dates given as strings and not as `Date` objects).
 - `suppress.warnings`: *Logical*, if `TRUE` don't show any warnings.
 - `return.data.table`: *Logical*, if `TRUE` return a
 `data.table` object, otherwise a `data.frame`.
