@@ -7,7 +7,7 @@ Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
              person("Alexandra", "Dima", role = "aut",
                      email = "alexadima@gmail.com"),
              person("Samuel", "Allemann", role = "aut",
-                     email = "samuel.allemann@univ-lyon1.fr"))
+                     email = "samuel.allemann@gmx.ch"))
 Author: Dan Dediu [aut, cre],
         Alexandra Dima [aut],
         Samuel Allemann [aut]
