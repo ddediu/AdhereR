@@ -11,7 +11,7 @@ prune_event_durations(data, include = c("special periods",
   suppress.warnings = FALSE, return.data.table = FALSE, ...)
 }
 \arguments{
-\item{data}{A \emph{\code{list}}, the output of `compute_event_durations`.}
+\item{data}{A \emph{\code{list}}, the output of \code{compute_event_durations}.}
 
 \item{include}{A \emph{\code{Vector}} of \emph{strings} indicating whether to include
 dosage changes, special periods, and/or treatment interruptions.}
@@ -59,9 +59,11 @@ patients discontinue treatments after the end of a special period or treatment i
 }
 \examples{
 # select medication class of interest and compute event durations
+
 disp_data <- durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)]
 presc_data <- durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)]
 
+# compute event durations
 event_durations_list <- compute_event_durations(disp.data = disp_data,
                                                 presc.data = presc_data,
                                                 special.periods.data = durcomp.hospitalisation,
@@ -85,6 +87,7 @@ event_durations_list <- compute_event_durations(disp.data = disp_data,
                                                 return.data.table = TRUE,
                                                 progress.bar = FALSE)
 
+# prune event durations
 event_durations <- prune_event_durations(event_durations_list,
                                          include = c("special periods"),
                                          medication.class.colnames = "ATC.CODE",

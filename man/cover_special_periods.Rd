@@ -5,7 +5,7 @@
 \title{Cover special periods.}
 \usage{
 cover_special_periods(events.data, special.periods.data, ID.colname,
-  disp.start.colname, duration.colname, medication.class.colnames,
+  medication.class.colnames, disp.start.colname, duration.colname,
   days.before, days.after, date.format, suppress.warnings = FALSE,
   return.data.table = FALSE, ...)
 }
@@ -18,8 +18,11 @@ where medication use may differ, e.g. during incarcerations or holidays). Must c
 patient ID as dispensing and prescription data, the start and end dates of the special
 periods with the exact column names \emph{\code{DATE.IN}} and \emph{\code{DATE.OUT}}.}
 
-\item{ID.colname}{A \emph{string}, the name of the column in \code{disp.data},
-\code{presc.data}, and \code{special.periods.data} containing the unique patient ID.}
+\item{ID.colname}{A \emph{string}, the name of the column in \code{events.data} and
+\code{special.periods.data} containing the unique patient ID.}
+
+\item{medication.class.colnames}{A \emph{\code{Vector}} of \emph{strings}, the
+name(s) of the column(s) in the \code{events.data} identify medication classes.}
 
 \item{disp.start.colname}{A \emph{string}, the name of the column in
 \code{events.data} containing the event start date (in the format given in
@@ -27,10 +30,6 @@ the \code{date.format} parameter).}
 
 \item{duration.colname}{A \emph{string}, the name of the column in
 \code{events.data} containing the duration of the medication event.}
-
-\item{medication.class.colnames}{A \emph{\code{Vector}} of \emph{strings}, the
-name(s) of the column(s) in the \code{event_durations} element of \code{data} to
-identify medication classes. Defaults to the columns used in \code{compute_event_durations}.}
 
 \item{days.before}{an \emph{integer}, the number of days before the start of a special period
 within which an event duration must end to consider the special period as covered.}
@@ -102,12 +101,13 @@ event_durations <- prune_event_durations(event_durations_list,
                                          keep.all = TRUE)
 
 # cover special periods
+special_periods <- event_durations_list$special_periods
 event_durations_covered <- cover_special_periods(events.data = event_durations,
-                                                 special.periods.data = event_durations_list$special_periods,
+                                                 special.periods.data = special_periods,
                                                  ID.colname = "ID",
+                                                 medication.class.colnames = "ATC.CODE",
                                                  disp.start.colname = "DISP.START",
                                                  duration.colname = "DURATION",
-                                                 medication.class.colnames = "ATC.CODE",
                                                  days.before = 7,
                                                  days.after = 7,
                                                  date.format = "\%Y-\%m-\%d")

@@ -5,8 +5,8 @@
 \title{Computation of event durations.}
 \usage{
 compute_event_durations(disp.data = NULL, presc.data = NULL,
-  special.periods.data = NULL, ID.colname, presc.date.colname,
-  disp.date.colname, medication.class.colnames, total.dose.colname,
+  special.periods.data = NULL, ID.colname, medication.class.colnames,
+  disp.date.colname, total.dose.colname, presc.date.colname,
   presc.daily.dose.colname, presc.duration.colname, visit.colname,
   split.on.dosage.change = TRUE, force.init.presc = FALSE,
   force.presc.renew = FALSE, trt.interruption = c("continue",
@@ -38,21 +38,21 @@ customized instructions how to handle a specific period (see
 \item{ID.colname}{A \emph{string}, the name of the column in \code{disp.data},
 \code{presc.data}, and \code{special.periods.data} containing the unique patient ID.}
 
-\item{presc.date.colname}{A \emph{string}, the name of the column in
-\code{presc.data} containing the prescription date (in the format given in
-the \code{date.format} parameter).}
+\item{medication.class.colnames}{A \emph{\code{Vector}} of \emph{strings}, the
+name(s) of the column(s) in \code{disp.data} and \code{presc.data} containing
+the classes/types/groups of medication.}
 
 \item{disp.date.colname}{A \emph{string}, the name of the column in
 \code{disp.data} containing the dispensing date (in the format given in
 the \code{date.format} parameter).}
 
-\item{medication.class.colnames}{A \emph{\code{Vector}} of \emph{strings}, the
-name(s) of the column(s) in \code{disp.data} and \code{presc.data} containing
-the classes/types/groups of medication.}
-
 \item{total.dose.colname}{A \emph{string}, the name of the column in
 \code{disp.data} containing the total dispensed dose as \code{numeric} (e.g.
 \code{500} for 10 tablets of 50 mg).}
+
+\item{presc.date.colname}{A \emph{string}, the name of the column in
+\code{presc.data} containing the prescription date (in the format given in
+the \code{date.format} parameter).}
 
 \item{presc.daily.dose.colname}{A \emph{string}, the name of the column in
 \code{presc.data} containing the daily prescribed dose as \code{numeric} (e.g.
@@ -121,10 +121,10 @@ A \code{list} with the following elements:
    \itemize{
      \item \code{ID.colname} the unique patient ID, as given by the \code{ID.colname}
      parameter.
-     \item \code{disp.date.colname} the date of the dispensing event, as given by
-     the \code{disp.date.colnema} parameter.
      \item \code{medication.class.colnames} the column(s) with classes/types/groups
      of medication, as given by the \code{medication.class.colnames} parameter.
+     \item \code{disp.date.colname} the date of the dispensing event, as given by
+     the \code{disp.date.colnema} parameter.
      \item \code{total.dose.colname} the total dispensed dose, as given by the
      \code{total.dose.colname} parameter.
      \item \code{presc.daily.dose.colname} the prescribed daily dose, as given by
@@ -147,7 +147,7 @@ A \code{list} with the following elements:
      \item \code{tot.dosage.changes} the total number of dosage changes per patient
      for a specific medication.
      }
- \item \code{prescription_episodes}: A code{data.table} or code{data.frame} with the following columns:
+ \item \code{prescription_episodes}: A \code{data.table} or \code{data.frame} with the following columns:
    \itemize{
      \item \code{ID.colname}: the unique patient ID, as given by the \code{ID.colname} parameter.
      \item \code{medication.class.colnames}:  the column(s) with classes/types/groups of medication,
@@ -158,7 +158,7 @@ A \code{list} with the following elements:
      \item \code{episode.duration}: the duration of the prescription episode in days.
      \item \code{episode.end}: the end date of the prescription episode.
      }
- \item \code{special_periods}: A code{data.table} or code{data.frame}, the \code{special.periods.data}
+ \item \code{special_periods}: A \code{data.table} or \code{data.frame}, the \code{special.periods.data}
   with an additional column \code{SPECIAL.DURATION}: the number of days
   between \code{DATE.IN} and \code{DATE.OUT}
 \item \code{ID.colname} the name of the columns containing
@@ -199,9 +199,9 @@ by the \code{trt.interruption} parameter.
 }
 }
 \description{
-Computes event durations based on dispensing, prescription, and hospitalization
-data and returns a \code{data.frame} which can be used with the CMA constructors
-in \code{AdhereR}.
+Computes event durations based on dispensing, prescription, and other data (e.g.
+hospitalization data) and returns a \code{data.frame} which can be used with the
+CMA constructors in \code{AdhereR}.
 }
 \details{
 Computation of CMAs requires a supply duration for medications dispensed to

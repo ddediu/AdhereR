@@ -125,9 +125,9 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 
 #' Computation of event durations.
 #'
-#' Computes event durations based on dispensing, prescription, and hospitalization
-#' data and returns a \code{data.frame} which can be used with the CMA constructors
-#' in \code{AdhereR}.
+#' Computes event durations based on dispensing, prescription, and other data (e.g.
+#' hospitalization data) and returns a \code{data.frame} which can be used with the
+#' CMA constructors in \code{AdhereR}.
 #'
 #' Computation of CMAs requires a supply duration for medications dispensed to
 #' patients. If medications are not supplied for fixed durations but as a quantity
@@ -223,10 +223,10 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #'    \itemize{
 #'      \item \code{ID.colname} the unique patient ID, as given by the \code{ID.colname}
 #'      parameter.
-#'      \item \code{disp.date.colname} the date of the dispensing event, as given by
-#'      the \code{disp.date.colnema} parameter.
 #'      \item \code{medication.class.colnames} the column(s) with classes/types/groups
 #'      of medication, as given by the \code{medication.class.colnames} parameter.
+#'      \item \code{disp.date.colname} the date of the dispensing event, as given by
+#'      the \code{disp.date.colnema} parameter.
 #'      \item \code{total.dose.colname} the total dispensed dose, as given by the
 #'      \code{total.dose.colname} parameter.
 #'      \item \code{presc.daily.dose.colname} the prescribed daily dose, as given by
@@ -249,7 +249,7 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #'      \item \code{tot.dosage.changes} the total number of dosage changes per patient
 #'      for a specific medication.
 #'      }
-#'  \item \code{prescription_episodes}: A code{data.table} or code{data.frame} with the following columns:
+#'  \item \code{prescription_episodes}: A \code{data.table} or \code{data.frame} with the following columns:
 #'    \itemize{
 #'      \item \code{ID.colname}: the unique patient ID, as given by the \code{ID.colname} parameter.
 #'      \item \code{medication.class.colnames}:  the column(s) with classes/types/groups of medication,
@@ -260,7 +260,7 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #'      \item \code{episode.duration}: the duration of the prescription episode in days.
 #'      \item \code{episode.end}: the end date of the prescription episode.
 #'      }
-#'  \item \code{special_periods}: A code{data.table} or code{data.frame}, the \code{special.periods.data}
+#'  \item \code{special_periods}: A \code{data.table} or \code{data.frame}, the \code{special.periods.data}
 #'   with an additional column \code{SPECIAL.DURATION}: the number of days
 #'   between \code{DATE.IN} and \code{DATE.OUT}
 #' \item \code{ID.colname} the name of the columns containing
@@ -325,10 +325,10 @@ compute_event_durations <- function(disp.data = NULL,
                                     presc.data = NULL,
                                     special.periods.data = NULL,
                                     ID.colname,
-                                    presc.date.colname,
-                                    disp.date.colname,
                                     medication.class.colnames,
+                                    disp.date.colname,
                                     total.dose.colname,
+                                    presc.date.colname,
                                     presc.daily.dose.colname,
                                     presc.duration.colname,
                                     visit.colname,
@@ -1418,8 +1418,8 @@ if(progress.bar == TRUE)  close(pb)
   opt_cols <- opt_cols[opt_cols %in% names(events_output_durations)]
 
   colorder <- c(ID.colname,
-                disp.date.colname,
                 medication.class.colnames,
+                disp.date.colname,
                 total.dose.colname,
                 presc.daily.dose.colname,
                 "DISP.START",
@@ -1466,7 +1466,7 @@ if(progress.bar == TRUE)  close(pb)
 #' their previous supply. Likewise, it may also lead to overestimation of persistence, e.g. when
 #' patients discontinue treatments after the end of a special period or treatment interruption.
 #'
-#' @param data A \emph{\code{list}}, the output of `compute_event_durations`.
+#' @param data A \emph{\code{list}}, the output of \code{compute_event_durations}.
 #' @param include A \emph{\code{Vector}} of \emph{strings} indicating whether to include
 #' dosage changes, special periods, and/or treatment interruptions.
 #' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
@@ -1491,9 +1491,11 @@ if(progress.bar == TRUE)  close(pb)
 #' @return A \code{data.frame} or \code{data.table}, the pruned event_durations.
 #' @examples
 #' # select medication class of interest and compute event durations
+#'
 #' disp_data <- durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)]
 #' presc_data <- durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)]
 #'
+#' # compute event durations
 #' event_durations_list <- compute_event_durations(disp.data = disp_data,
 #'                                                 presc.data = presc_data,
 #'                                                 special.periods.data = durcomp.hospitalisation,
@@ -1517,6 +1519,7 @@ if(progress.bar == TRUE)  close(pb)
 #'                                                 return.data.table = TRUE,
 #'                                                 progress.bar = FALSE)
 #'
+#' # prune event durations
 #' event_durations <- prune_event_durations(event_durations_list,
 #'                                          include = c("special periods"),
 #'                                          medication.class.colnames = "ATC.CODE",
@@ -1790,16 +1793,15 @@ prune_event_durations <- function(data,
 #' where medication use may differ, e.g. during incarcerations or holidays). Must contain the same unique
 #' patient ID as dispensing and prescription data, the start and end dates of the special
 #' periods with the exact column names \emph{\code{DATE.IN}} and \emph{\code{DATE.OUT}}.
-#' @param ID.colname A \emph{string}, the name of the column in \code{disp.data},
-#' \code{presc.data}, and \code{special.periods.data} containing the unique patient ID.
+#' @param ID.colname A \emph{string}, the name of the column in \code{events.data} and
+#' \code{special.periods.data} containing the unique patient ID.
+#' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
+#' name(s) of the column(s) in the \code{events.data} identify medication classes.
 #' @param disp.start.colname A \emph{string}, the name of the column in
 #' \code{events.data} containing the event start date (in the format given in
 #' the \code{date.format} parameter).
 #' @param duration.colname A \emph{string}, the name of the column in
 #' \code{events.data} containing the duration of the medication event.
-#' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
-#' name(s) of the column(s) in the \code{event_durations} element of \code{data} to
-#' identify medication classes. Defaults to the columns used in \code{compute_event_durations}.
 #' @param days.before an \emph{integer}, the number of days before the start of a special period
 #' within which an event duration must end to consider the special period as covered.
 #' @param days.after an \emph{integer}, the number of days after a special period within
@@ -1851,12 +1853,13 @@ prune_event_durations <- function(data,
 #'                                          keep.all = TRUE)
 #'
 #' # cover special periods
+#' special_periods <- event_durations_list$special_periods
 #' event_durations_covered <- cover_special_periods(events.data = event_durations,
-#'                                                  special.periods.data = event_durations_list$special_periods,
+#'                                                  special.periods.data = special_periods,
 #'                                                  ID.colname = "ID",
+#'                                                  medication.class.colnames = "ATC.CODE",
 #'                                                  disp.start.colname = "DISP.START",
 #'                                                  duration.colname = "DURATION",
-#'                                                  medication.class.colnames = "ATC.CODE",
 #'                                                  days.before = 7,
 #'                                                  days.after = 7,
 #'                                                  date.format = "%Y-%m-%d")
@@ -1864,9 +1867,9 @@ prune_event_durations <- function(data,
 cover_special_periods <- function(events.data,
                                   special.periods.data,
                                   ID.colname,
+                                  medication.class.colnames,
                                   disp.start.colname,
                                   duration.colname,
-                                  medication.class.colnames,
                                   days.before,
                                   days.after,
                                   date.format,
@@ -2065,6 +2068,9 @@ cover_special_periods <- function(events.data,
 #' in the \emph{\code{medication.class.colnames}} parameter).
 #' @param ID.colname A \emph{string}, the name of the column in \code{presc.data}
 #' and \code{disp.data} containing the unique patient ID, or \code{NA} if not defined.
+#' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
+#' name(s) of the column(s) in \code{data} containing the classes/types/groups of
+#' medication, or \code{NA} if not defined.
 #' @param presc.start.colname A \emph{string}, the name of the column in
 #' \code{presc.data} containing the prescription date (in the format given in
 #' the \code{date.format} parameter), or \code{NA} if not defined.
@@ -2075,9 +2081,6 @@ cover_special_periods <- function(events.data,
 #' the \code{data} and the other parameters; see the \code{format} parameters
 #' of the \code{\link[base]{as.Date}} function for details (NB, this concerns
 #' only the dates given as strings and not as \code{Date} objects).
-#' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
-#' name(s) of the column(s) in \code{data} containing the classes/types/groups of
-#' medication, or \code{NA} if not defined.
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
 #' @param return.data.table \emph{Logical}, if \code{TRUE} return a
@@ -2098,9 +2101,9 @@ cover_special_periods <- function(events.data,
 #' time_init <- time_to_initiation(presc.data = durcomp.prescribing,
 #'                                 disp.data = durcomp.dispensing,
 #'                                 ID.colname = "ID",
+#'                                 medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
 #'                                 presc.start.colname = "DATE.PRESC",
 #'                                 disp.date.colname = "DATE.DISP",
-#'                                 medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
 #'                                 date.format = "%Y-%m-%d",
 #'                                 suppress.warnings = FALSE,
 #'                                 return.data.table = TRUE);
@@ -2108,9 +2111,9 @@ cover_special_periods <- function(events.data,
 time_to_initiation <- function(presc.data = NULL,
                                disp.data = NULL,
                                ID.colname = NA,
+                               medication.class.colnames = NA,
                                presc.start.colname = NA,
                                disp.date.colname = NA,
-                               medication.class.colnames = NA,
                                date.format = "%d.%m.%Y",
                                suppress.warnings = FALSE,
                                return.data.table = FALSE,

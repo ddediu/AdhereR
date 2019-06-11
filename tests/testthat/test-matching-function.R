@@ -56,10 +56,10 @@ test_that("output format is correct", {
 
   expect_is(test_results, "data.table") # is a data.table
   expect_equal(names(test_results), c("ID",
-                                      "DATE.DISP",
                                       "ATC.CODE",
                                       "UNIT",
                                       "FORM",
+                                      "DATE.DISP",
                                       "TOTAL.DOSE",
                                       "DAILY.DOSE",
                                       "DISP.START",
@@ -489,9 +489,10 @@ test_that("output format for prune_event_durations is correct", {
                                         medication.class.colnames = "ATC.CODE",
                                         days.within.out.date.1 = 7, # flag carryover durations if there are new events within 7 days after the end of special periods
                                         days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods
-                                        keep.all = TRUE)
+                                        keep.all = TRUE,
+                                        return.data.table = FALSE)
 
-  expect_is(test_results, "data.table") # is a data.table
+  expect_is(test_results, "data.frame") # is a data.frame
   expect_equal(names(test_results), c("ID",
                                       "DATE.DISP",
                                       "ATC.CODE",
@@ -697,14 +698,15 @@ test_that("output format for cover_special_periods is correct", {
                                         medication.class.colnames = "ATC.CODE",
                                         days.before = 7,
                                         days.after = 7,
-                                        date.format = "%Y-%m-%d")
+                                        date.format = "%Y-%m-%d",
+                                        return.data.table = FALSE)
 
-  expect_is(test_results, "data.table") # is a data.table
+  expect_is(test_results, "data.frame") # is a data.table
   expect_equal(names(test_results), c("ID",
-                                      "DATE.DISP",
                                       "ATC.CODE",
                                       "UNIT",
                                       "FORM",
+                                      "DATE.DISP",
                                       "TOTAL.DOSE",
                                       "DAILY.DOSE",
                                       "DISP.START",

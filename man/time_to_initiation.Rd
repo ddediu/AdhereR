@@ -5,9 +5,10 @@
 \title{Computation of initiation times.}
 \usage{
 time_to_initiation(presc.data = NULL, disp.data = NULL,
-  ID.colname = NA, presc.start.colname = NA, disp.date.colname = NA,
-  medication.class.colnames = NA, date.format = "\%d.\%m.\%Y",
-  suppress.warnings = FALSE, return.data.table = FALSE, ...)
+  ID.colname = NA, medication.class.colnames = NA,
+  presc.start.colname = NA, disp.date.colname = NA,
+  date.format = "\%d.\%m.\%Y", suppress.warnings = FALSE,
+  return.data.table = FALSE, ...)
 }
 \arguments{
 \item{presc.data}{A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
@@ -25,6 +26,10 @@ in the \emph{\code{medication.class.colnames}} parameter).}
 \item{ID.colname}{A \emph{string}, the name of the column in \code{presc.data}
 and \code{disp.data} containing the unique patient ID, or \code{NA} if not defined.}
 
+\item{medication.class.colnames}{A \emph{\code{Vector}} of \emph{strings}, the
+name(s) of the column(s) in \code{data} containing the classes/types/groups of
+medication, or \code{NA} if not defined.}
+
 \item{presc.start.colname}{A \emph{string}, the name of the column in
 \code{presc.data} containing the prescription date (in the format given in
 the \code{date.format} parameter), or \code{NA} if not defined.}
@@ -32,10 +37,6 @@ the \code{date.format} parameter), or \code{NA} if not defined.}
 \item{disp.date.colname}{A \emph{string}, the name of the column in
 \code{disp.data} containing the dispensing date (in the format given in
 the \code{date.format} parameter), or \code{NA} if not defined.}
-
-\item{medication.class.colnames}{A \emph{\code{Vector}} of \emph{strings}, the
-name(s) of the column(s) in \code{data} containing the classes/types/groups of
-medication, or \code{NA} if not defined.}
 
 \item{date.format}{A \emph{string} giving the format of the dates used in
 the \code{data} and the other parameters; see the \code{format} parameters
@@ -80,9 +81,9 @@ into account multiple variables to differentiate between treatments.
 time_init <- time_to_initiation(presc.data = durcomp.prescribing,
                                 disp.data = durcomp.dispensing,
                                 ID.colname = "ID",
+                                medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
                                 presc.start.colname = "DATE.PRESC",
                                 disp.date.colname = "DATE.DISP",
-                                medication.class.colnames = c("ATC.CODE", "FORM", "UNIT"),
                                 date.format = "\%Y-\%m-\%d",
                                 suppress.warnings = FALSE,
                                 return.data.table = TRUE);
