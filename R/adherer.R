@@ -7665,7 +7665,9 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                           return.data.table=TRUE);
 
       episode.gap.days <- data.epi2[which(.EVENT.WITHIN.FU.WINDOW), c(ID.colname, "episode.ID", gap.days.colname), by = c(ID.colname, "episode.ID"), with = FALSE]; # gap days during the follow-up window
-      end.episode.gap.days <- episode.gap.days[,c("end.episode.gap.days") := list(last(get(gap.days.colname))), by = c(ID.colname, "episode.ID")]; # gap days during the last event
+      end.episode.gap.days <- episode.gap.days[,last(get(gap.days.colname)), by = c(ID.colname, "episode.ID")]; # gap days during the last event
+
+      setnames(end.episode.gap.days, old = "V1", new = "end.episode.gap.days")
 
       treat.epi <- merge(treat.epi, end.episode.gap.days, all.x = TRUE, by = c(ID.colname, "episode.ID")); # merge end.episode.gap.days back to data.epi
 
