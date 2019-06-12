@@ -4,7 +4,7 @@
 \alias{CMA_per_episode}
 \title{CMA_per_episode constructor.}
 \usage{
-CMA_per_episode(CMA.to.apply, data, ID.colname = NA,
+CMA_per_episode(CMA.to.apply, data, treat.epi = NULL, ID.colname = NA,
   event.date.colname = NA, event.duration.colname = NA,
   event.daily.dose.colname = NA, medication.class.colname = NA,
   carry.only.for.same.medication = NA, consider.dosage.change = NA,
@@ -37,6 +37,12 @@ dispensing) used to compute the CMA. Must contain, at a minimum, the patient
 unique ID, the event date and duration, and might also contain the daily
 dosage and medication type (the actual column names are defined in the
 following four parameters).}
+
+\item{treat.epi}{A \emph{\code{data.frame}} containing the treatment episodes.
+Must contain the patient ID (as given in \code{ID.colname}), the episode unique ID
+(increasing sequentially, \code{episode.ID}), the episode start date
+(\code{episode.start}), the episode duration in days (\code{episode.duration}),
+and the episode end date (\code{episode.end}).}
 
 \item{ID.colname}{A \emph{string}, the name of the column in \code{data}
 containing the unique patient ID; must be present.}

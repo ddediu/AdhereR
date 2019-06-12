@@ -21,6 +21,7 @@
 
 
 #library(shiny)
+#' @import AdhereR
 #' @import shiny
 #' @import colourpicker
 #' @import viridisLite
@@ -67,49 +68,6 @@ point.types <- c("plus"=3,
                  "two triangles"=11);
 
 
-if( is.null(.GlobalEnv$.plotting.params) )
-{
-  # Ok, seem we've been launched directly as a "normal" Shiny app:
-  # make sure things are set to the their default in the .plotting.params global list:
-  .GlobalEnv$.plotting.params <- list("data"=NULL,
-                                      "cma.class"="simple",
-                                      "ID.colname"=NA,
-                                      "event.date.colname"=NA,
-                                      "event.duration.colname"=NA,
-                                      "event.daily.dose.colname"=NA,
-                                      "medication.class.colname"=NA,
-                                      "date.format"=NA,
-                                      "align.all.patients"=FALSE,
-                                      "align.first.event.at.zero"=FALSE,
-                                      "ID"="[not defined]", "all.IDs"=c("[not defined]"),
-                                      "max.number.patients.to.plot"=10, "max.number.events.to.plot"=500,
-                                      "max.number.patients.to.compute"=100, "max.number.events.to.compute"=5000, "max.running.time.in.minutes.to.compute"=5,
-                                      ".patients.to.compute"=NULL,
-                                      "print.full.params"=FALSE,
-                                      "get.colnames.fnc"=NULL,
-                                      "get.patients.fnc"=NULL,
-                                      "get.data.for.patients.fnc"=NULL,
-                                      ".plotting.fnc"=AdhereR:::.plotting.fnc.shiny,
-                                      ".dataset.type"=NA,
-                                      ".dataset.comes.from.function.arguments"=FALSE,
-                                      ".dataset.name"=NA,
-                                      ".inmemory.dataset"=NULL,
-                                      ".fromfile.dataset"=NULL,
-                                      ".fromfile.dataset.filetype"=NULL,
-                                      ".fromfile.dataset.header"=NULL,
-                                      ".fromfile.dataset.sep"=NULL,
-                                      ".fromfile.dataset.quote"=NULL,
-                                      ".fromfile.dataset.dec"=NULL,
-                                      ".fromfile.dataset.strip.white"=NULL,
-                                      ".fromfile.dataset.na.strings"=NULL,
-                                      ".fromfile.dataset.sheet"=NULL,
-                                      ".db.connection.tables"=NULL,
-                                      ".db.connection.selected.table"=NULL,
-                                      ".db.connection"=NULL
-  );
-}
-
-
 # Define UI for app that draws a histogram ----
 ui <- fluidPage(
 
@@ -144,7 +102,8 @@ ui <- fluidPage(
     column(3,
 
            # PARAMS TAB ----
-           tabsetPanel(id="sidebar-tabpanel",
+           shinyjs::hidden(div(id="sidebar_tabpanel_container", # start with these hidden...
+             tabsetPanel(id="sidebar-tabpanel",
                        tabPanel("Params", value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
                                 conditionalPanel(
                                   condition="!(output.is_dataset_defined)",
@@ -580,6 +539,26 @@ ui <- fluidPage(
                                                                                                    label="Plot CMA?",
                                                                                                    value=TRUE, status="primary", right=TRUE)),
 
+                                                                  conditionalPanel(
+                                                                    condition="input.cma_class != 'simple' && input.plot_cma",
+
+                                                                    div(title='Show the "partial" CMA estimates as stacked bars?',
+                                                                        shinyWidgets::materialSwitch(inputId="plot_cma_stacked",
+                                                                                                     label="... as stacked bars?",
+                                                                                                     value=TRUE, status="primary", right=TRUE)),
+
+                                                                    div(title='Show the "partial" CMA estimates as overlapping segments?',
+                                                                        shinyWidgets::materialSwitch(inputId="plot_cma_overlapping",
+                                                                                                     label="... as overlapping lines?",
+                                                                                                     value=FALSE, status="primary", right=TRUE)),
+
+                                                                    div(title='Show the "partial" CMA estimates as time series?',
+                                                                        shinyWidgets::materialSwitch(inputId="plot_cma_timeseries",
+                                                                                                     label="... as time series?",
+                                                                                                     value=FALSE, status="primary", right=TRUE))
+
+                                                                  ),
+
                                                                   hr()
                                               ))
                                             ),
@@ -1012,6 +991,27 @@ ui <- fluidPage(
                                                                   hr()
                                                                 ),
 
+                                                                # Axis labels & title
+                                                                div(title='Axis labels and title',
+                                                                    span(p("Axis labels and title"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                div(title='Show to main title?',
+                                                                    shinyWidgets::materialSwitch(inputId="show_plot_title",
+                                                                                                 label="Show title?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
+
+                                                                div(title='Show to x axis label?',
+                                                                    shinyWidgets::materialSwitch(inputId="show_xlab",
+                                                                                                 label="Show x label?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
+
+                                                                div(title='Show to y axis label?',
+                                                                    shinyWidgets::materialSwitch(inputId="show_ylab",
+                                                                                                 label="Show y label?",
+                                                                                                 value=TRUE, status="primary", right=TRUE)),
+                                                                hr(),
+
+
                                                                 # CMA estimate aesthetics:
                                                                 conditionalPanel(
                                                                   condition="(input.cma_class == 'per episode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
@@ -1059,7 +1059,155 @@ ui <- fluidPage(
                                                                       div(title='The color of the CMA plot text',
                                                                           colourpicker::colourInput(inputId="cma_plot_text",
                                                                                                     label="CMA text color",
-                                                                                                    value="darkgreen"))
+                                                                                                    value="darkgreen")),
+
+                                                                      conditionalPanel(
+                                                                        condition="input.cma_class != 'simple'",
+
+                                                                        conditionalPanel(
+                                                                          condition="input.plot_cma_timeseries",
+
+                                                                          hr(),
+
+                                                                          div(title='Plotting the "partial" CMAs as time series...',
+                                                                              span(p("Showing CMAs as time series"), style="color:RoyalBlue; font-weight: italic;")),
+
+                                                                          div(title='The vertical space (in text lines) taken by the time series plot of the "partial" CMAs',
+                                                                              numericInput(inputId="cma_as_timeseries_vspace",
+                                                                                           label="Time series vertical space",
+                                                                                           value=10, min=5, max=NA, step=1)),
+
+                                                                          div(title='Show the 0% mark?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_0perc",
+                                                                                                           label="Show 0% mark?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+
+                                                                          div(title='Show the 100% mark?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_100perc",
+                                                                                                           label="Show 100% mark?",
+                                                                                                           value=FALSE, status="primary", right=TRUE)),
+
+                                                                          div(title='Should the vertical axis of the time series plot start at 0 or at the minimum actually observed value?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_start_from_zero",
+                                                                                                           label="Start plot from 0?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+
+                                                                          div(title='Show time series values as points and lines?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_dots",
+                                                                                                           label="Show dots and lines?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+                                                                          conditionalPanel(
+                                                                            condition="input.cma_as_timeseries_show_dots",
+                                                                            div(title='The color of the time series dots and lines',
+                                                                                colourpicker::colourInput(inputId="cma_as_timeseries_color_dots",
+                                                                                                          label="Dots and lines color",
+                                                                                                          value="#422CD1"))), # dark blue
+
+                                                                          div(title='Show time series interval?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_interval",
+                                                                                                           label="Show intervals?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+
+                                                                          conditionalPanel(
+                                                                            condition="input.cma_as_timeseries_show_interval",
+
+                                                                            div(title='Which way to show the intervals?',
+                                                                                selectInput(inputId="cma_as_timeseries_show_interval_type",
+                                                                                            label="Show intervals as",
+                                                                                            choices=c("none", "segments", "arrows", "lines", "rectangles"),
+                                                                                            selected="segments")),
+
+                                                                            div(title='The color of the time series intervals',
+                                                                                colourpicker::colourInput(inputId="cma_as_timeseries_color_intervals",
+                                                                                                          label="Intervals color",
+                                                                                                          value="blue")),
+
+                                                                            conditionalPanel(
+                                                                              condition="input.cma_as_timeseries_show_interval_type == 'segments' || input.cma_as_timeseries_show_interval_type == 'arrows' || input.cma_as_timeseries_show_interval_type == 'lines'",
+                                                                              div(title='Line width',
+                                                                                  numericInput(inputId="cma_as_timeseries_lwd_intervals",
+                                                                                               label="Intervals line width",
+                                                                                               value=1.0, min=0.01, max=NA, step=0.25))),
+
+                                                                            conditionalPanel(
+                                                                              condition="input.cma_as_timeseries_show_interval_type == 'rectangles'",
+                                                                              div(title='Rectangle transparency (0=fully transparent to 1=fully opaque)',
+                                                                                  sliderInput(inputId="cma_as_timeseries_alpha_intervals",
+                                                                                              label="Intervals transparency",
+                                                                                              value=0.25, min=0.00, max=1.00, step=0.05)))
+                                                                          ),
+
+                                                                          div(title='Show time series text?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_text",
+                                                                                                           label="Show text values?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+
+                                                                          conditionalPanel(
+                                                                            condition="input.cma_as_timeseries_show_text",
+                                                                            div(title='The color of the time series text values',
+                                                                                colourpicker::colourInput(inputId="cma_as_timeseries_color_text",
+                                                                                                          label="Text values color",
+                                                                                                          value="firebrick")))
+
+                                                                        ),
+
+                                                                        conditionalPanel(
+                                                                          condition="input.plot_cma_overlapping",
+
+                                                                          hr(),
+
+                                                                          div(title='Plotting the "partial" CMAs as overlapping segments...',
+                                                                              span(p("Showing CMAs as overlapping segments"), style="color:RoyalBlue; font-weight: italic;")),
+
+                                                                          div(title='Show the overlapping intervals?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_overlapping_show_interval",
+                                                                                                           label="Show intervals?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+                                                                          conditionalPanel(
+                                                                            condition="input.cma_as_overlapping_show_interval",
+                                                                            div(title='The color of the overlapping intervals',
+                                                                                colourpicker::colourInput(inputId="cma_as_overlapping_color_intervals",
+                                                                                                          label="Intervals color",
+                                                                                                          value="gray70"))),
+
+                                                                          div(title='Show overlapping text?',
+                                                                              shinyWidgets::materialSwitch(inputId="cma_as_overlapping_show_text",
+                                                                                                           label="Show text values?",
+                                                                                                           value=TRUE, status="primary", right=TRUE)),
+                                                                          conditionalPanel(
+                                                                            condition="input.cma_as_overlapping_show_text",
+                                                                            div(title='The color of the overlapping text values',
+                                                                                colourpicker::colourInput(inputId="cma_as_overlapping_color_text",
+                                                                                                          label="Text values color",
+                                                                                                          value="firebrick")))
+
+                                                                        ),
+
+                                                                        conditionalPanel(
+                                                                          condition="input.plot_cma_stacked",
+
+                                                                          hr(),
+
+                                                                          div(title='Plotting the "partial" CMAs as stacked bars...',
+                                                                              span(p("Showing CMAs as stacked bars"), style="color:RoyalBlue; font-weight: italic;")),
+
+                                                                          div(title='The color of the bar',
+                                                                              colourpicker::colourInput(inputId="plot_partial_cmas_as_stacked_col_bars",
+                                                                                                        label="Bar color",
+                                                                                                        value="gray90")),
+
+                                                                          div(title='The color of the border',
+                                                                              colourpicker::colourInput(inputId="plot_partial_cmas_as_stacked_col_border",
+                                                                                                        label="Border color",
+                                                                                                        value="gray30")),
+                                                                          div(title='The color of the text',
+                                                                              colourpicker::colourInput(inputId="plot_partial_cmas_as_stacked_col_text",
+                                                                                                        label="text color",
+                                                                                                        value="black"))
+
+                                                                        )
+
+                                                                      )
                                                                     ),
 
                                                                     hr()
@@ -1078,12 +1226,12 @@ ui <- fluidPage(
                                                                 div(title='The minimum horizontal plot size (in characters, for the whole duration to plot)',
                                                                     numericInput(inputId="min_plot_size_in_characters_horiz",
                                                                                  label="Min plot size (horiz.)",
-                                                                                 value=10, min=0, max=NA, step=1.0)),
+                                                                                 value=0, min=0, max=NA, step=1.0)), # should be 10
 
                                                                 div(title='The minimum vertical plot size (in characters, per event)',
                                                                     numericInput(inputId="min_plot_size_in_characters_vert",
                                                                                  label="Min plot size (vert.)",
-                                                                                 value=0.5, min=0.0, max=NA, step=0.25))
+                                                                                 value=0.0, min=0.0, max=NA, step=0.25)) # should be 0.5
                                             )),
 
 
@@ -1261,7 +1409,7 @@ ui <- fluidPage(
 
                                             conditionalPanel(
                                               #condition="(typeof(input.dataset_from_file_filename) != 'undefined') && (input.dataset_from_file_filename != null)",
-                                              condition="(output.is_file_loaded)",
+                                              condition="(output.is_file_loaded == true)",
 
                                               div(title="Click here to peek at the selected dataset...",
                                                   actionButton("dataset_from_file_peek_button", label="Peek at file...", icon=icon("eye-open", lib="glyphicon"))),
@@ -1376,7 +1524,7 @@ ui <- fluidPage(
                                                 style="padding-bottom: 10px;"),
 
                                             conditionalPanel(
-                                              condition="(output.is_database_connected)",
+                                              condition="(output.is_database_connected == true)",
 
                                               div(title='Disconnect from datadase (not really necessary, as the disconnection is automatic when closing the application, but nice to do))',
                                                   actionButton(inputId="dataset_from_sql_button_disconnect",
@@ -1452,15 +1600,20 @@ ui <- fluidPage(
                                 )
                        )
 
-           )),
+           )))),
 
 
     # OUTPUT PANEL ----
     #mainPanel(
     column(9,
 
+           #shinyjs::hidden(checkboxInput(inputId="output_panel_container_show", label="", value=FALSE)),
+           shinyjs::hidden(div(id="output_panel_container", # start with these hidden...
+           #conditionalPanel(
+           #  condition="(input.output_panel_container_show == true)",
+
            conditionalPanel(
-             condition="(output.is_dataset_defined)",
+             condition="(output.is_dataset_defined == true)",
 
              # Plot dimensions ----
              column(3,
@@ -1695,7 +1848,7 @@ ui <- fluidPage(
                  span(" tab to select a valid datesource!")))
            )
 
-    )
+    )))#)
   )
 )
 
@@ -1703,9 +1856,62 @@ ui <- fluidPage(
 # The server logic ----
 server <- function(input, output, session)
 {
+  isolate({showModal(modalDialog("Adherer", title=div(icon("hourglass", lib="glyphicon"), "Please wait while initializing the App..."), easyClose=FALSE, footer=NULL))})
 
   # Reactive value to allow UI updating on dataset changes:
   rv <- reactiveValues(toggle.me = FALSE);
+
+  isolate(
+    {
+      # Initialisation for a directly-launched Shiny App or for a new session:
+      if( is.null(.GlobalEnv$.plotting.params) ||
+          (is.logical(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments) &&
+           !is.na(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments) &&
+           !.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments) )
+      {
+        # Ok, seem we've been launched directly as a "normal" Shiny app:
+        # make sure things are set to the their default in the .plotting.params global list:
+        .GlobalEnv$.plotting.params <- list("data"=NULL,
+                                            "cma.class"="simple",
+                                            "ID.colname"=NA,
+                                            "event.date.colname"=NA,
+                                            "event.duration.colname"=NA,
+                                            "event.daily.dose.colname"=NA,
+                                            "medication.class.colname"=NA,
+                                            "date.format"=NA,
+                                            "align.all.patients"=FALSE,
+                                            "align.first.event.at.zero"=FALSE,
+                                            "ID"="[not defined]", "all.IDs"=c("[not defined]"),
+                                            "max.number.patients.to.plot"=10, "max.number.events.to.plot"=500,
+                                            "max.number.patients.to.compute"=100, "max.number.events.to.compute"=5000, "max.running.time.in.minutes.to.compute"=5,
+                                            ".patients.to.compute"=NULL,
+                                            "print.full.params"=FALSE,
+                                            "get.colnames.fnc"=NULL,
+                                            "get.patients.fnc"=NULL,
+                                            "get.data.for.patients.fnc"=NULL,
+                                            ".plotting.fnc"=AdhereR:::.plotting.fnc.shiny,
+                                            ".dataset.type"=NA,
+                                            ".dataset.comes.from.function.arguments"=FALSE,
+                                            ".dataset.name"=NA,
+                                            ".inmemory.dataset"=NULL,
+                                            ".fromfile.dataset"=NULL,
+                                            ".fromfile.dataset.filetype"=NULL,
+                                            ".fromfile.dataset.header"=NULL,
+                                            ".fromfile.dataset.sep"=NULL,
+                                            ".fromfile.dataset.quote"=NULL,
+                                            ".fromfile.dataset.dec"=NULL,
+                                            ".fromfile.dataset.strip.white"=NULL,
+                                            ".fromfile.dataset.na.strings"=NULL,
+                                            ".fromfile.dataset.sheet"=NULL,
+                                            ".db.connection.tables"=NULL,
+                                            ".db.connection.selected.table"=NULL,
+                                            ".db.connection"=NULL
+        );
+
+        # Make sure the med.events data is loaded as well:
+        data("medevents", package="AdhereR");
+      }
+    })
 
   # Show/hide UI elements based on various conditions:
   output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)});
@@ -1717,13 +1923,29 @@ server <- function(input, output, session)
   output$is_database_connected <- reactive({!is.null(.GlobalEnv$.plotting.params$.db.connection)});
   outputOptions(output, "is_database_connected", suspendWhenHidden = FALSE);
 
-  output$is_dose_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
+  output$is_dose_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
   outputOptions(output, "is_dose_defined", suspendWhenHidden = FALSE);
 
-  output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
+  output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
   outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
   #outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
+
+  # Clean up stuff when session ended:
+  session$onSessionEnded(function()
+  {
+    # Disconnect any open database connections...
+    if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
+    {
+      try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
+    }
+
+    # Clean up stuff from the previous session:
+    .GlobalEnv$.plotting.params <- NULL;
+    collected.results <<- NULL;
+    cma.computation.progress.log.text <<- NULL;
+  })
+
 
   # The plotting function:
   .renderPlot <- function()
@@ -1833,6 +2055,24 @@ server <- function(input, output, session)
                                                          print.CMA=input$print_cma, CMA.cex=max(0.01,input$cma_cex),
                                                          plot.CMA=input$plot_cma, CMA.plot.ratio=input$cma_plot_ratio / 100.0,
                                                          CMA.plot.col=input$cma_plot_col, CMA.plot.border=input$cma_plot_border, CMA.plot.bkg=input$cma_plot_bkg, CMA.plot.text=input$cma_plot_text,
+                                                         plot.partial.CMAs.as=c(if(input$plot_cma_stacked){"stacked"}else{NULL},
+                                                                                if(input$plot_cma_overlapping){"overlapping"}else{NULL},
+                                                                                if(input$plot_cma_timeseries){"timeseries"}else{NULL}),
+                                                         plot.partial.CMAs.as.stacked.col.bars=input$plot_partial_cmas_as_stacked_col_bars,
+                                                         plot.partial.CMAs.as.stacked.col.border=input$plot_partial_cmas_as_stacked_col_border,
+                                                         plot.partial.CMAs.as.stacked.col.text=input$plot_partial_cmas_as_stacked_col_text,
+                                                         plot.partial.CMAs.as.timeseries.vspace=input$cma_as_timeseries_vspace,
+                                                         plot.partial.CMAs.as.timeseries.start.from.zero=input$cma_as_timeseries_start_from_zero,
+                                                         plot.partial.CMAs.as.timeseries.col.dot=if(!input$cma_as_timeseries_show_dots){NA}else{input$cma_as_timeseries_color_dots},
+                                                         plot.partial.CMAs.as.timeseries.interval.type=input$cma_as_timeseries_show_interval_type,
+                                                         plot.partial.CMAs.as.timeseries.lwd.interval=input$cma_as_timeseries_lwd_intervals,
+                                                         plot.partial.CMAs.as.timeseries.alpha.interval=input$cma_as_timeseries_alpha_intervals,
+                                                         plot.partial.CMAs.as.timeseries.col.interval=if(!input$cma_as_timeseries_show_interval){NA}else{input$cma_as_timeseries_color_intervals},
+                                                         plot.partial.CMAs.as.timeseries.col.text=if(!input$cma_as_timeseries_show_text){NA}else{input$cma_as_timeseries_color_text},
+                                                         plot.partial.CMAs.as.timeseries.show.0perc=input$cma_as_timeseries_show_0perc,
+                                                         plot.partial.CMAs.as.timeseries.show.100perc=input$cma_as_timeseries_show_100perc,
+                                                         plot.partial.CMAs.as.overlapping.col.interval=if(!input$cma_as_overlapping_show_interval){NA}else{input$cma_as_overlapping_color_intervals},
+                                                         plot.partial.CMAs.as.overlapping.col.text=if(!input$cma_as_overlapping_show_text){NA}else{input$cma_as_overlapping_color_text},
                                                          show.event.intervals=input$show_event_intervals,
                                                          print.dose=input$print_dose,
                                                          cex.dose=max(0.01,input$cex_dose),
@@ -1841,6 +2081,9 @@ server <- function(input, output, session)
                                                          plot.dose=input$plot_dose,
                                                          lwd.event.max.dose=input$lwd_event_max_dose,
                                                          plot.dose.lwd.across.medication.classes=input$plot_dose_lwd_across_medication_classes,
+                                                         xlab=if(input$show_xlab) {c("dates"="Date", "days"="Days")} else {NULL},
+                                                         ylab=if(input$show_ylab) {c("withoutCMA"="patient", "withCMA"="patient (& CMA)")} else {NULL},
+                                                         title=if(input$show_plot_title) {c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns")} else {NULL},
                                                          min.plot.size.in.characters.horiz=input$min_plot_size_in_characters_horiz,
                                                          min.plot.size.in.characters.vert=input$min_plot_size_in_characters_vert,
                                                          get.colnames.fnc=.GlobalEnv$.plotting.params$get.colnames.fnc,
@@ -1952,19 +2195,19 @@ server <- function(input, output, session)
       # The type of plot to save:
       if( input$save_plot_type == "png" )
       {
-        png(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution, type="cairo");
+        png(file, width=input$save_plot_width, height=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution, type="cairo");
       } else if( input$save_plot_type == "tiff" )
       {
-        tiff(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution, compression="zip", type="cairo");
+        tiff(file, width=input$save_plot_width, height=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution, compression="zip", type="cairo");
       } else if( input$save_plot_type == "eps" )
       {
-        cairo_ps(file, height=input$save_plot_width, width=input$save_plot_height, onefile=FALSE);
+        cairo_ps(file, width=input$save_plot_width, height=input$save_plot_height, onefile=FALSE);
       } else if( input$save_plot_type == "pdf" )
       {
-        cairo_pdf(file, height=input$save_plot_width, width=input$save_plot_height, onefile=FALSE);
+        cairo_pdf(file, width=input$save_plot_width, height=input$save_plot_height, onefile=FALSE);
       } else # default to JPEG
       {
-        jpeg(file, height=input$save_plot_width, width=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution);
+        jpeg(file, width=input$save_plot_width, height=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution);
       }
 
       # Plot it:
@@ -2020,6 +2263,7 @@ server <- function(input, output, session)
 
 
   # Show r code:
+  r_code <- ""; # must be global because we need to access it form other functions as well (and it's not a big object anyway)
   observeEvent(input$show_r_code,
   {
     if( is.na(.GlobalEnv$.plotting.params$.dataset.type) )
@@ -2103,9 +2347,9 @@ server <- function(input, output, session)
                                                                       paste0("DATA <- haven::read_sas(\"",.GlobalEnv$.plotting.params$.dataset.name,"\");\n"),
                                                                     "Stata (.dta)"=
                                                                       paste0("DATA <- haven::read_stata(\"",.GlobalEnv$.plotting.params$.dataset.name,"\");\n"),
-                                                                    "NULL; # please make sure you load this file manually!!!"),
+                                                                    "NULL; # please make sure you load this file manually!!!\n"),
                                                              "\n"),
-                                       "SQL database"=paste0("# a connection to the SQL database '",.GlobalEnv$.plotting.params$.dataset.name,"'")),
+                                       "SQL database"=paste0("a connection to the SQL database\n# '",.GlobalEnv$.plotting.params$.dataset.name,"'\n")),
                         "");
       r_code <<- paste0(r_code, "# These data has ", length(.GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)), " columns, ",
                                 "and contains info for ", length(unique(.GlobalEnv$.plotting.params$get.patients.fnc(.GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname))), " patients.\n");
@@ -2717,13 +2961,13 @@ server <- function(input, output, session)
 
     # Even more complex check: try to compute CMA0 on the first patient:
     test.cma <- NULL;
-    test.res <- tryCatch(test.cma <- CMA0(data=get.data.for.patients.fnc(all.IDs[1], d, ID.colname),
-                                          ID.colname=ID.colname,
-                                          event.date.colname=event.date.colname,
-                                          event.duration.colname=event.duration.colname,
-                                          event.daily.dose.colname=event.daily.dose.colname,
-                                          medication.class.colname=medication.class.colname,
-                                          date.format=date.format),
+    test.res <- tryCatch(test.cma <- AdhereR::CMA0(data=get.data.for.patients.fnc(all.IDs[1], d, ID.colname),
+                                                   ID.colname=ID.colname,
+                                                   event.date.colname=event.date.colname,
+                                                   event.duration.colname=event.duration.colname,
+                                                   event.daily.dose.colname=event.daily.dose.colname,
+                                                   medication.class.colname=medication.class.colname,
+                                                   date.format=date.format),
                          error=function(e) e, warning=function(w) w);
     if( is.null(test.cma) || inherits(test.res, "error") )
     {
@@ -2819,8 +3063,8 @@ server <- function(input, output, session)
     updateSelectInput(session, "compute_cma_patient_by_id", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$all.IDs[1]);
 
     #if( is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname) ) shinyjs::hide(id="dose_is_defined") else shinyjs::show(id="dose_is_defined");
-    output$is_dose_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
-    output$is_treat_class_defined <- reactive({!is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
+    output$is_dose_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
+    output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
 
     rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not change any UI elements)
     output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)}); # now a dataset is defined!
@@ -3247,7 +3491,7 @@ server <- function(input, output, session)
         }
 
         # Put the data in:
-        tmp <- med.events; tmp$DATE <- as.character(as.Date(tmp$DATE,format="%m/%d/%Y"),format="%Y-%m-%d"); # make sure the dates are in the YYYY-MM-DD SQL format
+        tmp <- AdhereR::med.events; tmp$DATE <- as.character(as.Date(tmp$DATE,format="%m/%d/%Y"),format="%Y-%m-%d"); # make sure the dates are in the YYYY-MM-DD SQL format
         res <- tryCatch(DBI::dbWriteTable(d, "med_events", tmp, overwrite=TRUE),
                         error=function(e) e, warning=function(w) w);
         if( is.null(d) || inherits(res, "error") )
@@ -3721,6 +3965,10 @@ server <- function(input, output, session)
   # Update the patient IDs table:
   .update.patients.IDs.table <- function(reset.slider=TRUE)
   {
+    if( is.null(.GlobalEnv$.plotting.params$all.IDs) || length(.GlobalEnv$.plotting.params$all.IDs) < 1 )
+    {
+      .GlobalEnv$.plotting.params$all.IDs <- c("[not defined]");
+    }
     tmp <- data.frame("#"=  1:length(.GlobalEnv$.plotting.params$all.IDs),
                       "ID"= if( input$compute_cma_patient_by_group_sorting == "by ID (↑)" )
                       {
@@ -4193,32 +4441,20 @@ server <- function(input, output, session)
       }
     }
   )
+
+  # Make sure the UI is properly updated for ech new session:
+  isolate(
+  {
+    .force.update.UI();
+    removeModal();
+    shinyjs::show(id="sidebar_tabpanel_container");
+    #updateCheckboxInput(session, inputId="output_panel_container_show", value=TRUE);
+    shinyjs::show(id="output_panel_container");
+  })
+
 }
 
 
 # call shiny
-shinyApp(ui=ui,
-         server=server,
-         onStart=function() # thing to do on start-up:
-         {
-
-           # Such as setting-up things for the end :)
-           onStop(function()
-           {
-             # Disconnect any open database connections...
-             if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
-             {
-               try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
-             }
-
-             # Clean the .GlobalEnv$.plotting.params object:
-             if( !is.null(.GlobalEnv$.plotting.params) )
-             {
-               .GlobalEnv$.plotting.params <- NULL;
-               collected.results <<- NULL;
-               cma.computation.progress.log.text <<- NULL;
-             }
-           })
-         }
-)
+shinyApp(ui=ui, server=server);
 
