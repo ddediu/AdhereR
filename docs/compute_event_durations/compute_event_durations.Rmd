@@ -24,15 +24,17 @@ editor_options:
 library(AdhereR)
 library(data.table)
 
-source("../../R/matching_function.R")
-
 # Various Rmarkdown output options:
 # center figures and reduce their file size:
 knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg") 
 ```
 
 ```{css, echo = FALSE}
-.ba-slider{position:relative;overflow:hidden}.ba-slider img{width:100%;display:block;max-width:none}.ba-slider .resize{position:absolute;top:0;left:0;height:100%;width:50%;overflow:hidden}.ba-slider .handle{position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:rgba(0,0,0,.5);cursor:ew-resize}.ba-slider .handle:after{position:absolute;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;content:'\21d4';color:#fff;font-weight:700;font-size:36px;text-align:center;line-height:64px;background:#ffb800;border:1px solid #e6a600;border-radius:50%;transition:all .3s ease;box-shadow:0 2px 6px rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.5),inset 0 60px 50px -30px #ffd466}.ba-slider .handle.ba-draggable:after{width:48px;height:48px;margin:-24px 0 0 -24px;line-height:50px;font-size:30px}
+.ba-slider{position:relative;overflow:hidden}
+.ba-slider img{width:100%;display:block;max-width:none}
+.ba-slider .resize{position:absolute;top:0;left:0;height:100%;width:50%;overflow:hidden}
+.ba-slider .handle{position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:rgba(0,0,0,.5);cursor:ew-resize}
+.ba-slider .handle:after{position:absolute;top:50%;width:64px;height:64px;margin:-32px 0 0 -32px;content:'\21d4';color:#fff;font-weight:700;font-size:36px;text-align:center;line-height:64px;background:#ffb800;border:1px solid #e6a600;border-radius:50%;transition:all .3s ease;box-shadow:0 2px 6px rgba(0,0,0,.3),inset 0 2px 0 rgba(255,255,255,.5),inset 0 60px 50px -30px #ffd466}.ba-slider .handle.ba-draggable:after{width:48px;height:48px;margin:-24px 0 0 -24px;line-height:50px;font-size:30px}
 ```
 
 ## Introduction
@@ -362,7 +364,7 @@ event_durations <- event_durations_list$event_durations
 
 first_presc <- min(durcomp.prescribing[ID == 14 & grepl("R03AC", ATC.CODE)]$DATE.PRESC)
 
-first_presc_plot <- 73+as.numeric(first_presc-as.Date("2056-07-31"))
+first_presc_plot <- (72+as.numeric(first_presc-as.Date("2056-07-31"))+5)/(2*365+10+72)
 
 cma7 <- CMA7(event_durations[DURATION > 0],
              ID.colname = "ID",
@@ -377,9 +379,10 @@ cma7 <- CMA7(event_durations[DURATION > 0],
              observation.window.duration = 365)
 
 plot(cma7, min.plot.size.in.characters.vert = 0, show.period = "dates", highlight.followup.window = FALSE)
+# just for illustration, no reliable solution for plotting
 abline(v = first_presc_plot )
-points(x = first_presc_plot , y = nrow(event_durations[DURATION > 0]), pch = 25, bg = "black")
-text(x = first_presc_plot+1 , nrow(event_durations[DURATION > 0]), "First prescription", pos = 4)
+points(x = first_presc_plot , y = 0.99, pch = 25, bg = "black")
+text(x = first_presc_plot+0.005 , 0.95, "First prescription", pos = 4)
 ```
 
 #### Force prescription renewal
@@ -449,16 +452,17 @@ event_durations[,I := .I]
 # plot CMA0
 plot(cma0, min.plot.size.in.characters.vert = 0, show.legend = FALSE, show.period = "dates", highlight.followup.window = FALSE, highlight.observation.window = FALSE)
 # add treatment episodes
+# just for illustration, no reliable solution for plotting
 for(i in 1:nrow(TEs)){
-  bottom = head(event_durations[,I],1)
-  top = tail(event_durations[,I],1)
-  start = as.numeric(TEs[i, "episode.start"]-head(TEs[,"episode.start"],1)) + 26
-  end = as.numeric(TEs[i, "episode.end"]-head(TEs[, "episode.start"],1)) + 26
-  offset = min(TEs[["episode.start"]], na.rm = TRUE)-min(event_durations[["DISP.START"]], na.rm = TRUE)
+  bottom = 0
+  top = 1
+  start = (as.numeric(TEs[i, "episode.start"]-head(TEs[,"episode.start"],1)) + 26+5)/375
+  end = (as.numeric(TEs[i, "episode.end"]-head(TEs[, "episode.start"],1)) + 26+5)/375
+  offset = 0#(min(TEs[["episode.start"]], na.rm = TRUE)-min(event_durations[["DISP.START"]], na.rm = TRUE)+5+26)/375
 
-  rect(xleft=start+offset, xright=end+offset, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(1,1,0,alpha = 0.2), border = "black", lty = "dashed", lwd = 0.1)}
-points(x = as.numeric(all_presc_events[,DATE.PRESC-as.Date("2057-01-27")])+26 , y = rep(10.5, nrow(all_presc_events)), pch = 25, bg = "grey")
-points(x = as.numeric(presc_events[,DATE.PRESC-as.Date("2057-01-27")])+26 , y = rep(10.5, nrow(presc_events)), pch = 25, bg = "blue")
+  rect(xleft=start+offset, xright=end+offset, ybottom=bottom, ytop=top, col = rgb(1,1,0,alpha = 0.2), border = "black", lty = "dashed", lwd = 0.1)}
+points(x = (as.numeric(all_presc_events[,DATE.PRESC-as.Date("2057-01-27")])+26+5)/375 , y = rep(0.99, nrow(all_presc_events)), pch = 25, bg = "grey")
+points(x = (as.numeric(presc_events[,DATE.PRESC-as.Date("2057-01-27")])+26+5)/375 , y = rep(0.99, nrow(presc_events)), pch = 25, bg = "blue")
 
 ```
 
@@ -518,16 +522,17 @@ cma0 <- CMA0(event_durations,
 event_durations[,I := .I]
 
 plot(cma0, min.plot.size.in.characters.vert = 0, show.legend = FALSE)
+# just for illustration, no reliable solution for plotting
 for(i in 1:nrow(durcomp.hospitalisation[ID == 3])){
 
   first_event <- as.Date("2056-07-01")
 
-  bottom = head(event_durations[,I],1)
-  top = tail(event_durations[,I],1)
-  start = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.IN"]]-first_event)
-  end = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.OUT"]]-first_event)
+  bottom = 0
+  top = 1
+  start = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.IN"]]-first_event+5)/(2*365+10)
+  end = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.OUT"]]-first_event+5)/(2*365+10)
 
-  rect(xleft=start, xright=end, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(0,0,1,alpha = 0.5), border = NULL)}
+  rect(xleft=start, xright=end, ybottom=bottom, ytop=top, col = rgb(0,0,1,alpha = 0.5), border = NULL)}
 ```
 
 Let's consider a hypothetical scenario with some overlapping special periods.
@@ -640,6 +645,7 @@ cma0 <- CMA0(event_durations,
 event_durations[,I := .I]
 
 plot(cma0, min.plot.size.in.characters.vert = 0, show.legend = FALSE, highlight.followup.window = FALSE, highlight.observation.window = FALSE)
+# just for illustration, no reliable solution for plotting
 for(i in 1:nrow(special_episodes)){
   
   col <- ifelse(special_episodes[[i, "CUSTOM"]] == "carryover", 1, 0)
@@ -648,10 +654,10 @@ for(i in 1:nrow(special_episodes)){
   special_episodes[,`:=` (DATE.IN = as.Date(DATE.IN),
                           DATE.OUT = as.Date(DATE.OUT))]
 
-  bottom = nrow(event_durations)+i/10+0.4
-  top = bottom+0.1
-  start = as.numeric(special_episodes[[i, "DATE.IN"]]-first_event)
-  end = as.numeric(special_episodes[[i, "DATE.OUT"]]-first_event)
+  bottom = nrow(event_durations)/(nrow(event_durations)+1)+i/40+0.025
+  top = bottom+0.025
+  start = as.numeric(special_episodes[[i, "DATE.IN"]]-first_event+5)/110
+  end = as.numeric(special_episodes[[i, "DATE.OUT"]]-first_event+5)/110
 
  
   rect(xleft=start, xright=end, ybottom=0, ytop=top, col = rgb(col,0,1,alpha = 0.1), border = NA)
@@ -793,17 +799,18 @@ cma7_2 <- CMA7(event_durations[DURATION > 0],
 event_durations[,I := .I]
 
 svg("plots/fig6a.svg", width = 8, height = 6)
-plot(cma7, min.plot.size.in.characters.vert = 0, show.legend = FALSE)
+plot(cma7, min.plot.size.in.characters.vert = 0, show.legend = FALSE, show.period = "dates")
+# just for illustration, no reliable solution for plotting
 for(i in 1:nrow(event_durations_list$special_periods)){
 
   first_event <- as.Date("2056-07-01") 
 
-  bottom = head(event_durations[,I],1)
-  top = tail(event_durations[,I],1)
-  start = as.numeric(event_durations_list$special_periods[[i, "DATE.IN"]]-first_event) + 72.5
-  end = as.numeric(event_durations_list$special_periods[[i, "DATE.OUT"]]-first_event) + 72.5
+  bottom = 0
+  top = 1
+  start = (as.numeric(event_durations_list$special_periods[[i, "DATE.IN"]]-first_event)+5+72)/(2*365+10+72)
+  end = (as.numeric(event_durations_list$special_periods[[i, "DATE.OUT"]]-first_event)+5+72)/(2*365+10+72)
 
-  rect(xleft=start, xright=end, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(0,0,1,alpha = 0.5), border = NULL)
+  rect(xleft=start, xright=end, ybottom=bottom, ytop=top, col = rgb(0,0,1,alpha = 0.5), border = NULL)
 }
 dev.off()
 
@@ -813,12 +820,12 @@ for(i in 1:nrow(event_durations_list$special_periods)){
 
   first_event <- as.Date("2056-07-01") 
 
-  bottom = head(event_durations[,I],1)
-  top = tail(event_durations[,I],1)
-  start = as.numeric(event_durations_list$special_periods[[i, "DATE.IN"]]-first_event) + 72.5
-  end = as.numeric(event_durations_list$special_periods[[i, "DATE.OUT"]]-first_event) + 72.5
+  bottom = 0
+  top = 1
+  start = (as.numeric(event_durations_list$special_periods[[i, "DATE.IN"]]-first_event)+5+72)/(2*365+10+72)
+  end = (as.numeric(event_durations_list$special_periods[[i, "DATE.OUT"]]-first_event)+5+72)/(2*365+10+72)
 
-  rect(xleft=start, xright=end, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(0,0,1,alpha = 0.5), border = NULL)
+  rect(xleft=start, xright=end, ybottom=bottom, ytop=top, col = rgb(0,0,1,alpha = 0.5), border = NULL)
   
   }
 dev.off()
@@ -910,7 +917,8 @@ event_durations_covered <- cover_special_periods(events.data = event_durations,
                                                  medication.class.colnames = "ATC.CODE",
                                                  days.before = 7,
                                                  days.after = 7,
-                                                 date.format = "%Y-%m-%d")
+                                                 date.format = "%Y-%m-%d",
+                                                 return.data.table = TRUE)
 
 
 ```
@@ -932,16 +940,17 @@ cma0 <- CMA0(event_durations_covered,
 event_durations_covered[,I := .I]
 
 plot(cma0, min.plot.size.in.characters.vert = 0, show.legend = FALSE)
+# just for illustration, no reliable solution for plotting
 for(i in 1:nrow(durcomp.hospitalisation[ID == 3])){
 
   first_event <- as.Date("2056-07-01")
 
-  bottom = head(event_durations_covered[,I],1)
-  top = tail(event_durations_covered[,I],1)
-  start = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.IN"]]-first_event)
-  end = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.OUT"]]-first_event)
+  bottom = 0
+  top = 1
+  start = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.IN"]]-first_event+5)/(2*365+10)
+  end = as.numeric(durcomp.hospitalisation[ID == 3][[i, "DATE.OUT"]]-first_event+5)/(2*365+10)
 
-  rect(xleft=start, xright=end, ybottom=bottom-0.45, ytop=top+0.45, col = rgb(0,0,1,alpha = 0.5), border = NULL)}
+  rect(xleft=start, xright=end, ybottom=bottom, ytop=top, col = rgb(0,0,1,alpha = 0.5), border = NULL)}
 ```
 
 
@@ -955,10 +964,6 @@ Periods without prescriptions (treatment interruptions) or certain special episo
 - `episode.start`: the episode start date,
 - `episode.duration`: the episode duration in days,
 - `episode.end`: the episode end date.
-
-```{r, echo = FALSE}
-source("../../R/adherer.R")
-```
 
 The prescription episodes in the output of `compute_event_durations` come in the correct format to use with `CMA_per_episode`: 
 
@@ -998,6 +1003,9 @@ treatment_episodes[,`:=` (ATC.CODE = NULL,
                           UNIT = NULL,
                           FORM = NULL,
                           DAILY.DOSE = NULL)]
+
+event_durations[,`:=` (episode.start = NULL,
+                       episode.end = NULL)]
 
 # compute CMA per episode
 df_cma_episode <- CMA_per_episode(data = event_durations[DURATION > 0],
@@ -1097,4 +1105,6 @@ Various parameters allow for flexible and transparent customization of the funct
 <script type="text/javascript">
   $('.ba-slider').beforeAfter();
 </script>
+
+<script>(function(t,e,s,o){var n,a,c;t.SMCX=t.SMCX||[],e.getElementById(o)||(n=e.getElementsByTagName(s),a=n[n.length-1],c=e.createElement(s),c.type="text/javascript",c.async=!0,c.id=o,c.src=["https:"===location.protocol?"https://":"http://","widget.surveymonkey.com/collect/website/js/tRaiETqnLgj758hTBazgd7pJaijHH5as88m1QTaCa8AkTTbdOpApBZm_2BzZwW21bT.js"].join(""),a.parentNode.insertBefore(c,a))})(window,document,"script","smcx-sdk");</script>
 <!--/html_preserve-->
