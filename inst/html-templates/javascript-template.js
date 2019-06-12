@@ -453,6 +453,27 @@ window.onload = function() {
   //adh_svg.show_axis_labels(true, true);
   //adh_svg.show_legend(true);
   //adh_svg.show_title(true);
+
+  // Various set-up things:
+  svg = document.getElementById(adh_svg.plot_id);
+
+  // Make (parts of) the legend clickable:
+  // The medication classes (if any):
+  m = adh_svg.get_medication_classes();
+  if(m) {
+    for(i=0; i<m.length; i++) {
+      l_rect = adh_svg._getElementsByClassName(svg, "legend-medication-class-rect-" + adh_svg.get_id_for_medication_class(m[i]));
+      for(j=0; j<l_rect.length; j++) {
+        l_rect[j].style.cursor = "pointer";
+        l_rect[j].addEventListener("click", (function(x){ return function() { adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })(m[i]), false);
+      }
+      l_label = adh_svg._getElementsByClassName(svg, "legend-medication-class-label-" + adh_svg.get_id_for_medication_class(m[i]));
+      for(j=0; j<l_label.length; j++) {
+        l_label[j].style.cursor = "pointer";
+        l_label[j].addEventListener("click", (function(x){ return function() { adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })(m[i]), false);
+      }
+    }
+  }
 }
 
 
