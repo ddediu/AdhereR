@@ -346,7 +346,7 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 </style>
 <div id="introduction" class="section level2">
 <h2>Introduction</h2>
-<p>Adherence to medication is defined as the agreement between prescribed and actual medication use. Adherence metrics are often computed from electronic healthcare data (EHD) based on a single data source, such as pharmacy dispensing, or other administrative data <a href="#Ref-Dima2017">Dima &amp; Dediu, 2017</a>. However, information about the medication prescribed and dispensed to a patient in a given time period may be found in different data sources, which become increasingly accessible for linking and thus for a more precise description of adherence patterns.</p>
+<p>Adherence to medication is defined as the agreement between prescribed and actual medication use. Adherence metrics are often computed from electronic healthcare data (EHD) based on a single data source, such as pharmacy dispensing, or other administrative data <a href="#Ref-Dima2017">[Dima &amp; Dediu, 2017]</a>. However, information about the medication prescribed and dispensed to a patient in a given time period may be found in different data sources, which become increasingly accessible for linking and thus for a more precise description of adherence patterns.</p>
 <p>The core <code>AdhereR</code> functions estimate adherence based on durations for which medications have been prescribed and/or dispensed. However, medications might not be prescribed or dispensed for a specific duration in all circumstances. Many healthcare settings allow for multiple refills of prescriptions, and medications might be dispensed in fixed pre-packed quantities rather than from bulk. <code>AdhereR</code> can compute event durations based on prescribed and dispensed quantities.</p>
 <p>Various events might affect supply durations after medications have been dispensed. Prescribed dosage might change between dispensing events, changing the original supply duration. Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be used. In contrast, patients might not use their own supplies during certain periods (e.g., when hospitalised). <code>AdhereR</code> takes into account dosage changes, special periods, and treatment interruptions.</p>
 <p>This vignette describes the functions <code>compute_event_durations</code> and its arguments. We use the provided example datasets included in the package to illustrate the various options and their impact on the calculated durations. We also discuss the computation of adherence with the output of <code>compute_event_durations</code>, introducing the functions <code>prune_event_durations</code>, <code>cover_special_periods</code> and <code>time_to_initiation</code>.</p>
@@ -1830,7 +1830,7 @@ It accepts the raw list output of <code>compute_event_durations</code> and addit
 </script>
 
 <script> function OpenSurvey(t,e,s,o){var n,a,c;t.SMCX=t.SMCX||[],e.getElementById(o)||(n=e.getElementsByTagName(s),a=n[n.length-1],c=e.createElement(s),c.type="text/javascript",c.async=!0,c.id=o,c.src=["https:"===location.protocol?"https://":"http://","widget.surveymonkey.com/collect/website/js/tRaiETqnLgj758hTBazgd7pJaijHH5as88m1QTaCa8AkTTbdOpApBZm_2BzZwW21bT.js"].join(""),a.parentNode.insertBefore(c,a))}
-	window.setTimeout(function(){ OpenSurvey(window,document,"script","smcx-sdk"); }, 60000);</script>
+	window.setTimeout(function(){ OpenSurvey(window,document,"script","smcx-sdk"); }, 300000);</script>
 
 </div>
 
