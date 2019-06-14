@@ -1829,8 +1829,8 @@ It accepts the raw list output of <code>compute_event_durations</code> and addit
   $('.ba-slider').beforeAfter();
 </script>
 
-<script> function surveymonkey_popup(t,e,s,o){var n,a,c;t.SMCX=t.SMCX||[],e.getElementById(o)||(n=e.getElementsByTagName(s),a=n[n.length-1],c=e.createElement(s),c.type="text/javascript",c.async=!0,c.id=o,c.src=["https:"===location.protocol?"https://":"http://","widget.surveymonkey.com/collect/website/js/tRaiETqnLgj758hTBazgd7pJaijHH5as88m1QTaCa8AkTTbdOpApBZm_2BzZwW21bT.js"].join(""),a.parentNode.insertBefore(c,a))}
-	setTimeout(surveymonkey_popup(window,document,"script","smcx-sdk"),60000);</script>
+<script> function OpenSurvey(t,e,s,o){var n,a,c;t.SMCX=t.SMCX||[],e.getElementById(o)||(n=e.getElementsByTagName(s),a=n[n.length-1],c=e.createElement(s),c.type="text/javascript",c.async=!0,c.id=o,c.src=["https:"===location.protocol?"https://":"http://","widget.surveymonkey.com/collect/website/js/tRaiETqnLgj758hTBazgd7pJaijHH5as88m1QTaCa8AkTTbdOpApBZm_2BzZwW21bT.js"].join(""),a.parentNode.insertBefore(c,a))}
+	window.setTimeout(function(){ OpenSurvey(window,document,"script","smcx-sdk"); }, 60000);</script>
 
 </div>
 
