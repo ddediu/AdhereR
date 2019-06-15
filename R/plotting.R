@@ -555,18 +555,22 @@
                        min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
                        suppress.warnings=FALSE,         # suppress warnings?
-                       export.formats=NULL,             # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "svg-and-html" (SVG + HTML + CSS + JavaScript as independent files), "svg-in-html" (SVG + HTML + CSS + JavaScript all contained in the HTML document), "png", "webp", "ps" and "pdf"
+                       export.formats=NULL,             # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "png", "webp", "ps" and "pdf"
                        export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
                        export.formats.directory=NA,     # if exporting, which directory to export to (if not give, creates files in the temporary directory)
-                       generate.R.plot=FALSE,           # generate standardR plot for plotting within R?
+                       generate.R.plot=TRUE,            # generate standard (base R) plot for plotting within R?
                        ...
 )
 {
 
   ## DEBUG ####
-  export.formats <- c("html");
-  export.formats.directory <- "~/Temp/tmp";
-  generate.R.plot <- TRUE;
+  if( FALSE )
+  {
+    # Force debugging SVG plotting:
+    export.formats <- c("html");
+    export.formats.directory <- "~/Temp/tmp";
+    generate.R.plot <- TRUE;
+  }
   ## END DEBUG ####
 
 

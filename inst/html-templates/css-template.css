@@ -15,4 +15,6 @@ p {
   color: red;
 }
 
-
+/*svg {
+    pointer-events: none;
+}*/

@@ -21,7 +21,27 @@ var adh_svg = { // begin namespace
   plot_id : 'adherence_plot',
 
 
-  // IE does not implement getElementsByClassName() so use: https://stackoverflow.com/questions/7410949/javascript-document-getelementsbyclassname-compatibility-with-ie
+  /**
+   * Check if browser supports embedded SVG
+   * using: https://css-tricks.com/a-complete-guide-to-svg-fallbacks/
+   * @param {HTMLElement} node  The element.
+   * @param {String} classname  The class name.
+   * @return {Array} the child elements of the given class.
+   */
+  is_embedded_SVG_supported : function() {
+    var div = document.createElement('div');
+    div.innerHTML = '<svg/>';
+    return (div.firstChild && div.firstChild.namespaceURI) == 'http://www.w3.org/2000/svg';
+  },
+
+
+  /**
+   * IE does not implement getElementsByClassName()
+   * so re-implement it using: https://stackoverflow.com/questions/7410949/javascript-document-getelementsbyclassname-compatibility-with-ie
+   * @param {HTMLElement} node  The element.
+   * @param {String} classname  The class name.
+   * @return {Array} the child elements of the given class.
+   */
   _getElementsByClassName : function(node, classname) {
     if(!node.getElementsByClassName) {
       // getElementsByClassName() is not implemennted, so fake it:
@@ -38,13 +58,18 @@ var adh_svg = { // begin namespace
     }
   },
 
-  // IE does not implement hasAttribute() so use an alternative method: https://andrewdupont.net/2007/01/10/code-hasattribute-for-ie/
+  /**
+   * IE does not implement hasAttribute()
+   * so re-implement it using: https://andrewdupont.net/2007/01/10/code-hasattribute-for-ie/
+   * @param {HTMLElement} node  The element.
+   * @param {String} attrname  The attribute name.
+   * @return {Boolean} true if node has the attribute.
+   */
   _hasAttribute : function(node, attrname) {
     if(!node.hasAttribute) {
       // hasAttribute() is not implemennted, so fake it:
       var x = node.attributes[attrname];
       return (typeof x != "undefined");
-      return a;
     } else
     {
       // getElementsByClassName() is implemented, so use it:
@@ -454,6 +479,12 @@ window.onload = function() {
   //adh_svg.show_legend(true);
   //adh_svg.show_title(true);
 
+  // Check if browser supports embedded SVG:
+  if( !adh_svg.is_embedded_SVG_supported() ) {
+    // No SVG support:
+    document.documentElemement.classList.add("no-svg");
+  }
+
   // Various set-up things:
   svg = document.getElementById(adh_svg.plot_id);
 
@@ -465,7 +496,7 @@ window.onload = function() {
       l_rect = adh_svg._getElementsByClassName(svg, "legend-medication-class-rect-" + adh_svg.get_id_for_medication_class(m[i]));
       for(j=0; j<l_rect.length; j++) {
         l_rect[j].style.cursor = "pointer";
-        l_rect[j].addEventListener("click", (function(x){ return function() { adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })(m[i]), false);
+        l_rect[j].addEventListener("click", (function(x){ return function() { /*console.log('AddEvent()!');*/ adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })(m[i]), false);
       }
       l_label = adh_svg._getElementsByClassName(svg, "legend-medication-class-label-" + adh_svg.get_id_for_medication_class(m[i]));
       for(j=0; j<l_label.length; j++) {
@@ -474,6 +505,10 @@ window.onload = function() {
       }
     }
   }
+
+  /*// TEST:
+  e1 = adh_svg._getElementsByClassName(svg, "main-title")[0];
+  e1.style.cursor = "pointer"; e1.addEventListener("click", (function(x){ return function() { console.log('AddEvent()!'); adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })("medA"), false);*/
 }
 
 
