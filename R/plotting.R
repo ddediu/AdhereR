@@ -515,7 +515,7 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
                        medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
                        lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                        show.event.intervals=TRUE,             # show the actual prescription intervals
-                       print.dose=FALSE, cex.dose=0.75, print.dose.col="black", print.dose.centered=FALSE, # print daily dose
+                       print.dose=FALSE, cex.dose=0.75, print.dose.col="black", print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                        plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                        col.na="lightgray",                    # color for mising data
                        col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
@@ -553,7 +553,7 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 {
 
   ## DEBUG ####
-  if( FALSE )
+  if( TRUE )
   {
     # Force debugging SVG plotting:
     export.formats <- c("html");
@@ -1368,9 +1368,8 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
   ## The actual plotting ####
   ##
 
-  assign(".last.cma.plot.info",
-         list("baseR"=NULL, "SVG"=NULL),
-         envir=.adherer.env); # delete the previous plot info and replace it with empty info...
+  # For speed and clarity, we use an internal version of .last.cma.plot.info, which we save into the external environment on exit...
+  .last.cma.plot.info <- list("baseR"=NULL, "SVG"=NULL); # delete the previous plot info and replace it with empty info...
 
   if( .do.R ) # Rplot:
   {
@@ -1390,6 +1389,7 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
       # Some error occured when creatig the plot...
       warning(msg);
       par(old.par); # restore graphical params
+      assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
       return (invisible(NULL));
     }
 
@@ -1412,12 +1412,12 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
                      round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (nrow(cma$data) + ifelse(is.cma.TS.or.SW && plot.CMA && has.estimated.CMA, nrow(cmas), 0))),1),
                      ")!\n"));
       par(old.par); # restore graphical params
+      assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
       return (invisible(NULL));
     }
 
     # Save plot info:
-    tmp <- get(".last.cma.plot.info", envir=.adherer.env);
-    tmp$baseR <- list(
+    .last.cma.plot.info$baseR <- list(
       # Function params:
       "patients.to.plot"=patients.to.plot,
       "align.all.patients"=align.all.patients, "align.first.event.at.zero"=align.first.event.at.zero,
@@ -1485,11 +1485,10 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
     );
     if(plot.dose || print.dose)
     {
-      tmp$baseR$dose.range <- dose.range;
-      if( plot.dose.lwd.across.medication.classes ) tmp$baseR$dose.range.global <- dose.range.global;
-      tmp$baseR$adjust.dose.lwd <- adjust.dose.lwd;
+      .last.cma.plot.info$baseR$dose.range <- dose.range;
+      if( plot.dose.lwd.across.medication.classes ) .last.cma.plot.info$baseR$dose.range.global <- dose.range.global;
+      .last.cma.plot.info$baseR$adjust.dose.lwd <- adjust.dose.lwd;
     }
-    assign(".last.cma.plot.info", tmp, envir=.adherer.env);
   }
 
   if( .do.SVG ) # SVG:
@@ -1504,8 +1503,7 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
     );
 
     # Save plot info:
-    tmp <- get(".last.cma.plot.info", envir=.adherer.env);
-    tmp$SVG <- list(
+    .last.cma.plot.info$SVG <- list(
       # Function params:
       "patients.to.plot"=patients.to.plot,
       "align.all.patients"=align.all.patients, "align.first.event.at.zero"=align.first.event.at.zero,
@@ -1595,11 +1593,10 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
     );
     if(plot.dose || print.dose)
     {
-      tmp$SVG$dose.range <- dose.range;
-      if( plot.dose.lwd.across.medication.classes ) tmp$SVG$dose.range.global <- dose.range.global;
-      tmp$SVG$adjust.dose.lwd <- adjust.dose.lwd;
+      .last.cma.plot.info$SVG$dose.range <- dose.range;
+      if( plot.dose.lwd.across.medication.classes ) .last.cma.plot.info$SVG$dose.range.global <- dose.range.global;
+      .last.cma.plot.info$SVG$adjust.dose.lwd <- adjust.dose.lwd;
     }
-    assign(".last.cma.plot.info", tmp, envir=.adherer.env);
   }
 
   # Function mapping the CMA values to the appropriate x-coordinates:
@@ -1614,17 +1611,13 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
     # Save plot info:
     if( .do.R )
     {
-      tmp <- get(".last.cma.plot.info", envir=.adherer.env);
-      tmp$baseR$adh.max <- adh.max;
-      tmp$baseR$.rescale.xcoord.for.CMA.plot <- .rescale.xcoord.for.CMA.plot;
-      assign(".last.cma.plot.info", tmp, envir=.adherer.env);
+      .last.cma.plot.info$baseR$adh.max <- adh.max;
+      .last.cma.plot.info$baseR$.rescale.xcoord.for.CMA.plot <- .rescale.xcoord.for.CMA.plot;
     }
     if( .do.SVG )
     {
-      tmp <- get(".last.cma.plot.info", envir=.adherer.env);
-      tmp$SVG$adh.max <- adh.max;
-      tmp$SVG$.rescale.xcoord.for.CMA.plot <- .rescale.xcoord.for.CMA.plot;
-      assign(".last.cma.plot.info", tmp, envir=.adherer.env);
+      .last.cma.plot.info$SVG$adh.max <- adh.max;
+      .last.cma.plot.info$SVG$.rescale.xcoord.for.CMA.plot <- .rescale.xcoord.for.CMA.plot;
     }
   }
 
@@ -1636,6 +1629,38 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
   # Intialisations
   y.cur <- 1; # the current vertical line at which plotting takes place
   alternating.band.to.draw <- 1; # for this patient, which alternating band to draw?
+
+  # For each event in cma$data, as well as for each of the cmas (if the case), record important plotting info
+  if( .do.R )
+  {
+    .last.cma.plot.info$baseR$cma$data <- cbind(.last.cma.plot.info$baseR$cma$data,
+                                                ".X.OW.START"=NA,   ".X.OW.END"=NA,   ".Y.OW.START"=NA,   ".Y.OW.END"=NA,   # observation window extension on the plot
+                                                ".X.ROW.START"=NA,  ".X.ROW.END"=NA,  ".Y.ROW.START"=NA,  ".Y.ROW.END"=NA,  # "real" observation window extension on the plot
+                                                ".X.FUW.START"=NA,  ".X.FUW.END"=NA,  ".Y.FUW.START"=NA,  ".Y.FUW.END"=NA,  # follow-up window extension on the plot
+                                                ".X.START"=NA,      ".X.END"=NA,      ".Y.START"=NA,      ".Y.END"=NA,      # event extension on the plot
+                                                ".EV.LWD"=NA, # the event's line width
+                                                ".X.DOSE"=NA, ".Y.DOSE"=NA, ".FONT.SIZE.DOSE"=NA, # dose text position and size
+                                                ".X.EVC.START"=NA,  ".X.EVC.END"=NA,  ".Y.EVC.START"=NA,  ".Y.EVC.END"=NA,  # event covered extension on the plot
+                                                ".X.EVNC.START"=NA, ".X.EVNC.END"=NA, ".Y.EVNC.START"=NA, ".Y.EVNC.END"=NA, # event not covered extension on the plot
+                                                ".X.CNT.START"=NA,  ".X.CNT.END"=NA,  ".Y.CNT.START"=NA,  ".Y.CNT.END"=NA,  # continuation lines extension on the plot
+                                                ".X.SCMA.START"=NA, ".X.SCMA.END"=NA, ".Y.SCMA.START"=NA, ".Y.SCMA.END"=NA  # summary CMA extension on the plot
+    );
+  }
+  if( .do.SVG )
+  {
+    .last.cma.plot.info$SVG$cma$data <- cbind(.last.cma.plot.info$SVG$cma$data,
+                                              ".X.OW.START"=NA,   ".X.OW.END"=NA,   ".Y.OW.START"=NA,   ".Y.OW.END"=NA,   # observation window extension on the plot
+                                              ".X.ROW.START"=NA,  ".X.ROW.END"=NA,  ".Y.ROW.START"=NA,  ".Y.ROW.END"=NA,  # "real" observation window extension on the plot
+                                              ".X.FUW.START"=NA,  ".X.FUW.END"=NA,  ".Y.FUW.START"=NA,  ".Y.FUW.END"=NA,  # follow-up window extension on the plot
+                                              ".X.START"=NA,      ".X.END"=NA,      ".Y.START"=NA,      ".Y.END"=NA,      # event extension on the plot
+                                              ".EV.LWD"=NA, # the event's line width
+                                              ".X.DOSE"=NA, ".Y.DOSE"=NA, ".FONT.SIZE.DOSE"=NA, # dose text position and size
+                                              ".X.EVC.START"=NA,  ".X.EVC.END"=NA,  ".Y.EVC.START"=NA,  ".Y.EVC.END"=NA,  # event covered extension on the plot
+                                              ".X.EVNC.START"=NA, ".X.EVNC.END"=NA, ".Y.EVNC.START"=NA, ".Y.EVNC.END"=NA, # event not covered extension on the plot
+                                              ".X.CNT.START"=NA,  ".X.CNT.END"=NA,  ".Y.CNT.START"=NA,  ".Y.CNT.END"=NA,  # continuation lines extension on the plot
+                                              ".X.SCMA.START"=NA, ".X.SCMA.END"=NA, ".Y.SCMA.START"=NA, ".Y.SCMA.END"=NA  # summary CMA extension on the plot
+    );
+  }
 
   # For each individual event in turn:
   for( i in 1:nrow(cma$data) )
@@ -1697,17 +1722,30 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
       {
         if( .do.R ) # Rplot:
         {
-          rect(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window, y.cur - 0.5,
-               adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window, y.cur + length(s.events) - 0.5,
+          # Save the info:
+          .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.START"] <- (y.cur - 0.5);
+          .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.END"]   <- (y.cur + length(s.events) - 0.5);
+
+          # Draw:
+          rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.FUW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.FUW.START"],
+               .last.cma.plot.info$baseR$cma$data[s.events[1],".X.FUW.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.FUW.END"],
                col=NA, border=followup.window.col, lty="dashed", lwd=2);
         }
 
         if( .do.SVG ) # SVG:
         {
+          # Save the info:
+          .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.START"] <- .scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5);
+          .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
+
+          # Draw:
           svg.str <- c(svg.str,
                        # FUW:
-                       .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window),
-                                 y=.scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5),
+                       .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.FUW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.FUW.START"],
                                  width=.scale.width.to.SVG.plot(as.numeric(cmas$.FU.END.DATE[s.cmas[1]] - cmas$.FU.START.DATE[s.cmas[1]])),
                                  height=.scale.height.to.SVG.plot(length(s.events)),
                                  stroke=followup.window.col, stroke_width=2, lty="dashed", fill="white", fill_opacity=0.0, # fully transparent but tooltips also work
@@ -1720,17 +1758,30 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
         # The "given" OW:
         if( .do.R ) # Rplot:
         {
-          rect(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window, y.cur - 0.5,
-               adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window, y.cur + length(s.events) - 0.5,
+          # Save the info:
+          .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.START"] <- (y.cur - 0.5);
+          .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.END"]   <- (y.cur + length(s.events) - 0.5);
+
+          # Draw:
+          rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.OW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.OW.START"],
+               .last.cma.plot.info$baseR$cma$data[s.events[1],".X.OW.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.OW.END"],
                col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA); #, density=observation.window.density, angle=observation.window.angle);
         }
 
         if( .do.SVG ) # SVG:
         {
+          # Save the info:
+          .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.START"] <- .scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5);
+          .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
+
+          # Draw:
           svg.str <- c(svg.str,
                        # OW:
-                       .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window),
-                                 y=.scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5),
+                       .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.OW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.OW.START"],
                                  width=.scale.width.to.SVG.plot(as.numeric(cmas$.OBS.END.DATE[s.cmas[1]] - cmas$.OBS.START.DATE[s.cmas[1]])),
                                  height=.scale.height.to.SVG.plot(length(s.events)),
                                  stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
@@ -1764,17 +1815,30 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
             # Draw the "real" OW:
             if( .do.R ) # Rplot:
             {
-              rect(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window, y.cur - 0.5,
-                   adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + correct.earliest.followup.window, y.cur + length(s.events) - 0.5,
+              # Save the info:
+              .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.START"] <- (adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
+              .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.START"] <- (y.cur - 0.5);
+              .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.END"]   <- (adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + correct.earliest.followup.window);
+              .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.END"]   <- (y.cur + length(s.events) - 0.5);
+
+              # Draw:
+              rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.ROW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.ROW.START"],
+                   .last.cma.plot.info$baseR$cma$data[s.events[1],".X.ROW.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.ROW.END"],
                    col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA); #, density=real.obs.window.density, angle=real.obs.window.angle);
             }
 
             if( .do.SVG ) # SVG:
             {
+              # Save the info:
+              .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
+              .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.START"] <- .scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5);
+              .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
+              .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
+
+              # Draw:
               svg.str <- c(svg.str,
                            # "real" OW:
-                           .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window),
-                                     y=.scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5),
+                           .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.ROW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.ROW.START"],
                                      width=.scale.width.to.SVG.plot(as.numeric(real.obs.window.end - real.obs.window.start)),
                                      height=.scale.height.to.SVG.plot(length(s.events)),
                                      stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
@@ -1819,22 +1883,40 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
           if( .do.R ) # Rplot:
           {
             # The CMA plot background:
-            segments(.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2, .rescale.xcoord.for.CMA.plot(1.0), y.mean - 2, lty="solid", col=CMA.plot.col);
-            segments(.rescale.xcoord.for.CMA.plot(0.0), y.mean + 2, .rescale.xcoord.for.CMA.plot(1.0), y.mean + 2, lty="solid", col=CMA.plot.col);
+            # Save the info:
+            .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.START"] <- .rescale.xcoord.for.CMA.plot(0.0);
+            .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.START"] <- (y.mean - 2);
+            .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.END"]   <- .rescale.xcoord.for.CMA.plot(1.0);
+            .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.END"]   <- (y.mean + 2);
+
+            # Draw:
+            segments(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
+                     .last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
+                     lty="solid", col=CMA.plot.col);
+            segments(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
+                     .last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
+                     lty="solid", col=CMA.plot.col);
           }
 
           if( .do.SVG ) # SVG:
           {
+            # Save the info:
+            .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.START"] <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0));
+            .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.START"] <- .scale.y.to.SVG.plot(y.mean - 2);
+            .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.END"]   <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0));
+            .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.END"]   <- .scale.y.to.SVG.plot(y.mean + 2);
+
+            # Draw:
             svg.str <- c(svg.str,
                          # The CMA plot background:
-                         .SVG.lines(x=c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
-                                        .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)),
-                                        .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
-                                        .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0))),
-                                    y=c(.scale.y.to.SVG.plot(y.mean - 2),
-                                        .scale.y.to.SVG.plot(y.mean - 2),
-                                        .scale.y.to.SVG.plot(y.mean + 2),
-                                        .scale.y.to.SVG.plot(y.mean + 2)),
+                         .SVG.lines(x=c(.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
+                                        .last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.END"],
+                                        .last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
+                                        .last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.END"]),
+                                    y=c(.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
+                                        .last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
+                                        .last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.END"],
+                                        .last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.END"]),
                                     connected=FALSE,
                                     stroke=CMA.plot.col, stroke_width=1,
                                     class="cma-drawing-area-background", comment="The CMA plot background")
@@ -1889,22 +1971,40 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
             if( .do.R ) # Rplot:
             {
               # Draw the background rectangle:
-              rect(.rescale.xcoord.for.CMA.plot(0.0), mean(s.events) - 1, .rescale.xcoord.for.CMA.plot(min(adh,adh.max)), mean(s.events) + 1, col=CMA.plot.col, border=NA);
-              rect(.rescale.xcoord.for.CMA.plot(0.0), mean(s.events) - 1, .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)), mean(s.events) + 1, col=NA, border=CMA.plot.border);
+              # Save the info:
+              .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.START"] <- .rescale.xcoord.for.CMA.plot(0.0);
+              .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.START"] <- (mean(s.events) - 1);
+              .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.END"]   <- .rescale.xcoord.for.CMA.plot(max(1.0,adh.max));
+              .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.END"]   <- (mean(s.events) + 1);
+
+              # Draw:
+              rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
+                   .rescale.xcoord.for.CMA.plot(min(adh,adh.max)),                  .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
+                   col=CMA.plot.col, border=NA);
+              rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
+                   .last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
+                   col=NA, border=CMA.plot.border);
             }
 
             if( .do.SVG ) # SVG:
             {
+              # Save the info:
+              .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.START"] <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0));
+              .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.START"] <- .scale.y.to.SVG.plot(mean(s.events)+1);
+              .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.END"]   <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)));
+              .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.END"]   <- .scale.y.to.SVG.plot(mean(s.events)-1);
+
+              # Draw:
               svg.str <- c(svg.str,
                            # Draw the CMA estimate background rectangle:
-                           .SVG.rect(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
-                                     y=.scale.y.to.SVG.plot(mean(s.events)+1),
+                           .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
+                                     y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
                                      width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(min(adh,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)),
                                      height=.scale.height.to.SVG.plot(2),
                                      stroke="none", fill=CMA.plot.col,
                                      class="cma-estimate-bkg", comment="The CMA estimate backgound"),
-                           .SVG.rect(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
-                                     y=.scale.y.to.SVG.plot(mean(s.events)+1),
+                           .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
+                                     y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
                                      width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)),
                                      height=.scale.height.to.SVG.plot(2),
                                      stroke=CMA.plot.border, stroke_width=1, fill="none",
@@ -1968,21 +2068,34 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
     if( .do.R ) # Rplot:
     {
+      # Save the info:
+      .last.cma.plot.info$baseR$cma$data[i,".X.START"] <- (adh.plot.space[2] + start + correct.earliest.followup.window);
+      .last.cma.plot.info$baseR$cma$data[i,".Y.START"] <- (y.cur);
+      .last.cma.plot.info$baseR$cma$data[i,".X.END"]   <- (adh.plot.space[2] + end   + correct.earliest.followup.window);
+      .last.cma.plot.info$baseR$cma$data[i,".Y.END"]   <- (y.cur);
+
       # Plot the beging and end of the event:
-      points(adh.plot.space[2] + start + correct.earliest.followup.window, y.cur, pch=pch.start.event, col=col, cex=cex);
-      points(adh.plot.space[2] + end   + correct.earliest.followup.window, y.cur, pch=pch.end.event,   col=col, cex=cex);
+      points(.last.cma.plot.info$baseR$cma$data[i,".X.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.START"], pch=pch.start.event, col=col, cex=cex);
+      points(.last.cma.plot.info$baseR$cma$data[i,".X.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.END"],   pch=pch.end.event,   col=col, cex=cex);
     }
 
     if( .do.SVG ) # SVG:
     {
+      # Save the info:
+      .last.cma.plot.info$SVG$cma$data[i,".X.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window);
+      .last.cma.plot.info$SVG$cma$data[i,".Y.START"] <- .scale.y.to.SVG.plot(y.cur);
+      .last.cma.plot.info$SVG$cma$data[i,".X.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window);
+      .last.cma.plot.info$SVG$cma$data[i,".Y.END"]   <- .scale.y.to.SVG.plot(y.cur);
+
+      # Draw:
       svg.str <- c(svg.str,
                    # The begining of the event:
-                   .SVG.points(x=.scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window), y=.scale.y.to.SVG.plot(y.cur),
+                   .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.START"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.START"],
                                pch=pch.start.event, col=col, cex=cex,
                                class=paste0("event-start",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
                                tooltip=med.class.svg),
                    # The end of the event:
-                   .SVG.points(x=.scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window), y=.scale.y.to.SVG.plot(y.cur),
+                   .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.END"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.END"],
                                pch=pch.end.event, col=col, cex=cex,
                                class=paste0("event-end",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
                                tooltip=med.class.svg)
@@ -1998,35 +2111,67 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
       if( .do.R ) # Rplot:
       {
-        rect(adh.plot.space[2] + start  + correct.earliest.followup.window, i - char.height/2,
-             adh.plot.space[2] + end.pi + correct.earliest.followup.window, i + char.height/2,
+        # Save the info:
+        .last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"] <- (adh.plot.space[2] + start  + correct.earliest.followup.window);
+        .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"] <- (i - char.height/2);
+        .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"]   <- (adh.plot.space[2] + end.pi + correct.earliest.followup.window);
+        .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"]   <- (i + char.height/2);
+
+        # Draw:
+        rect(.last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"],
+             .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"],
              col=adjustcolor(col,alpha.f=0.2), border=col);
         if( cma$event.info$gap.days[i] > 0 )
-          rect(adh.plot.space[2] + end.pi + correct.earliest.followup.window, i - char.height/2,
-               adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window, i + char.height/2,
+        {
+          # Save the info:
+          .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"] <- (adh.plot.space[2] + end.pi + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"] <- (i - char.height/2);
+          .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"]   <- (adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"]   <- (i + char.height/2);
+
+          # Draw:
+          rect(.last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"],
+               .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"],
                #density=25, col=adjustcolor(col,alpha.f=0.5),
                col=NA, border=col);
+        }
       }
 
       if( .do.SVG ) # SVG:
       {
+        # Save the info:
+        .last.cma.plot.info$SVG$cma$data[i,".X.EVC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window);
+        .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"] <- .scale.y.to.SVG.plot(y.cur) - dims.event.y/2;
+        .last.cma.plot.info$SVG$cma$data[i,".X.EVC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window);
+        .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.END"]   <- .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"] + dims.event.y;
+
+        # Draw:
         svg.str <- c(svg.str,
-                     .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window),
-                               y=.scale.y.to.SVG.plot(y.cur) - dims.event.y/2,
-                               xend=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window),
+                     .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[i,".X.EVC.START"],
+                               y=.last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"],
+                               xend=.last.cma.plot.info$SVG$cma$data[i,".X.EVC.END"],
                                height=dims.event.y,
                                stroke=col, fill=col, fill_opacity=0.2,
                                class=paste0("event-interval-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                               tooltip=med.class.svg),
-                     if( cma$event.info$gap.days[i] > 0 )
-                       .SVG.rect(x=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window),
-                                 y=.scale.y.to.SVG.plot(y.cur) - dims.event.y/2,
-                                 xend=.scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window),
+                               tooltip=med.class.svg));
+        if( cma$event.info$gap.days[i] > 0 )
+        {
+          # Save the info:
+          .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] <- .scale.y.to.SVG.plot(y.cur) - dims.event.y/2;
+          .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.END"]   <- .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] + dims.event.y;
+
+          # Draw:
+          svg.str <- c(svg.str,
+                       .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[i,".X.EVNC.START"],
+                                 y=.last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"],
+                                 xend=.last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"],
                                  height=dims.event.y,
                                  stroke=col, fill="none",
                                  class=paste0("event-interval-not-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                                 tooltip=med.class.svg)
-        );
+                                 tooltip=med.class.svg));
+        }
       }
     }
 
@@ -2070,10 +2215,18 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
     }
     if( .do.R ) # Rplot:
     {
+      # Save the info:
+      .last.cma.plot.info$baseR$cma$data[s.events,".EV.LWD"] <- seg.lwd;
+
+      # Draw:
       segments( seg.x1, y.cur, seg.x2, y.cur, col=col, lty=lty.event, lwd=seg.lwd);
     }
     if( .do.SVG ) # SVG:
     {
+      # Save the info:
+      .last.cma.plot.info$SVG$cma$data[s.events,".EV.LWD"] <- seg.lwd;
+
+      # Draw:
       svg.str <- c(svg.str,
                    # The begining of the event:
                    .SVG.lines(x=c(.scale.x.to.SVG.plot(seg.x1), .scale.x.to.SVG.plot(seg.x2)),
@@ -2090,21 +2243,29 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
       # Show dose as actual numbers on the plot:
       if( .do.R ) # Rplot:
       {
-        dose.text.y <- (y.cur - ifelse(print.dose.centered, 0, dose.text.height*2/3)); # print it on or below the dose segment?
+        # Save the info:
+        .last.cma.plot.info$baseR$cma$data[i,".X.DOSE"] <- (adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window);
+        .last.cma.plot.info$baseR$cma$data[i,".Y.DOSE"] <- (y.cur - ifelse(print.dose.centered, 0, dose.text.height*2/3)); # print it on or below the dose segment?
+        .last.cma.plot.info$baseR$cma$data[i,".FONT.SIZE.DOSE"] <- cex.dose;
 
-        text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
-             dose.text.y,
+        # Draw:
+        text(.last.cma.plot.info$baseR$cma$data[i,".X.DOSE"], .last.cma.plot.info$baseR$cma$data[i,".Y.DOSE"],
              cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=ifelse(is.na(print.dose.col),col,print.dose.col), font=2);
       }
 
       if( .do.SVG ) # SVG:
       {
+        # Save the info:
+        .last.cma.plot.info$SVG$cma$data[i,".X.DOSE"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window);
+        .last.cma.plot.info$SVG$cma$data[i,".Y.DOSE"] <- .scale.y.to.SVG.plot(y.cur - ifelse(print.dose.centered, 0, 3/4));
+        .last.cma.plot.info$SVG$cma$data[i,".FONT.SIZE.DOSE"] <- (dims.chr.std * cex.dose);
+
+        # Draw:
         svg.str <- c(svg.str,
                      # The dose text:
-                     .SVG.text(x=.scale.x.to.SVG.plot(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window),
-                               y=.scale.y.to.SVG.plot(y.cur - ifelse(print.dose.centered, 0, 3/4)),
+                     .SVG.text(x=.last.cma.plot.info$SVG$cma$data[i,".X.DOSE"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.DOSE"],
                                text=cma$data[i,cma$event.daily.dose.colname],
-                               font_size=dims.chr.std * cex.dose, h.align="center", v.align="center",
+                               font_size=.last.cma.plot.info$SVG$cma$data[i,".FONT.SIZE.DOSE"], h.align="center", v.align="center",
                                col=if(is.na(print.dose.col)) col else print.dose.col,
                                other_params=if(!is.na(print.dose.outline.col)) paste0(' stroke="',.SVG.color(print.dose.outline.col,return_string=TRUE),'" stroke-width="0.5"'),
                                class=paste0("event-dose-text",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
@@ -2124,26 +2285,40 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
       if( .do.R ) # Rplot:
       {
-        segments( adh.plot.space[2] + end        + correct.earliest.followup.window, y.cur-1,
-                  adh.plot.space[2] + start.next + correct.earliest.followup.window, y.cur-1,
+        # Save the info:
+        .last.cma.plot.info$baseR$cma$data[i,".X.CNT.START"] <- (adh.plot.space[2] + end        + correct.earliest.followup.window);
+        .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"] <- (y.cur-1);
+        .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"]   <- (adh.plot.space[2] + start.next + correct.earliest.followup.window);
+        .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.END"]   <- (y.cur);
+
+        # Draw:
+        segments( .last.cma.plot.info$baseR$cma$data[i,".X.CNT.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"],
+                  .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"],
                   col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
-        segments( adh.plot.space[2] + start.next + correct.earliest.followup.window, y.cur-1,
-                  adh.plot.space[2] + start.next + correct.earliest.followup.window, y.cur,
+        segments( .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"], .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"],
+                  .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"], .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.END"],
                   col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
       }
 
       if( .do.SVG ) # SVG:
       {
+        # Save the info:
+        .last.cma.plot.info$SVG$cma$data[i,".X.CNT.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window);
+        .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"] <- .scale.y.to.SVG.plot(y.cur-1);
+        .last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + start.next + correct.earliest.followup.window);
+        .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.END"]   <- .scale.y.to.SVG.plot(y.cur);
+
+        # Draw:
         svg.str <- c(svg.str,
                      # The continuation line:
-                     .SVG.lines(x=c(.scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window),
-                                    .scale.x.to.SVG.plot(adh.plot.space[2] + start.next + correct.earliest.followup.window),
-                                    .scale.x.to.SVG.plot(adh.plot.space[2] + start.next + correct.earliest.followup.window),
-                                    .scale.x.to.SVG.plot(adh.plot.space[2] + start.next + correct.earliest.followup.window)),
-                                y=c(.scale.y.to.SVG.plot(y.cur-1),
-                                    .scale.y.to.SVG.plot(y.cur-1),
-                                    .scale.y.to.SVG.plot(y.cur-1),
-                                    .scale.y.to.SVG.plot(y.cur)),
+                     .SVG.lines(x=c(.last.cma.plot.info$SVG$cma$data[i,".X.CNT.START"],
+                                    .last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"],
+                                    .last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"],
+                                    .last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"]),
+                                y=c(.last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"],
+                                    .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"],
+                                    .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"],
+                                    .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.END"]),
                                 connected=TRUE,
                                 stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
                                 class=paste0("continuation-line",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
@@ -3228,12 +3403,14 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
         if( is.null(css.template.path) || css.template.path=="" )
         {
           warning("Cannot load the CSS template -- please reinstall the AdhereR package!\n");
+          assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
           return (invisible(NULL));
         }
         js.template.path <- system.file('html-templates/javascript-template.js', package='AdhereR');
         if( is.null(js.template.path) || js.template.path=="" )
         {
           warning("Cannot load the JavaScript template -- please reinstall the AdhereR package!\n");
+          assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
           return (invisible(NULL));
         }
         css.template <- readLines(css.template.path);
@@ -3251,6 +3428,7 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
         if( is.null(html.template.path) || html.template.path=="" )
         {
           warning("Cannot load the HTML template -- please reinstall the AdhereR package!\n");
+          assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
           return (invisible(NULL));
         }
         html.template <- readLines(html.template.path);
@@ -3326,6 +3504,10 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
       }
     }
   }
+
+
+  ## Save plot info into the external environment ####
+  assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env);
 
 
   # Return value:
