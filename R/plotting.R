@@ -54,29 +54,6 @@
 }
 
 
-# # Draws shadowed/outlined text (taken directly from TeachingDemos to reduced the dependencies on other packages):
-# .shadow.text <- function(x, y=NULL, labels, col='white', bg='black', theta= seq(pi/4, 2*pi, length.out=8), r=0.1, ... )
-# {
-#
-#   xy <- xy.coords(x,y);
-#   xo <- r*strwidth('A');
-#   yo <- r*strheight('A');
-#
-#   for (i in theta) text( xy$x + cos(i)*xo, xy$y + sin(i)*yo, labels, col=bg, ... );
-#   text(xy$x, xy$y, labels, col=col, ... );
-# }
-
-# Draws text on a semi-transparent background:
-.shadow.text <- function(x, y=NULL, labels, col='white', bg='black', alpha=0.25, cex=1.0, ... )
-{
-  #browser()
-  xy <- xy.coords(x,y);
-  w <- strwidth(labels, cex=cex); h <- strheight(labels, cex=cex); w0 <- strwidth("0", cex=cex); h0 <- strheight("0", cex=cex);
-  rect(xy$x-w/2-w0/4, xy$y-h/2-h0/4, xy$x+w/2+w0/4, xy$y+h/2+h0/4, col=scales::alpha(bg, alpha=alpha), border=NA);
-  text(xy$x, xy$y, labels, col=col, cex=cex);
-}
-
-
 ## SVG special functions and constants ####
 
 .SVG.number <- function(n, prec=3)
@@ -507,6 +484,18 @@
 }
 
 
+## Last plot info ####
+# Store various info about the current/last plot (such as mapping events/patients to graphic coordinates
+# or adding primitive graphical elements) so that we can extend/modify the plots later on.
+# It contains info both about the baseR and SVG plots (if present).
+# As this is inside a paclage and we must avoid locking, we ned to use an environment (see, e.g. https://www.r-bloggers.com/package-wide-variablescache-in-r-packages/)
+.adherer.env <- new.env();
+assign(".last.cma.plot.info", NULL, envir=.adherer.env); # initially no last plot that we're aware of...
+
+# Access the last plot's info:
+get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adherer.env)); }
+
+
 # Make this function produce SVG
 # (and for now display it as well to maintain compatibility with the old function)
 .plot.CMAs <- function(cma,                                   # the CMA_per_episode or CMA_sliding_window (or derived) object
@@ -526,7 +515,7 @@
                        medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
                        lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                        show.event.intervals=TRUE,             # show the actual prescription intervals
-                       print.dose=FALSE, cex.dose=0.75, print.dose.col="black", print.dose.outline.col=NA, print.dose.centered=FALSE, # print daily dose
+                       print.dose=FALSE, cex.dose=0.75, print.dose.col="black", print.dose.centered=FALSE, # print daily dose
                        plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                        col.na="lightgray",                    # color for mising data
                        col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
@@ -1024,15 +1013,15 @@
     if( is.function(col.cats) ) cols <- col.cats(length(categories)) else cols <- rep(col.cats,length(categories));
   }
   names(cols) <- categories;
-  .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
+  .map.category.to.color <- function(category, cols.array=cols) ifelse( is.na(category), cols.array[1], ifelse( category %in% names(cols.array), cols.array[category], "black") );
 
   if( .do.SVG )
   {
     # Map category names to standardized category ids to be stored as class attributes; this mapping will be exported as a JavaScript dictionary in the HTML container(if any):
     categories.to.classes <- paste0("med-class-",1:length(categories)); names(categories.to.classes) <- categories;
-    .map.category.to.class <- function( category ) ifelse( is.na(category), categories.to.classes[1],
-                                                           ifelse( category %in% names(categories.to.classes), categories.to.classes[category],
-                                                                   categories.to.classes[1]) );
+    .map.category.to.class <- function(category, cat2class=categories.to.classes) ifelse( is.na(category), cat2class[1],
+                                                                                          ifelse( category %in% names(cat2class), cat2class[category],
+                                                                                                  cat2class[1]) );
   }
 
 
@@ -1379,6 +1368,10 @@
   ## The actual plotting ####
   ##
 
+  assign(".last.cma.plot.info",
+         list("baseR"=NULL, "SVG"=NULL),
+         envir=.adherer.env); # delete the previous plot info and replace it with empty info...
+
   if( .do.R ) # Rplot:
   {
     # The plotting area:
@@ -1421,6 +1414,82 @@
       par(old.par); # restore graphical params
       return (invisible(NULL));
     }
+
+    # Save plot info:
+    tmp <- get(".last.cma.plot.info", envir=.adherer.env);
+    tmp$baseR <- list(
+      # Function params:
+      "patients.to.plot"=patients.to.plot,
+      "align.all.patients"=align.all.patients, "align.first.event.at.zero"=align.first.event.at.zero,
+      "show.period"=show.period,
+      "period.in.days"=period.in.days,
+      "show.legend"=show.legend, "legend.x"=legend.x, "legend.y"=legend.y,
+      "legend.bkg.opacity"=legend.bkg.opacity, "legend.cex"=legend.cex, "legend.cex.title"=legend.cex.title,
+      "cex"=cex, "cex.axis"=cex.axis, "cex.lab"=cex.lab, "cex.title"=cex.title,
+      "show.cma"=show.cma,
+      "xlab"=xlab, "ylab"=ylab,
+      "title"=title,
+      "col.cats"=col.cats, "unspecified.category.label"=unspecified.category.label,
+      "medication.groups"=medication.groups,
+      "lty.event"=lty.event, "lwd.event"=lwd.event, "pch.start.event"=pch.start.event, "pch.end.event"=pch.end.event,
+      "show.event.intervals"=show.event.intervals,
+      "print.dose"=print.dose, "cex.dose"=cex.dose, "print.dose.col"=print.dose.col, "print.dose.centered"=print.dose.centered,
+      "plot.dose"=plot.dose, "lwd.event.max.dose"=lwd.event.max.dose, "plot.dose.lwd.across.medication.classes"=plot.dose.lwd.across.medication.classes,
+      "col.na"=col.na, "col.continuation"=col.continuation, "lty.continuation"=lty.continuation, "lwd.continuation"=lwd.continuation,
+      "print.CMA"=print.CMA, "CMA.cex"=CMA.cex,
+      "plot.CMA"=plot.CMA, "plot.CMA.as.histogram"=plot.CMA.as.histogram,
+      "plot.partial.CMAs.as"=plot.partial.CMAs.as,
+      "plot.partial.CMAs.as.stacked.col.bars"=plot.partial.CMAs.as.stacked.col.bars,
+      "plot.partial.CMAs.as.stacked.col.border"=plot.partial.CMAs.as.stacked.col.border,
+      "plot.partial.CMAs.as.stacked.col.text"=plot.partial.CMAs.as.stacked.col.text,
+      "plot.partial.CMAs.as.timeseries.vspace"=plot.partial.CMAs.as.timeseries.vspace,
+      "plot.partial.CMAs.as.timeseries.start.from.zero"=plot.partial.CMAs.as.timeseries.start.from.zero,
+      "plot.partial.CMAs.as.timeseries.col.dot"=plot.partial.CMAs.as.timeseries.col.dot,
+      "plot.partial.CMAs.as.timeseries.col.interval"=plot.partial.CMAs.as.timeseries.col.interval,
+      "plot.partial.CMAs.as.timeseries.col.text"=plot.partial.CMAs.as.timeseries.col.text,
+      "plot.partial.CMAs.as.timeseries.interval.type"=plot.partial.CMAs.as.timeseries.interval.type,
+      "plot.partial.CMAs.as.timeseries.lwd.interval"=plot.partial.CMAs.as.timeseries.lwd.interval,
+      "plot.partial.CMAs.as.timeseries.alpha.interval"=plot.partial.CMAs.as.timeseries.alpha.interval,
+      "plot.partial.CMAs.as.timeseries.show.0perc"=plot.partial.CMAs.as.timeseries.show.0perc,
+      "plot.partial.CMAs.as.timeseries.show.100perc"=plot.partial.CMAs.as.timeseries.show.100perc,
+      "plot.partial.CMAs.as.overlapping.alternate"=plot.partial.CMAs.as.overlapping.alternate,
+      "plot.partial.CMAs.as.overlapping.col.interval"=plot.partial.CMAs.as.overlapping.col.interval,
+      "plot.partial.CMAs.as.overlapping.col.text"=plot.partial.CMAs.as.overlapping.col.text,
+      "CMA.plot.ratio"=CMA.plot.ratio,
+      "CMA.plot.col"=CMA.plot.col, "CMA.plot.border"=CMA.plot.border, "CMA.plot.bkg"=CMA.plot.bkg, "CMA.plot.text"=CMA.plot.text,
+      "highlight.followup.window"=highlight.followup.window, "followup.window.col"=followup.window.col,
+      "highlight.observation.window"=highlight.observation.window,
+      "observation.window.col"=observation.window.col,
+      "observation.window.opacity"=observation.window.opacity,
+      "show.real.obs.window.start"=show.real.obs.window.start,
+      "alternating.bands.cols"=alternating.bands.cols,
+      "rotate.text"=rotate.text,
+      "bw.plot"=bw.plot,
+      "min.plot.size.in.characters.horiz"=min.plot.size.in.characters.horiz, "min.plot.size.in.characters.vert"=min.plot.size.in.characters.vert,
+      "export.formats"=export.formats, "export.formats.fileprefix"=export.formats.fileprefix, "export.formats.directory"=export.formats.directory,
+      "generate.R.plot"=generate.R.plot,
+
+      # Computed things:
+      "old.par"=old.par,
+      "xlim"=c(0-5,duration.total+5), "ylim"=c(0,nrow(cma$data)+vert.space.cmas+1),
+      "dose.text.height"=ifelse(print.dose, dose.text.height, NA),
+      "char.width"=char.width, "char.height"=char.height,
+      "char.height.CMA"=char.height.CMA,
+      "is.cma.TS.or.SW"=is.cma.TS.or.SW, "has.estimated.CMA"=has.estimated.CMA,
+      "cma"=cma, "cmas"=cmas,
+      "categories"=categories, "cols"=cols, ".map.category.to.color"=.map.category.to.color,
+      "earliest.date"=earliest.date, "correct.earliest.followup.window"=correct.earliest.followup.window, "endperiod"=endperiod,
+      "adh.plot.space"=adh.plot.space, "duration.total"=duration.total,
+      "id.labels"=id.labels, "date.labels"=date.labels, "x.label"=x.label, "y.label"=y.label,
+      "vert.space.cmas"=vert.space.cmas
+    );
+    if(plot.dose || print.dose)
+    {
+      tmp$baseR$dose.range <- dose.range;
+      if( plot.dose.lwd.across.medication.classes ) tmp$baseR$dose.range.global <- dose.range.global;
+      tmp$baseR$adjust.dose.lwd <- adjust.dose.lwd;
+    }
+    assign(".last.cma.plot.info", tmp, envir=.adherer.env);
   }
 
   if( .do.SVG ) # SVG:
@@ -1433,15 +1502,129 @@
                            fill="white", stroke="none"),
                  '\n' # one empty line
     );
+
+    # Save plot info:
+    tmp <- get(".last.cma.plot.info", envir=.adherer.env);
+    tmp$SVG <- list(
+      # Function params:
+      "patients.to.plot"=patients.to.plot,
+      "align.all.patients"=align.all.patients, "align.first.event.at.zero"=align.first.event.at.zero,
+      "show.period"=show.period,
+      "period.in.days"=period.in.days,
+      "show.legend"=show.legend, "legend.x"=legend.x, "legend.y"=legend.y,
+      "legend.bkg.opacity"=legend.bkg.opacity, "legend.cex"=legend.cex, "legend.cex.title"=legend.cex.title,
+      "cex"=cex, "cex.axis"=cex.axis, "cex.lab"=cex.lab, "cex.title"=cex.title,
+      "show.cma"=show.cma,
+      "xlab"=xlab, "ylab"=ylab,
+      "title"=title,
+      "col.cats"=col.cats, "unspecified.category.label"=unspecified.category.label,
+      "medication.groups"=medication.groups,
+      "lty.event"=lty.event, "lwd.event"=lwd.event, "pch.start.event"=pch.start.event, "pch.end.event"=pch.end.event,
+      "show.event.intervals"=show.event.intervals,
+      "print.dose"=print.dose, "cex.dose"=cex.dose, "print.dose.col"=print.dose.col, "print.dose.centered"=print.dose.centered,
+      "plot.dose"=plot.dose, "lwd.event.max.dose"=lwd.event.max.dose, "plot.dose.lwd.across.medication.classes"=plot.dose.lwd.across.medication.classes,
+      "col.na"=col.na, "col.continuation"=col.continuation, "lty.continuation"=lty.continuation, "lwd.continuation"=lwd.continuation,
+      "print.CMA"=print.CMA, "CMA.cex"=CMA.cex,
+      "plot.CMA"=plot.CMA, "plot.CMA.as.histogram"=plot.CMA.as.histogram,
+      "plot.partial.CMAs.as"=plot.partial.CMAs.as,
+      "plot.partial.CMAs.as.stacked.col.bars"=plot.partial.CMAs.as.stacked.col.bars,
+      "plot.partial.CMAs.as.stacked.col.border"=plot.partial.CMAs.as.stacked.col.border,
+      "plot.partial.CMAs.as.stacked.col.text"=plot.partial.CMAs.as.stacked.col.text,
+      "plot.partial.CMAs.as.timeseries.vspace"=plot.partial.CMAs.as.timeseries.vspace,
+      "plot.partial.CMAs.as.timeseries.start.from.zero"=plot.partial.CMAs.as.timeseries.start.from.zero,
+      "plot.partial.CMAs.as.timeseries.col.dot"=plot.partial.CMAs.as.timeseries.col.dot,
+      "plot.partial.CMAs.as.timeseries.col.interval"=plot.partial.CMAs.as.timeseries.col.interval,
+      "plot.partial.CMAs.as.timeseries.col.text"=plot.partial.CMAs.as.timeseries.col.text,
+      "plot.partial.CMAs.as.timeseries.interval.type"=plot.partial.CMAs.as.timeseries.interval.type,
+      "plot.partial.CMAs.as.timeseries.lwd.interval"=plot.partial.CMAs.as.timeseries.lwd.interval,
+      "plot.partial.CMAs.as.timeseries.alpha.interval"=plot.partial.CMAs.as.timeseries.alpha.interval,
+      "plot.partial.CMAs.as.timeseries.show.0perc"=plot.partial.CMAs.as.timeseries.show.0perc,
+      "plot.partial.CMAs.as.timeseries.show.100perc"=plot.partial.CMAs.as.timeseries.show.100perc,
+      "plot.partial.CMAs.as.overlapping.alternate"=plot.partial.CMAs.as.overlapping.alternate,
+      "plot.partial.CMAs.as.overlapping.col.interval"=plot.partial.CMAs.as.overlapping.col.interval,
+      "plot.partial.CMAs.as.overlapping.col.text"=plot.partial.CMAs.as.overlapping.col.text,
+      "CMA.plot.ratio"=CMA.plot.ratio,
+      "CMA.plot.col"=CMA.plot.col, "CMA.plot.border"=CMA.plot.border, "CMA.plot.bkg"=CMA.plot.bkg, "CMA.plot.text"=CMA.plot.text,
+      "highlight.followup.window"=highlight.followup.window, "followup.window.col"=followup.window.col,
+      "highlight.observation.window"=highlight.observation.window,
+      "observation.window.col"=observation.window.col,
+      "observation.window.opacity"=observation.window.opacity,
+      "show.real.obs.window.start"=show.real.obs.window.start,
+      "alternating.bands.cols"=alternating.bands.cols,
+      "rotate.text"=rotate.text,
+      "bw.plot"=bw.plot,
+      "min.plot.size.in.characters.horiz"=min.plot.size.in.characters.horiz, "min.plot.size.in.characters.vert"=min.plot.size.in.characters.vert,
+      "export.formats"=export.formats, "export.formats.fileprefix"=export.formats.fileprefix, "export.formats.directory"=export.formats.directory,
+      "generate.R.plot"=generate.R.plot,
+
+      # Computed things:
+      "x"=0, "y"=0,
+      "width"=dims.total.width, "height"=dims.total.height,
+      "dims.chr.std"=dims.chr.std,
+      "dims.chr.event"=dims.chr.event,
+      "dims.chr.title"=dims.chr.title,
+      "dims.chr.axis"=dims.chr.axis,
+      "dims.chr.lab"=dims.chr.lab,
+      "dims.chr.cma"=dims.chr.cma,
+      "dims.chr.legend"=dims.chr.legend,
+      "dims.chr.legend.title"=dims.chr.legend.title,
+      "dims.event.x"=dims.event.x,
+      "dims.event.y"=dims.event.y,
+      "dims.day"=dims.day,
+      "dims.axis.x"=dims.axis.x,
+      "dims.axis.y"=dims.axis.y,
+      "dims.plot.x"=dims.plot.x,
+      "dims.plot.y"=dims.plot.y,
+      "dims.plot.width"=dims.plot.width,
+      "dims.plot.height"=dims.plot.height,
+      "dims.total.width"=dims.total.width,
+      "dims.total.height"=dims.total.height,
+      ".scale.width.to.SVG.plot"=.scale.width.to.SVG.plot,
+      ".scale.x.to.SVG.plot"=.scale.x.to.SVG.plot,
+      ".scale.height.to.SVG.plot"=.scale.height.to.SVG.plot,
+      ".scale.y.to.SVG.plot"=.scale.y.to.SVG.plot,
+      "svg.stroke.dasharrays"=svg.stroke.dasharrays,
+      "is.cma.TS.or.SW"=is.cma.TS.or.SW, "has.estimated.CMA"=has.estimated.CMA,
+      "cma"=cma, "cmas"=cmas,
+      "categories"=categories, "cols"=cols, ".map.category.to.color"=.map.category.to.color,
+      "categories.to.classes"=categories.to.classes, ".map.category.to.class"=.map.category.to.class,
+      "earliest.date"=earliest.date, "correct.earliest.followup.window"=correct.earliest.followup.window, "endperiod"=endperiod,
+      "adh.plot.space"=adh.plot.space, "duration.total"=duration.total,
+      "id.labels"=id.labels, "date.labels"=date.labels, "x.label"=x.label, "y.label"=y.label,
+      "vert.space.cmas"=vert.space.cmas
+    );
+    if(plot.dose || print.dose)
+    {
+      tmp$SVG$dose.range <- dose.range;
+      if( plot.dose.lwd.across.medication.classes ) tmp$SVG$dose.range.global <- dose.range.global;
+      tmp$SVG$adjust.dose.lwd <- adjust.dose.lwd;
+    }
+    assign(".last.cma.plot.info", tmp, envir=.adherer.env);
   }
 
   # Function mapping the CMA values to the appropriate x-coordinates:
   if( plot.CMA && has.estimated.CMA )
   {
     adh.max <- ifelse(is.cma.TS.or.SW, 1.0, max(c(getCMA(cma)$CMA, 1.0),na.rm=TRUE)); # maximum achieved CMA (used for plotting, forced to 1.0 for PE and SW)
-    .rescale.xcoord.for.CMA.plot <- function(x, pfree=0.20)
+    .rescale.xcoord.for.CMA.plot <- function(x, pfree=0.20, plot.space=adh.plot.space, max.x=adh.max)
     {
-      return (adh.plot.space[1] + (x / adh.max) * (adh.plot.space[2] * (1-pfree) - adh.plot.space[1]));
+      return (plot.space[1] + (x / max.x) * (plot.space[2] * (1-pfree) - plot.space[1]));
+    }
+
+    # Save plot info:
+    if( .do.R )
+    {
+      tmp <- get(".last.cma.plot.info", envir=.adherer.env);
+      tmp$baseR$adh.max <- adh.max;
+      tmp$baseR$.rescale.xcoord.for.CMA.plot <- .rescale.xcoord.for.CMA.plot;
+      assign(".last.cma.plot.info", tmp, envir=.adherer.env);
+    }
+    if( .do.SVG )
+    {
+      tmp <- get(".last.cma.plot.info", envir=.adherer.env);
+      tmp$SVG$adh.max <- adh.max;
+      tmp$SVG$.rescale.xcoord.for.CMA.plot <- .rescale.xcoord.for.CMA.plot;
+      assign(".last.cma.plot.info", tmp, envir=.adherer.env);
     }
   }
 
@@ -1909,19 +2092,9 @@
       {
         dose.text.y <- (y.cur - ifelse(print.dose.centered, 0, dose.text.height*2/3)); # print it on or below the dose segment?
 
-        if( is.na(print.dose.outline.col) ) # simple or outlined?
-        {
-          # Simple text:
-          text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
-               dose.text.y,
-               cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=ifelse(is.na(print.dose.col),col,print.dose.col));
-        } else
-        {
-          # Outlined text:
-          .shadow.text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
-                       dose.text.y,
-                       cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=ifelse(is.na(print.dose.col),col,print.dose.col), bg=print.dose.outline.col);
-        }
+        text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
+             dose.text.y,
+             cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=ifelse(is.na(print.dose.col),col,print.dose.col), font=2);
       }
 
       if( .do.SVG ) # SVG:
@@ -3021,12 +3194,12 @@
     par(old.par); # restore graphical params
   }
 
+  exported.file.names <- NULL; # the list of exported files (if any)
   if( .do.SVG ) # Close the <sgv> tag:
   {
     svg.str <- c(svg.str, '</svg>\n');
 
     # Export to various formats (if so requested):
-    exported.file.names <- NULL; # the list of exported files (if any)
     if( !is.null(export.formats) )
     {
       file.svg <- NULL;
@@ -3168,6 +3341,19 @@
 
 
 # The old unified function plotting using base R graphics (held here for historical purposes)
+# Draws shadowed/outlined text (taken directly from TeachingDemos to reduced the dependencies on other packages):
+.shadow.text.old <- function(x, y=NULL, labels, col='white', bg='black', theta= seq(pi/4, 2*pi, length.out=8), r=0.1, ... )
+{
+
+  xy <- xy.coords(x,y);
+  xo <- r*strwidth('A');
+  yo <- r*strheight('A');
+
+  for (i in theta) text( xy$x + cos(i)*xo, xy$y + sin(i)*yo, labels, col=bg, ... );
+  text(xy$x, xy$y, labels, col=col, ... );
+}
+
+
 .plot.CMAs.old <- function(cma,                                   # the CMA_per_episode or CMA_sliding_window (or derived) object
                        patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
                        duration=NA,                           # duration and end period to plot in days (if missing, determined from the data)
@@ -4015,9 +4201,9 @@
       } else
       {
         # Outlined text:
-        .shadow.text(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
-                     dose.text.y,
-                     cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
+        .shadow.text.old(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window,
+                         dose.text.y,
+                         cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
       }
     }
 
