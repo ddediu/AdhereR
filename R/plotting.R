@@ -1630,7 +1630,7 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
   y.cur <- 1; # the current vertical line at which plotting takes place
   alternating.band.to.draw <- 1; # for this patient, which alternating band to draw?
 
-  # For each event in cma$data, as well as for each of the cmas (if the case), record important plotting info
+  # For each event in cma$data, as well as for each of the partial CMAs (if the case), record important plotting info
   if( .do.R )
   {
     .last.cma.plot.info$baseR$cma$data <- cbind(.last.cma.plot.info$baseR$cma$data,
@@ -1645,6 +1645,7 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
                                                 ".X.CNT.START"=NA,  ".X.CNT.END"=NA,  ".Y.CNT.START"=NA,  ".Y.CNT.END"=NA,  # continuation lines extension on the plot
                                                 ".X.SCMA.START"=NA, ".X.SCMA.END"=NA, ".Y.SCMA.START"=NA, ".Y.SCMA.END"=NA  # summary CMA extension on the plot
     );
+    .last.cma.plot.info$baseR$partialCMAs <- NULL;
   }
   if( .do.SVG )
   {
@@ -1660,6 +1661,7 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
                                               ".X.CNT.START"=NA,  ".X.CNT.END"=NA,  ".Y.CNT.START"=NA,  ".Y.CNT.END"=NA,  # continuation lines extension on the plot
                                               ".X.SCMA.START"=NA, ".X.SCMA.END"=NA, ".Y.SCMA.START"=NA, ".Y.SCMA.END"=NA  # summary CMA extension on the plot
     );
+    .last.cma.plot.info$SVG$partialCMAs <- NULL;
   }
 
   # For each individual event in turn:
@@ -2381,6 +2383,17 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
             if( .do.R ) # Rplot:
             {
+              # Save the info:
+              .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                             data.frame("pid"=cur_pat_id, type="stacked",
+                                                                        "x.region.start"=min(corrected.x.start, na.rm=TRUE),
+                                                                        "y.region.start"=min(ys, na.rm=TRUE),
+                                                                        "x.region.end"=max(corrected.x.end, na.rm=TRUE),
+                                                                        "y.region.end"=max(ys, na.rm=TRUE)+1,
+                                                                        "x.partial.start"=corrected.x.start,
+                                                                        "y.partial.start"=ys + 0.10,
+                                                                        "x.partial.end"=corrected.x.end,
+                                                                        "y.partial.end"=ys + 0.90));
               # The intervals as empty rectangles:
               rect(corrected.x.start, ys + 0.10, corrected.x.end,   ys + 0.90, border=gray(0.7), col="white");
               # The CMAs as filled rectangles of length proportional to the CMA:
@@ -2393,6 +2406,17 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
             if( .do.SVG ) # SVG:
             {
+              # Save the info:
+              .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                           data.frame("pid"=cur_pat_id, type="stacked",
+                                                                      "x.region.start"=.scale.x.to.SVG.plot(min(corrected.x.start, na.rm=TRUE)),
+                                                                      "y.region.start"=.scale.y.to.SVG.plot(max(ys, na.rm=TRUE)+1),
+                                                                      "x.region.end"=.scale.x.to.SVG.plot(max(corrected.x.end, na.rm=TRUE)),
+                                                                      "y.region.start"=.scale.y.to.SVG.plot(min(ys, na.rm=TRUE)),
+                                                                      "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start),
+                                                                      "y.partial.start"=.scale.y.to.SVG.plot(ys + 0.90),
+                                                                      "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end),
+                                                                      "y.partial.end"=.scale.y.to.SVG.plot(ys + 0.10)));
               svg.str <- c(svg.str,
                            .SVG.comment("Partial CMAs as stacked bars:", newpara=TRUE));
               for( j in 1:nrow(ppts) )
@@ -2449,6 +2473,17 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
               if( .do.R ) # Rplot:
               {
+                # Save the info:
+                .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                               data.frame("pid"=cur_pat_id, type="overlapping",
+                                                                          "x.region.start"=min(corrected.x.start, na.rm=TRUE),
+                                                                          "y.region.start"=min(y.cur + 0.5 + v, na.rm=TRUE),
+                                                                          "x.region.end"=max(corrected.x.end, na.rm=TRUE),
+                                                                          "y.region.start"=max(y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0), na.rm=TRUE),
+                                                                          "x.partial.start"=corrected.x.start,
+                                                                          "y.partial.start"=y.cur + 0.5 + v,
+                                                                          "x.partial.end"=corrected.x.end,
+                                                                          "y.partial.end"=y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0)));
                 segments(corrected.x.start, y.cur + 0.5 + v, corrected.x.end,   y.cur + 0.5 + v, col=plot.partial.CMAs.as.overlapping.col.interval);
                 segments(corrected.x.start, y.cur + 0.5 + v, corrected.x.start, y.cur + 0.5 + v + y.norm.v, col=plot.partial.CMAs.as.overlapping.col.interval);
                 segments(corrected.x.end,   y.cur + 0.5 + v, corrected.x.end,   y.cur + 0.5 + v + y.norm.v, col=plot.partial.CMAs.as.overlapping.col.interval);
@@ -2456,6 +2491,17 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
               if( .do.SVG ) # SVG:
               {
+                # Save the info:
+                .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                             data.frame("pid"=cur_pat_id, type="stacked",
+                                                                        "x.region.start"=.scale.x.to.SVG.plot(min(corrected.x.start, na.rm=TRUE)),
+                                                                        "y.region.start"=.scale.y.to.SVG.plot(max(y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0), na.rm=TRUE)),
+                                                                        "x.region.end"=.scale.x.to.SVG.plot(max(corrected.x.end, na.rm=TRUE)),
+                                                                        "y.region.start"=.scale.y.to.SVG.plot(min(y.cur + 0.5 + v, na.rm=TRUE)),
+                                                                        "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start),
+                                                                        "y.partial.start"=.scale.y.to.SVG.plot(y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0)),
+                                                                        "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end),
+                                                                        "y.partial.end"=.scale.y.to.SVG.plot(y.cur + 0.5 + v)));
                 for( j in 1:nrow(ppts) )
                 {
                   svg.str <- c(svg.str,
@@ -2636,7 +2682,33 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
             {
               if( plot.partial.CMAs.as.timeseries.interval.type == "none" )
               {
-                # Nothing to plot
+                # Nothing to plot, but save the actual points:
+                if( .do.R )
+                {
+                  .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                 data.frame("pid"=cur_pat_id, type="timeseries",
+                                                                            "x.region.start"=corrected.x + x.start.min,
+                                                                            "y.region.start"=y.cur + 0.5,
+                                                                            "x.region.end"=corrected.x + x.end.max,
+                                                                            "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                                            "x.partial.start"=corrected.x.text[!is.na(ppts$y.norm)],
+                                                                            "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)],
+                                                                            "x.partial.end"=corrected.x.text[!is.na(ppts$y.norm)],
+                                                                            "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)]));
+                }
+                if( .do.SVG )
+                {
+                  .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                               data.frame("pid"=cur_pat_id, type="timeseries",
+                                                                          "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                                          "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                          "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
+                                                                          "y.region.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                          "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.text[!is.na(ppts$y.norm)]),
+                                                                          "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)]),
+                                                                          "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.text[!is.na(ppts$y.norm)]),
+                                                                          "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)])));
+                }
               } else if( plot.partial.CMAs.as.timeseries.interval.type %in% c("segments", "arrows", "lines") )
               {
                 if( .do.R ) # Rplot:
@@ -2650,6 +2722,17 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
                              col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
                     segments(corrected.x.end,   ppts$y.norm - 0.2, corrected.x.end,   ppts$y.norm + 0.2,
                              col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                    # Save the info:
+                    .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                   data.frame("pid"=cur_pat_id, type="timeseries",
+                                                                              "x.region.start"=corrected.x + x.start.min,
+                                                                              "y.region.start"=y.cur + 0.5,
+                                                                              "x.region.end"=corrected.x + x.end.max,
+                                                                              "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                                              "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
+                                                                              "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)] - 0.2,
+                                                                              "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
+                                                                              "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)] + 0.2));
                   } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
                   {
                     # The arrow endings:
@@ -2661,6 +2744,31 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
                              col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
                     segments(corrected.x.end - char.width/2, ppts$y.norm + char.height/2, corrected.x.end, ppts$y.norm,
                              col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                    # Save the info:
+                    .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                   data.frame("pid"=cur_pat_id, type="timeseries",
+                                                                              "x.region.start"=corrected.x + x.start.min,
+                                                                              "y.region.start"=y.cur + 0.5,
+                                                                              "x.region.end"=corrected.x + x.end.max,
+                                                                              "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                                              "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
+                                                                              "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)] - char.height/2,
+                                                                              "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
+                                                                              "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)] + char.height/2));
+                  } else
+                  {
+                    # Just the lines:
+                    # Save the info:
+                    .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                   data.frame("pid"=cur_pat_id, type="timeseries",
+                                                                              "x.region.start"=corrected.x + x.start.min,
+                                                                              "y.region.start"=y.cur + 0.5,
+                                                                              "x.region.end"=corrected.x + x.end.max,
+                                                                              "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                                              "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
+                                                                              "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)],
+                                                                              "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
+                                                                              "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)]));
                   }
                 }
 

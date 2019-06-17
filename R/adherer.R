@@ -8146,7 +8146,7 @@ plot.CMA_per_episode <- function(cma,                                     # the 
              title=title,
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
-             medication.groups=medication.groups,
+             #medication.groups=medication.groups,
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=FALSE, # per-episode and sliding windows might have overlapping intervals, so better not to show them at all
@@ -8193,7 +8193,7 @@ plot.CMA_per_episode <- function(cma,                                     # the 
              observation.window.density=observation.window.density,
              observation.window.angle=observation.window.angle,
              observation.window.opacity=observation.window.opacity,
-             show.real.obs.window.start=show.real.obs.window.start,
+             #show.real.obs.window.start=show.real.obs.window.start,
              real.obs.window.density=real.obs.window.density,
              real.obs.window.angle=real.obs.window.angle,
              alternating.bands.cols=alternating.bands.cols,
