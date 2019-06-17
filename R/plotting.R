@@ -492,10 +492,76 @@
 .adherer.env <- new.env();
 assign(".last.cma.plot.info", NULL, envir=.adherer.env); # initially no last plot that we're aware of...
 
-# Access the last plot's info:
-get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adherer.env)); }
+#' Access last adherence plot info.
+#'
+#' Returns the full info the last adherence plot, to be used to modify and/or to
+#' add new elements to this plot.
+#'
+#' This is intended for advanced users only.
+#' It may return \code{NULL} if no plotting was generated yet, but if one was, a
+#' list contaning one named element for each type of plot produced (currently only
+#' \emph{baseR} and \emph{SVG} are used).
+#' Besides the shared elements (see the returned value), there are specific ones
+#' as well.
+#' For \emph{baseR}, the members \emph{old.par} and \emph{used.par} contain the
+#' original (pre-plot) \code{par()} environment and the one used within
+#' \code{plot()}, respectively. Before \code{plot()} does anything, it saves the
+#' environment into \emph{old.par}, then it adjusts it in various ways and it saves
+#' it to \emph{used.par}, does its job, then, just beofre returning, restores back
+#' \emph{old.par}. So, beofre adding/chaning anything to the plot, please make sure
+#' to reinstate \emph{used.par}, do the plotting, and restore back \emph{old.par}
+#' (see examples).
+#'
+#' @return A \code{list} (possibly empty) contaning one named element for each type
+#' of plot produced (currently only \emph{baseR} and \emph{SVG}). Each may contain
+#' shared and specific fields concerning:
+#' \itemize{
+#'  \item the values of the parameters with which \code{plot()} was invoked.
+#'  \item actual plot size and other characteristics.
+#'  \item actual title, axis names and labels and their position and size.
+#'  \item legend size, position and size and position of its components.
+#'  \item expanded \code{cma$data} contaning, for each event, info about its
+#'  plotting, including the corresponding fullow-uo and observation windows,
+#'  event start and end, dose text (if any) and other graphical elements.
+#'  \item position, size of the partial CMAs (if any) and of their components.
+#'  \item position, size of the plotted CMAs (if any) and of their components.
+#'  \item rescaling function(s) useful for mapping events to plotting coordinates.
+#'  \item for \emph{baseR} only, the original and used par() environment.
+#' }
+#' @examples
+#' cma7 <- CMA7(data=med.events[med.events$PATIENT_ID %in% c(1,2),],
+#'              ID.colname="PATIENT_ID",
+#'              event.date.colname="DATE",
+#'              event.duration.colname="DURATION",
+#'              event.daily.dose.colname="PERDAY",
+#'              medication.class.colname="CATEGORY",
+#'              followup.window.start=0,
+#'              followup.window.start.unit="days",
+#'              followup.window.duration=2*365,
+#'              followup.window.duration.unit="days",
+#'              observation.window.start=30,
+#'              observation.window.start.unit="days",
+#'              observation.window.duration=365,
+#'              observation.window.duration.unit="days",
+#'              date.format="%m/%d/%Y",
+#'              summary="Base CMA");
+#' plot(cma7);
+#' tmp <- last.plot.get.info();
+#' names(tmp);
+#' tmp$baseR$legend$box; # legend position and size
+#' head(tmp$baseR$cma$data); # events + plotting info
+#' par(tmp$baseR$used.par); # restore the plotting environment
+#' rect(tmp$baseR$.map.event.x(270), tmp$baseR$.map.event.y(1-0.5),
+#'      tmp$baseR$.map.event.x(900), tmp$baseR$.map.event.y(nrow(tmp$baseR$cma$data)+0.5),
+#'      col=adjustcolor("blue",alpha.f=0.5), border="blue");
+#' par(tmp$baseR$old.par); # restore the pre-plotting environment
+#' @export
+last.plot.get.info <- function() { return (get(".last.cma.plot.info", envir=.adherer.env)); }
+
+#
 
 
+## The plotting function ####
 # Make this function produce SVG
 # (and for now display it as well to maintain compatibility with the old function)
 .plot.CMAs <- function(cma,                                   # the CMA_per_episode or CMA_sliding_window (or derived) object
@@ -1471,6 +1537,7 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
       # Computed things:
       "old.par"=old.par,
+      "used.par"=par(no.readonly=TRUE),
       "xlim"=c(0-5,duration.total+5), "ylim"=c(0,nrow(cma$data)+vert.space.cmas+1),
       "dose.text.height"=ifelse(print.dose, dose.text.height, NA),
       "char.width"=char.width, "char.height"=char.height,
@@ -1597,6 +1664,24 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
       if( plot.dose.lwd.across.medication.classes ) .last.cma.plot.info$SVG$dose.range.global <- dose.range.global;
       .last.cma.plot.info$SVG$adjust.dose.lwd <- adjust.dose.lwd;
     }
+  }
+
+  # Functions mapping an event given as (days, row) to the plotting coordinates:
+  .map.event.x <- function(x) { return (adh.plot.space[2] + x); }
+  .map.event.date <- function(d) { return (adh.plot.space[2] + as.numeric(d) + correct.earliest.followup.window); }
+  .map.event.y <- function(y) { return (y); }
+  # Save plot info:
+  if( .do.R )
+  {
+    .last.cma.plot.info$baseR$.map.event.x <- .map.event.x;
+    .last.cma.plot.info$baseR$.map.event.date <- .map.event.date;
+    .last.cma.plot.info$baseR$.map.event.y <- .map.event.y;
+  }
+  if( .do.SVG )
+  {
+    .last.cma.plot.info$SVG$.map.event.x <- .map.event.x;
+    .last.cma.plot.info$SVG$.map.event.date <- .map.event.date;
+    .last.cma.plot.info$SVG$.map.event.y <- .map.event.y;
   }
 
   # Function mapping the CMA values to the appropriate x-coordinates:
@@ -2805,8 +2890,45 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
                                               stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
                                               class="partial_cma_timeseries_lines")
                                  }
-
                     );
+                  }
+                  # Save the info:
+                  if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
+                  {
+                    .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                                 data.frame("pid"=cur_pat_id, type="timeseries",
+                                                                            "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                                            "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                            "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
+                                                                            "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
+                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] - 0.2),
+                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
+                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] + 0.2)));
+                  } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
+                  {
+                    .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                                 data.frame("pid"=cur_pat_id, type="timeseries",
+                                                                            "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                                            "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                            "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
+                                                                            "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
+                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] - 0.2),
+                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
+                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] + 0.2)));
+                  } else # just lines
+                  {
+                    .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                                 data.frame("pid"=cur_pat_id, type="timeseries",
+                                                                            "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                                            "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                            "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
+                                                                            "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
+                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)]),
+                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
+                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)])));
                   }
                 }
               } else if( plot.partial.CMAs.as.timeseries.interval.type == "rectangles" )
@@ -2817,6 +2939,17 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
                   rect(corrected.x.start, y.cur + 0.5, corrected.x.end, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
                        col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
                        border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
+                  # Save the info:
+                  .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                 data.frame("pid"=cur_pat_id, type="timeseries",
+                                                                            "x.region.start"=corrected.x + x.start.min,
+                                                                            "y.region.start"=y.cur + 0.5,
+                                                                            "x.region.end"=corrected.x + x.end.max,
+                                                                            "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                                            "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
+                                                                            "y.partial.start"=y.cur + 0.5,
+                                                                            "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
+                                                                            "y.partial.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0));
                 }
 
                 if( .do.SVG ) # SVG:
@@ -2832,6 +2965,17 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
                                            class="partial_cma_timeseries_rect")
                     );
                   }
+                  # Save the info:
+                  .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                               data.frame("pid"=cur_pat_id, type="timeseries",
+                                                                          "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                                          "y.region.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                          "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
+                                                                          "y.region.end"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                          "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
+                                                                          "y.partial.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                          "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
+                                                                          "y.partial.end"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0)));
                 }
               }
             }
@@ -3712,7 +3856,8 @@ get.last.plot.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
   if( .do.R ) # Rplot:
   {
-    par(old.par); # restore graphical params
+    TODO: restore only those parts of par() that matter -- see help for par!!!
+    #par(old.par); # restore graphical params
   }
 
   exported.file.names <- NULL; # the list of exported files (if any)
