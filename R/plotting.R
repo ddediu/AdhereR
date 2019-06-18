@@ -505,12 +505,7 @@ assign(".last.cma.plot.info", NULL, envir=.adherer.env); # initially no last plo
 #' as well.
 #' For \emph{baseR}, the members \emph{old.par} and \emph{used.par} contain the
 #' original (pre-plot) \code{par()} environment and the one used within
-#' \code{plot()}, respectively. Before \code{plot()} does anything, it saves the
-#' environment into \emph{old.par}, then it adjusts it in various ways and it saves
-#' it to \emph{used.par}, does its job, then, just beofre returning, restores back
-#' \emph{old.par}. So, beofre adding/chaning anything to the plot, please make sure
-#' to reinstate \emph{used.par}, do the plotting, and restore back \emph{old.par}
-#' (see examples).
+#' \code{plot()}, respectively, in case these need restoring.
 #'
 #' @return A \code{list} (possibly empty) contaning one named element for each type
 #' of plot produced (currently only \emph{baseR} and \emph{SVG}). Each may contain
@@ -550,11 +545,9 @@ assign(".last.cma.plot.info", NULL, envir=.adherer.env); # initially no last plo
 #' names(tmp);
 #' tmp$baseR$legend$box; # legend position and size
 #' head(tmp$baseR$cma$data); # events + plotting info
-#' par(tmp$baseR$used.par); # restore the plotting environment
 #' rect(tmp$baseR$.map.event.x(270), tmp$baseR$.map.event.y(1-0.5),
 #'      tmp$baseR$.map.event.x(900), tmp$baseR$.map.event.y(nrow(tmp$baseR$cma$data)+0.5),
 #'      col=adjustcolor("blue",alpha.f=0.5), border="blue");
-#' par(tmp$baseR$old.par); # restore the pre-plotting environment
 #' @export
 last.plot.get.info <- function() { return (get(".last.cma.plot.info", envir=.adherer.env)); }
 
@@ -3856,7 +3849,6 @@ last.plot.get.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
   if( .do.R ) # Rplot:
   {
-    TODO: restore only those parts of par() that matter -- see help for par!!!
     #par(old.par); # restore graphical params
   }
 
