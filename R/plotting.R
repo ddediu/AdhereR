@@ -501,6 +501,11 @@ assign(".last.cma.plot.info", NULL, envir=.adherer.env); # initially no last plo
 #' It may return \code{NULL} if no plotting was generated yet, but if one was, a
 #' list contaning one named element for each type of plot produced (currently only
 #' \emph{baseR} and \emph{SVG} are used).
+#' For all types of plots there are a set of \emph{mapping} functions useful for
+#' transforming events in plotting coordinates: \code{.map.event.x(x)} takes a
+#' number of days \code{x}, \code{.map.event.date(d, adjust.for.earliest.date=TRUE)}
+#' takes a \code{Date} \code{d} (and implictely adjusts for the earilerst date
+#' plotted), and  \code{.map.event.y(y)} takes a row ("event" number) \code{y}.
 #' Besides the shared elements (see the returned value), there are specific ones
 #' as well.
 #' For \emph{baseR}, the members \emph{old.par} and \emph{used.par} contain the
@@ -521,7 +526,6 @@ assign(".last.cma.plot.info", NULL, envir=.adherer.env); # initially no last plo
 #'  \item position, size of the partial CMAs (if any) and of their components.
 #'  \item position, size of the plotted CMAs (if any) and of their components.
 #'  \item rescaling function(s) useful for mapping events to plotting coordinates.
-#'  \item for \emph{baseR} only, the original and used par() environment.
 #' }
 #' @examples
 #' cma7 <- CMA7(data=med.events[med.events$PATIENT_ID %in% c(1,2),],
@@ -545,13 +549,181 @@ assign(".last.cma.plot.info", NULL, envir=.adherer.env); # initially no last plo
 #' names(tmp);
 #' tmp$baseR$legend$box; # legend position and size
 #' head(tmp$baseR$cma$data); # events + plotting info
+#' # Add a transparent blue rect between days 270 and 900:
 #' rect(tmp$baseR$.map.event.x(270), tmp$baseR$.map.event.y(1-0.5),
 #'      tmp$baseR$.map.event.x(900), tmp$baseR$.map.event.y(nrow(tmp$baseR$cma$data)+0.5),
 #'      col=adjustcolor("blue",alpha.f=0.5), border="blue");
+#' # Add a transparent rect rect between dates 03/15/2036 and 03/15/2037:
+#' rect(tmp$baseR$.map.event.date(as.Date("03/15/2036", format="%m/%d/%Y")),
+#'      tmp$baseR$.map.event.y(1-0.5),
+#'      tmp$baseR$.map.event.date(as.Date("03/15/2037", format="%m/%d/%Y")),
+#'      tmp$baseR$.map.event.y(nrow(tmp$baseR$cma$data)+0.5),
+#'      col=adjustcolor("red",alpha.f=0.5), border="blue");
 #' @export
 last.plot.get.info <- function() { return (get(".last.cma.plot.info", envir=.adherer.env)); }
 
-#
+#' Map from event to plot coordinates.
+#'
+#' Maps the (x,y) coordinates in the event space to the plotting space.
+#'
+#' This is intended for advanced users only.
+#' In the event space, the \emph{x} coordinate can be either given as the number of
+#' days since the first plotted event, or as an actual calendar date (either as a
+#' \code{Date} object or a string with a given format; a date may or may not be corrected
+#' relative to the first displayed date). On the \emph{y} coordinate, the plotting is
+#' divided in equally spaced rows, each row corresponding to a single event or an element
+#' of a partial CMA plot (one can specify in between rows using fractions). Any or both of
+#' \emph{x} and \emph{y} can be missing.
+#'
+#' @param x The \emph{x} coordinate in the event space, either a \code{number} giving the
+#' number of days since the earliest plotted date, or a \code{Date} or a \code{string} in
+#' the format given by the \emph{x.date.format} parameter giving the actual calendar date.
+#' @param y The \emph{y} coordinate in the event space, thus a \code{number} giving the
+#' plot row.
+#' @param x.is.Date A \code{logical}, being \code{TRUE} if \emph{x} is a string giving the
+#' date in the \emph{x.date.format} format.
+#' @param x.date.format A \code{string} giving the format of the \emph{x} date, if
+#' \emph{x.is.Date} id \code{TRUE}.
+#' @param adjust.for.earliest.date A \code{logical} which is \code{TRUE} if \emph{x} is a
+#' calendar date that must be adjusted for the earliest plotted date (by default
+#' \code{TRUE}).
+#' @param plot.type Can be either "baseR" or "SVG" and specifies to which type of plotting
+#' the mapping applies.
+#' @return A numeric vector with \emph{x} and \emph{y} components giving the plotting
+#' coordinates, or \code{NULL} in case of error.
+#' @examples
+#' cma7 <- CMA7(data=med.events[med.events$PATIENT_ID %in% c(1,2),],
+#'              ID.colname="PATIENT_ID",
+#'              event.date.colname="DATE",
+#'              event.duration.colname="DURATION",
+#'              event.daily.dose.colname="PERDAY",
+#'              medication.class.colname="CATEGORY",
+#'              followup.window.start=0,
+#'              followup.window.start.unit="days",
+#'              followup.window.duration=2*365,
+#'              followup.window.duration.unit="days",
+#'              observation.window.start=30,
+#'              observation.window.start.unit="days",
+#'              observation.window.duration=365,
+#'              observation.window.duration.unit="days",
+#'              date.format="%m/%d/%Y",
+#'              summary="Base CMA");
+#' plot(cma7);
+#' # Add a transparent blue rect:
+#' x1 <- map.event.coords.to.plot(x=270);
+#' y1 <- get.event.plotting.area()["y.min"];
+#' x2 <- map.event.coords.to.plot(x="03/15/2037", x.is.Date=TRUE, x.date.format="%m/%d/%Y");
+#' y2 <- get.event.plotting.area()["y.max"];
+#' rect(map.event.coords.to.plot(x=270),
+#' get.event.plotting.area()["y.min"],
+#'      map.event.coords.to.plot(x="03/15/2037", x.is.Date=TRUE, x.date.format="%m/%d/%Y"),
+#'      get.event.plotting.area()["y.max"],
+#'      col=adjustcolor("blue",alpha.f=0.5), border="blue");
+#' @export
+map.event.coords.to.plot <- function(x=NA, y=NA, x.is.Date=FALSE, x.date.format="%m/%d/%Y", adjust.for.earliest.date=TRUE, plot.type=c("baseR", "SVG")[1])
+{
+  lcpi <- last.plot.get.info();
+
+  if( plot.type[1] == "baseR" )
+  {
+    if( is.null(lcpi) || is.null(lcpi$baseR) )
+    {
+      warning("No CMA plot or no base R was generated!\n");
+      return (NULL);
+    } else
+    {
+      # x:
+      if( is.na(x) )
+      {
+        x1 <- NA;
+      } else if( inherits(x, "Date") )
+      {
+        x1 <- lcpi$baseR$.map.event.date(x, adjust.for.earliest.date=adjust.for.earliest.date);
+      } else if( x.is.Date )
+      {
+        x1 <- lcpi$baseR$.map.event.date(as.Date(as.character(x), format=x.date.format), adjust.for.earliest.date=adjust.for.earliest.date);
+      } else
+      {
+        x1 <- lcpi$baseR$.map.event.x(x);
+      }
+      # y:
+      if( is.na(y) )
+      {
+        y1 <- NA;
+      } else
+      {
+        y1 <- lcpi$baseR$.map.event.y(y);
+      }
+      # Return value:
+      return (c("x"=x1, "y"=y1));
+    }
+  } else if( plot.type[1] == "SVG" )
+  {
+    if( is.null(lcpi) || is.null(lcpi$SVG) )
+    {
+      warning("No CMA plot or no SVG was generated!\n");
+      return (NULL);
+    } else
+    {
+      # x:
+      if( inherits(x, "Date") || x.is.Date )
+      {
+        x1 <- lcpi$SVG$.map.event.date(ifelse(inherits(x, "Date"), x, as.Date(x, format=x.date.format)), adjust.for.earliest.date=adjust.for.earliest.date);
+      } else
+      {
+        x1 <- lcpi$SVG$.map.event.x(x);
+      }
+      # y:
+      y1 <- lcpi$SVG$.map.event.y(y);
+      # Return value:
+      return (c("x"=x1, "y"=y1));
+    }
+  } else
+  {
+    warning("Unknown plot type!\n");
+    return (NULL);
+  }
+}
+
+#' Get the actual plotting area.
+#'
+#' Returns the actual plotting area rectangle.
+#'
+#' This is intended for advanced users only.
+#'
+#' @return A numeric vector with components \emph{x.min}, \emph{x.max},
+#' \emph{y.min} and \emph{y.max}, or \code{NULL} in case of error.
+#' @export
+get.event.plotting.area <- function(plot.type=c("baseR", "SVG")[1])
+{
+  lcpi <- last.plot.get.info();
+
+  if( plot.type[1] == "baseR" )
+  {
+    if( is.null(lcpi) || is.null(lcpi$baseR) )
+    {
+      warning("No CMA plot or no base R was generated!\n");
+      return (NULL);
+    } else
+    {
+      return (c("x.min"=lcpi$baseR$x.min, "x.max"=lcpi$baseR$x.max, "y.min"=lcpi$baseR$y.min, "y.max"=lcpi$baseR$y.max));
+    }
+  } else if( plot.type[1] == "SVG" )
+  {
+    if( is.null(lcpi) || is.null(lcpi$SVG) )
+    {
+      warning("No CMA plot or no SVG was generated!\n");
+      return (NULL);
+    } else
+    {
+      return (c("x.min"=lcpi$SVG$x.min, "x.max"=lcpi$SVG$x.max, "y.min"=lcpi$SVG$y.min, "y.max"=lcpi$SVG$y.max));
+    }
+  } else
+  {
+    warning("Unknown plot type!\n");
+    return (NULL);
+  }
+}
 
 
 ## The plotting function ####
@@ -1532,6 +1704,7 @@ last.plot.get.info <- function() { return (get(".last.cma.plot.info", envir=.adh
       "old.par"=old.par,
       "used.par"=par(no.readonly=TRUE),
       "xlim"=c(0-5,duration.total+5), "ylim"=c(0,nrow(cma$data)+vert.space.cmas+1),
+      "x.min"=0, "x.max"=duration.total, "y.min"=1, "y.max"=nrow(cma$data)+vert.space.cmas,
       "dose.text.height"=ifelse(print.dose, dose.text.height, NA),
       "char.width"=char.width, "char.height"=char.height,
       "char.height.CMA"=char.height.CMA,
@@ -1618,6 +1791,7 @@ last.plot.get.info <- function() { return (get(".last.cma.plot.info", envir=.adh
       # Computed things:
       "x"=0, "y"=0,
       "width"=dims.total.width, "height"=dims.total.height,
+      "x.min"=0, "x.max"=duration.total, "y.min"=1, "y.max"=nrow(cma$data)+vert.space.cmas,
       "dims.chr.std"=dims.chr.std,
       "dims.chr.event"=dims.chr.event,
       "dims.chr.title"=dims.chr.title,
@@ -1661,7 +1835,16 @@ last.plot.get.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 
   # Functions mapping an event given as (days, row) to the plotting coordinates:
   .map.event.x <- function(x) { return (adh.plot.space[2] + x); }
-  .map.event.date <- function(d) { return (adh.plot.space[2] + as.numeric(d) + correct.earliest.followup.window); }
+  .map.event.date <- function(d, adjust.for.earliest.date=TRUE)
+  {
+    if( adjust.for.earliest.date )
+    {
+      return (as.numeric(d - earliest.date + adh.plot.space[2] + correct.earliest.followup.window));
+    } else
+    {
+      return (as.numeric(d + adh.plot.space[2] + correct.earliest.followup.window));
+    }
+  }
   .map.event.y <- function(y) { return (y); }
   # Save plot info:
   if( .do.R )

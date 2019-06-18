@@ -21,7 +21,6 @@ shared and specific fields concerning:
  \item position, size of the partial CMAs (if any) and of their components.
  \item position, size of the plotted CMAs (if any) and of their components.
  \item rescaling function(s) useful for mapping events to plotting coordinates.
- \item for \emph{baseR} only, the original and used par() environment.
 }
 }
 \description{
@@ -33,16 +32,16 @@ This is intended for advanced users only.
 It may return \code{NULL} if no plotting was generated yet, but if one was, a
 list contaning one named element for each type of plot produced (currently only
 \emph{baseR} and \emph{SVG} are used).
+For all types of plots there are a set of \emph{mapping} functions useful for
+transforming events in plotting coordinates: \code{.map.event.x(x)} takes a
+number of days \code{x}, \code{.map.event.date(d, adjust.for.earliest.date=TRUE)}
+takes a \code{Date} \code{d} (and implictely adjusts for the earilerst date
+plotted), and  \code{.map.event.y(y)} takes a row ("event" number) \code{y}.
 Besides the shared elements (see the returned value), there are specific ones
 as well.
 For \emph{baseR}, the members \emph{old.par} and \emph{used.par} contain the
 original (pre-plot) \code{par()} environment and the one used within
-\code{plot()}, respectively. Before \code{plot()} does anything, it saves the
-environment into \emph{old.par}, then it adjusts it in various ways and it saves
-it to \emph{used.par}, does its job, then, just beofre returning, restores back
-\emph{old.par}. So, beofre adding/chaning anything to the plot, please make sure
-to reinstate \emph{used.par}, do the plotting, and restore back \emph{old.par}
-(see examples).
+\code{plot()}, respectively, in case these need restoring.
 }
 \examples{
 cma7 <- CMA7(data=med.events[med.events$PATIENT_ID \%in\% c(1,2),],
@@ -66,9 +65,14 @@ tmp <- last.plot.get.info();
 names(tmp);
 tmp$baseR$legend$box; # legend position and size
 head(tmp$baseR$cma$data); # events + plotting info
-par(tmp$baseR$used.par); # restore the plotting environment
+# Add a transparent blue rect between days 270 and 900:
 rect(tmp$baseR$.map.event.x(270), tmp$baseR$.map.event.y(1-0.5),
      tmp$baseR$.map.event.x(900), tmp$baseR$.map.event.y(nrow(tmp$baseR$cma$data)+0.5),
      col=adjustcolor("blue",alpha.f=0.5), border="blue");
-par(tmp$baseR$old.par); # restore the pre-plotting environment
+# Add a transparent rect rect between dates 03/15/2036 and 03/15/2037:
+rect(tmp$baseR$.map.event.date(as.Date("03/15/2036", format="\%m/\%d/\%Y")),
+     tmp$baseR$.map.event.y(1-0.5),
+     tmp$baseR$.map.event.date(as.Date("03/15/2037", format="\%m/\%d/\%Y")),
+     tmp$baseR$.map.event.y(nrow(tmp$baseR$cma$data)+0.5),
+     col=adjustcolor("red",alpha.f=0.5), border="blue");
 }
