@@ -610,14 +610,10 @@ last.plot.get.info <- function() { return (get(".last.cma.plot.info", envir=.adh
 #'              summary="Base CMA");
 #' plot(cma7);
 #' # Add a transparent blue rect:
-#' x1 <- map.event.coords.to.plot(x=270);
-#' y1 <- get.event.plotting.area()["y.min"];
-#' x2 <- map.event.coords.to.plot(x="03/15/2037", x.is.Date=TRUE, x.date.format="%m/%d/%Y");
-#' y2 <- get.event.plotting.area()["y.max"];
 #' rect(map.event.coords.to.plot(x=270),
-#' get.event.plotting.area()["y.min"],
+#'      get.event.plotting.area()["y.min"]-1,
 #'      map.event.coords.to.plot(x="03/15/2037", x.is.Date=TRUE, x.date.format="%m/%d/%Y"),
-#'      get.event.plotting.area()["y.max"],
+#'      get.event.plotting.area()["y.max"]+1,
 #'      col=adjustcolor("blue",alpha.f=0.5), border="blue");
 #' @export
 map.event.coords.to.plot <- function(x=NA, y=NA, x.is.Date=FALSE, x.date.format="%m/%d/%Y", adjust.for.earliest.date=TRUE, plot.type=c("baseR", "SVG")[1])
@@ -687,9 +683,12 @@ map.event.coords.to.plot <- function(x=NA, y=NA, x.is.Date=FALSE, x.date.format=
 
 #' Get the actual plotting area.
 #'
-#' Returns the actual plotting area rectangle.
+#' Returns the actual plotting area rectangle in plotting coordinates.
 #'
 #' This is intended for advanced users only.
+#'
+#' @param plot.type Can be either "baseR" or "SVG" and specifies to which type of plotting
+#' the mapping applies.
 #'
 #' @return A numeric vector with components \emph{x.min}, \emph{x.max},
 #' \emph{y.min} and \emph{y.max}, or \code{NULL} in case of error.
@@ -717,6 +716,244 @@ get.event.plotting.area <- function(plot.type=c("baseR", "SVG")[1])
     } else
     {
       return (c("x.min"=lcpi$SVG$x.min, "x.max"=lcpi$SVG$x.max, "y.min"=lcpi$SVG$y.min, "y.max"=lcpi$SVG$y.max));
+    }
+  } else
+  {
+    warning("Unknown plot type!\n");
+    return (NULL);
+  }
+}
+
+#' Get the legend plotting area.
+#'
+#' Returns the legend plotting area rectangle in plotting coordinates
+#' (if any).
+#'
+#' This is intended for advanced users only.
+#'
+#' @param plot.type Can be either "baseR" or "SVG" and specifies to which type of plotting
+#' the mapping applies.
+#'
+#' @return A numeric vector with components \emph{x.min}, \emph{x.max},
+#' \emph{y.min} and \emph{y.max}, or \code{NULL} in case of error or no
+#' legend being shown.
+#' @export
+get.legend.plotting.area <- function(plot.type=c("baseR", "SVG")[1])
+{
+  lcpi <- last.plot.get.info();
+
+  if( plot.type[1] == "baseR" )
+  {
+    if( is.null(lcpi) || is.null(lcpi$baseR) )
+    {
+      warning("No CMA plot or no base R was generated!\n");
+      return (NULL);
+    } else
+    {
+      if( is.null(lcpi$baseR$legend) )
+      {
+        return (NULL); # no legend being shown
+      } else
+      {
+        return (c("x.min"=lcpi$baseR$legend$x.start, "x.max"=lcpi$baseR$legend$x.end, "y.min"=lcpi$baseR$legend$y.start, "y.max"=lcpi$baseR$legend$y.end));
+      }
+    }
+  } else if( plot.type[1] == "SVG" )
+  {
+    if( is.null(lcpi) || is.null(lcpi$SVG) )
+    {
+      warning("No CMA plot or no SVG was generated!\n");
+      return (NULL);
+    } else
+    {
+      if( is.null(lcpi$SVG$legend) )
+      {
+        return (NULL); # no legend being shown
+      } else
+      {
+        return (c("x.min"=lcpi$SVG$legend$x.start, "x.max"=lcpi$SVG$legend$x.end, "y.min"=lcpi$SVG$legend$y.start, "y.max"=lcpi$SVG$legend$y.end));
+      }
+    }
+  } else
+  {
+    warning("Unknown plot type!\n");
+    return (NULL);
+  }
+}
+
+
+#' Get info about the plotted events.
+#'
+#' Returns a \code{data.frame} where each row contains info about one plotted event;
+#' the order of the rows reflects the y-axis (first row on bottom).
+#'
+#' This is intended for advanced users only.
+#'
+#' @param plot.type Can be either "baseR" or "SVG" and specifies to which type of plotting
+#' the mapping applies.
+#'
+#' @return A \code{data.frame} that, besides the info about each event, also
+#' contains info about:
+#' \itemize{
+#'  \item the corresponding follow-up and observation windows (and, for
+#'  \code{CMA8}, the "real" observation window), given as the corners of the area
+#'  \emph{.X...START}, \emph{.X...END}, \emph{.Y...START} and \emph{.Y...END}
+#'  (where the mid dot stands for FUW, OW and ROW, respectively).
+#'  \item the area occupied by the graphic representation of the event given by
+#'  its four corners \emph{.X.START}, \emph{.X.END}, \emph{.Y.START} and
+#'  \emph{.Y.END}, as well as the line width \emph{.EV.LWD}.
+#'  \item the dose text's (if any) position (\emph{.X.DOSE}, \emph{.Y.DOSE}) and
+#'  font size \emph{.FONT.SIZE.DOSE}.
+#'  \item if event corvered and not covered are plotted, also give their areas as
+#'  \emph{.X.EVC.START}, \emph{.X.EVC.END}, \emph{.Y.EVC.START}, \emph{.Y.EVC.END},
+#'  \emph{.X.EVNC.START}, \emph{.X.EVNC.END}, \emph{.Y.EVNC.START} and
+#'  \emph{.Y.EVNC.END}.
+#'  \item the continuation lines area as \emph{.X.CNT.START}, \emph{.X.CNT.END},
+#'  \emph{.Y.CNT.START} and \emph{.Y.CNT.END}.
+#'  \item and the corresponding summary CMA (if any) given as the area
+#'  \emph{.X.SCMA.START}, \emph{.X.SCMA.END}, \emph{.Y.SCMA.START} and
+#'  \emph{.Y.SCMA.END}.
+#' }
+#' Please note that even if with follow-up and ("real") observation window, and
+#' the summary CMA info is repeated for each event, they really make sense at
+#' the level of the patient.
+#' @examples
+#' cma7 <- CMA7(data=med.events[med.events$PATIENT_ID %in% c(1,2),],
+#'              ID.colname="PATIENT_ID",
+#'              event.date.colname="DATE",
+#'              event.duration.colname="DURATION",
+#'              event.daily.dose.colname="PERDAY",
+#'              medication.class.colname="CATEGORY",
+#'              followup.window.start=0,
+#'              followup.window.start.unit="days",
+#'              followup.window.duration=2*365,
+#'              followup.window.duration.unit="days",
+#'              observation.window.start=30,
+#'              observation.window.start.unit="days",
+#'              observation.window.duration=365,
+#'              observation.window.duration.unit="days",
+#'              date.format="%m/%d/%Y",
+#'              summary="Base CMA");
+#' plot(cma7);
+#' tmp <- get.plotted.events();
+#' head(tmp);
+#' # "Mask" the first event:
+#' rect(tmp$.X.START[1], tmp$.Y.START[1]-0.5, tmp$.X.END[1], tmp$.Y.END[1]+0.5,
+#'      col=adjustcolor("white",alpha.f=0.75), border="black");
+#' # "Mask" the first patient's summary CMA:
+#' rect(tmp$.X.SCMA.START[1], tmp$.Y.SCMA.START[1],
+#'      tmp$.X.SCMA.END[1], tmp$.Y.SCMA.END[1],
+#'      col=adjustcolor("white",alpha.f=0.75), border="black");
+#' @export
+get.plotted.events <- function(plot.type=c("baseR", "SVG")[1])
+{
+  lcpi <- last.plot.get.info();
+
+  if( plot.type[1] == "baseR" )
+  {
+    if( is.null(lcpi) || is.null(lcpi$baseR) )
+    {
+      warning("No CMA plot or no base R was generated!\n");
+      return (NULL);
+    } else
+    {
+      if( is.null(lcpi$baseR$cma) || is.null(lcpi$baseR$cma$data) )
+      {
+        warning("No info about the plotted CMA!\n");
+        return (NULL);
+      } else
+      {
+        return (lcpi$baseR$cma$data);
+      }
+    }
+  } else if( plot.type[1] == "SVG" )
+  {
+    if( is.null(lcpi) || is.null(lcpi$SVG) )
+    {
+      warning("No CMA plot or no SVG was generated!\n");
+      return (NULL);
+    } else
+    {
+      if( is.null(lcpi$SVG$cma) || is.null(lcpi$SVG$cma$data) )
+      {
+        warning("No info about the plotted CMA!\n");
+        return (NULL);
+      } else
+      {
+        return (lcpi$SVG$cma$data);
+      }
+    }
+  } else
+  {
+    warning("Unknown plot type!\n");
+    return (NULL);
+  }
+}
+
+
+#' Get info about the plotted partial CMAs.
+#'
+#' Returns a \code{data.frame} where each row contains info about one plotted
+#' partial CMA (partial CMAs make sense only for "complex" CMAs, i.e., per
+#' episode and sliding windows).
+#'
+#' This is intended for advanced users only.
+#'
+#' @param plot.type Can be either "baseR" or "SVG" and specifies to which type of plotting
+#' the mapping applies.
+#'
+#' @return A \code{data.frame} that contains info about:
+#' \itemize{
+#'  \item the patient ID (\emph{pid}) to which the partial CMA belongs.
+#'  \item the \emph{type} of partial CMA (see the help for plotting "complex"
+#'  CMAs).
+#'  \item the corners of the whole area covered by the partial CMA plot given as
+#'  \emph{x.region.start}, \emph{y.region.start}, \emph{x.region.end} and
+#'  \emph{y.region.end}.
+#'  \item for each element of the partial CMA plot, its area as
+#'  \emph{x.partial.start}, \emph{y.partial.start}, \emph{x.partial.end} and
+#'  \emph{y.partial.end}.
+#' }
+#' Please note that this contains one row per partial CMA element (e.g., if
+#' plotting stacked, one row for each rectangle).
+#' @export
+get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1])
+{
+  lcpi <- last.plot.get.info();
+
+  if( plot.type[1] == "baseR" )
+  {
+    if( is.null(lcpi) || is.null(lcpi$baseR) )
+    {
+      warning("No CMA plot or no base R was generated!\n");
+      return (NULL);
+    } else
+    {
+      if( is.null(lcpi$baseR$partialCMAs) )
+      {
+        warning("No partial CMAs: are you sur this is the right type of CMA and that the partial CMAs were actually plotted?\n");
+        return (NULL);
+      } else
+      {
+        return (lcpi$baseR$partialCMAs);
+      }
+    }
+  } else if( plot.type[1] == "SVG" )
+  {
+    if( is.null(lcpi) || is.null(lcpi$SVG) )
+    {
+      warning("No CMA plot or no SVG was generated!\n");
+      return (NULL);
+    } else
+    {
+      if( is.null(lcpi$SVG$partialCMAs) )
+      {
+        warning("No partial CMAs: are you sur this is the right type of CMA and that the partial CMAs were actually plotted?\n");
+        return (NULL);
+      } else
+      {
+        return (lcpi$SVG$partialCMAs);
+      }
     }
   } else
   {
@@ -784,13 +1021,13 @@ get.event.plotting.area <- function(plot.type=c("baseR", "SVG")[1])
 {
 
   ## DEBUG ####
-  if( TRUE )
-  {
-    # Force debugging SVG plotting:
-    export.formats <- c("html");
-    export.formats.directory <- "~/Temp/tmp";
-    generate.R.plot <- TRUE;
-  }
+  #if( TRUE )
+  #{
+  #  # Force debugging SVG plotting:
+  #  export.formats <- c("html");
+  #  export.formats.directory <- "~/Temp/tmp";
+  #  generate.R.plot <- TRUE;
+  #}
   ## END DEBUG ####
 
 

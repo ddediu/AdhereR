@@ -65,13 +65,9 @@ cma7 <- CMA7(data=med.events[med.events$PATIENT_ID \%in\% c(1,2),],
              summary="Base CMA");
 plot(cma7);
 # Add a transparent blue rect:
-x1 <- map.event.coords.to.plot(x=270);
-y1 <- get.event.plotting.area()["y.min"];
-x2 <- map.event.coords.to.plot(x="03/15/2037", x.is.Date=TRUE, x.date.format="\%m/\%d/\%Y");
-y2 <- get.event.plotting.area()["y.max"];
 rect(map.event.coords.to.plot(x=270),
-get.event.plotting.area()["y.min"],
+     get.event.plotting.area()["y.min"]-1,
      map.event.coords.to.plot(x="03/15/2037", x.is.Date=TRUE, x.date.format="\%m/\%d/\%Y"),
-     get.event.plotting.area()["y.max"],
+     get.event.plotting.area()["y.max"]+1,
      col=adjustcolor("blue",alpha.f=0.5), border="blue");
 }
