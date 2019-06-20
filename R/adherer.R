@@ -719,6 +719,8 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' @param align.all.patients \emph{Logical}, should all patients be aligned
 #' (i.e., the actual dates are discarded and all plots are relative to the
 #' earliest date)?
+#' @param align.first.event.at.zero \emph{Logical}, should the first event be
+#' placed at the origin of the time axis (at 0)?
 #' @param show.period A \emph{string}, if "dates" show the actual dates at the
 #' regular grid intervals, while for "days" (the default) shows the days since
 #' the beginning; if \code{align.all.patients == TRUE}, \code{show.period} is
@@ -734,12 +736,20 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' opacity of the legend background.
 #' @param cex,cex.axis,cex.lab,legend.cex,legend.cex.title \emph{numeric} values
 #' specifying the cex of the various types of text.
+#' @param xlab Named vector of x-axis labels to show for the two types of periods
+#' ("days" and "dates"), or a single value for both, or \code{NULL} for nothing.
+#' @param ylab Named vector of y-axis labels to show without and with CMA estimates,
+#' or a single value for both, or \code{NULL} for nonthing.
+#' @param title Named vector of titles to show for and without alignment, or a
+#' single value for both, or \code{NULL} for nonthing.
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
 #' default \code{rainbow}, but we recommend, whenever possible, a
 #' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
+#' @param medication.groups Optionally, the groups of medications (by default,
+#' all are part of the same group).
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param print.dose \emph{Logical}, should the daily dose be printed as text?
@@ -769,13 +779,11 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' @param observation.window.col,observation.window.density,observation.window.angle,observation.window.opacity
 #' Attributes of the observation window (colour, shading density, angle and
 #' opacity).
+#' @param alternating.bands.cols The colors of the alternating vertical bands
+#' distinguishing the patients; can be \code{NULL} = don't draw the bandes;
+#' or a vector of colors.
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
-#' @param print.CMA \emph{Logical}, should the CMA values be printed?
-#' @param plot.CMA \emph{Logical}, should the CMA values be represented
-#' graphically?
-#' @param CMA.plot.ratio A \emph{number}, the proportion of the total horizontal
-#' plot space to be allocated to the CMA plot.
 #' \emph{Numeric}, the minimum size of the plotting surface in characters;
 #' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
 #' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
@@ -785,6 +793,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
 #' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
 #' referes to a single event.
+#' @param suppress.warnings \emph{Logical}: show or hide the warnings?
 #' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
 #' to plot.
 #' @param ... other possible parameters
@@ -3207,6 +3216,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                            min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                            max.patients.to.plot=100,        # maximum number of patients to plot
+                           suppress.warnings=TRUE,
                            ...
 )
 {
@@ -8068,9 +8078,16 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' (default), "top", or a \emph{numeric} value.
 #' @param legend.bkg.opacity A \emph{number} between 0.0 and 1.0 specifying the
 #' opacity of the legend background.
+#' @param legend.cex,legend.cex.title The legend and legend title font sizes.
 #' @param cex,cex.axis,cex.lab \emph{numeric} values specifying the cex of the
 #' various types of text.
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
+#' @param xlab Named vector of x-axis labels to show for the two types of periods
+#' ("days" and "dates"), or a single value for both, or \code{NULL} for nothing.
+#' @param ylab Named vector of y-axis labels to show without and with CMA estimates,
+#' or a single value for both, or \code{NULL} for nonthing.
+#' @param title Named vector of titles to show for and without alignment, or a
+#' single value for both, or \code{NULL} for nonthing.
 #' @param col.cats A \emph{color} or a \emph{function} that specifies the single
 #' colour or the colour palette used to plot the different medication; by
 #' default \code{rainbow}, but we recommend, whenever possible, a
@@ -8079,9 +8096,17 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
+#' @param print.dose,cex.dose,print.dose.outline.col,print.dose.centered Print daily
+#' dose as a number and, if so, how (color, size, position...).
+#' @param plot.dose,lwd.event.max.dose,plot.dose.lwd.across.medication.classes
+#' Show dose through the width of the event lines and, if so, what the maximum
+#' width should be, and should this maximum be by medication class or overall.
 #' @param col.na The colour used for missing event data.
 #' @param col.continuation,lty.continuation,lwd.continuation The color, style
 #' and width of the contuniation lines connecting consecutive events.
+#' @param alternating.bands.cols The colors of the alternating vertical bands
+#' distinguishing the patients; can be \code{NULL} = don't draw the bandes;
+#' or a vector of colors.
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
 #' @param print.CMA \emph{Logical}, should the CMA values be printed?
@@ -8093,6 +8118,15 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' deafult for CMA_per_episode and FALSE for CMA_sliding_window, because
 #' usually there are more sliding windows than episodes. Also, the density
 #' estimate canot be estimated for less than three different values.
+#' @param plot.partial.CMAs.as Plot the partial CMAs at all (\code{NULL}), and
+#' if so, how (can be "stacked", "overlapping" or "timeseries").
+#' @param plot.partial.CMAs.as.stacked.col.bars,plot.partial.CMAs.as.stacked.col.border,plot.partial.CMAs.as.stacked.col.text
+#' If plotting the partial CMAs as stacked bars, define their graphical attributes.
+#' @param plot.partial.CMAs.as.timeseries.vspace,plot.partial.CMAs.as.timeseries.start.from.zero,plot.partial.CMAs.as.timeseries.col.dot,plot.partial.CMAs.as.timeseries.col.interval,plot.partial.CMAs.as.timeseries.col.text,plot.partial.CMAs.as.timeseries.interval.type,plot.partial.CMAs.as.timeseries.lwd.interval,plot.partial.CMAs.as.timeseries.alpha.interval,plot.partial.CMAs.as.timeseries.show.0perc,plot.partial.CMAs.as.timeseries.show.100perc
+#' If plotting the partial CMAs as imeseries, these are their graphical attributes.
+#' @param plot.partial.CMAs.as.overlapping.alternate,plot.partial.CMAs.as.overlapping.col.interval,plot.partial.CMAs.as.overlapping.col.text
+#' If plotting the partial CMAs as overlapping segments, these are their
+#' graphical attributes.
 #' @param CMA.plot.ratio A \emph{number}, the proportion of the total horizontal
 #' plot space to be allocated to the CMA plot.
 #' @param CMA.plot.col,CMA.plot.border,CMA.plot.bkg,CMA.plot.text \emph{Strings}
@@ -8102,10 +8136,17 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' @param followup.window.col The follow-up window colour.
 #' @param highlight.observation.window \emph{Logical}, should the observation
 #' window be plotted?
-#' @param observation.window.col,observation.window.density,observation.window.angle Attributes of the observation window
-#' (colour, shading density and angle).
-#' @param show.real.obs.window.start,real.obs.window.density,real.obs.window.angle For some CMAs, the observation window
-#' might be adjusted, in which case should it be plotted and with that attributes?
+#' @param observation.window.col,observation.window.opacity
+#' Attributes of the observation window (colour, transparency).
+#' @param min.plot.size.in.characters.horiz,min.plot.size.in.characters.vert
+#' \emph{Numeric}, the minimum size of the plotting surface in characters;
+#' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+#' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
+#' referes to a single event.
+#' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
+#' to plot.
+#' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
+#' warnings.
 #' @param ... other parameters (to be passed to the estimation and plotting of
 #' the simple CMA)
 #'
@@ -8153,7 +8194,7 @@ print.CMA_per_episode <- function(x,                                     # the C
 #'                        );
 #' plot(cmaE, patients.to.plot=c("1","2"));}
 #' @export
-plot.CMA_per_episode <- function(cma,                                     # the CMA_per_episode or CMA_sliding_window (or derived) object
+plot.CMA_per_episode <- function(x,                                     # the CMA_per_episode or CMA_sliding_window (or derived) object
                                  patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
                                  duration=NA,                           # duration and end period to plot in days (if missing, determined from the data)
                                  align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? and, if so, place the first event as the horizintal 0?
@@ -8189,7 +8230,7 @@ plot.CMA_per_episode <- function(cma,                                     # the 
                                  CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
                                  CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                                  highlight.followup.window=TRUE, followup.window.col="green",
-                                 highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
+                                 highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.opacity=0.3,
                                  alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                                  bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                                  min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.25, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
@@ -8198,7 +8239,7 @@ plot.CMA_per_episode <- function(cma,                                     # the 
                                  ...
 )
 {
-  .plot.CMAs(cma,
+  .plot.CMAs(x,
              patients.to.plot=patients.to.plot,
              duration=duration,
              align.all.patients=align.all.patients,
@@ -8264,12 +8305,7 @@ plot.CMA_per_episode <- function(cma,                                     # the 
              followup.window.col=followup.window.col,
              highlight.observation.window=highlight.observation.window,
              observation.window.col=observation.window.col,
-             observation.window.density=observation.window.density,
-             observation.window.angle=observation.window.angle,
              observation.window.opacity=observation.window.opacity,
-             #show.real.obs.window.start=show.real.obs.window.start,
-             real.obs.window.density=real.obs.window.density,
-             real.obs.window.angle=real.obs.window.angle,
              alternating.bands.cols=alternating.bands.cols,
              bw.plot=bw.plot,
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,

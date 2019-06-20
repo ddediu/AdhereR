@@ -43,14 +43,11 @@ export(callAdhereR)
 export(compute.event.int.gaps)
 export(compute.treatment.episodes)
 export(compute_event_durations)
-<<<<<<< HEAD
+export(cover_special_periods)
 export(get.event.plotting.area)
 export(get.legend.plotting.area)
 export(get.plotted.events)
 export(get.plotted.partial.cmas)
-=======
-export(cover_special_periods)
->>>>>>> devel
 export(getCMA)
 export(getCallerWrapperLocation)
 export(last.plot.get.info)

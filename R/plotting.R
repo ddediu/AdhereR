@@ -3697,7 +3697,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1])
 
   if( .do.R ) # Rplot:
   {
-    .legend <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
+    .legend.R <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
     {
       # Legend rectangle:
       if( do.plot )
@@ -3921,7 +3921,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1])
       # Character size for the legend:
       legend.char.width <- strwidth("O",cex=legend.cex); legend.char.height <- strheight("O",cex=legend.cex);
 
-      legend.size <- .legend(do.plot=FALSE);
+      legend.size <- .legend.R(do.plot=FALSE);
       x <- legend.x; y <- legend.y;
       if( is.na(x) || x == "right" )
       {
@@ -3943,7 +3943,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1])
       {
         y <- par("usr")[3] + legend.char.height;
       }
-      ret.val <- .legend(x, y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
+      ret.val <- .legend.R(x, y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
       # Remove superfluous rownames from the saved info:
       if( !is.null(.last.cma.plot.info$baseR$legend$box) ) rownames(.last.cma.plot.info$baseR$legend$box) <- NULL;
       if( !is.null(.last.cma.plot.info$baseR$legend$title) ) rownames(.last.cma.plot.info$baseR$legend$title) <- NULL;
@@ -3957,7 +3957,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1])
 
   if( .do.SVG ) # SVG:
   {
-    .legend <- function(x=0, y=0)
+    .legend.SVG <- function(x=0, y=0)
     {
       # The legend is an object that we can move around, scale, etc:
       l1 <- c(.SVG.comment("The legend", newpara=TRUE, newline=TRUE),
@@ -4254,7 +4254,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1])
     }
     svg.str <- c(svg.str,
                  # The legend:
-                 .legend(legend.x, legend.y)
+                 .legend.SVG(legend.x, legend.y)
     );
     # Remove superfluous rownames from the saved info:
     if( !is.null(.last.cma.plot.info$SVG$legend$box) ) rownames(.last.cma.plot.info$SVG$legend$box) <- NULL;
