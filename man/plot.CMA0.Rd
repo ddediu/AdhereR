@@ -5,15 +5,20 @@
 \title{Plot CMA0 objects.}
 \usage{
 \method{plot}{CMA0}(x, ..., patients.to.plot = NULL, duration = NA,
-  align.all.patients = FALSE, show.period = c("dates", "days")[2],
-  period.in.days = 90, show.legend = TRUE, legend.x = "right",
-  legend.y = "bottom", legend.bkg.opacity = 0.5, legend.cex = 0.75,
-  legend.cex.title = 1, cex = 1, cex.axis = 0.75, cex.lab = 1,
+  align.all.patients = FALSE, align.first.event.at.zero = TRUE,
+  show.period = c("dates", "days")[2], period.in.days = 90,
+  show.legend = TRUE, legend.x = "right", legend.y = "bottom",
+  legend.bkg.opacity = 0.5, legend.cex = 0.75, legend.cex.title = 1,
+  cex = 1, cex.axis = 0.75, cex.lab = 1, xlab = c(dates = "Date",
+  days = "Days"), ylab = c(withoutCMA = "patient", withCMA =
+  "patient (& CMA)"), title = c(aligned =
+  "Event patterns (all patients aligned)", notaligned = "Event patterns"),
   col.cats = rainbow, unspecified.category.label = "drug",
-  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
-  pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
-  print.dose.outline.col = "white", print.dose.centered = FALSE,
-  plot.dose = FALSE, lwd.event.max.dose = 8,
+  medication.groups = NULL, lty.event = "solid", lwd.event = 2,
+  pch.start.event = 15, pch.end.event = 16, print.dose = FALSE,
+  cex.dose = 0.75, print.dose.outline.col = "white",
+  print.dose.centered = FALSE, plot.dose = FALSE,
+  lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
   col.continuation = "black", lty.continuation = "dotted",
   lwd.continuation = 1, col.na = "lightgray",
@@ -21,9 +26,10 @@
   highlight.observation.window = TRUE,
   observation.window.col = "yellow", observation.window.density = 35,
   observation.window.angle = -30, observation.window.opacity = 0.3,
-  bw.plot = FALSE, print.CMA = TRUE, plot.CMA = TRUE,
-  CMA.plot.ratio = 0.1, min.plot.size.in.characters.horiz = 10,
-  min.plot.size.in.characters.vert = 0.5, max.patients.to.plot = 100)
+  alternating.bands.cols = c("white", "gray95"), bw.plot = FALSE,
+  min.plot.size.in.characters.horiz = 10,
+  min.plot.size.in.characters.vert = 0.5, suppress.warnings = FALSE,
+  max.patients.to.plot = 100)
 }
 \arguments{
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
@@ -42,6 +48,9 @@ data such that the whole dataset fits.}
 \item{align.all.patients}{\emph{Logical}, should all patients be aligned
 (i.e., the actual dates are discarded and all plots are relative to the
 earliest date)?}
+
+\item{align.first.event.at.zero}{\emph{Logical}, should the first event be
+placed at the origin of the time axis (at 0)?}
 
 \item{show.period}{A \emph{string}, if "dates" show the actual dates at the
 regular grid intervals, while for "days" (the default) shows the days since
@@ -65,6 +74,15 @@ opacity of the legend background.}
 \item{cex, cex.axis, cex.lab, legend.cex, legend.cex.title}{\emph{numeric} values
 specifying the cex of the various types of text.}
 
+\item{xlab}{Named vector of x-axis labels to show for the two types of periods
+("days" and "dates"), or a single value for both, or \code{NULL} for nothing.}
+
+\item{ylab}{Named vector of y-axis labels to show without and with CMA estimates,
+or a single value for both, or \code{NULL} for nonthing.}
+
+\item{title}{Named vector of titles to show for and without alignment, or a
+single value for both, or \code{NULL} for nonthing.}
+
 \item{col.cats}{A \emph{color} or a \emph{function} that specifies the single
 colour or the colour palette used to plot the different medication; by
 default \code{rainbow}, but we recommend, whenever possible, a
@@ -72,6 +90,9 @@ colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.}
 
 \item{unspecified.category.label}{A \emph{string} giving the name of the
 unspecified (generic) medication category.}
+
+\item{medication.groups}{Optionally, the groups of medications (by default,
+all are part of the same group).}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
@@ -115,16 +136,12 @@ window be plotted?}
 \item{observation.window.col, observation.window.density, observation.window.angle, observation.window.opacity}{Attributes of the observation window (colour, shading density, angle and
 opacity).}
 
+\item{alternating.bands.cols}{The colors of the alternating vertical bands
+distinguishing the patients; can be \code{NULL} = don't draw the bandes;
+or a vector of colors.}
+
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
-\code{\link[grDevices]{gray.colors}} function)?}
-
-\item{print.CMA}{\emph{Logical}, should the CMA values be printed?}
-
-\item{plot.CMA}{\emph{Logical}, should the CMA values be represented
-graphically?}
-
-\item{CMA.plot.ratio}{A \emph{number}, the proportion of the total horizontal
-plot space to be allocated to the CMA plot.
+\code{\link[grDevices]{gray.colors}} function)?
 \emph{Numeric}, the minimum size of the plotting surface in characters;
 horizontally (min.plot.size.in.characters.horiz) referes to the the whole
 duration of the events to plot; vertically (min.plot.size.in.characters.vert)
@@ -134,6 +151,8 @@ referes to a single event.}
 horizontally (min.plot.size.in.characters.horiz) referes to the the whole
 duration of the events to plot; vertically (min.plot.size.in.characters.vert)
 referes to a single event.}
+
+\item{suppress.warnings}{\emph{Logical}: show or hide the warnings?}
 
 \item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
 to plot.}
