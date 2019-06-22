@@ -3350,7 +3350,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1])
                 {
                   # As semi-transparent rectangles:
                   rect(corrected.x.start, y.cur + 0.5, corrected.x.end, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                       col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
+                       #col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
+                       col=adjustcolor(plot.partial.CMAs.as.timeseries.col.interval, alpha.f=plot.partial.CMAs.as.timeseries.alpha.interval),
                        border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
                   # Save the info:
                   .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
@@ -5436,7 +5437,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1])
               {
                 # As semi-transparent rectangles:
                 rect(corrected.x.start, y.cur + 0.5, corrected.x.end, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                     col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
+                     #col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
+                     col=adjustcolor(plot.partial.CMAs.as.timeseries.col.interval, alpha.f=plot.partial.CMAs.as.timeseries.alpha.interval),
                      border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
               }
             }

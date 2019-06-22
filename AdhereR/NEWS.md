@@ -1,3 +1,37 @@
+# AdhereR 0.6
+  
+## New features
+
+  - splitting the old `AdhereR` package into two packages: `AdhereR`, which continues to implement all the computations and plotting, and `AdhereRViz`, which implements all the interactive plotting and GUI (using either RStudio's manipulate and Shiny); while `AdhereRViz` requires `AdhereR`, `AdhereR` only suggests `AdhereRViz`.
+
+
+# AdhereR 0.5
+
+## New features
+
+  - major improvements to `compute_event_durations`, with a complete makeover of the handling for special periods like hospitalization and restructuring of the output.
+
+  - New function `prune_event_durations` to remove leftover supply from previous dispensing events in case of new dispensing events within a user-specified time after dosage changes, special periods, or treatment interruptions.
+
+  - New function `cover_special_periods` to identify special periods that are in proximity to already covered durations and add an additional event for these durations.
+
+  - New option `treat.epi` in function `CMA_per_episode` to specify precomputed treatment episodes for the computation of CMA per episode.
+  
+  - New vignette [*Data preparation for computing adherence to medication in AdhereR*](https://ddediu.github.io/AdhereR/compute_event_durations/compute_event_durations.html) added to explain the functions `compute_event_durations`, `prune_event_durations`, `cover_special_periods`, and `time_to_initiation`.
+
+## Bug fixes
+
+### `compute_event_durations`
+
+  - fixed a few instances where colnames were hardcoded to colnames in example dataset
+  
+  - throw errors when disp.date, presc.date, total.dose, or presc.daily.dose contain NAs
+  
+  - fix error when visit.colname is not in presc.data
+  
+  - fix progress bar when ID's are not sequentially starting from 1
+
+  
 # AdhereR 0.4.1
 
 ## Bug fixes

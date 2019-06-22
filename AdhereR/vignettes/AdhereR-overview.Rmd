@@ -651,9 +651,9 @@ plot(cmaW1, patients.to.plot=c("76"), show.legend=FALSE);
 
 During the exploratory phases of data analysis, it is sometimes extremely useful to be able to plot interactively various views of the data using different parameter settings.
 We have implemented such interactive plotting of medication histories and (simple and iterative) CMA estimates within [`RStudio`](https://www.rstudio.com) and outside it (using [`Shiny`](https://shiny.rstudio.com/); this is the default as it very flexible and independent of running `AdhereR` within `RStudio`) through the `plot_interactive_cma()` function. 
-This function is generic and interactive, and the most important argument is the dataset on which the plotting should be done.
+This function is generic and interactive, and can be given a large set of parameters (including the dataset on which to work) or it can interactively acquire these parameters directly from the user.
 
-For more info, please see the vignette [AdhereR: Interactive plotting (and more) with Shiny](https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html) (please note that due to size resrictions, this vignette is not available offline).
+Please note that this interactive plotting is actually implemented in a different package, `AdhereRViz` (which extends `AdhereR`); for more info, please see the vignette [AdhereR: Interactive plotting (and more) with Shiny](https://cran.r-project.org/package=AdhereRViz/vignettes/adherer_interctive_plots.html) from package `AdhereRViz`.
 
 
 ## Computing event duration from prescription, dispensing, and hospitalization data

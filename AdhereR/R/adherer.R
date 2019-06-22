@@ -32,13 +32,8 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
                   ".CARRY.OVER.FROM.BEFORE", ".DATE.as.Date", ".END.EVENT.DATE", ".EVENT.STARTS.AFTER.OBS.WINDOW",
                   ".EVENT.STARTS.BEFORE.OBS.WINDOW", ".EVENT.WITHIN.FU.WINDOW", ".FU.START.DATE", ".FU.START.DATE.UPDATED",
                   ".INTERSECT.EPISODE.OBS.WIN.END", ".INTERSECT.EPISODE.OBS.WIN.START", ".OBS.DURATION.UPDATED",
-                  ".OBS.END.DATE", ".OBS.END.DATE.PRECOMPUTED", "carry.only.for.same.medication", "chunk",
-                  "consider.dosage.change", "end.episode.gap.days", "episode.ID", "episode.duration", "episode.end",
-                  "episode.start", "followup.window.duration", "followup.window.start",
-                  "maximum.permissible.gap", "maximum.permissible.gap.as.percent",
-                  "medication.change.means.new.treatment.episode", "dosage.change.means.new.treatment.episode",
-                  "observation.window.duration", "observation.window.start", "patientID", "plot.CMA.as.histogram", "selectedCMA",
-                  "show.legend", "sliding.window.duration", "sliding.window.start", "sliding.window.step.duration"));
+                  ".OBS.END.DATE", ".OBS.END.DATE.PRECOMPUTED",
+                  "episode.ID", "episode.duration", "end.episode.gap.days"));
 
 
 #' Example medication events records for 100 patients.
@@ -8899,95 +8894,22 @@ plot.CMA_sliding_window <- plot.CMA_per_episode;
 
 
 
-#' Interactive exploration CMA computation.
+#' Interactive exploration and CMA computation.
 #'
 #' Interactively plot a given patient's data, allowing the real-time exploration
 #' of the various CMAs and their parameters.
 #' It can use \code{Rstudio}'s \code{manipulate} library or \code{Shiny}.
 #'
-#' The \code{manipulate} is kept for backward compatibility only, as it is much
-#' more limited than \code{Shiny} and will receive no new development in the
-#' future.
-#' \code{Shiny} currently allows the use of any other data source besides a
-#' default (and usual) \code{data.frame} (or derived), such a connection to an
-#' \code{SQL} database. In this case, the user \emph{must} redefine the three
-#' argument functions \code{get.colnames.fnc}, \code{get.patients.fnc} and
-#' \code{get.data.for.patients.fnc} which collectively define an interface for
-#' listing the column names, all the patient IDs, and for retreiving the actual
-#' data for a (set of) patient ID(s). A fully worked example is described in
-#' the vignette detailing the access to standard databases storaging the
-#' patient information.
-#' For more info please see the online vignette \url{https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html}.
+#' This is merely a stub for the actual implementation in package
+#' \code{AdhereRViz}: it just checks if this package is installed and functional,
+#' in which case it calls the actual implementation, otherwise warns the user that
+#' \code{AdhereRViz} must be instaled.
 #'
-#' @param data Usually a \emph{\code{data.frame}} containing the events (prescribing
-#' or dispensing) used to compute the CMA. Must contain, at a minimum, the patient
-#' unique ID, the event date and duration, and might also contain the daily
-#' dosage and medication type (the actual column names are defined in the
-#' following four parameters). Alternatively, this can be any other data source
-#' (for example, a connection to a database), in which case the user must redefine
-#' the arguments \code{get.colnames.fnc}, \code{get.patients.fnc} and
-#' \code{get.data.for.patients.fnc} appropriately. Currently, this works only when
-#' using Shiny for interactive rendering. For a working example, please see
-#' the vignette describing the interfacing with databases.
-#' @param ID The ID (as given in the \code{ID.colname} column) of the patient
-#' whose data to interactively plot (if absent, pick the first one); please not
-#' that this an be interactively selected during plotting.
-#' @param cma.class The type of CMAs to plot; can be "simple" (CMA0 to CMA9),
-#' "per episode", or "sliding window".
-#' @param print.full.params A \emph{logical} specifying if the values of all the
-#' parameters used to generate the current plot should be printed in the console
-#' (if \emph{TRUE}, it can generate extremely verbose output!).
-#' @param ID.colname A \emph{string}, the name of the column in \code{data}
-#' containing the unique patient ID, or \code{NA} if not defined.
-#' @param event.date.colname A \emph{string}, the name of the column in
-#' \code{data} containing the start date of the event (in the format given in
-#' the \code{date.format} parameter), or \code{NA} if not defined.
-#' @param event.duration.colname A \emph{string}, the name of the column in
-#' \code{data} containing the event duration (in days), or \code{NA} if not
-#' defined.
-#' @param event.daily.dose.colname A \emph{string}, the name of the column in
-#' \code{data} containing the prescribed daily dose, or \code{NA} if not defined.
-#' @param medication.class.colname A \emph{string}, the name of the column in
-#' \code{data} containing the classes/types/groups of medication, or \code{NA}
-#' if not defined.
-#' @param date.format A \emph{string} giving the format of the dates used in the
-#' \code{data} and the other parameters; see the \code{format} parameters of the
-#' \code{\link[base]{as.Date}} function for details (NB, this concerns only the
-#' dates given as strings and not as \code{Date} objects).
-#' @param followup.window.start.max The maximum number of days when the
-#' follow-up window can start.
-#' @param followup.window.duration.max The maximum duration of the follow-up
-#' window in days.
-#' @param observation.window.start.max The maximum number of days when the
-#' observation window can start.
-#' @param observation.window.duration.max The maximum duration of the
-#' observation window in days.
-#' @param align.all.patients Should the patients be aligend?
-#' @param align.first.event.at.zero Should the first event be put at zero?
-#' @param maximum.permissible.gap.max The maximum permissible gap in days.
-#' @param sliding.window.start.max The maximum number of days when the sliding
-#' windows can start.
-#' @param sliding.window.duration.max The maximum duration of the sliding
-#' windows in days.
-#' @param sliding.window.step.duration.max The maximum sliding window step in
-#' days.
-#' @param backend The plotting backend to use; "shiny" (the default) tries to
-#' use the Shiny framework, while "rstudio" uses the manipulate RStudio
-#' capability.
-#' @param use.system.browser For shiny, use the system browser?
-#' @param get.colnames.fnc A \emph{function} taking as parameter the data source
-#' and returning the column names. Must be overridden when the data source is
-#' not derived from a \code{data.frame}.
-#' @param get.patients.fnc A \emph{function} taking as parameter the data source
-#' and the patient ID column name, and returns the list of all patient IDs.
-#' Must be overridden when the data source is not derived from a \code{data.frame}.
-#' @param get.data.for.patients.fnc A \emph{function} taking as parameter a (set
-#' of) patient ID(s), the data source, and the patient ID column name, and returns
-#' the list of all patient IDs. Must be overridden when the data source is not
-#' derived from a \code{data.frame}.
-#' @param ... Extra arguments.
+#' @seealso Function \code{\link[AdhereR]{plot_interactive_cma}} in package
+#' \code{AdhereRViz}.
 #'
-#' @seealso The online vignette \url{https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html}.
+#' @param ... Parameters to be passed to \code{plot_interactive_cma()} in package
+#' \code{AdhereRViz}.
 #'
 #' @return Nothing
 #' @examples
@@ -8999,66 +8921,12 @@ plot.CMA_sliding_window <- plot.CMA_per_episode;
 #'                      event.daily.dose.colname="PERDAY",
 #'                      medication.class.colname="CATEGORY");}
 #' @export
-plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA on
-                                  ID=NULL, # the ID of the patient to be plotted (automatically taken to be the first)
-                                  cma.class=c("simple","per episode","sliding window")[1], # the CMA class to plot
-                                  print.full.params=FALSE, # should the parameter values for the currently plotted plot be printed?
-                                  # Important columns in the data
-                                  ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
-                                  event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
-                                  event.duration.colname=NA, # the event duration in days (NA = undefined)
-                                  event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
-                                  medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                                  # Date format:
-                                  date.format="%m/%d/%Y", # the format of the dates used in this function (NA = undefined)
-                                  # Parameter ranges:
-                                  followup.window.start.max=5*365, # in days
-                                  followup.window.duration.max=5*365, # in days
-                                  observation.window.start.max=followup.window.start.max, # in days
-                                  observation.window.duration.max=followup.window.duration.max, # in days
-                                  align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place the first event as the horizontal 0?
-                                  maximum.permissible.gap.max=2*365, # in days
-                                  sliding.window.start.max=followup.window.start.max, # in days
-                                  sliding.window.duration.max=2*365, # in days
-                                  sliding.window.step.duration.max=2*365, # in days
-                                  backend=c("shiny","rstudio")[1], # the interactive backend to use
-                                  use.system.browser=FALSE, # if shiny backend, use the system browser?
-                                  get.colnames.fnc=function(d) names(d),
-                                  get.patients.fnc=function(d, idcol) unique(d[[idcol]]),
-                                  get.data.for.patients.fnc=function(patientid, d, idcol, cols=NA, maxrows=NA) d[ d[[idcol]] %in% patientid, ],
-                                  ...
-)
+plot_interactive_cma <- function(...)
 {
   if( requireNamespace("AdhereRViz", quietly=TRUE) )
   {
     # Pass the parameters to AdhereRViz:
-    AdhereRViz::plot_interactive_cma(data=data,
-                                     ID=ID,
-                                     cma.class=cma.class,
-                                     print.full.params=print.full.params,
-                                     ID.colname=ID.colname,
-                                     event.date.colname=event.date.colname,
-                                     event.duration.colname=event.duration.colname,
-                                     event.daily.dose.colname=event.daily.dose.colname,
-                                     medication.class.colname=medication.class.colname,
-                                     date.format=date.format,
-                                     followup.window.start.max=followup.window.start.max,
-                                     followup.window.duration.max=followup.window.duration.max,
-                                     observation.window.start.max=observation.window.start.max,
-                                     observation.window.duration.max=observation.window.duration.max,
-                                     align.all.patients=align.all.patients,
-                                     align.first.event.at.zero=align.first.event.at.zero,
-                                     maximum.permissible.gap.max=maximum.permissible.gap.max,
-                                     sliding.window.start.max=sliding.window.start.max,
-                                     sliding.window.duration.max=sliding.window.duration.max,
-                                     sliding.window.step.duration.max=sliding.window.step.duration.max,
-                                     backend=backend,
-                                     use.system.browser=use.system.browser,
-                                     get.colnames.fnc=get.colnames.fnc,
-                                     get.patients.fnc=get.patients.fnc,
-                                     get.data.for.patients.fnc=get.data.for.patients.fnc,
-                                     ...
-    );
+    AdhereRViz::plot_interactive_cma(...);
   } else {
     warning("Package 'AdhereRViz' must be installed for the interactive plotting to work! Please either install it or use the 'normal' plotting functions provided by 'AdhereR'...\n");
     return (invisible(NULL));

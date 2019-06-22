@@ -2,120 +2,13 @@
 % Please edit documentation in R/adherer.R
 \name{plot_interactive_cma}
 \alias{plot_interactive_cma}
-\title{Interactive exploration CMA computation.}
+\title{Interactive exploration and CMA computation.}
 \usage{
-plot_interactive_cma(data = NULL, ID = NULL, cma.class = c("simple",
-  "per episode", "sliding window")[1], print.full.params = FALSE,
-  ID.colname = NA, event.date.colname = NA,
-  event.duration.colname = NA, event.daily.dose.colname = NA,
-  medication.class.colname = NA, date.format = "\%m/\%d/\%Y",
-  followup.window.start.max = 5 * 365, followup.window.duration.max = 5
-  * 365, observation.window.start.max = followup.window.start.max,
-  observation.window.duration.max = followup.window.duration.max,
-  align.all.patients = FALSE, align.first.event.at.zero = TRUE,
-  maximum.permissible.gap.max = 2 * 365,
-  sliding.window.start.max = followup.window.start.max,
-  sliding.window.duration.max = 2 * 365,
-  sliding.window.step.duration.max = 2 * 365, backend = c("shiny",
-  "rstudio")[1], use.system.browser = FALSE,
-  get.colnames.fnc = function(d) names(d),
-  get.patients.fnc = function(d, idcol) unique(d[[idcol]]),
-  get.data.for.patients.fnc = function(patientid, d, idcol, cols = NA,
-  maxrows = NA) d[d[[idcol]] \%in\% patientid, ], ...)
+plot_interactive_cma(...)
 }
 \arguments{
-\item{data}{Usually a \emph{\code{data.frame}} containing the events (prescribing
-or dispensing) used to compute the CMA. Must contain, at a minimum, the patient
-unique ID, the event date and duration, and might also contain the daily
-dosage and medication type (the actual column names are defined in the
-following four parameters). Alternatively, this can be any other data source
-(for example, a connection to a database), in which case the user must redefine
-the arguments \code{get.colnames.fnc}, \code{get.patients.fnc} and
-\code{get.data.for.patients.fnc} appropriately. Currently, this works only when
-using Shiny for interactive rendering. For a working example, please see
-the vignette describing the interfacing with databases.}
-
-\item{ID}{The ID (as given in the \code{ID.colname} column) of the patient
-whose data to interactively plot (if absent, pick the first one); please not
-that this an be interactively selected during plotting.}
-
-\item{cma.class}{The type of CMAs to plot; can be "simple" (CMA0 to CMA9),
-"per episode", or "sliding window".}
-
-\item{print.full.params}{A \emph{logical} specifying if the values of all the
-parameters used to generate the current plot should be printed in the console
-(if \emph{TRUE}, it can generate extremely verbose output!).}
-
-\item{ID.colname}{A \emph{string}, the name of the column in \code{data}
-containing the unique patient ID, or \code{NA} if not defined.}
-
-\item{event.date.colname}{A \emph{string}, the name of the column in
-\code{data} containing the start date of the event (in the format given in
-the \code{date.format} parameter), or \code{NA} if not defined.}
-
-\item{event.duration.colname}{A \emph{string}, the name of the column in
-\code{data} containing the event duration (in days), or \code{NA} if not
-defined.}
-
-\item{event.daily.dose.colname}{A \emph{string}, the name of the column in
-\code{data} containing the prescribed daily dose, or \code{NA} if not defined.}
-
-\item{medication.class.colname}{A \emph{string}, the name of the column in
-\code{data} containing the classes/types/groups of medication, or \code{NA}
-if not defined.}
-
-\item{date.format}{A \emph{string} giving the format of the dates used in the
-\code{data} and the other parameters; see the \code{format} parameters of the
-\code{\link[base]{as.Date}} function for details (NB, this concerns only the
-dates given as strings and not as \code{Date} objects).}
-
-\item{followup.window.start.max}{The maximum number of days when the
-follow-up window can start.}
-
-\item{followup.window.duration.max}{The maximum duration of the follow-up
-window in days.}
-
-\item{observation.window.start.max}{The maximum number of days when the
-observation window can start.}
-
-\item{observation.window.duration.max}{The maximum duration of the
-observation window in days.}
-
-\item{align.all.patients}{Should the patients be aligend?}
-
-\item{align.first.event.at.zero}{Should the first event be put at zero?}
-
-\item{maximum.permissible.gap.max}{The maximum permissible gap in days.}
-
-\item{sliding.window.start.max}{The maximum number of days when the sliding
-windows can start.}
-
-\item{sliding.window.duration.max}{The maximum duration of the sliding
-windows in days.}
-
-\item{sliding.window.step.duration.max}{The maximum sliding window step in
-days.}
-
-\item{backend}{The plotting backend to use; "shiny" (the default) tries to
-use the Shiny framework, while "rstudio" uses the manipulate RStudio
-capability.}
-
-\item{use.system.browser}{For shiny, use the system browser?}
-
-\item{get.colnames.fnc}{A \emph{function} taking as parameter the data source
-and returning the column names. Must be overridden when the data source is
-not derived from a \code{data.frame}.}
-
-\item{get.patients.fnc}{A \emph{function} taking as parameter the data source
-and the patient ID column name, and returns the list of all patient IDs.
-Must be overridden when the data source is not derived from a \code{data.frame}.}
-
-\item{get.data.for.patients.fnc}{A \emph{function} taking as parameter a (set
-of) patient ID(s), the data source, and the patient ID column name, and returns
-the list of all patient IDs. Must be overridden when the data source is not
-derived from a \code{data.frame}.}
-
-\item{...}{Extra arguments.}
+\item{...}{Parameters to be passed to \code{plot_interactive_cma()} in package
+\code{AdhereRViz}.}
 }
 \value{
 Nothing
@@ -126,19 +19,10 @@ of the various CMAs and their parameters.
 It can use \code{Rstudio}'s \code{manipulate} library or \code{Shiny}.
 }
 \details{
-The \code{manipulate} is kept for backward compatibility only, as it is much
-more limited than \code{Shiny} and will receive no new development in the
-future.
-\code{Shiny} currently allows the use of any other data source besides a
-default (and usual) \code{data.frame} (or derived), such a connection to an
-\code{SQL} database. In this case, the user \emph{must} redefine the three
-argument functions \code{get.colnames.fnc}, \code{get.patients.fnc} and
-\code{get.data.for.patients.fnc} which collectively define an interface for
-listing the column names, all the patient IDs, and for retreiving the actual
-data for a (set of) patient ID(s). A fully worked example is described in
-the vignette detailing the access to standard databases storaging the
-patient information.
-For more info please see the online vignette \url{https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html}.
+This is merely a stub for the actual implementation in package
+\code{AdhereRViz}: it just checks if this package is installed and functional,
+in which case it calls the actual implementation, otherwise warns the user that
+\code{AdhereRViz} must be instaled.
 }
 \examples{
 \dontrun{
@@ -150,5 +34,6 @@ plot_interactive_cma(med.events,
                      medication.class.colname="CATEGORY");}
 }
 \seealso{
-The online vignette \url{https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html}.
+Function \code{\link[AdhereR]{plot_interactive_cma}} in package
+\code{AdhereRViz}.
 }
