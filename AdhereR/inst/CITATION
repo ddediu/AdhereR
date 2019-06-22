@@ -17,3 +17,21 @@ citEntry(entry = "Article",
         "PLoS ONE, 12(4): e0174426.",
         "doi:10.1371/journal.pone.0174426")
 )
+
+year <- format(Sys.Date(), "%Y")
+vers <- paste("R package version", meta$Version)
+
+citEntry(entry = "Manual",
+  title        = "AdhereR: Computation and visualisation of adherence to medications from Electronic Health care Data.",
+  author       = personList(as.person("Dan Dediu"),
+                   as.person("Samuel Allemann"),
+                   as.person("Alexandra L. Dima")),
+  year         = year,
+  note         = vers,
+
+  textVersion  =
+  paste0("Dediu D, Allemann S, Dima AL (",year,"). ",
+         "AdhereR: Computation and visualisation of adherence to medications from Electronic Health care Data. ",
+         vers,
+         ".")
+)
