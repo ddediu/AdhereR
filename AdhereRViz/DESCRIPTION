@@ -20,7 +20,8 @@ URL: https://github.com/ddediu/AdhereR
 License: GPL (>= 2)
 LazyData: TRUE
 RoxygenNote: 6.1.1
-Imports: lubridate (>= 1.5),
+Imports: AdhereR (>= 0.6),
+    lubridate (>= 1.5),
     parallel (>= 3.0),
     data.table (>= 1.9),
     manipulate (>= 1.0),

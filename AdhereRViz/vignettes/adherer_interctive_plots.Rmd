@@ -29,6 +29,7 @@ This can be normally achieved from an `R` session or script using the `plot()` f
 However, while allowing for a very fine-grained control over the resulting plots, this requires a certain level of familiarity with `R` (loading the source data, creating the appropriate `CMA` object, invoking the `plot()` function with the desired parameters, and the export of the resulting plot in the desired format at the quality and with the other desired characteristics), on the one hand, and the process is rather cumbersome when the user wants to explore and understand the data, or to try various types of plotting in search for the optimal visualization, on the other.
 
 These reasons prompted us to develop a *fully interactive user interface* that should hide the "gory details" of data loading, `CMA` computation and `plot()` invocation under an intuitive and easy to use point-and-click interface, while allowing fast exploration and customization of the plots.
+However, because this interactive user interface covers a rather particular set of use cases, tends to be rather "heavy" in terms of dependencies, and may not install or run properly in some environments (e.g., headless servers or older systems), we decided to implement it in a separate package, `AdhereRViz` that extends `AdhereR` (i.e., `AdhereRViz` requires `AdhereR`, but `AdhereR` cn happily run without `AdhereRViz`).
 
 
 ## Overview
@@ -39,7 +40,7 @@ The app's interface uses *standard controls and paradigms*, ensuring a similar u
 
 ## Launching the app
 
-**Locally**, the app can be launched from a normal `R` session (including from within `RStudio`) or script with a single command; of course, the latest version of `AdhereR` must be *installed* on the system (using, for example, `install.packages("AdhereR", dep=TRUE)` or `RStudio`'s *Tools* → *Install Packages...* menu; or, in case it is already installed, updated using `update.packages()` or `RStudio`'s *Tools* → *Check for Package Updates...* menu), and *loaded* in the current session (using, for example, `library(AdhereR)` or `require(AdhereR)`).
+**Locally**, the app can be launched from a normal `R` session (including from within `RStudio`) or script with a single command; of course, the latest version of `AdhereR` and `AdhereRViz` must be *installed* on the system (using, for example, `install.packages("AdhereRViz", dep=TRUE)` or `RStudio`'s *Tools* → *Install Packages...* menu; or, in case it is already installed, updated using `update.packages()` or `RStudio`'s *Tools* → *Check for Package Updates...* menu), and *loaded* in the current session (using, for example, `library(AdhereRViz)` or `require(AdhereRViz)`).
 With these prerequisites in order, the app can be launched without any parameters with
 ```{r eval=FALSE}
 plot_interactive_cma()
@@ -79,6 +80,8 @@ The app can also be launched in the "standard way" using `runApp()` or `RStudio`
 Alternatively, the app may be made available on a **remote server**, such as on <https://www.shinyapps.io/>, in which case it can be accessed simply by pointing the web browser to the app's internet address. 
 
 Please note that launching the App with no parameters, opens with a different screen (see the [**Selecting/changing the *data source***](#ui-datasource) section for details).
+
+Also note that there we provide a "stub" function `plot_interactive_cma()` in the package `AdhereR`, but this simply checks if `AdhereRViz` is installed and functional, and then tries to invoke `plot_interactive_cma()` from `AdhereRViz`.
 
 
 ## The App's User Interface (UI) {#ui-overview}

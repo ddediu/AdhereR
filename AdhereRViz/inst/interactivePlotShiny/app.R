@@ -1,8 +1,8 @@
 ###############################################################################################
 #
-#    AdhereR: an R package for computing various estimates of medication adherence.
+#    AdhereRViz: interactive visualisations for AdhereR.
 #    This implements interactive plotting using shiny.
-#    Copyright (C) 2015-2018  Dan Dediu & Alexandra Dima
+#    Copyright (C) 2018-2019  Dan Dediu, Alexandra Dima & Samuel Allemann
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 
 #library(shiny)
 #' @import AdhereR
+#' @import AdhereRViz
 #' @import shiny
 #' @import colourpicker
 #' @import viridisLite
@@ -89,7 +90,7 @@ ui <- fluidPage(
              img(src='adherer-logo.png', align = "left", style="font-size: x-large; font-weight: bold; height: 2em; vertical-align: baseline;"),
              div(style="width: 3em; display: inline-block; "),
              #h1("interactive plots with Shiny...", style="color:DarkBlue; font-size: x-large; font-weight: bold; margin: 0; display: inline-block;"),
-             div(title="About AdhereR and links to more info online and offline...",
+             div(title="About AdhereR and AdhereRViz, and links to more info online and offline...",
                  actionButton(inputId="about_button", label=strong("About"), icon=icon("question-sign", lib="glyphicon"), style="color: #3498db; border: none; background: none;"),
                  style="float: right;")
            ),
@@ -1889,7 +1890,7 @@ server <- function(input, output, session)
                                             "get.colnames.fnc"=NULL,
                                             "get.patients.fnc"=NULL,
                                             "get.data.for.patients.fnc"=NULL,
-                                            ".plotting.fnc"=AdhereR:::.plotting.fnc.shiny,
+                                            ".plotting.fnc"=AdhereRViz:::.plotting.fnc.shiny,
                                             ".dataset.type"=NA,
                                             ".dataset.comes.from.function.arguments"=FALSE,
                                             ".dataset.name"=NA,
@@ -2223,19 +2224,35 @@ server <- function(input, output, session)
   observeEvent(input$about_button,
   {
     # Get most of the relevant info from the DESCRIPTION file:
-    descr <- utils::packageDescription("AdhereR");
-    msg <- paste0("<img src='adherer-logo.png', align = 'left', style='font-size: x-large; font-weight: bold; height: 2em; vertical-align: baseline;'/>",
+    descr.adherer    <- utils::packageDescription("AdhereR");
+    descr.adhererviz <- utils::packageDescription("AdhereRViz");
+    msg <- paste0(# Logo:
+                  "<img src='adherer-logo.png', align = 'left', style='font-size: x-large; font-weight: bold; height: 2em; vertical-align: baseline;'/>",
                   "<div style='width: 1em; display: inline-block;'/>",
                   "<hr/>",
+                  # AdhereR:
                   "<div style='max-height: 50vh; overflow: auto;'>",
-                  "<p><b>Version</b> ",descr$Version,"</p>",
-                  "<p><b>Authors:</b> ",descr$Author,"</p>",
-                  "<p><b>Maintainer:</b> ",descr$Maintainer,"</p>",
-                  "<p align='justify'>",descr$Description,"</p>",
-                  "<p><b>Website:</b> <a href='",descr$URL,"' target='_blank'>",descr$URL,"</a></p>",
-                  "<p><b>Released under:</b> ",descr$License,"</p>",
-                  "<p><b>Citation:</b></p>",format(citation(package="AdhereR"),style="html"),
+                  "<h2>AdhereR</h1>",
+                  "<p><b>Version</b> ",descr.adherer$Version,"</p>",
+                  "<p><b>Authors:</b> ",descr.adherer$Author,"</p>",
+                  "<p><b>Maintainer:</b> ",descr.adherer$Maintainer,"</p>",
+                  "<p align='justify'>",descr.adherer$Description,"</p>",
+                  "<p><b>Website:</b> <a href='",descr.adherer$URL,"' target='_blank'>",descr.adherer$URL,"</a></p>",
+                  "<p><b>Released under:</b> ",descr.adherer$License,"</p>",
+                  "<p><b>Citation:</b></p>",paste0(format(citation(package="AdhereR"),style="html"),collapse=" "),
                   "<hr/>",
+                  # AdhereRViz:
+                  "<h2>AdhereRViz</h1>",
+                  "<p><b>Version</b> ",descr.adhererviz$Version,"</p>",
+                  "<p><b>Authors:</b> ",descr.adhererviz$Author,"</p>",
+                  "<p><b>Maintainer:</b> ",descr.adhererviz$Maintainer,"</p>",
+                  "<p align='justify'>",descr.adhererviz$Description,"</p>",
+                  "<p><b>Website:</b> <a href='",descr.adhererviz$URL,"' target='_blank'>",descr.adhererviz$URL,"</a></p>",
+                  "<p><b>Released under:</b> ",descr.adhererviz$License,"</p>",
+                  "<p><b>Citation:</b></p>",paste0(format(citation(package="AdhereRViz"),style="html"),collapse=" "),
+                  "<hr/>",
+                  # More info:
+                  "<h2>More info</h1>",
                   "<p>For more info <b>online</b> please visit the project's <a href='http://www.adherer.eu' target='_blank'>homepage</a> (<a href='http://www.adherer.eu' target='_blank'>www.adherer.eu</a>) and its source code repository on <a href='https://github.com/ddediu/AdhereR' target='_blank'>GitHub</a> (<a href='https://github.com/ddediu/AdhereR' target='_blank'>github.com/ddediu/AdhereR</a>). ",
                   "The official releases are hosted on <a href='https://cran.r-project.org/package=AdhereR' target='_blank'>CRAN</a> (<a href='https://cran.r-project.org/package=AdhereR' target='_blank'>https://cran.r-project.org/package=AdhereR</a>).",
                   "<p><b>Offline</b> help is available within R (and RStudio):</p>",
@@ -2247,7 +2264,7 @@ server <- function(input, output, session)
                   "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html' target='_blank'>AdhereR: Adherence to Medications</a></i> gives an overview of what AdhereR can do;</li>",
                   "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/calling-AdhereR-from-python3.html' target='_blank'>Calling AdhereR from Python 3</a></i> describes a mechanism that allows AdhereR to be used from programming languages and platforms other than R (in particular, from Python 3);</li>",
                   "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_with_databases.pdf' target='_blank'>Using AdhereR with various database technologies for processing very large datasets</a></i> described how to use AdhereR to process data stored in 'classic' SQL Relational Databases Management Systems (RDBMSs) or in Apache's Hadoop;</li>",
-                  "<li><i><b><a href='https://htmlpreview.github.io/?https://github.com/ddediu/AdhereR/blob/master/online-only-doc/adherer_interactive_plots/adherer_interctive_plots.html' target='_blank'>AdhereR: Interactive plotting (and more) with Shiny</a></b></i> is probably the most relevant here.</li>",
+                  "<li><i><b><a href='https://cran.r-project.org/web/packages/AdhereRViz/vignettes/adherer_interctive_plots.html' target='_blank'>AdhereR: Interactive plotting (and more) with Shiny</a></b></i> is probably the most relevant here.</li>",
                   "</ul>",
                   "</ul>",
                   "</div>");
@@ -2531,7 +2548,7 @@ server <- function(input, output, session)
                                                      highlight::highlight(parse.output=parse(text=r_code),
                                                                           renderer=highlight::renderer_html(document=TRUE,
                                                                                                             stylesheet=file.path(system.file('interactivePlotShiny',
-                                                                                                                                             package='AdhereR'),
+                                                                                                                                             package='AdhereRViz'),
                                                                                                                                  "r-code-highlight.css")),
                                                                           show_line_numbers=FALSE,
                                                                           output=NULL),
