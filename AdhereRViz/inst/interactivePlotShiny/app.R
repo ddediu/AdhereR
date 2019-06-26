@@ -950,14 +950,14 @@ ui <- fluidPage(
                                                                                                   label="OW color",
                                                                                                   value="yellow"))
                                                                   ),
-                                                                  div(title='The density of the hashing lines (number of lines per inch) used to draw the observation window',
-                                                                      numericInput(inputId="observation_window_density",
-                                                                                   label="OW hash dens.",
-                                                                                   value=35, min=0, max=NA, step=5)),
-                                                                  div(title='The orientation of the hashing lines (in degrees) used to draw the observation window',
-                                                                      sliderInput(inputId="observation_window_angle",
-                                                                                  label="OW hash angle",
-                                                                                  min=-90.0, max=90.0, value=-30, step=15, round=TRUE)),
+                                                                  #div(title='The density of the hashing lines (number of lines per inch) used to draw the observation window',
+                                                                  #    numericInput(inputId="observation_window_density",
+                                                                  #                 label="OW hash dens.",
+                                                                  #                 value=35, min=0, max=NA, step=5)),
+                                                                  #div(title='The orientation of the hashing lines (in degrees) used to draw the observation window',
+                                                                  #    sliderInput(inputId="observation_window_angle",
+                                                                  #                label="OW hash angle",
+                                                                  #                min=-90.0, max=90.0, value=-30, step=15, round=TRUE)),
                                                                   div(title='The observation window\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
                                                                       sliderInput(inputId="observation_window_opacity",
                                                                                   label="OW opacity",
@@ -976,18 +976,18 @@ ui <- fluidPage(
                                                                       shinyWidgets::materialSwitch(inputId="show_real_obs_window_start",
                                                                                                    label="Show real OW?",
                                                                                                    value=TRUE, status="primary", right=TRUE)),
-                                                                  conditionalPanel(
-                                                                    condition="input.show_real_obs_window_start",
-
-                                                                    div(title='The density of the hashing lines (number of lines per inch) used to draw the real observation window',
-                                                                        numericInput(inputId="real_obs_window_density",
-                                                                                     label="Real OW hash dens.",
-                                                                                     value=35, min=0, max=NA, step=5)),
-                                                                    div(title='The orientation of the hashing lines (in degrees) used to draw the real observation window',
-                                                                        sliderInput(inputId="real_obs_window_angle",
-                                                                                    label="Real OW hash angle",
-                                                                                    min=-90.0, max=90.0, value=30, step=15, round=TRUE))
-                                                                  ),
+                                                                  #conditionalPanel(
+                                                                  #  condition="input.show_real_obs_window_start",
+                                                                  #
+                                                                  #  div(title='The density of the hashing lines (number of lines per inch) used to draw the real observation window',
+                                                                  #      numericInput(inputId="real_obs_window_density",
+                                                                  #                   label="Real OW hash dens.",
+                                                                  #                   value=35, min=0, max=NA, step=5)),
+                                                                  #  div(title='The orientation of the hashing lines (in degrees) used to draw the real observation window',
+                                                                  #      sliderInput(inputId="real_obs_window_angle",
+                                                                  #                  label="Real OW hash angle",
+                                                                  #                  min=-90.0, max=90.0, value=30, step=15, round=TRUE))
+                                                                  #),
 
                                                                   hr()
                                                                 ),
@@ -2049,10 +2049,10 @@ server <- function(input, output, session)
                                                          cex=max(0.01,input$cex), cex.axis=max(0.01,input$cex_axis), cex.lab=max(0.01,input$cex_lab),
                                                          highlight.followup.window=input$highlight_followup_window, followup.window.col=input$followup_window_col,
                                                          highlight.observation.window=input$highlight_observation_window, observation.window.col=input$observation_window_col,
-                                                         observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
+                                                         #observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
                                                          observation.window.opacity=input$observation_window_opacity,
                                                          show.real.obs.window.start=input$show_real_obs_window_start,
-                                                         real.obs.window.density=input$real_obs_window_density, real.obs.window.angle=input$real_obs_window_angle,
+                                                         #real.obs.window.density=input$real_obs_window_density, real.obs.window.angle=input$real_obs_window_angle,
                                                          print.CMA=input$print_cma, CMA.cex=max(0.01,input$cma_cex),
                                                          plot.CMA=input$plot_cma, CMA.plot.ratio=input$cma_plot_ratio / 100.0,
                                                          CMA.plot.col=input$cma_plot_col, CMA.plot.border=input$cma_plot_border, CMA.plot.bkg=input$cma_plot_bkg, CMA.plot.text=input$cma_plot_text,
@@ -2510,12 +2510,12 @@ server <- function(input, output, session)
                      "followup.window.col"=paste0('"',input$followup_window_col,'"'),
                      "highlight.observation.window"=input$highlight_observation_window,
                      "observation.window.col"=paste0('"',input$observation_window_col,'"'),
-                     "observation.window.density"=input$observation_window_density,
-                     "observation.window.angle"=input$observation_window_angle,
+                     #"observation.window.density"=input$observation_window_density,
+                     #"observation.window.angle"=input$observation_window_angle,
                      "observation.window.opacity"=input$observation_window_opacity,
                      "show.real.obs.window.start"=input$show_real_obs_window_start,
-                     "real.obs.window.density"=input$real_obs_window_density,
-                     "real.obs.window.angle"=input$real_obs_window_angle,
+                     #"real.obs.window.density"=input$real_obs_window_density,
+                     #"real.obs.window.angle"=input$real_obs_window_angle,
                      "print.CMA"=input$print_cma,
                      "CMA.cex"=max(0.01,input$cma_cex),
                      "plot.CMA"=input$plot_cma,
@@ -4267,7 +4267,7 @@ server <- function(input, output, session)
     shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
 
     # Return the results:
-    return (getCMA(res));
+    return (AdhereR::getCMA(res));
   }
 
   collected.results <<- list();
