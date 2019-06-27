@@ -357,7 +357,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
   if( !is.null(data) )
   {
     # data's class and dimensions:
-    if( inherits(data, "matrix") ) data <- as.data.frame(data); # convert matrix to data.frame
+    if( inherits(data, "matrix") || inherits(data, "tbl") || inherits(data, "data.table") ) data <- as.data.frame(data); # convert various things to data.frame
     if( !inherits(data, "data.frame") )
     {
       if( !suppress.warnings ) warning("The 'data' for a CMA must be of type 'data.frame'!\n");
