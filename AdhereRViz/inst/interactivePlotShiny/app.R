@@ -1864,6 +1864,8 @@ server <- function(input, output, session)
 
   isolate(
     {
+      options(shiny.sanitize.errors=FALSE);
+
       # Initialisation for a directly-launched Shiny App or for a new session:
       if( is.null(.GlobalEnv$.plotting.params) ||
           (is.logical(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments) &&
