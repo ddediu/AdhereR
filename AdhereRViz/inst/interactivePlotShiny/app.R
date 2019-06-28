@@ -1726,7 +1726,7 @@ ui <- fluidPage(
                     div(id="container", title="Various messages (in blue), warnings (in green) and errors (in red) generated during plotting...",
                         span(" Messages:", style="color:DarkBlue; font-weight: bold;"),
                         span(htmlOutput(outputId = "messages")),
-                        style="height: 4em; resize: none; overflow: auto")
+                        style="height: 4em; resize: vertical; overflow: auto")
              ),
 
              # The actual plot ----
@@ -2124,26 +2124,45 @@ server <- function(input, output, session)
         if( input$cma_class %in% c("simple", "per episode", "sliding window") )
         {
           # Call the workhorse plotting function with the appropriate argumens:
-          msgs <- capture.output(res <- .renderPlot());
+          #msgs <- capture.output(res <- .renderPlot());
+          res <- .renderPlot();
         } else
         {
           # Quitting....
           showModal(modalDialog(title="AdhereR interactive plotting...", paste0("Unknwon CMA class '",input$cma_class,"'."), easyClose=TRUE));
         }
 
-        if( is.null(res) || length(grep("error", msgs, ignore.case=TRUE)) > 0 )
+        # Show the messages (if any):
+        ewsn <- AdhereR:::.get.ewsn();
+        if( !is.null(ewsn) && nrow(ewsn) > 0 )
         {
-          # Errors:
-          output$messages <- renderText({ paste0("<font color=\"red\"><b>",msgs,"</b></font>"); })
-        } else if( length(grep("warning", msgs, ignore.case=TRUE)) > 0 )
-        {
-          # Warnings:
-          output$messages <- renderText({ paste0("<font color=\"green\"><i>",msgs,"</i></font>"); })
-        } else
-        {
-          # Normal output:
-          output$messages <- renderText({ paste0("<font color=\"blue\">",msgs,"</font>"); })
+          msgs <- vapply(1:nrow(ewsn), function(i)
+          {
+            switch(as.character(ewsn$type[i]),
+                   "error"=  paste0("<b>&gt;</b> <font color=\"red\"><b>",as.character(ewsn$text[i]),"</b></font>"),
+                   "warning"=paste0("<b>&gt;</b> <font color=\"green\"><i>",as.character(ewsn$text[i]),"</i></font>"),
+                   "message"=paste0("<b>&gt;</b> <font color=\"blue\">",as.character(ewsn$text[i]),"</font>"),
+                   paste0("<b>&gt;</b> ",as.character(ewsn$text[i])));
+          }, character(1));
+          output$messages <- renderText(paste0(paste0("<font color=\"red\"><b>",  sum(ewsn$type=="error",na.rm=TRUE),  " error(s)</b></font>, ",
+                                                      "<font color=\"green\"><i>",sum(ewsn$type=="warning",na.rm=TRUE)," warning(s)</i></font> & ",
+                                                      "<font color=\"blue\">",    sum(ewsn$type=="message",na.rm=TRUE)," message(s)</font>:<br>"),
+                                               paste0(msgs,collapse="<br>")));
         }
+
+        #if( is.null(res) || length(grep("error", msgs, ignore.case=TRUE)) > 0 )
+        #{
+        #  # Errors:
+        #  output$messages <- renderText({ paste0("<font color=\"red\"><b>",msgs,"</b></font>"); })
+        #} else if( length(grep("warning", msgs, ignore.case=TRUE)) > 0 )
+        #{
+        #  # Warnings:
+        #  output$messages <- renderText({ paste0("<font color=\"green\"><i>",msgs,"</i></font>"); })
+        #} else
+        #{
+        #  # Normal output:
+        #  output$messages <- renderText({ paste0("<font color=\"blue\">",msgs,"</font>"); })
+        #}
       }
     },
     width=function() # plot width

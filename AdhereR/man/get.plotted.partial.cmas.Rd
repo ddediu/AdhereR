@@ -4,11 +4,15 @@
 \alias{get.plotted.partial.cmas}
 \title{Get info about the plotted partial CMAs.}
 \usage{
-get.plotted.partial.cmas(plot.type = c("baseR", "SVG")[1])
+get.plotted.partial.cmas(plot.type = c("baseR", "SVG")[1],
+  suppress.warnings = FALSE)
 }
 \arguments{
 \item{plot.type}{Can be either "baseR" or "SVG" and specifies to which type of plotting
 the mapping applies.}
+
+\item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
+warnings.}
 }
 \value{
 A \code{data.frame} that contains info about:

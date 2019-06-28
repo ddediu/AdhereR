@@ -180,6 +180,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   ...
 )
 {
+  # Clear any AdhereR errors, warning or messages:
+  AdhereR:::.clear.ewsn();
+
   if( backend == "shiny" )
   {
     .plot_interactive_cma_shiny(data=data,
@@ -757,10 +760,13 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 print.full.params=FALSE
 )
 {
+  # Clear any AdhereR messages:
+  AdhereR:::.clear.ewsn();
+
   if( !compute.cma.only ) # for computing CMA only these messages are not very informative and positively distracting...
   {
     # Progress messages:
-    cat(paste0("Plotting patient ID '",ID,"' with CMA '",cma,"'",ifelse(cma.to.apply != "none",paste0(" ('",cma.to.apply,"')"),"")));
+    AdhereR:::.write.ewsn(paste0("Plotting patient ID '",ID,"' with CMA '",cma,"'",ifelse(cma.to.apply != "none",paste0(" ('",cma.to.apply,"')"),"")), "message", "plot_interactive_cma", "AdhereRViz");
     if( print.full.params )
     {
       cat(paste0(" with params: ",
@@ -903,7 +909,6 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     pp <- .GlobalEnv$.plotting.params$.recompute.CMA.old.params; #make sure it's easier to access with a shorter name
   }
 
-
   # Preconditions (and data extraction):
   if( is.null(ID) ||
       is.null(data <- get.data.for.patients.fnc(ID, data, ID.colname)) || # extract the data for these IDs
@@ -911,10 +916,11 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   {
     if( compute.cma.only )
     {
-      warning("No data for patient ",ID);
+      AdhereR:::.write.ewsn(paste0("No data for patient ",ID), "warning", "plot_interactive_cma", "AdhereRViz");
     } else
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
+      AdhereR:::.write.ewsn(paste0("Error: cannot display the data for patient '",ID,"'!"), "warning", "plot_interactive_cma", "AdhereRViz");
     }
     return (invisible(NULL));
   }
@@ -1195,9 +1201,12 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       ".db.connection"=NULL
                                      );
 
-  # make sure they are deleted on exit from shiny:
+  # Make sure they are deleted on exit from shiny:
   on.exit({.GlobalEnv$.plotting.params <- NULL}, add=TRUE);
   #on.exit(rm(list=c(".plotting.params"), envir=.GlobalEnv));
+
+  # Clear any AdhereR messages:
+  AdhereR:::.clear.ewsn();
 
   shiny.app.launcher <- system.file('interactivePlotShiny', package='AdhereRViz');
 
