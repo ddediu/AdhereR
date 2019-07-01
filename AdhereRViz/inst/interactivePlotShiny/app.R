@@ -20,6 +20,7 @@
 ###############################################################################################
 
 
+# Imports ----
 #library(shiny)
 #' @import AdhereR
 #' @import AdhereRViz
@@ -1854,9 +1855,10 @@ ui <- fluidPage(
 )
 
 
-# The server logic ----
+# THE SERVER LOGIC ----
 server <- function(input, output, session)
 {
+  # Initialisation of the Shiny app ----
   isolate({showModal(modalDialog("Adherer", title=div(icon("hourglass", lib="glyphicon"), "Please wait while initializing the App..."), easyClose=FALSE, footer=NULL))})
 
   # Reactive value to allow UI updating on dataset changes:
@@ -1873,7 +1875,7 @@ server <- function(input, output, session)
            !.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments) )
       {
         # Ok, seem we've been launched directly as a "normal" Shiny app:
-        # make sure things are set to the their default in the .plotting.params global list:
+        # make sure things are set to their default in the .plotting.params global list:
         .GlobalEnv$.plotting.params <- list("data"=NULL,
                                             "cma.class"="simple",
                                             "ID.colname"=NA,
@@ -1934,7 +1936,7 @@ server <- function(input, output, session)
 
   #outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
 
-  # Clean up stuff when session ended:
+  # Clean up at session end ----
   session$onSessionEnded(function()
   {
     # Disconnect any open database connections...
@@ -1950,7 +1952,7 @@ server <- function(input, output, session)
   })
 
 
-  # The plotting function:
+  # The plotting function ----
   .renderPlot <- function()
   {
     patients.to.plot <- input$patient;
@@ -2097,7 +2099,7 @@ server <- function(input, output, session)
     return (res);
   }
 
-  # Do the ploting:
+  # renderPlot() ----
   output$distPlot <- renderPlot({
 
       rv$toggle.me; # make the plot aware of forced updates to the UI (for example, when chainging the dataset)
@@ -2183,12 +2185,13 @@ server <- function(input, output, session)
     execOnResize=TRUE # force redrawing on resize
   )
 
-  # Text messages:
+  # The text messages ----
   output$messages <- renderText({
     ""
   })
 
-  observeEvent(input$plot_keep_ratio, # plot keep ratio toggle
+  # Keep ratio toggle event ----
+  observeEvent(input$plot_keep_ratio,
   {
     if( input$plot_keep_ratio )
     {
@@ -2200,7 +2203,7 @@ server <- function(input, output, session)
   })
 
 
-  # Export plot to file:
+  # Export plot to file ----
   output$save_to_file <- downloadHandler(
     filename = function()
       {
@@ -2241,7 +2244,7 @@ server <- function(input, output, session)
   )
 
 
-  # About and Help:
+  # About and help box ----
   observeEvent(input$about_button,
   {
     # Get most of the relevant info from the DESCRIPTION file:
@@ -2300,7 +2303,7 @@ server <- function(input, output, session)
   })
 
 
-  # Show r code:
+  # Show the R code box ----
   r_code <- ""; # must be global because we need to access it form other functions as well (and it's not a big object anyway)
   observeEvent(input$show_r_code,
   {
@@ -2590,7 +2593,7 @@ server <- function(input, output, session)
   })
 
 
-  # Close shop nicely:
+  # Close shop nicely ----
   observeEvent(input$close_shop,
   {
     showModal(modalDialog(title="AdhereR interactive plotting...", "Are you sure you want to close the interactive plotting?",
@@ -2603,7 +2606,7 @@ server <- function(input, output, session)
     stopApp();
   })
 
-  # Show/hide panel sections:
+  # Show/hide panel sections ----
   .toggle.all.sections <- function(id=c("follow_up"), anim=TRUE, animType=c("slide","fade")[1])
   {
     shinyjs::toggle(id=paste0(id,"_unfold_icon"), anim=anim, animType=animType); # the unfolding icon
@@ -2624,8 +2627,7 @@ server <- function(input, output, session)
   shinyjs::onclick("advanced_section",         function(e){.toggle.all.sections("advanced");})
 
 
-  # Dataset stuff:
-
+  # Recursively list objects in memory ----
   .recursively.list.objects.in.memory <- function(..., # inspired from http://adv-r.had.co.nz/Environments.html#env-recursion
                                                   env = parent.frame(),
                                                   of.class="data.frame", # if NULL, no type testing (all go)
@@ -2667,7 +2669,7 @@ server <- function(input, output, session)
     }
   }
 
-  # If selecting an in-memory dataset, update the list of data.frame-derived objects all the way to the base environment:
+  # In-memory dataset: update the list of data.frame-derived objects all the way to the base environment ----
   observeEvent(input$datasource_type,
   {
     if( input$datasource_type == "already in memory" )
@@ -2690,7 +2692,7 @@ server <- function(input, output, session)
     }
   })
 
-  # For a given dataset from memory, list the columns and upate the selections:
+  # In-memory dataset: list the columns and upate the selections ----
   observeEvent(input$dataset_from_memory,
   {
     # Disconnect any pre-existing database connections:
@@ -2702,7 +2704,7 @@ server <- function(input, output, session)
 
     # Set the data.frame:
     .GlobalEnv$.plotting.params$.inmemory.dataset <- NULL;
-    if( input$dataset_from_memory == "[none]" )
+    if( input$dataset_from_memory == "[none]" || input$dataset_from_memory == "" )
     {
       # Initialisation:
       return (invisible(NULL));
@@ -2759,7 +2761,7 @@ server <- function(input, output, session)
 
   })
 
-  # Display a data.frame as a nice HTML table:
+  # Display a data.frame as a nice HTML table ----
   .show.data.frame.as.HTML <- function(d, # the data.frame-derived object to show
                                        max.rows=50, # if NA, show all
                                        escape=TRUE)
@@ -2833,7 +2835,7 @@ server <- function(input, output, session)
     return (d.as.html);
   }
 
-  # Peek at in-memory dataset:
+  # In-memory dataset: peek ----
   observeEvent(input$dataset_from_memory_peek_button,
   {
     # Sanity checks:
@@ -2855,7 +2857,7 @@ server <- function(input, output, session)
 
   })
 
-  # Validate a given dataset and possibly load it:
+  # Validate a given dataset and possibly load it ----
   .validate.and.load.dataset <- function(d, # the dataset
                                          get.colnames.fnc, get.patients.fnc, get.data.for.patients.fnc, # getter functions appropriate for the dataset
                                          min.npats=1, min.ncol=3, # minimum number of patients and columns
@@ -3047,7 +3049,7 @@ server <- function(input, output, session)
     .force.update.UI();
   }
 
-  # Validate and use in-memory dataset:
+  # In-memory dataset: validate and use ----
   observeEvent(input$dataset_from_memory_button_use,
   {
     # Sanity checks:
@@ -3091,7 +3093,7 @@ server <- function(input, output, session)
     }
   })
 
-  # Force updating the Shiny UI using the new data:
+  # Force updating the Shiny UI using the new data ----
   .force.update.UI <- function()
   {
     updateSelectInput(session, "cma_class", selected="simple");
@@ -3109,7 +3111,7 @@ server <- function(input, output, session)
   }
 
 
-  # For a given dataset from file, load it, list the columns and upate the selections:
+  # Dataset from file: load it, list the columns and upate the selections ----
   observeEvent(input$dataset_from_file_filename,
   {
     # Disconnect any pre-existing database connections:
@@ -3437,7 +3439,7 @@ server <- function(input, output, session)
     }
   })
 
-  # Peek at in-memory dataset:
+  # Dataset from file: peek ----
   observeEvent(input$dataset_from_file_peek_button,
   {
     # Sanity checks:
@@ -3458,7 +3460,7 @@ server <- function(input, output, session)
                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
   })
 
-  # Validate and use from-file dataset:
+  # Dataset from file: validate and use ----
   observeEvent(input$dataset_from_file_button_use,
   {
     # Sanity checks:
@@ -3491,7 +3493,7 @@ server <- function(input, output, session)
     .GlobalEnv$.plotting.params$.dataset.name <- input$dataset_from_file_filename$name[1];
   })
 
-  # Connect to the SQL database and fecth tables:
+  # SQL database: connect and fetch tables ----
   observeEvent(input$dataset_from_sql_button_connect,
   {
     # Disconnect any pre-existing database connections:
@@ -3759,7 +3761,7 @@ server <- function(input, output, session)
     .show.db.info();
   })
 
-  # Disconnect from database:
+  # SQL database: disconnect ----
   observeEvent(input$dataset_from_sql_button_disconnect,
   {
     if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
@@ -3772,13 +3774,13 @@ server <- function(input, output, session)
     output$is_database_connected <- reactive({FALSE});
   })
 
-  # Peek at the database:
+  # SQL database: peek ----
   observeEvent(input$dataset_from_sql_button_peek,
   {
      .show.db.info();
   })
 
-  # Show database info:
+  # SQL database: show info ----
   .show.db.info <- function()
   {
     if( is.null(.GlobalEnv$.plotting.params$.db.connection.tables) ||
@@ -3849,7 +3851,7 @@ server <- function(input, output, session)
   }
 
 
-  # Update columns depending on the selected table:
+  # SQL database: update columns depending on the selected table ----
   observeEvent(input$dataset_from_sql_table,
   {
     if( input$dataset_from_sql_table != "[none]" &&
@@ -3880,7 +3882,7 @@ server <- function(input, output, session)
     }
   })
 
-  # Validate and use sql dataset:
+  # SQL database: validate and use ----
   observeEvent(input$dataset_from_sql_button_use,
   {
     # Sanity checks:
@@ -3955,7 +3957,7 @@ server <- function(input, output, session)
   })
 
 
-  # Show info about the currently used dataset:
+  # Show info about the curent dataset ----
   observeEvent(input$about_dataset_button,
   {
     showModal(modalDialog(title=div(icon("hdd", lib="glyphicon"), "AdhereR: info over the current dataset..."),
@@ -4000,7 +4002,7 @@ server <- function(input, output, session)
   })
 
 
-  # Update the patient IDs table:
+  # Update the patient IDs table ----
   .update.patients.IDs.table <- function(reset.slider=TRUE)
   {
     if( is.null(.GlobalEnv$.plotting.params$all.IDs) || length(.GlobalEnv$.plotting.params$all.IDs) < 1 )
@@ -4024,7 +4026,6 @@ server <- function(input, output, session)
     output$show_patients_as_list <- renderDataTable(.GlobalEnv$.plotting.params$.patients.to.compute, options=list(pageLength=10));
     if( reset.slider ) updateSliderInput(session, inputId="compute_cma_patient_by_group_range", max=nrow(tmp), value=c(1,1));
   }
-
   observeEvent(input$compute_cma_patient_selection_method,
   {
     if( input$compute_cma_patient_selection_method == "by_position" )
@@ -4032,15 +4033,14 @@ server <- function(input, output, session)
       .update.patients.IDs.table();
     }
   })
-
   observeEvent(input$compute_cma_patient_by_group_sorting,
   {
     .update.patients.IDs.table();
   })
 
-  # Start the CMA computation:
-  # allow the user to break it and show progress
-  # inpured by https://gist.github.com/jcheng5/1659aff15904a0c4ffcd4d0c7788f789
+  # CMA computation for multiple patients ----
+  # Allow the user to break it and show progress (inspired by https://gist.github.com/jcheng5/1659aff15904a0c4ffcd4d0c7788f789 )
+  # The CMA computation main UI ----
   observeEvent(input$compute_cma_for_larger_sample_button,
   {
     # Get the selected patient IDs:
@@ -4123,6 +4123,7 @@ server <- function(input, output, session)
 
   })
 
+  # Close the CMA computation main UI ----
   observeEvent(input$close_compute_cma_dialog,
   {
     removeModal();
@@ -4179,6 +4180,7 @@ server <- function(input, output, session)
   #   removeModal();
   # })
 
+  # Compute CMA for one patient ----
   .compute.cma.for.patient <- function(i, start.time)
   {
     # Show the patient currently processed:
@@ -4291,6 +4293,7 @@ server <- function(input, output, session)
     return (AdhereR::getCMA(res));
   }
 
+  # Collect computed CMA for several patients ----
   collected.results <<- list();
   cma.computation.progress.log.text <<- "";
   workQueue <- function(start.time = Sys.time(),
@@ -4397,6 +4400,7 @@ server <- function(input, output, session)
   #   #});
   # })
 
+  # Start CMA computation ----
   observeEvent(input$start_computation_now,
   {
     # Show up the progress bar and stopping button:
@@ -4453,7 +4457,7 @@ server <- function(input, output, session)
   #
   # })
 
-  # Export results to file:
+  # Export results to file ----
   output$save_cma_computation_results <- downloadHandler(
     filename = function() paste0("adherer-compute-",input$cma_class,"-",ifelse(input$cma_class=="simple", input$cma_to_compute, input$cma_to_compute_within_complex),"-results.tsv"),
     content = function(file)
@@ -4480,7 +4484,7 @@ server <- function(input, output, session)
     }
   )
 
-  # Make sure the UI is properly updated for ech new session:
+  # Make sure the UI is properly updated for ech new session ----
   isolate(
   {
     .force.update.UI();
@@ -4493,6 +4497,6 @@ server <- function(input, output, session)
 }
 
 
-# call shiny
+# Call shiny ----
 shinyApp(ui=ui, server=server);
 
