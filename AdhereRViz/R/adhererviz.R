@@ -771,7 +771,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   if( !compute.cma.only ) # for computing CMA only these messages are not very informative and positively distracting...
   {
     # Progress messages:
-    AdhereR:::.write.ewms(paste0("Plotting patient ID '",ID,"' with CMA '",cma,"'",ifelse(cma.to.apply != "none",paste0(" ('",cma.to.apply,"')"),"")), "message", "plot_interactive_cma", "AdhereRViz");
+    AdhereR:::.report.ewms(paste0("Plotting patient ID '",ID,"' with CMA '",cma,"'",ifelse(cma.to.apply != "none",paste0(" ('",cma.to.apply,"')"),"")), "message", "plot_interactive_cma", "AdhereRViz");
     if( print.full.params )
     {
       cat(paste0(" with params: ",
@@ -921,11 +921,11 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   {
     if( compute.cma.only )
     {
-      AdhereR:::.write.ewms(paste0("No data for patient ",ID), "warning", "plot_interactive_cma", "AdhereRViz");
+      AdhereR:::.report.ewms(paste0("No data for patient ",ID), "error", "plot_interactive_cma", "AdhereRViz");
     } else
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
-      AdhereR:::.write.ewms(paste0("Error: cannot display the data for patient '",ID,"'!"), "warning", "plot_interactive_cma", "AdhereRViz");
+      AdhereR:::.report.ewms(paste0("Error: cannot display the data for patient '",ID,"'!"), "error", "plot_interactive_cma", "AdhereRViz");
     }
     return (invisible(NULL));
   }
