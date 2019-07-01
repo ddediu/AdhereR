@@ -180,8 +180,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   ...
 )
 {
-  # Clear any AdhereR errors, warning or messages:
-  AdhereR:::.clear.ewsn();
+  # Clear any AdhereR errors, warning or messages, and start recording them:
+  AdhereR:::.clear.ewms();
+  AdhereR:::.record.ewms(record=TRUE);
 
   if( backend == "shiny" )
   {
@@ -239,6 +240,10 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   {
     warning("Interactive plotting: dont' know backend '",backend,"'; only use 'shiny' or 'rstudio'.\n");
   }
+
+  # Clear any generated AdhereR errors, warning or messages, and stop recording them:
+  AdhereR:::.clear.ewms();
+  AdhereR:::.record.ewms(record=FALSE);
 }
 
 
@@ -761,12 +766,12 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
 )
 {
   # Clear any AdhereR messages:
-  AdhereR:::.clear.ewsn();
+  AdhereR:::.clear.ewms();
 
   if( !compute.cma.only ) # for computing CMA only these messages are not very informative and positively distracting...
   {
     # Progress messages:
-    AdhereR:::.write.ewsn(paste0("Plotting patient ID '",ID,"' with CMA '",cma,"'",ifelse(cma.to.apply != "none",paste0(" ('",cma.to.apply,"')"),"")), "message", "plot_interactive_cma", "AdhereRViz");
+    AdhereR:::.write.ewms(paste0("Plotting patient ID '",ID,"' with CMA '",cma,"'",ifelse(cma.to.apply != "none",paste0(" ('",cma.to.apply,"')"),"")), "message", "plot_interactive_cma", "AdhereRViz");
     if( print.full.params )
     {
       cat(paste0(" with params: ",
@@ -916,11 +921,11 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   {
     if( compute.cma.only )
     {
-      AdhereR:::.write.ewsn(paste0("No data for patient ",ID), "warning", "plot_interactive_cma", "AdhereRViz");
+      AdhereR:::.write.ewms(paste0("No data for patient ",ID), "warning", "plot_interactive_cma", "AdhereRViz");
     } else
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
-      AdhereR:::.write.ewsn(paste0("Error: cannot display the data for patient '",ID,"'!"), "warning", "plot_interactive_cma", "AdhereRViz");
+      AdhereR:::.write.ewms(paste0("Error: cannot display the data for patient '",ID,"'!"), "warning", "plot_interactive_cma", "AdhereRViz");
     }
     return (invisible(NULL));
   }
@@ -1202,11 +1207,18 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                      );
 
   # Make sure they are deleted on exit from shiny:
-  on.exit({.GlobalEnv$.plotting.params <- NULL}, add=TRUE);
+  on.exit({
+            .GlobalEnv$.plotting.params <- NULL;
+            # Clear any AdhereR errors, warning or messages, and start recording them:
+            AdhereR:::.clear.ewms();
+            AdhereR:::.record.ewms(record=FALSE);
+          },
+          add=TRUE);
   #on.exit(rm(list=c(".plotting.params"), envir=.GlobalEnv));
 
-  # Clear any AdhereR messages:
-  AdhereR:::.clear.ewsn();
+  # Clear any AdhereR errors, warning or messages, and start recording them:
+  AdhereR:::.clear.ewms();
+  AdhereR:::.record.ewms(record=TRUE);
 
   shiny.app.launcher <- system.file('interactivePlotShiny', package='AdhereRViz');
 

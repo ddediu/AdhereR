@@ -2133,20 +2133,20 @@ server <- function(input, output, session)
         }
 
         # Show the messages (if any):
-        ewsn <- AdhereR:::.get.ewsn();
-        if( !is.null(ewsn) && nrow(ewsn) > 0 )
+        ewms <- AdhereR:::.get.ewms();
+        if( !is.null(ewms) && nrow(ewms) > 0 )
         {
-          msgs <- vapply(1:nrow(ewsn), function(i)
+          msgs <- vapply(1:nrow(ewms), function(i)
           {
-            switch(as.character(ewsn$type[i]),
-                   "error"=  paste0("<b>&gt;</b> <font color=\"red\"><b>",as.character(ewsn$text[i]),"</b></font>"),
-                   "warning"=paste0("<b>&gt;</b> <font color=\"green\"><i>",as.character(ewsn$text[i]),"</i></font>"),
-                   "message"=paste0("<b>&gt;</b> <font color=\"blue\">",as.character(ewsn$text[i]),"</font>"),
-                   paste0("<b>&gt;</b> ",as.character(ewsn$text[i])));
+            switch(as.character(ewms$type[i]),
+                   "error"=  paste0("<b>&gt;</b> <font color=\"red\"><b>",as.character(ewms$text[i]),"</b></font>"),
+                   "warning"=paste0("<b>&gt;</b> <font color=\"green\"><i>",as.character(ewms$text[i]),"</i></font>"),
+                   "message"=paste0("<b>&gt;</b> <font color=\"blue\">",as.character(ewms$text[i]),"</font>"),
+                   paste0("<b>&gt;</b> ",as.character(ewms$text[i])));
           }, character(1));
-          output$messages <- renderText(paste0(paste0("<font color=\"red\"><b>",  sum(ewsn$type=="error",na.rm=TRUE),  " error(s)</b></font>, ",
-                                                      "<font color=\"green\"><i>",sum(ewsn$type=="warning",na.rm=TRUE)," warning(s)</i></font> & ",
-                                                      "<font color=\"blue\">",    sum(ewsn$type=="message",na.rm=TRUE)," message(s)</font>:<br>"),
+          output$messages <- renderText(paste0(paste0("<font color=\"red\"><b>",  sum(ewms$type=="error",na.rm=TRUE),  " error(s)</b></font>, ",
+                                                      "<font color=\"green\"><i>",sum(ewms$type=="warning",na.rm=TRUE)," warning(s)</i></font> & ",
+                                                      "<font color=\"blue\">",    sum(ewms$type=="message",na.rm=TRUE)," message(s)</font>:<br>"),
                                                paste0(msgs,collapse="<br>")));
         }
 
