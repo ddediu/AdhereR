@@ -3749,9 +3749,22 @@ server <- function(input, output, session)
 
     # Update the list of tables/views:
     x <- aggregate(column ~ nrow + table, d.tables.columns, length);
+    x.eligible <- which(x$column >= 3); # which are the eligible tables/views
+    x.to.pick <- 1;
+    if( length(x.eligible) == 0 )
+    {
+      # Warning:
+      showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                            div("There doesn't seem to be any tables/views with at least 3 columns in this database: picking the first (but this will generate an error)!\n"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      x.to.pick <- 1;
+    } else
+    {
+      x.to.pick <- x.eligible[1];
+    }
     shinyWidgets::updatePickerInput(session, "dataset_from_sql_table",
                                     choices=as.character(x$table),
-                                    selected=as.character(x$table)[1],
+                                    selected=as.character(x$table)[x.to.pick],
                                     choicesOpt=list(subtext=paste0(x$nrow," x ",x$column)));
 
     # Update UI:
