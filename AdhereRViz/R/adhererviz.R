@@ -460,8 +460,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     if( is.null(results) )
     {
       # Plot an error message:
-      plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab="");
-      text(0,0,paste0("Error computing '",cma,"' for patient '",ID,"'\n(see console for possible warnings or errors)!"),col="red");
+      #plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab="");
+      #text(0,0,paste0("Error computing '",cma,"' for patient '",ID,"'\n(see console for possible warnings or errors)!"),col="red");
+      AdhereR:::.plot.CMA.error(cma=cma, IDs=ID);
       if( !is.null(full.results$error) )   cat(paste0("Error(s): ",paste0(full.results$error,collapse="\n")));
     } else
     {
@@ -1008,8 +1009,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     } else
     {
       # Plot an error message:
-      plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab="");
-      text(0,0,paste0("Error computing '",cma,"' for patient '",ID,"'\n(see console for possible warnings or errors)!"),col="red");
+      #plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab="");
+      #text(0,0,paste0("Error computing '",cma,"' for patient '",ID,"'\n(see console for possible warnings or errors)!"),col="red");
+      AdhereR:::.plot.CMA.error(cma=cma, IDs=ID);
       if( !is.null(full.results$error) )   cat(paste0("Error(s): ",paste0(full.results$error,collapse="\n")));
       if( !is.null(full.results$warning) ) cat(paste0("Warning(s): ",paste0(full.results$warning,collapse="\n")));
     }

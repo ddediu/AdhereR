@@ -971,8 +971,6 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
 
 ## The plotting function ####
-# Make this function produce SVG
-# (and for now display it as well to maintain compatibility with the old function)
 .plot.CMAs <- function(cma,                                   # the CMA_per_episode or CMA_sliding_window (or derived) object
                        patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
                        duration=NA,                           # duration and end period to plot in days (if missing, determined from the data)
@@ -1077,6 +1075,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   )
   {
     if( !suppress.warnings ) .report.ewms("Can only plot a correctly specified CMA object (i.e., with valid data and column names)!\n", "error", ".plot.CMAs", "AdhereR");
+    plot.CMA.error(export.formats=export.formats,
+                   export.formats.fileprefix=export.formats.fileprefix,
+                   export.formats.directory=export.formats.directory,
+                   generate.R.plot=generate.R.plot);
     return (invisible(NULL));
   }
 
@@ -1292,12 +1294,20 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   if( length(patids) == 0 )
   {
     if( !suppress.warnings ) .report.ewms("No patients to plot!\n", "error", ".plot.CMAs", "AdhereR");
+    plot.CMA.error(export.formats=export.formats,
+                   export.formats.fileprefix=export.formats.fileprefix,
+                   export.formats.directory=export.formats.directory,
+                   generate.R.plot=generate.R.plot);
     return (invisible(NULL));
   } else if( length(patids) > max.patients.to.plot )
   {
     if( !suppress.warnings ) .report.ewms(paste0("Too many patients to plot (",length(patids),
                                             ")! If this is the desired outcome, please change the 'max.patients.to.plot' parameter value (now set at ",
                                             max.patients.to.plot,") to at least ',length(patids),'!\n"), "error", ".plot.CMAs", "AdhereR");
+    plot.CMA.error(export.formats=export.formats,
+                   export.formats.fileprefix=export.formats.fileprefix,
+                   export.formats.directory=export.formats.directory,
+                   generate.R.plot=generate.R.plot);
     return (invisible(NULL));
   }
 
@@ -1364,6 +1374,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       if( is.null(event.info) || nrow(event.info) == 0 )
       {
         if( !suppress.warnings ) .report.ewms("No events in the follow-up window: nothing to plot!\n", "error", ".plot.CMAs", "AdhereR");
+        plot.CMA.error(export.formats=export.formats,
+                       export.formats.fileprefix=export.formats.fileprefix,
+                       export.formats.directory=export.formats.directory,
+                       generate.R.plot=generate.R.plot);
         return (invisible(NULL));
       }
 
@@ -1386,6 +1400,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     } else
     {
       if( !suppress.warnings ) .report.ewms("Error(s) concerning the follow-up and observation windows!\n", "error", ".plot.CMAs", "AdhereR");
+      plot.CMA.error(export.formats=export.formats,
+                     export.formats.fileprefix=export.formats.fileprefix,
+                     export.formats.directory=export.formats.directory,
+                     generate.R.plot=generate.R.plot);
       return (invisible(NULL));
     }
   }
@@ -1418,6 +1436,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( is.na(cma$date.format) || is.null(cma$date.format) || length(cma$date.format) != 1 || !is.character(cma$date.format) )
     {
       if( !suppress.warnings ) .report.ewms("The date format must be a single string: cannot continue plotting!\n", "error", ".plot.CMAs", "AdhereR");
+      plot.CMA.error(export.formats=export.formats,
+                     export.formats.fileprefix=export.formats.fileprefix,
+                     export.formats.directory=export.formats.directory,
+                     generate.R.plot=generate.R.plot);
       return (invisible(NULL));
     }
 
@@ -1426,6 +1448,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( anyNA(cma$data$.DATE.as.Date) )
     {
       if( !suppress.warnings ) .report.ewms(paste0("Not all entries in the event date \"",cma$event.date.colname,"\" column are valid dates or conform to the date format \"",cma$date.format,"\"; first issue occurs on row ",min(which(is.na(cma$data$.DATE.as.Date))),": cannot continue plotting!\n"), "error", ".plot.CMAs", "AdhereR");
+      plot.CMA.error(export.formats=export.formats,
+                     export.formats.fileprefix=export.formats.fileprefix,
+                     export.formats.directory=export.formats.directory,
+                     generate.R.plot=generate.R.plot);
       return (invisible(NULL));
     }
   } else
@@ -1864,7 +1890,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       # Some error occured when creatig the plot...
       .report.ewms(msg, "error", ".plot.CMAs", "AdhereR");
       par(old.par); # restore graphical params
-      assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+      #assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+      plot.CMA.error(export.formats=export.formats,
+                     export.formats.fileprefix=export.formats.fileprefix,
+                     export.formats.directory=export.formats.directory,
+                     generate.R.plot=generate.R.plot);
       return (invisible(NULL));
     }
 
@@ -1887,7 +1917,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                      round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (nrow(cma$data) + ifelse(is.cma.TS.or.SW && plot.CMA && has.estimated.CMA, nrow(cmas), 0))),1),
                      ")!\n"), "error", ".plot.CMAs", "AdhereR");
       par(old.par); # restore graphical params
-      assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+      #assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+      plot.CMA.error(export.formats=export.formats,
+                     export.formats.fileprefix=export.formats.fileprefix,
+                     export.formats.directory=export.formats.directory,
+                     generate.R.plot=generate.R.plot);
       return (invisible(NULL));
     }
 
@@ -4314,14 +4348,24 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( is.null(css.template.path) || css.template.path=="" )
         {
           .report.ewms("Cannot load the CSS template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+          .last.cma.plot.info$SVG <- NULL;
           assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+          plot.CMA.error(export.formats=export.formats,
+                         export.formats.fileprefix=export.formats.fileprefix,
+                         export.formats.directory=export.formats.directory,
+                         generate.R.plot=FALSE);
           return (invisible(NULL));
         }
         js.template.path <- system.file('html-templates/javascript-template.js', package='AdhereR');
         if( is.null(js.template.path) || js.template.path=="" )
         {
           .report.ewms("Cannot load the JavaScript template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+          .last.cma.plot.info$SVG <- NULL;
           assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+          plot.CMA.error(export.formats=export.formats,
+                         export.formats.fileprefix=export.formats.fileprefix,
+                         export.formats.directory=export.formats.directory,
+                         generate.R.plot=FALSE);
           return (invisible(NULL));
         }
         css.template <- readLines(css.template.path);
@@ -4339,7 +4383,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( is.null(html.template.path) || html.template.path=="" )
         {
           .report.ewms("Cannot load the HTML template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+          .last.cma.plot.info$SVG <- NULL;
           assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+          plot.CMA.error(export.formats=export.formats,
+                         export.formats.fileprefix=export.formats.fileprefix,
+                         export.formats.directory=export.formats.directory,
+                         generate.R.plot=FALSE);
           return (invisible(NULL));
         }
         html.template <- readLines(html.template.path);
@@ -4423,6 +4472,31 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
   # Return value:
   return (invisible(exported.file.names));
+}
+
+## The error plotting function ####
+plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
+                           export.formats=NULL, export.formats.fileprefix="AdhereR-plot", export.formats.directory=NA,
+                           generate.R.plot=TRUE
+)
+{
+  ret.val <- NULL;
+
+  if( generate.R.plot )
+  {
+    dev.new(); # clear any previous plots
+    par(mar=c(0,0,0,0));
+    plot.new();
+    segments(0, 0, 1, 1, col="red", lwd=10);
+    segments(0, 1, 1, 0, col="red", lwd=10);
+  }
+
+  # IMPLEMENT OTHER FORMATS AS WELL!!!
+
+  # No last plot (really)...
+  assign(".last.cma.plot.info", NULL, envir=.adherer.env);
+
+  return (ret.val);
 }
 
 
