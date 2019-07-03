@@ -4490,7 +4490,7 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
 
   if( .do.R )
   {
-    dev.new(); # clear any previous plots
+    #dev.new(); # clear any previous plots
     par(mar=c(0,0,0,0), bg="gray60");
     plot.new();
     segments(0, 0, 1, 1, col="gray40", lwd=10);
