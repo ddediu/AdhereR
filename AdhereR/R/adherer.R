@@ -67,6 +67,9 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
                         error.as.warning=TRUE # when reporting an error, should it stop() the whole process or be thrown as a warning() so the processes continues?
 )
 {
+  # Make sure text is really a text:
+  if( length(text) > 1 ) text <- paste0("[ ", paste0("'", as.character(text), "'", collapse="; "), " ]");
+
   # Add this new ewms info:
   if( .is.recording.ewms() )
   {
