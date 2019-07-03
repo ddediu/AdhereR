@@ -7704,6 +7704,25 @@ plot_interactive_cma <- function(...)
     AdhereRViz::plot_interactive_cma(...);
   } else {
     .report.ewms("Package 'AdhereRViz' must be installed for the interactive plotting to work! Please either install it or use the 'normal' plotting functions provided by 'AdhereR'...\n", "error", "plot_interactive_cma", "AdhereR");
-    return (invisible(NULL));
+    if( interactive() )
+    {
+      if( menu(c("Yes", "No"), graphics=FALSE, title="Do you want to install 'AdhereRViz' now?") == 1 )
+      {
+        # Try to install AdhereRViz:
+        install.packages("AdhereRViz", dep=TRUE);
+        if( requireNamespace("AdhereRViz", quietly=TRUE) )
+        {
+          # Pass the parameters to AdhereRViz:
+          AdhereRViz::plot_interactive_cma(...);
+        } else
+        {
+          .report.ewms("Failed to install 'AdhereRViz'!\n", "error", "plot_interactive_cma", "AdhereR");
+          return (invisible(NULL));
+        }
+      } else
+      {
+        return (invisible(NULL));
+      }
+    }
   }
 }
