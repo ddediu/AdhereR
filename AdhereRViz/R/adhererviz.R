@@ -462,7 +462,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
       # Plot an error message:
       #plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab="");
       #text(0,0,paste0("Error computing '",cma,"' for patient '",ID,"'\n(see console for possible warnings or errors)!"),col="red");
-      AdhereR:::.plot.CMA.error(cma=cma, IDs=ID);
+      AdhereR:::plot.CMA.error(cma=cma, IDs=ID);
       if( !is.null(full.results$error) )   cat(paste0("Error(s): ",paste0(full.results$error,collapse="\n")));
     } else
     {
@@ -927,6 +927,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     {
       plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab=""); text(0,0,paste0("Error: cannot display the data for patient '",ID,"'!"),col="red");
       AdhereR:::.report.ewms(paste0("Error: cannot display the data for patient '",ID,"'!"), "error", "plot_interactive_cma", "AdhereRViz");
+      AdhereR:::plot.CMA.error();
     }
     return (invisible(NULL));
   }
@@ -1011,7 +1012,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
       # Plot an error message:
       #plot(-10:10,-10:10,type="n",axes=FALSE,xlab="",ylab="");
       #text(0,0,paste0("Error computing '",cma,"' for patient '",ID,"'\n(see console for possible warnings or errors)!"),col="red");
-      AdhereR:::.plot.CMA.error(cma=cma, IDs=ID);
+      AdhereR:::plot.CMA.error(cma=cma, IDs=ID);
       if( !is.null(full.results$error) )   cat(paste0("Error(s): ",paste0(full.results$error,collapse="\n")));
       if( !is.null(full.results$warning) ) cat(paste0("Warning(s): ",paste0(full.results$warning,collapse="\n")));
     }
