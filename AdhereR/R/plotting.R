@@ -4480,23 +4480,194 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
                            generate.R.plot=TRUE
 )
 {
-  ret.val <- NULL;
-
-  if( generate.R.plot )
+  # What sorts of plots to generate (use short names for short if statements):
+  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "png", "webp", "ps", "pdf") %in% export.formats));
+  if( !.do.R && !.do.SVG )
   {
-    dev.new(); # clear any previous plots
-    par(mar=c(0,0,0,0));
-    plot.new();
-    segments(0, 0, 1, 1, col="red", lwd=10);
-    segments(0, 1, 1, 0, col="red", lwd=10);
+    # Nothing to plot!
+    return (invisible(NULL));
   }
 
-  # IMPLEMENT OTHER FORMATS AS WELL!!!
+  if( .do.R )
+  {
+    dev.new(); # clear any previous plots
+    par(mar=c(0,0,0,0), bg="gray60");
+    plot.new();
+    segments(0, 0, 1, 1, col="gray40", lwd=10);
+    segments(0, 1, 1, 0, col="gray40", lwd=10);
+  }
+
+  exported.file.names <- NULL; # the list of exported files (if any)
+  if( .do.SVG )
+  {
+    # Build the SVG plot:
+    svg.header <- c('<?xml version="1.0" standalone="no"?>\n',
+                    '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n');
+    svg.str <- c( '<svg ',
+                  'viewBox="0 0 100 100" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">\n', # the plotting surface
+
+                  # Comments, notes and clarifications:
+                  .SVG.comment("This is the self-contained SVG error plot.", newpara=TRUE),
+                  # Clear the area:
+                  .SVG.rect(comment="Clear the whole plotting area",
+                            class="plotting-area-background",
+                            x=0, y=0, width=100, height=100,
+                            fill="gray60", stroke="none"),
+                  '\n', # one empty line
+                  .SVG.lines(x=c(0,100, 0,100), y=c(0,100, 100,0), stroke="gray40", stroke_width=5),
+                  '</svg>\n');
+
+    # Export to various formats (if so requested):
+    if( !is.null(export.formats) )
+    {
+      file.svg <- NULL;
+      if( "svg" %in% export.formats )
+      {
+        ## Export as stand-alone SVG file ####
+        file.svg <- ifelse( is.na(export.formats.directory),
+                            tempfile(export.formats.fileprefix, fileext=".svg"),
+                            file.path(export.formats.directory, paste0(export.formats.fileprefix,".svg")) );
+        exported.file.names <- c(exported.file.names, file.svg);
+
+        # Export SVG:
+        writeLines(c(svg.header, svg.str), file.svg, sep="");
+      }
+
+      if( "html" %in% export.formats )
+      {
+        ## Export as self-contained HTML document ####
+        file.html <- ifelse( is.na(export.formats.directory),
+                             tempfile(export.formats.fileprefix, fileext=".html"),
+                             file.path(export.formats.directory, paste0(export.formats.fileprefix,".html")) );
+        exported.file.names <- c(exported.file.names, file.html);
+
+        # Load the CSS and JavaScript templates:
+        css.template.path <- system.file('html-templates/css-template.css', package='AdhereR');
+        if( is.null(css.template.path) || css.template.path=="" )
+        {
+          .report.ewms("Cannot load the CSS template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+          .last.cma.plot.info$SVG <- NULL;
+          assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+          plot.CMA.error(export.formats=export.formats,
+                         export.formats.fileprefix=export.formats.fileprefix,
+                         export.formats.directory=export.formats.directory,
+                         generate.R.plot=FALSE);
+          return (invisible(NULL));
+        }
+        js.template.path <- system.file('html-templates/javascript-template.js', package='AdhereR');
+        if( is.null(js.template.path) || js.template.path=="" )
+        {
+          .report.ewms("Cannot load the JavaScript template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+          .last.cma.plot.info$SVG <- NULL;
+          assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+          plot.CMA.error(export.formats=export.formats,
+                         export.formats.fileprefix=export.formats.fileprefix,
+                         export.formats.directory=export.formats.directory,
+                         generate.R.plot=FALSE);
+          return (invisible(NULL));
+        }
+        css.template <- readLines(css.template.path);
+        js.template  <- readLines(js.template.path);
+
+        # Add the medication categories to class names mapping as a dictionary:
+        js.template <- c(js.template,
+                         '// Mapping between medication categories and -med-class-X class names\n',
+                         'adh_svg["medication_classes"] = {\n',
+                         paste0('  "',names(categories.to.classes),'" : "',categories.to.classes,'"',collapse=",\n"),
+                         '\n};\n\n');
+
+        # Load the HTML template and replace generics by their actual values before saving it in the desired location:
+        html.template.path <- system.file('html-templates/html-template.html', package='AdhereR');
+        if( is.null(html.template.path) || html.template.path=="" )
+        {
+          .report.ewms("Cannot load the HTML template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+          .last.cma.plot.info$SVG <- NULL;
+          assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+          plot.CMA.error(export.formats=export.formats,
+                         export.formats.fileprefix=export.formats.fileprefix,
+                         export.formats.directory=export.formats.directory,
+                         generate.R.plot=FALSE);
+          return (invisible(NULL));
+        }
+        html.template <- readLines(html.template.path);
+        html.template <- sub('<script type="text/javascript" src="PATH-TO-JS"></script>',
+                             paste0('<script type="text/javascript">\n', paste0(js.template, collapse="\n"), '\n</script>'),
+                             html.template, fixed=TRUE); # JavaScript
+        html.template <- sub('<link rel="stylesheet" href="PATH-TO-CSS">',
+                             paste0('<style>\n', paste0(css.template, collapse="\n"), '\n</style>'),
+                             html.template, fixed=TRUE); # CSS
+
+        # SVG:
+        svg.str.embedded <- c('<svg id="adherence_plot" ', # add id and (possibly) the dimensions to the <svg> tag
+                              if( TRUE ) 'height="600" ', # height (if defined)
+                              if( FALSE ) 'width="600" ', # width (if defined)
+                              svg.str[-1]);
+        html.template <- sub('<object id="adherence_plot" data="PATH-TO-IMAGE" type="image/svg+xml">Please use a modern browser!</object>',
+                             paste0(paste0(svg.str.embedded, collapse=""), "\n"),
+                             html.template, fixed=TRUE); # SVG
+
+        # Explort the self-contained HTML document:
+        writeLines(html.template, file.html, sep="\n");
+      }
+
+      if( any(c("png", "ps", "pdf", "webp") %in% export.formats) )
+      {
+        ## Export to flat file formats (PNG, JPG, PS, PDF or WEBP) ####
+        # Need to covert the SVG to one of these, so we need to export it (if not already exported):
+        if( is.null(file.svg) )
+        {
+          file.svg <- tempfile(export.formats.fileprefix, fileext=".svg");
+          writeLines(c(svg.header, svg.str), file.svg, sep="");
+        }
+
+        if( "png" %in% export.formats )
+        {
+          # PNG file:
+          file.png <- ifelse( is.na(export.formats.directory),
+                              tempfile(export.formats.fileprefix, fileext=".png"),
+                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
+          exported.file.names <- c(exported.file.names, file.png);
+          rsvg::rsvg_png(file.svg, file=file.png);
+        }
+
+        if( "webp" %in% export.formats )
+        {
+          # WEBP file:
+          file.webp <- ifelse( is.na(export.formats.directory),
+                               tempfile(export.formats.fileprefix, fileext=".webp"),
+                               file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
+          exported.file.names <- c(exported.file.names, file.webp);
+          rsvg::rsvg_webp(file.svg, file=file.webp);
+        }
+
+        if( "ps" %in% export.formats )
+        {
+          # PS file:
+          file.ps <- ifelse( is.na(export.formats.directory),
+                             tempfile(export.formats.fileprefix, fileext=".ps"),
+                             file.path(export.formats.directory, paste0(export.formats.fileprefix,".ps")) );
+          exported.file.names <- c(exported.file.names, file.ps);
+          rsvg::rsvg_ps(file.svg, file=file.ps);
+        }
+
+        if( "pdf" %in% export.formats )
+        {
+          # PDF file:
+          file.pdf <- ifelse( is.na(export.formats.directory),
+                              tempfile(export.formats.fileprefix, fileext=".pdf"),
+                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".pdf")) );
+          exported.file.names <- c(exported.file.names, file.pdf);
+          rsvg::rsvg_pdf(file.svg, file=file.pdf);
+        }
+      }
+    }
+  }
 
   # No last plot (really)...
   assign(".last.cma.plot.info", NULL, envir=.adherer.env);
 
-  return (ret.val);
+  # Return value:
+  return (invisible(exported.file.names));
 }
 
 
