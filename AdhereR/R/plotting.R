@@ -4569,13 +4569,6 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
         css.template <- readLines(css.template.path);
         js.template  <- readLines(js.template.path);
 
-        # Add the medication categories to class names mapping as a dictionary:
-        js.template <- c(js.template,
-                         '// Mapping between medication categories and -med-class-X class names\n',
-                         'adh_svg["medication_classes"] = {\n',
-                         paste0('  "',names(categories.to.classes),'" : "',categories.to.classes,'"',collapse=",\n"),
-                         '\n};\n\n');
-
         # Load the HTML template and replace generics by their actual values before saving it in the desired location:
         html.template.path <- system.file('html-templates/html-template.html', package='AdhereR');
         if( is.null(html.template.path) || html.template.path=="" )
