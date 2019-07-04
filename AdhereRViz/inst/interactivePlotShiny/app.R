@@ -1683,34 +1683,55 @@ ui <- fluidPage(
                   conditionalPanel(
                     condition="(input.save_to_file_info)",
 
-                    column(2,
-                           div(title='The width of the exported plot (in the selected units)',
-                               numericInput(inputId="save_plot_width", label="width", value=5))),
-                    column(2,
-                           div(title='The height of the exported plot (in the selected units)',
-                               numericInput(inputId="save_plot_height", label="height", value=5))),
+                    div(title='Save the plot using the same size as currently displayed or pick a new size?',
+                        checkboxInput(inputId="save_plot_displayed_size", label="Save plot using current size?", value=TRUE)),
 
-                    conditionalPanel( # EPS + PDF
-                      condition="(input.save_plot_type == 'eps' || save_plot_type == 'pdf')",
+                    conditionalPanel(
+                      condition="(!input.save_plot_displayed_size)",
                       column(2,
-                             div(title='For EPS and PDF, only inches are available',
-                                 selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in"))) # only inches
+                             div(title='The width of the exported plot (in the selected units)',
+                                 numericInput(inputId="save_plot_width", label="width", value=5))),
+                      column(2,
+                             div(title='The height of the exported plot (in the selected units)',
+                                 numericInput(inputId="save_plot_height", label="height", value=5))),
+
+                      conditionalPanel( # EPS + PDF
+                        condition="(input.save_plot_type == 'eps' || save_plot_type == 'pdf')",
+                        column(2,
+                               div(title='For EPS and PDF, only inches are available',
+                                   selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in"))) # only inches
+                      ),
+                      conditionalPanel( # JPEG + PNG + TIFF
+                        condition="(input.save_plot_type != 'eps' && save_plot_type != 'pdf')",
+                        column(2,
+                               div(title='The unit of exported plot',
+                                   selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","px"), selected="in")))
+                      )
                     ),
-                    conditionalPanel( # JPEG + PNG + TIFF
-                      condition="(input.save_plot_type != 'eps' && save_plot_type != 'pdf')",
-                      column(2,
-                             div(title='The unit of exported plot',
-                                 selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","mm","px"), selected="in")))
+
+                    conditionalPanel(
+                      condition="(input.save_plot_displayed_size)",
+                      column(6,
+                             div())
                     ),
 
                     column(2,
                            div(title='The type of the exported image',
-                               selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpeg"))),
+                               selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpg"))),
 
                     #column(2,numericInput(inputId="save_plot_quality", label="quality", value=75, min=0, max=100, step=1)),
-                    column(2,
-                           div(title='The resolution of the exported image (not useful for EPS and PDF)',
-                               numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0))),
+                    conditionalPanel(
+                      condition="(input.save_plot_type != 'eps' && input.save_plot_type != 'pdf')",
+                      column(2,
+                             div(title='The resolution of the exported image (not useful for EPS and PDF)',
+                                 numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0)))
+                    ),
+
+                    conditionalPanel(
+                      condition="(input.save_plot_type == 'eps' || input.save_plot_type == 'pdf')",
+                      column(2,
+                             div())
+                    ),
 
                     column(2, style="margin-top: 25px;",
                            div(title='Export the plot now!',
@@ -2217,22 +2238,47 @@ server <- function(input, output, session)
       },
     content = function(file)
     {
+      # Plot dimensions:
+      if( input$save_plot_displayed_size )
+      {
+        if( input$save_plot_type %in% c("eps", "pdf") )
+        {
+          # Cairo PS and PDF only understand inches, so make sure we convert right:
+          plot.dims.width  <- input$plot_width / 72; # by default 72 DPI
+          if( !is.numeric(.GlobalEnv$.plotting.params$plot.ratio) ) .GlobalEnv$.plotting.params$plot.ratio <- (input$plot_width / input$plot_height); # define the ratio
+          plot.dims.height <- ifelse(input$plot_keep_ratio, input$plot_width / .GlobalEnv$.plotting.params$plot.ratio, input$plot_height) / 72; # by default 72 DPI
+          plot.dims.unit   <- "in";
+        } else
+        {
+          # The others work in pixels:
+          plot.dims.width  <- input$plot_width;
+          if( !is.numeric(.GlobalEnv$.plotting.params$plot.ratio) ) .GlobalEnv$.plotting.params$plot.ratio <- (input$plot_width / input$plot_height); # define the ratio
+          plot.dims.height <- ifelse(input$plot_keep_ratio, input$plot_width / .GlobalEnv$.plotting.params$plot.ratio, input$plot_height);
+          plot.dims.unit   <- "px";
+       }
+      } else
+      {
+        plot.dims.width  <- input$save_plot_width;
+        plot.dims.height <- input$save_plot_height;
+        plot.dims.unit   <- input$save_plot_dim_unit;
+      }
+
       # The type of plot to save:
       if( input$save_plot_type == "png" )
       {
-        png(file, width=input$save_plot_width, height=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution, type="cairo");
+        png(file, width=plot.dims.width, height=plot.dims.height, units=plot.dims.unit, res=input$save_plot_resolution, type="cairo");
       } else if( input$save_plot_type == "tiff" )
       {
-        tiff(file, width=input$save_plot_width, height=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution, compression="zip", type="cairo");
+        tiff(file, width=plot.dims.width, height=plot.dims.height, units=plot.dims.unit, res=input$save_plot_resolution, compression="zip", type="cairo");
       } else if( input$save_plot_type == "eps" )
       {
-        cairo_ps(file, width=input$save_plot_width, height=input$save_plot_height, onefile=FALSE);
+        cairo_ps(file, width=plot.dims.width, height=plot.dims.height, onefile=FALSE);
       } else if( input$save_plot_type == "pdf" )
       {
-        cairo_pdf(file, width=input$save_plot_width, height=input$save_plot_height, onefile=FALSE);
+        cairo_pdf(file, width=plot.dims.width, height=plot.dims.height, onefile=FALSE);
       } else # default to JPEG
       {
-        jpeg(file, width=input$save_plot_width, height=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution);
+        jpeg(file, width=plot.dims.width, height=plot.dims.height, units=plot.dims.unit, res=input$save_plot_resolution);
       }
 
       # Plot it:
