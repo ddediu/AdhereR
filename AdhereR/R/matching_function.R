@@ -208,6 +208,9 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #' at the beginning of a special period and a new event with the remaining duration
 #' is created after the end of the end of the special period. With \emph{custom}, the
 #' mapping has to be included in \emph{\code{special.periods.data}}.
+# @param carryover \emph{Logical}, if \code{TRUE} apply carry-over to medications of the
+# same type (according to \code{medication.class.colnames}). Can only be used together with
+# CMA7 and above in combination with \code{carry.only.for.same.medication = TRUE}.
 #' @param date.format A \emph{string} giving the format of the dates used in
 #' the \code{data} and the other parameters; see the \code{format} parameters
 #' of the \code{\link[base]{as.Date}} function for details (NB, this concerns
@@ -339,6 +342,7 @@ compute_event_durations <- function(disp.data = NULL,
                                     force.presc.renew = FALSE,
                                     trt.interruption = c("continue", "discard", "carryover")[1],
                                     special.periods.method = trt.interruption,
+                                    #carryover,
                                     date.format = "%d.%m.%Y",
                                     suppress.warnings = FALSE,
                                     return.data.table = FALSE,
@@ -346,7 +350,8 @@ compute_event_durations <- function(disp.data = NULL,
                                     ...)
 {
 
-
+  # set carryover to false
+  carryover <- FALSE # remove when carryover argument is properly implemented
 
   # Preconditions:
   {
@@ -810,6 +815,20 @@ compute_event_durations <- function(disp.data = NULL,
             total.dose.i <- curr_disp[["TOTAL.DOSE"]]; #dispensed dose
             presc.dose.i <- 0; # initialize prescibed dose as 0
             disp.start.date.i <- orig.disp.date; #start date of dispensing event
+
+            ## check for carry-over status and adjust start date in case of carry-over from last event
+            if( nrow(medication_events) > 0){
+
+              if( carryover == TRUE){
+                prev.end.date <- last(medication_events[,DISP.START+DURATION])
+
+                if( prev.end.date < orig.disp.date ) {
+
+                  disp.start.date.i <- prev.end.date
+
+                }
+              }
+            }
 
             #select prescription episodes ending after the original dispensing date and add the one immediately before
             curr_med_presc <- copy(med_presc)
@@ -1404,10 +1423,13 @@ compute_event_durations <- function(disp.data = NULL,
   )
 if(progress.bar == TRUE) { close(pb) }
 
+  attributes(events_output_durations)$carryover <- carryover
+
   if( !return.data.table )
   {
     events_output_durations <- as.data.frame(events_output_durations);
     events_output_prescriptions <- as.data.frame(events_output_prescriptions)
+
   }
 
   # only return special periods for selected patients
@@ -1434,23 +1456,24 @@ if(progress.bar == TRUE) { close(pb) }
 
   summary <- "Event durations based on dispensing, prescription, and other data, which can be used with the CMA constructors in AdhereR."
 
-  list("event_durations" = events_output_durations,
-       "prescription_episodes" = events_output_prescriptions,
-       "special_periods" = special.periods.data,
-       "ID.colname" = ID.colname,
-       "medication.class.colnames" = medication.class.colnames,
-       "disp.date.colname" = disp.date.colname,
-       "total.dose.colname" = total.dose.colname,
-       "presc.date.colname" = presc.date.colname,
-       "presc.daily.dose.colname"  = presc.daily.dose.colname,
-       "presc.duration.colname" = presc.duration.colname,
-       "visit.colname"  = visit.colname,
-       "split.on.dosage.change" = split.on.dosage.change,
-       "force.init.presc" = force.init.presc,
-       "force.presc.renew" = force.presc.renew,
-       "trt.interruption" = trt.interruption,
-       "special.periods.method" = special.periods.method,
-       "date.format" = date.format);
+  structure(list("event_durations" = events_output_durations,
+                 "prescription_episodes" = events_output_prescriptions,
+                 "special_periods" = special.periods.data,
+                 "ID.colname" = ID.colname,
+                 "medication.class.colnames" = medication.class.colnames,
+                 "disp.date.colname" = disp.date.colname,
+                 "total.dose.colname" = total.dose.colname,
+                 "presc.date.colname" = presc.date.colname,
+                 "presc.daily.dose.colname"  = presc.daily.dose.colname,
+                 "presc.duration.colname" = presc.duration.colname,
+                 "visit.colname"  = visit.colname,
+                 "split.on.dosage.change" = split.on.dosage.change,
+                 "force.init.presc" = force.init.presc,
+                 "force.presc.renew" = force.presc.renew,
+                 "trt.interruption" = trt.interruption,
+                 "special.periods.method" = special.periods.method,
+                 "date.format" = date.format),
+            class = "event_durations");
 
 }
 
