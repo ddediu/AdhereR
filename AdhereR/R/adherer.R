@@ -7709,7 +7709,7 @@ plot_interactive_cma <- function(...)
       if( menu(c("Yes", "No"), graphics=FALSE, title="Do you want to install 'AdhereRViz' now?") == 1 )
       {
         # Try to install AdhereRViz:
-        install.packages("AdhereRViz", dep=TRUE);
+        install.packages("AdhereRViz", dependencies=TRUE);
         if( requireNamespace("AdhereRViz", quietly=TRUE) )
         {
           # Pass the parameters to AdhereRViz:
