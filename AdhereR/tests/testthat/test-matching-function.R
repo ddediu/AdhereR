@@ -107,6 +107,7 @@ test_that("all patients are processed", {
                                                force.presc.renew = TRUE,
                                                split.on.dosage.change = TRUE,
                                                trt.interruption = "continue",
+                                               carryover = FALSE,
                                                suppress.warnings = FALSE,
                                                return.data.table = TRUE,
                                                progress.bar = FALSE)
@@ -398,7 +399,7 @@ test_that("consideration of dosage changes can be turned off", {
 
   test_results <- test_results_list$event_durations
 
-  expect_equal(dim(test_results), c(221,13))
+  expect_equal(dim(test_results), c(231,13))
   expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 6854) #correct sum of durations
 })
 
@@ -457,10 +458,10 @@ test_that("events are processed correctly with trt.interrupttion = carryover", {
 })
 
 test_that("events are processed correctly with carryover = TRUE", {
-disp.data = data.table(ID = c(1,1),
-                       ATC = c("A01", "A01"),
-                       DATE.DISP = c("2000-01-01", "2000-02-01"),
-                       TOTAL.DOSE = c(60, 60))
+disp.data = data.table(ID = c(1,1,1,1),
+                       ATC = c("A01", "A01", "A01", "A01"),
+                       DATE.DISP = c("2000-01-01", "2000-02-01", "2000-03-01", "2000-04-01"),
+                       TOTAL.DOSE = c(60, 30, 60, 60))
 
 presc.data = data.table(ID = c(1),
                         ATC = c("A01"),
@@ -469,14 +470,14 @@ presc.data = data.table(ID = c(1),
                         PRESC.DURATION = c(NA))
 
 special_episodes <- data.table(ID = c(1,1,1,1),
-                               DATE.IN = c("2000-01-15",
-                                           "2000-01-25",
-                                           "2000-03-01",
-                                           "2000-03-05"),
-                               DATE.OUT = c("2000-02-20",
-                                            "2000-02-05",
-                                            "2000-03-15",
-                                            "2000-03-10"),
+                               DATE.IN = c("2000-03-15",
+                                           "2000-03-25",
+                                           "2000-05-01",
+                                           "2000-05-05"),
+                               DATE.OUT = c("2000-04-20",
+                                            "2000-04-05",
+                                            "2000-05-15",
+                                            "2000-05-10"),
                                TYPE = c("HOSP",
                                         "REHAB",
                                         "HOLIDAY",
@@ -489,8 +490,8 @@ special_episodes <- data.table(ID = c(1,1,1,1),
 # compute event durations
 event_durations_list <- compute_event_durations(disp.data = disp.data,
                                                 presc.data = presc.data,
-                                                # special.periods.data = special_episodes,
-                                                # special.periods.method = "CUSTOM",
+                                                special.periods.data = special_episodes,
+                                                special.periods.method = "CUSTOM",
                                                 ID.colname = "ID",
                                                 presc.date.colname = "DATE.PRESC",
                                                 disp.date.colname = "DATE.DISP",
@@ -504,12 +505,21 @@ event_durations_list <- compute_event_durations(disp.data = disp.data,
                                                 force.presc.renew = TRUE,
                                                 split.on.dosage.change = TRUE,
                                                 trt.interruption = "carryover",
-                                                #carryover = TRUE,
+                                                carryover = TRUE,
                                                 suppress.warnings = FALSE,
                                                 return.data.table = TRUE,
                                                 progress.bar = FALSE)
 
-expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 3286) #correct sum of durations
+test_results <- event_durations_list$event_durations
+
+expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 210) #correct sum of durations
+expect_equal(as.character(test_results$DISP.START), c("2000-01-01", #correct start dates
+                                                      "2000-03-01",
+                                                      "2000-03-25",
+                                                      "2000-04-20",
+                                                      "2000-04-25",
+                                                      "2000-05-10",
+                                                      "2000-06-29"))
 })
 
 #########################################################################################

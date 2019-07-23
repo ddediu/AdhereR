@@ -342,7 +342,7 @@ compute_event_durations <- function(disp.data = NULL,
                                     force.presc.renew = FALSE,
                                     trt.interruption = c("continue", "discard", "carryover")[1],
                                     special.periods.method = trt.interruption,
-                                    #carryover,
+                                    carryover = FALSE,
                                     date.format = "%d.%m.%Y",
                                     suppress.warnings = FALSE,
                                     return.data.table = FALSE,
@@ -351,7 +351,7 @@ compute_event_durations <- function(disp.data = NULL,
 {
 
   # set carryover to false
-  carryover <- FALSE # remove when carryover argument is properly implemented
+  # carryover <- FALSE # remove when carryover argument is properly implemented
 
   # Preconditions:
   {
@@ -780,6 +780,7 @@ compute_event_durations <- function(disp.data = NULL,
           return(all.events)
         }
 
+
         if(exists("debug.mode") && debug.mode==TRUE) print(paste("Event:", event));
         ## !Important: We assume that the prescribed dose can be accomodated with the dispensed medication
 
@@ -817,16 +818,12 @@ compute_event_durations <- function(disp.data = NULL,
             disp.start.date.i <- orig.disp.date; #start date of dispensing event
 
             ## check for carry-over status and adjust start date in case of carry-over from last event
-            if( nrow(medication_events) > 0){
+            if( carryover == TRUE){
 
-              if( carryover == TRUE){
-                prev.end.date <- last(medication_events[,DISP.START+DURATION])
+              if(!is.na(last.disp.end.date) && last.disp.end.date > disp.start.date.i ) {
 
-                if( prev.end.date < orig.disp.date ) {
+                disp.start.date.i <- last.disp.end.date
 
-                  disp.start.date.i <- prev.end.date
-
-                }
               }
             }
 
@@ -1216,27 +1213,71 @@ compute_event_durations <- function(disp.data = NULL,
         }
       }
 
-      medication_events <- med_disp[DURATION != Inf & is.na(.out) & is.na(.special.periods),
-                                    c("ID",
-                                      medication.class.colnames,
-                                      "TOTAL.DOSE",
-                                      "DISP.DATE",
-                                      "DISP.START",
-                                      "DURATION",
-                                      "DAILY.DOSE",
-                                      "episode.start",
-                                      "episode.end"), with = FALSE];
-      medication_events[,SPECIAL.DURATION := 0];
+      med_disp[DURATION == Inf | .out == 1 | .special.periods == 1, process.seq := 1]
+      med_disp[,process.seq.num := rleidv(process.seq)]
 
-      med_disp <- med_disp[DURATION == Inf | .out == 1 | .special.periods == 1];
-
-      ## apply process_dispensing_events to each dispensing event
       medication_events_rest <- NULL;
-      if( nrow(med_disp) > 0 )
-      {
-        medication_events_rest <- do.call(rbindlist,
-                                          list(l = lapply(1:nrow(med_disp), FUN = function(i) process_dispensing_events(event = i)),
-                                               fill = TRUE));
+      if(carryover == TRUE){
+
+        med_disp[,carryover.from.last := as.numeric(shift(DISP.START+DURATION, type = "lag")-DISP.START)]
+        med_disp[1,carryover.from.last := 0]
+        med_disp[,carryover.total := cumsum(carryover.from.last)]
+        med_disp[carryover.total > 0, process.seq := 1]
+
+        med_disp[is.na(process.seq) & process.seq.num == 1,
+                 DISP.START := DISP.START + carryover.total]
+
+        medication_events <- med_disp[is.na(process.seq) & process.seq.num == 1,
+                                      c("ID",
+                                        medication.class.colnames,
+                                        "TOTAL.DOSE",
+                                        "DISP.DATE",
+                                        "DISP.START",
+                                        "DURATION",
+                                        "DAILY.DOSE",
+                                        "episode.start",
+                                        "episode.end"), with = FALSE];
+        medication_events[,SPECIAL.DURATION := 0];
+
+        med_disp <- med_disp[process.seq == 1 | process.seq.num > 1];
+
+        ## apply process_dispensing_events to each dispensing event
+        last.disp.end.date <- last(medication_events[,DISP.START + DURATION])
+        #carryover.total <- 0#ifelse(nrow(medication_events) > 0, last(medication_events$carryover.total), 0)
+        if( nrow(med_disp) > 0 )
+        {
+          for(i in 1:nrow(med_disp)){
+            medication_events_i <- process_dispensing_events(event = i)
+
+            medication_events_rest <- rbind(medication_events_rest, medication_events_i, fill = TRUE)
+
+            last.disp.end.date <- last(medication_events_i[, DISP.START + DURATION])
+
+
+          }
+        }
+
+      } else {
+        medication_events <- med_disp[is.na(process.seq),
+                                      c("ID",
+                                        medication.class.colnames,
+                                        "TOTAL.DOSE",
+                                        "DISP.DATE",
+                                        "DISP.START",
+                                        "DURATION",
+                                        "DAILY.DOSE",
+                                        "episode.start",
+                                        "episode.end"), with = FALSE];
+        medication_events[,SPECIAL.DURATION := 0];
+
+        med_disp <- med_disp[process.seq == 1];
+
+        if( nrow(med_disp) > 0 ) {
+
+          medication_events_rest <- do.call(rbindlist,
+                                            list(l = lapply(1:nrow(med_disp), FUN = function(i) process_dispensing_events(event = i)),
+                                                 fill = TRUE));
+        }
       }
 
       medication_events <- rbind(medication_events, medication_events_rest, fill = TRUE);
