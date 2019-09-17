@@ -1024,7 +1024,7 @@ compute_event_durations <- function(disp.data = NULL,
           }
         }
       }
-browser()
+#browser()
       if(exists("debug.mode") && debug.mode==TRUE) print(paste("Medication:", med));
 
       ## subset data to medication
