@@ -35,6 +35,76 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
                   ".OBS.END.DATE", ".OBS.END.DATE.PRECOMPUTED",
                   "episode.ID", "episode.duration", "end.episode.gap.days"));
 
+## Package private info ####
+# Store various info relevant to the package (such as info about the last plot or the last error).
+# As this is inside a paclage and we must avoid locking, we ned to use an environment (see, e.g. https://www.r-bloggers.com/package-wide-variablescache-in-r-packages/)
+.adherer.env <- new.env();
+
+# Info about the last plot (initially, none):
+assign(".last.cma.plot.info", NULL, envir=.adherer.env);
+
+# Info about errors, warnings and messages (initially, none):
+assign(".ewms", NULL, envir=.adherer.env);
+assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record the errors, warnings and message, but just display them
+
+# Clear the info about errors, warnings and messages:
+.clear.ewms <- function() { assign(".ewms", NULL, envir=.adherer.env); }
+
+# Get the info about errors, warnings and messages (basically, a data.frame contaning all the important info, one thing per row):
+.get.ewms <- function() { return (get(".ewms", envir=.adherer.env)); }
+
+# Are we recording the errors, warnings and messages?
+.is.recording.ewms <- function() { return (!is.null(.record.ewms <- get(".record.ewms", envir=.adherer.env)) && .record.ewms); }
+
+# Start/stop recording the errors, warnings and messages:
+.record.ewms <- function(record=TRUE) { .clear.ewms(); assign(".record.ewms", record, envir=.adherer.env); }
+
+# Reporting an error, warning or message:
+.report.ewms <- function(text, # the text
+                        type=c("error", "warning", "message")[1], # the type
+                        fnc.name=NA, pkg.name=NA, # which function and package generated it
+                        generate.exception=TRUE, # should we throw an actual error or watning using R's exceptions mechanism?
+                        error.as.warning=TRUE # when reporting an error, should it stop() the whole process or be thrown as a warning() so the processes continues?
+)
+{
+  # Make sure text is really a text:
+  if( length(text) > 1 ) text <- paste0("[ ", paste0("'", as.character(text), "'", collapse="; "), " ]");
+
+  # Add this new ewms info:
+  if( .is.recording.ewms() )
+  {
+    assign(".ewms",
+           rbind(.get.ewms(),
+                 data.frame("text"=text, "type"=type, "function"=fnc.name, "package"=pkg.name, "exception.was.thrown"=generate.exception)),
+           envir=.adherer.env);
+  }
+
+  # Throw an exception (if the case):
+  if( generate.exception )
+  {
+    if( type == "error" )
+    {
+      if( !error.as.warning )
+      {
+        stop(text);
+      } else
+      {
+        warning(text);
+      }
+    } else if( type == "warning" )
+    {
+      warning(text);
+    } else
+    {
+      print(paste0("Info: ",text,
+                   if(!is.na(fnc.name)) paste0(" [from function ",fnc.name,
+                                               if(!is.na(pkg.name)) paste0(", package ",pkg.name),
+                                               "]"),
+                   collapse=""));
+    }
+  }
+}
+
 
 #' Example medication events records for 100 patients.
 #'
@@ -86,25 +156,25 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
 
   if( !inherits(medication.groups, "list") )
   {
-    if( !suppress.warnings ) warning("The medication groups must be a list!\n");
+    if( !suppress.warnings ) .report.ewms("The medication groups must be a list!\n", "error", ".check.medication.groups", "AdhereR");
     return (FALSE);
   }
 
   #if( length(names(medication.groups)) != length(medication.groups) || any(duplicated(names(medication.groups))) || ("" %in% names(medication.groups)) )
   #{
-  #  if( !suppress.warnings ) warning("The medication groups must be a named list with unique and non-empty names!\n");
+  #  if( !suppress.warnings ) .report.ewms("The medication groups must be a named list with unique and non-empty names!\n", "error", ".check.medication.groups", "AdhereR");
   #  return (FALSE);
   #}
 
   if( !all(vapply(medication.groups, function(x) (inherits(x,"character") || inherits(x,"factor")), logical(1))) )
   {
-    if( !suppress.warnings ) warning("The members of the medication groups must vectors of charcters (or factors)!\n");
+    if( !suppress.warnings ) .report.ewms("The members of the medication groups must vectors of charcters (or factors)!\n", "error", ".check.medication.groups", "AdhereR");
     return (FALSE);
   }
 
   if( any(is.na(v <- unlist(medication.groups))) || any(duplicated(v)) )
   {
-    if( !suppress.warnings ) warning("The vectors in the medication groups must not contain NAs and their values must appear only once!\n");
+    if( !suppress.warnings ) .report.ewms("The vectors in the medication groups must not contain NAs and their values must appear only once!\n", "error", ".check.medication.groups", "AdhereR");
     return (FALSE);
   }
 
@@ -113,13 +183,13 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
     # The list of all possible medication classes is given
     if( !(inherits(list.of.medication.classes, "character") || inherits(list.of.medication.classes, "factor")) )
     {
-      if( !suppress.warnings ) warning("The list of all possible medication classes, if given, must be a vector of characters (or factors)!\n");
+      if( !suppress.warnings ) .report.ewms("The list of all possible medication classes, if given, must be a vector of characters (or factors)!\n", "error", ".check.medication.groups", "AdhereR");
       return (FALSE);
     }
 
     if( length((x <- setdiff(v, list.of.medication.classes))) > 0 )
     {
-      if( !suppress.warnings ) warning(paste0("There are ",length(x)," medication classes given in the groups that are not in the list of all possible medication classes!\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("There are ",length(x)," medication classes given in the groups that are not in the list of all possible medication classes!\n"), "error", ".check.medication.groups", "AdhereR");
       return (FALSE);
     }
   }
@@ -357,126 +427,126 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
   if( !is.null(data) )
   {
     # data's class and dimensions:
-    if( inherits(data, "matrix") ) data <- as.data.frame(data); # convert matrix to data.frame
+    if( inherits(data, "matrix") || inherits(data, "tbl") || inherits(data, "data.table") ) data <- as.data.frame(data); # convert various things to data.frame
     if( !inherits(data, "data.frame") )
     {
-      if( !suppress.warnings ) warning("The 'data' for a CMA must be of type 'data.frame'!\n");
+      if( !suppress.warnings ) .report.ewms("The 'data' for a CMA must be of type 'data.frame'!\n", "error", "CMA0", "AdhereR");
       return (NULL);
     }
     if( nrow(data) < 1 )
     {
-      if( !suppress.warnings ) warning("The 'data' for a CMA must have at least one row!\n");
+      if( !suppress.warnings ) .report.ewms("The 'data' for a CMA must have at least one row!\n", "error", "CMA0", "AdhereR");
       return (NULL);
     }
     # the column names must exist in data:
     if( !is.na(ID.colname) && !(ID.colname %in% names(data)) )
     {
-      if( !suppress.warnings ) warning(paste0("Column ID.colname='",ID.colname,"' must appear in the 'data'!\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Column ID.colname='",ID.colname,"' must appear in the 'data'!\n"), "error", "CMA0", "AdhereR");
       return (NULL);
     }
     if( !is.na(event.date.colname) && !(event.date.colname %in% names(data)) )
     {
-      if( !suppress.warnings ) warning(paste0("Column event.date.colname='",event.date.colname,"' must appear in the 'data'!\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Column event.date.colname='",event.date.colname,"' must appear in the 'data'!\n"), "error", "CMA0", "AdhereR");
       return (NULL);
     }
     if( !is.na(event.duration.colname) && !(event.duration.colname %in% names(data)) )
     {
-      if( !suppress.warnings ) warning(paste0("Column event.duration.colname='",event.duration.colname,"' must appear in the 'data'!\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Column event.duration.colname='",event.duration.colname,"' must appear in the 'data'!\n"), "error", "CMA0", "AdhereR");
       return (NULL);
     }
     if( !is.na(event.daily.dose.colname) && !(event.daily.dose.colname %in% names(data)) )
     {
-      if( !suppress.warnings ) warning(paste0("Column event.daily.dose.colname='",event.daily.dose.colname,"' must appear in the 'data'!\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Column event.daily.dose.colname='",event.daily.dose.colname,"' must appear in the 'data'!\n"), "error", "CMA0", "AdhereR");
       return (NULL);
     }
     if( !is.na(medication.class.colname) && !(medication.class.colname %in% names(data)) )
     {
-      if( !suppress.warnings ) warning(paste0("Column medication.class.colname='",medication.class.colname,"' must appear in the 'data'!\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Column medication.class.colname='",medication.class.colname,"' must appear in the 'data'!\n"), "error", "CMA0", "AdhereR");
       return (NULL);
     }
     # carry-over conditions:
     if( !is.na(carryover.within.obs.window) && !is.logical(carryover.within.obs.window) )
     {
-      if( !suppress.warnings ) warning(paste0("Parameter 'carryover.within.obs.window' must be logical!\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Parameter 'carryover.within.obs.window' must be logical!\n"), "error", "CMA0", "AdhereR");
       return (NULL);
     }
     if( !is.na(carryover.into.obs.window) && !is.logical(carryover.into.obs.window) )
     {
-      if( !suppress.warnings ) warning(paste0("Parameter 'carryover.into.obs.window' must be logical!\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Parameter 'carryover.into.obs.window' must be logical!\n"), "error", "CMA0", "AdhereR");
       return (NULL);
     }
     if( !is.na(carry.only.for.same.medication) && !is.logical(carry.only.for.same.medication) )
     {
-      if( !suppress.warnings ) warning(paste0("Parameter 'carry.only.for.same.medication' must be logical!\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Parameter 'carry.only.for.same.medication' must be logical!\n"), "error", "CMA0", "AdhereR");
       return (NULL);
     }
     if( !is.na(consider.dosage.change) && !is.logical(consider.dosage.change) )
     {
-      if( !suppress.warnings ) warning(paste0("Parameter 'consider.dosage.change' must be logical!\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Parameter 'consider.dosage.change' must be logical!\n"), "error", "CMA0", "AdhereR");
       return (NULL);
     }
     if( (!is.na(carryover.within.obs.window) && !is.na(carryover.into.obs.window) && !is.na(carry.only.for.same.medication)) &&
           (!carryover.within.obs.window && !carryover.into.obs.window && carry.only.for.same.medication) )
     {
-      if( !suppress.warnings ) warning("Cannot carry over only for same medication when no carry over at all is considered!\n")
+      if( !suppress.warnings ) .report.ewms("Cannot carry over only for same medication when no carry over at all is considered!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
     # the follow-up window:
     if( !is.na(followup.window.start) && is.numeric(followup.window.start) && followup.window.start < 0 )
     {
-      if( !suppress.warnings ) warning("The follow-up window start must be a positive number of time units after the first event!\n")
+      if( !suppress.warnings ) .report.ewms("The follow-up window start must be a positive number of time units after the first event!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     } else if( !is.na(followup.window.start) && !inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) && !(followup.window.start %in% names(data)) )
     {
-      if( !suppress.warnings ) warning("The follow-up window start must be either a positive number, a Date, or a valid column name in 'data'!\n")
+      if( !suppress.warnings ) .report.ewms("The follow-up window start must be either a positive number, a Date, or a valid column name in 'data'!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
     if( !is.na(followup.window.start.unit) && !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
     {
-      if( !suppress.warnings ) warning("The follow-up window start unit is not recognized!\n")
+      if( !suppress.warnings ) .report.ewms("The follow-up window start unit is not recognized!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
     if( !is.na(followup.window.duration) && is.numeric(followup.window.duration) && followup.window.duration < 0 )
     {
-      if( !suppress.warnings ) warning("The follow-up window duration must be a positive number of time units after the first event!\n")
+      if( !suppress.warnings ) .report.ewms("The follow-up window duration must be a positive number of time units after the first event!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     } else if( !is.na(followup.window.duration) && !is.numeric(followup.window.duration) && !(followup.window.duration %in% names(data)) )
     {
-      if( !suppress.warnings ) warning("The follow-up window duration must be either a positive number or a valid column name in 'data'!\n")
+      if( !suppress.warnings ) .report.ewms("The follow-up window duration must be either a positive number or a valid column name in 'data'!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
     if( !is.na(followup.window.duration.unit) && !(followup.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
     {
-      if( !suppress.warnings ) warning("The follow-up window duration unit is not recognized!\n")
+      if( !suppress.warnings ) .report.ewms("The follow-up window duration unit is not recognized!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
     # the observation window:
     if( !is.na(observation.window.start) && is.numeric(observation.window.start) && observation.window.start < 0 )
     {
-      if( !suppress.warnings ) warning("The observation window start must be a positive number of time units after the first event!\n")
+      if( !suppress.warnings ) .report.ewms("The observation window start must be a positive number of time units after the first event!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     } else if( !is.na(observation.window.start) && !inherits(observation.window.start,"Date") && !is.numeric(observation.window.start) && !(observation.window.start %in% names(data)) )
     {
-      if( !suppress.warnings ) warning("The observation window start must be either a positive number, a Date, or a valid column name in 'data'!\n")
+      if( !suppress.warnings ) .report.ewms("The observation window start must be either a positive number, a Date, or a valid column name in 'data'!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
     if( !is.na(observation.window.start.unit) && !(observation.window.start.unit %in% c("days", "weeks", "months", "years") ) )
     {
-      if( !suppress.warnings ) warning("The observation window start unit is not recognized!\n")
+      if( !suppress.warnings ) .report.ewms("The observation window start unit is not recognized!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
     if( !is.na(observation.window.duration) && is.numeric(observation.window.duration) && observation.window.duration < 0 )
     {
-      if( !suppress.warnings ) warning("The observation window duration must be a positive number of time units after the first event!\n")
+      if( !suppress.warnings ) .report.ewms("The observation window duration must be a positive number of time units after the first event!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     } else if( !is.na(observation.window.duration) && !is.numeric(observation.window.duration) && !(observation.window.duration %in% names(data)) )
     {
-      if( !suppress.warnings ) warning("The observation window duration must be either a positive number or a valid column name in 'data'!\n")
+      if( !suppress.warnings ) .report.ewms("The observation window duration must be either a positive number or a valid column name in 'data'!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
     if( !is.na(observation.window.duration.unit) && !(observation.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
     {
-      if( !suppress.warnings ) warning("The observation window duration unit is not recognized!\n")
+      if( !suppress.warnings ) .report.ewms("The observation window duration unit is not recognized!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
     if( !.check.medication.groups(medication.groups,
@@ -496,7 +566,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
       {
         for( i in which(args.mathing) )
         {
-          warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
+          .report.ewms(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"), "warning", "CMA0", "AdhereR");
         }
       }
     }
@@ -658,7 +728,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
                ifelse(print.data && !is.null(cma$data),paste0(" (on ",nrow(cma$data)," rows x ",ncol(cma$data)," columns",", ",length(unique(cma$data[,cma$ID.colname]))," patients",")"),"")));
   } else
   {
-    warning("Unknown format for printing!\n");
+    .report.ewms("Unknown format for printing!\n", "error", "print.CMA0", "AdhereR");
     return (invisible(NULL));
   }
 }
@@ -882,664 +952,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              max.patients.to.plot=max.patients.to.plot,
              suppress.warnings=suppress.warnings);
 }
-# {
-#   cma <- x; # parameter x is required for S3 consistency, but I like cma more
-#   if( is.null(cma) || !inherits(cma, "CMA0") || is.null(cma$data) || !inherits(cma$data, "data.frame") || nrow(cma$data) < 1 ||
-#       is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) ||
-#       is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) )
-#   {
-#     warning(paste0("Can only plot a correctly specified CMA0 object (i.e., with valid data and column names): cannot continue plotting!\n"));
-#     return (invisible(NULL));
-#   }
-#
-#   # if( !is.null(events) )
-#   # {
-#   #   # Check the events: this should be a data.frame with valid events.ID.colname, events.start.colname, events.end.colname
-#   #   if( !inherits(events, "data.frame") || nrow(events) < 1 || ncol(events) < 3 )
-#   #   {
-#   #     warning(paste0("Events must be a non-empty data.frame with at least three columns!\n"));
-#   #     return (invisible(NULL));
-#   #   }
-#   #   if( inherits(events, "data.table") ) events <- as.data.frame(events); # guard against inconsistencies between data.table and data.frame in how they handle d[,i]
-#   #   if( is.na(events.ID.colname) || !(events.ID.colname %in% names(events)) )
-#   #   {
-#   #     warning(paste0("The events.ID.colname '",events.ID.colname,"' must be given and must be present in events!\n"));
-#   #     return (invisible(NULL));
-#   #   }
-#   #   if( is.na(events.start.colname) || !(events.start.colname %in% names(events)) )
-#   #   {
-#   #     warning(paste0("The events.ID.colname '",events.start.colname,"' must be given and must be present in events!\n"));
-#   #     return (invisible(NULL));
-#   #   }
-#   #   if( is.na(events.end.colname) || !(events.end.colname %in% names(events)) )
-#   #   {
-#   #     warning(paste0("The events.ID.colname '",events.end.colname,"' must be given and must be present in events!\n"));
-#   #     return (invisible(NULL));
-#   #   }
-#   #   # Convert the date columns to Date:
-#   #   if( is.na(events.date.format) ) events.date.format <- cma$date.format;
-#   #   if( !inherits(events[,events.start.colname], "Date") )
-#   #   {
-#   #     if( is.na(events.date.format) || is.null(events.date.format) || length(events.date.format) != 1 || !is.character(events.date.format) )
-#   #     {
-#   #       warning(paste0("The event date format must be a single string: cannot continue plotting!\n"));
-#   #       return (invisible(NULL));
-#   #     }
-#   #     if( anyNA(events[,events.start.colname] <- as.Date(events[,events.start.colname],format=events.date.format)) )
-#   #     {
-#   #       warning(paste0("Not all entries in the event start date \"",events.start.colname,"\" column are valid dates or conform to the date format \"",events.date.format,"\"; first issue occurs on row ",min(which(is.na(events[,events.start.colname]))),": cannot continue plotting!\n"));
-#   #       return (invisible(NULL));
-#   #     }
-#   #   }
-#   #   if( !inherits(events[,events.end.colname], "Date") )
-#   #   {
-#   #     if( is.na(events.date.format) || is.null(events.date.format) || length(events.date.format) != 1 || !is.character(events.date.format) )
-#   #     {
-#   #       warning(paste0("The event date format must be a single string: cannot continue plotting!\n"));
-#   #       return (invisible(NULL));
-#   #     }
-#   #     if( anyNA(events[,events.end.colname] <- as.Date(events[,events.end.colname],format=events.date.format)) )
-#   #     {
-#   #       warning(paste0("Not all entries in the event start date \"",events.end.colname,"\" column are valid dates or conform to the date format \"",events.date.format,"\"; first issue occurs on row ",min(which(is.na(events[,events.end.colname]))),": cannot continue plotting!\n"));
-#   #       return (invisible(NULL));
-#   #     }
-#   #   }
-#   # }
-#
-#   if( inherits(cma$data, "data.table") ) cma$data <- as.data.frame(cma$data); # guard against inconsistencies between data.table and data.frame in how they handle d[,i]
-#
-#   # Check compatibility between subtypes of plots:
-#   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
-#
-#   ## Make sure the dates are strings in the right format:
-#   #if( inherits(cma$data[,cma$event.date.colname], "Date") )
-#   #{
-#   #  cma$date.format <- "%m/%d/%Y"; # use the default format
-#   #  cma$data[,cma$event.date.colname] <- as.character(cma$data[,cma$event.date.colname], format=cma$date.format);
-#   #}
-#
-#   # Select the patients:
-#   patids <- unique(as.character(cma$data[,cma$ID.colname])); patids <- patids[!is.na(patids)];
-#   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
-#   if( length(patids) == 0 ) return (invisible(NULL));
-#   # Select only the patients to display:
-#   cma$data <- cma$data[ cma$data[,cma$ID.colname] %in% patids, ];
-#
-#   # Deal with follow-up and observation windows (if present):
-#   if( !is.na(cma$followup.window.start) &&
-#       !is.na(cma$followup.window.start.unit) &&
-#       !is.na(cma$followup.window.duration) &&
-#       !is.na(cma$observation.window.start) &&
-#       !is.na(cma$observation.window.start.unit) &&
-#       !is.na(cma$observation.window.duration) &&
-#       !is.na(cma$observation.window.duration.unit) )
-#   {
-#     event.info <- compute.event.int.gaps(data=as.data.frame(cma$data),
-#                                          ID.colname=cma$ID.colname,
-#                                          event.date.colname=cma$event.date.colname,
-#                                          event.duration.colname=cma$event.duration.colname,
-#                                          event.daily.dose.colname=cma$event.daily.dose.colname,
-#                                          medication.class.colname=cma$medication.class.colname,
-#                                          event.interval.colname="event.interval",
-#                                          gap.days.colname="gap.days",
-#                                          carryover.within.obs.window=FALSE,
-#                                          carryover.into.obs.window=FALSE,
-#                                          carry.only.for.same.medication=FALSE,
-#                                          consider.dosage.change=FALSE,
-#                                          followup.window.start=cma$followup.window.start,
-#                                          followup.window.start.unit=cma$followup.window.start.unit,
-#                                          followup.window.duration=cma$followup.window.duration,
-#                                          followup.window.duration.unit=cma$followup.window.duration.unit,
-#                                          observation.window.start=cma$observation.window.start,
-#                                          observation.window.start.unit=cma$observation.window.start.unit,
-#                                          observation.window.duration=cma$observation.window.duration,
-#                                          observation.window.duration.unit=cma$observation.window.duration.unit,
-#                                          date.format=cma$date.format,
-#                                          keep.window.start.end.dates=TRUE,
-#                                          remove.events.outside.followup.window=FALSE,
-#                                          keep.event.interval.for.all.events=TRUE,
-#                                          parallel.backend="none", # make sure this runs sequentially!
-#                                          parallel.threads=1,
-#                                          suppress.warnings=FALSE,
-#                                          return.data.table=FALSE);
-#     if( !is.null(event.info) )
-#     {
-#       # Keep only those events that intersect with the observation window (and keep only the part that is within the intersection):
-#
-#       # Compute end prescription date as well:
-#       event.info$.DATE.as.Date.end <- .add.time.interval.to.date(event.info$.DATE.as.Date, event.info[,cma$event.duration.colname], "days");
-#
-#       # Remove all treatments that end before FUW starts and those that start after FUW ends:
-#       event.info <- event.info[ !(event.info$.DATE.as.Date.end < event.info$.FU.START.DATE | event.info$.DATE.as.Date > event.info$.FU.END.DATE), ];
-#       if( is.null(event.info) || nrow(event.info) == 0 ) return (invisible(NULL));
-#
-#       # Find all prescriptions that start before the follow-up window and truncate them:
-#       s <- (event.info$.DATE.as.Date < event.info$.FU.START.DATE);
-#       if( length(s) > 0 )
-#       {
-#         event.info$.DATE.as.Date[s] <- event.info$.FU.START.DATE[s];
-#       }
-#
-#       # Find all prescriptions that end after the follow-up window and truncate them:
-#       s <- (event.info$.DATE.as.Date.end > event.info$.FU.END.DATE);
-#       if( length(s) > 0 )
-#       {
-#         event.info[s,cma$event.duration.colname] <- .difftime.Dates.as.days(event.info$.FU.END.DATE[s], event.info$.DATE.as.Date[s]);
-#       }
-#
-#       # Replace the original data by this enhanced one!
-#       cma$data <- event.info;
-#     } else
-#     {
-#       cat("Error concerning the follow-up and observation windows: please see console for details!");
-#       return (invisible(NULL));
-#     }
-#   } else
-#   {
-#     event.info <- NULL;
-#   }
-#
-#   # Check the date format (and cache the conversion for later use):
-#   if( !is.null(event.info) && inherits(cma$data$.DATE.as.Date, "Date") )
-#   {
-#     # Nothing to cache, it's already in the right format!
-#   } else
-#   {
-#     # Do cache it!
-#     if( inherits(cma$data[,cma$event.date.colname], "Date") )
-#     {
-#       cma$data$.DATE.as.Date <- cma$data[,cma$event.date.colname];
-#     } else
-#     {
-#       if( is.na(cma$date.format) || is.null(cma$date.format) || length(cma$date.format) != 1 || !is.character(cma$date.format) )
-#       {
-#         warning(paste0("The date format must be a single string: cannot continue plotting!\n"));
-#         return (invisible(NULL));
-#       }
-#
-#       if( anyNA(cma$data$.DATE.as.Date <- as.Date(cma$data[,cma$event.date.colname],format=cma$date.format)) )
-#       {
-#         warning(paste0("Not all entries in the event date \"",cma$event.date.colname,"\" column are valid dates or conform to the date format \"",cma$date.format,"\"; first issue occurs on row ",min(which(is.na(cma$data$.DATE.as.Date))),": cannot continue plotting!\n"));
-#         return (invisible(NULL));
-#       }
-#     }
-#   }
-#
-#   # Order ID and date:
-#   cma$data <- cma$data[ order( cma$data[,cma$ID.colname], cma$data$.DATE.as.Date), ];
-#
-#   # Grayscale plotting:
-#   if( bw.plot )
-#   {
-#       if( is.function(col.cats) ) col.cats <- .bw.colors else col.cats <- gray(0.1);
-#       followup.window.col <- "black";
-#       observation.window.col <- gray(0.3);
-#       CMA.plot.col <- gray(0.8);
-#       CMA.plot.border <- gray(0.2);
-#       CMA.plot.bkg <- gray(0.5);
-#       CMA.plot.text <- CMA.plot.border;
-#   }
-#
-#   # The colors for the categories:
-#   if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
-#   {
-#     categories <- unspecified.category.label;
-#   } else
-#   {
-#     categories <- sort(unique(as.character(cma$data[,cma$medication.class.colname])), na.last=FALSE); # all categories making sure NA is first
-#   }
-#   if( is.na(categories[1]) )
-#   {
-#     if( is.function(col.cats) ) cols <- c(col.na, col.cats(length(categories)-1)) else cols <- c(col.na, rep(col.cats,length(categories)-1));
-#   } else
-#   {
-#     if( is.function(col.cats) ) cols <- col.cats(length(categories)) else cols <- rep(col.cats,length(categories));
-#   }
-#   names(cols) <- categories;
-#   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
-#
-#   # Daily dose:
-#   if( is.na(cma$event.daily.dose.colname) || !(cma$event.daily.dose.colname %in% names(cma$data)) )
-#   {
-#     print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
-#   }
-#   if( plot.dose || print.dose ) # consistency checks:
-#   {
-#     if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
-#   }
-#   if( plot.dose || print.dose )
-#   {
-#     if( length(categories) == 1 && categories == unspecified.category.label )
-#     {
-#       # Really, no category:
-#       dose.range <- data.frame("category"=categories, "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
-#     } else
-#     {
-#       # Range per category:
-#       tmp <- aggregate(cma$data[,cma$event.daily.dose.colname], by=list("category"=cma$data[,cma$medication.class.colname]), FUN=function(x) range(x,na.rm=TRUE));
-#       dose.range <- data.frame("category"=tmp$category, "min"=tmp$x[,1], "max"=tmp$x[,2]);
-#       if( plot.dose.lwd.across.medication.classes )
-#       {
-#         dose.range.global <- data.frame("category"="ALL", "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
-#       }
-#     }
-#
-#     # Function for the linear interpolation of dose between lwd.min and lwd.max:
-#     adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])
-#     {
-#       delta <- ifelse(dose.max == dose.min, 1.0, (dose.max - dose.min)); # avoid dividing by zero when there's only one dose
-#       return (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / delta);
-#     }
-#   }
-#
-#   # Find the earliest date:
-#   earliest.date <- min(c(cma$data$.DATE.as.Date, ifelse(!is.null(event.info), cma$data$.OBS.START.DATE, NA), ifelse(!is.null(event.info), cma$data$.FU.START.DATE, NA)), na.rm=TRUE);
-#   if( is.na(earliest.date) )
-#   {
-#     warning(paste0("I need at least one non-NA date (please check the data.format fits the actual format of the dates): cannot continue plotting!\n"));
-#     return (invisible(NULL));
-#   }
-#
-#   # If aligning all participants to the same date, simply relocate all dates relative to the earliest date:
-#   correct.earliest.followup.window <- 0;
-#   if( align.all.patients )
-#   {
-#     for( i in 1:nrow(cma$data) )
-#     {
-#       if( i == 1 || cma$data[i,cma$ID.colname] != cma$data[i-1,cma$ID.colname] ) align.to <- cma$data$.DATE.as.Date[i];
-#       #cma$data[i,cma$event.date.colname] <- as.character(earliest.date + (cma$data$.DATE.as.Date[i] - align.to), format=cma$date.format);
-#       cma$data$.DATE.as.Date[i] <- (earliest.date + (cma$data$.DATE.as.Date[i] - align.to));
-#       if( !is.null(event.info) )
-#       {
-#         cma$data$.FU.START.DATE[i] <- earliest.date + (cma$data$.FU.START.DATE[i] - align.to);
-#         cma$data$.FU.END.DATE[i] <- earliest.date + (cma$data$.FU.END.DATE[i] - align.to);
-#         cma$data$.OBS.START.DATE[i] <- earliest.date + (cma$data$.OBS.START.DATE[i] - align.to);
-#         cma$data$.OBS.END.DATE[i] <- earliest.date + (cma$data$.OBS.END.DATE[i] - align.to);
-#       }
-#     }
-#     if( !is.null(event.info) ) correct.earliest.followup.window <- min(as.numeric(cma$data$.DATE.as.Date - min(cma$data$.FU.START.DATE),na.rm=TRUE),na.rm=TRUE);
-#   }
-#
-#   # Compute the duration if not given:
-#   if( is.na(duration) )
-#   {
-#     latest.date <- max(c(cma$data$.DATE.as.Date + cma$data[,cma$event.duration.colname], ifelse(!is.null(event.info),cma$data$.FU.END.DATE,NA)), na.rm=TRUE);
-#     duration <- as.numeric(difftime(latest.date, earliest.date, "days")) + correct.earliest.followup.window;
-#   }
-#   endperiod <- duration;
-#
-#   # Reserve space for the CMA plotting:
-#   adh.plot.space <- c(0, ifelse( print.CMA && !is.null(getCMA(cma)), duration*CMA.plot.ratio, 0) );
-#   duration.total <- duration + adh.plot.space[2];
-#
-#   # Save the graphical params and restore them later:
-#   old.par <- par(no.readonly=TRUE);
-#
-#   # Make sure there's enough space to actually plot the patient IDs on the y-axis:
-#   id.labels <- do.call(rbind,lapply(as.character(patids), # for each patient ID, compute the string dimensions in inches
-#                                     function(p)
-#                                     {
-#                                       # The participant axis text:
-#                                       s <- which(cma$data[,cma$ID.colname] == p);
-#                                       pid <- ifelse( print.CMA && !is.null(getCMA(cma)) && length(x<-which(getCMA(cma)[cma$ID.colname] == p))==1,
-#                                                      paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)),
-#                                                      p);
-#                                       data.frame("ID"=p, "string"=pid, "width"=strwidth(pid, units="inches", cex=cex.axis), "height"=strheight(pid, units="inches", cex=cex.axis));
-#                                     }));
-#   y.label <- data.frame("string"=(tmp <- ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient")), # soace needed for the label as well (in inches)
-#                         "width"=strwidth(tmp, units="inches", cex=cex.lab), "height"=strheight(tmp, units="inches", cex=cex.lab));
-#   left.margin <- (cur.mai <- par("mai"))[2]; # left margin in inches (and cache the current margins too)
-#   # If there's enough space as it is, don't do anything:
-#   if( left.margin < (y.label$height + max(id.labels$width,na.rm=TRUE)) ) # remeber that the y.label is vertical
-#   {
-#     # Well, there isn't so:
-#     rotate.id.labels <- 30; # rotate the labels (in degrees)
-#     new.left.margin <- (y.label$height + (cos(rotate.id.labels*pi/180) * max(id.labels$width,na.rm=TRUE)) + strwidth("0000", units="inches", cex=cex.axis)); # ask for enough space
-#     par(mai=c(cur.mai[1], new.left.margin, cur.mai[3], cur.mai[4]));
-#   } else
-#   {
-#     # Seems to fit, so don't do anything:
-#     rotate.id.labels <- 0;
-#   }
-#
-#   # The actual plotting:
-#   if(inherits(msg <- try(plot( 0, 1,
-#                                xlim=c(0-5,duration.total+5), # padding with 5 days on both sides to better see the follow-up window, etc.
-#                                ylim=c(0,nrow(cma$data)+1), type="n", xaxs="i", yaxs="i",
-#                                axes=FALSE,
-#                                xlab="", ylab=""),
-#                          silent=TRUE),
-#               "try-error"))
-#   {
-#     # Some error occured when creatig the plot...
-#     cat(msg);
-#     par(old.par); # restore graphical params
-#     return (invisible(NULL));
-#   }
-#
-#   if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
-#   char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex); # character height and width in the current plotting system
-#
-#   # Minimum plot dimensions:
-#   if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
-#       abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * nrow(cma$data))
-#   {
-#     cat(paste0("Plotting area is too small (it must be at least ",
-#                min.plot.size.in.characters.horiz,
-#                " x ",
-#                min.plot.size.in.characters.vert,
-#                " characters per event, but now it is only ",
-#                round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
-#                " x ",
-#                round(abs(par("usr")[4] - par("usr")[3]) / (char.height * nrow(cma$data)),1),
-#                ")!\n"));
-#     #segments(x0=c(par("usr")[1], par("usr")[1]),
-#     #         y0=c(par("usr")[3], par("usr")[4]),
-#     #         x1=c(par("usr")[2], par("usr")[2]),
-#     #         y1=c(par("usr")[4], par("usr")[3]),
-#     #         col="red", lwd=3);
-#     par(old.par); # restore graphical params
-#     return (invisible(NULL));
-#   }
-#
-#   # Continue plotting:
-#   box();
-#   title(main=ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
-#         xlab=ifelse(show.period=="dates","date","days"),
-#         #ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
-#         cex.lab=cex.lab);
-#   #browser();
-#   #text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(strwidth(id.labels$string, cex=cex.axis),na.rm=TRUE)) + strwidth("0000", cex=cex.axis)),
-#   #     (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE);
-#   mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3);
-#
-#   curpat <- TRUE;
-#   for( i in 1:nrow(cma$data) )
-#   {
-#     start <- as.numeric(difftime(cma$data$.DATE.as.Date[i], earliest.date, "days" ) );
-#     end <- start + cma$data[i,cma$event.duration.colname];
-#     if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
-#     {
-#       col <- .map.category.to.color(unspecified.category.label);
-#     } else
-#     {
-#       col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
-#     }
-#     points( adh.plot.space[2]+start+correct.earliest.followup.window, i, pch=pch.start.event, col=col, cex=cex);
-#     points(adh.plot.space[2]+end+correct.earliest.followup.window, i, pch=pch.end.event, col=col, cex=cex);
-#     if( plot.dose )
-#     {
-#       if( nrow(dose.range) == 1 )
-#       {
-#         segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
-#       } else
-#       {
-#         if( plot.dose.lwd.across.medication.classes )
-#         {
-#           segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max));
-#         } else
-#         {
-#           dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
-#           if( sum(dose.for.cat,na.rm=TRUE) == 1 )
-#           {
-#             segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
-#           } else
-#           {
-#             segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
-#           }
-#         }
-#       }
-#     } else
-#     {
-#       segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
-#     }
-#     if( print.dose ) # print daily dose
-#     {
-#       dose.text.y <- i - ifelse(print.dose.centered,0 , dose.text.height*2/3); # print it on or below the dose segment?
-#       if( is.na(print.dose.outline.col) ) # simple or outlined?
-#       {
-#         text(adh.plot.space[2]+(start + end)/2+correct.earliest.followup.window, dose.text.y, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
-#       } else
-#       {
-#         .shadow.text(adh.plot.space[2]+(start + end)/2+correct.earliest.followup.window, dose.text.y, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
-#       }
-#     }
-#
-#     if( i < nrow(cma$data) )
-#     {
-#       if( cma$data[i,cma$ID.colname] == cma$data[i+1,cma$ID.colname] )
-#       {
-#         start.next <- as.numeric(difftime(cma$data$.DATE.as.Date[i+1], earliest.date, "days"));
-#         segments( adh.plot.space[2]+end+correct.earliest.followup.window, i, adh.plot.space[2]+start.next+correct.earliest.followup.window, i, col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
-#         segments( adh.plot.space[2]+start.next+correct.earliest.followup.window, i, adh.plot.space[2]+start.next+correct.earliest.followup.window, i+1, col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
-#       } else
-#       {
-#         # Now the patient is changing:
-#         if( curpat )
-#         {
-#           y <- which(cma$data[,cma$ID.colname] == cma$data[i+1,cma$ID.colname]);
-#           rect( 0-1, min(y)-0.5, duration.total+1, max(y)+0.5, col=gray(0.9), border=NA );
-#         }
-#         curpat <- !curpat;
-#       }
-#     }
-#   }
-#   # The grid at regular dates:
-#   if( period.in.days > 0 ) abline( v=adh.plot.space[2]+seq(0,endperiod,by=period.in.days), lty="dotted", col=gray(0.5) );
-#   abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
-#
-#   # The patient axis and CMA plots:
-#   if( print.CMA && !is.null(getCMA(cma)) )
-#   {
-#     # Maximum achieved CMA:
-#     adh.max <- max(getCMA(cma)$CMA,na.rm=TRUE);
-#     # Function mapping the CMA values to the appropriate x-coordinates:
-#     .rescale.xcoord.for.CMA.plot <- function(x,pfree=0.20) return (adh.plot.space[1] + x/adh.max*(adh.plot.space[2]*(1-pfree) - adh.plot.space[1]));
-#     # Mark the drawing area:
-#     if( adh.max > 1.0 )
-#     {
-#       rect(.rescale.xcoord.for.CMA.plot(0), par("usr")[3], .rescale.xcoord.for.CMA.plot(adh.max), par("usr")[4], col=rgb(1.0,1.0,0.0,0.25), border=NA);
-#       abline(v=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0), .rescale.xcoord.for.CMA.plot(adh.max)), col="blue", lty=c("solid","dotted","solid"), lwd=1);
-#       mtext( c("0%","100%",sprintf("%.1f%%",adh.max*100)), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0), .rescale.xcoord.for.CMA.plot(adh.max)), las=2, cex=cex.axis, col="blue" );
-#     } else
-#     {
-#       rect(.rescale.xcoord.for.CMA.plot(0), par("usr")[3], .rescale.xcoord.for.CMA.plot(1.0), par("usr")[4], col=rgb(1.0,1.0,0.0,0.25), border=NA);
-#       abline(v=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), col="blue", lty="solid", lwd=1);
-#       mtext( c("0%","100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col="blue" );
-#     }
-#   }
-#   for( p in as.character(patids) )
-#   {
-#     # The participant axis text:
-#     s <- which(cma$data[,cma$ID.colname] == p);
-#     #pid <- ifelse( print.CMA && !is.null(getCMA(cma)) && length(x<-which(getCMA(cma)[cma$ID.colname] == p))==1, paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)), p);
-#     pid <- id.labels$string[ id.labels$ID == p ];
-#     if( rotate.id.labels > 0 )
-#     {
-#       # Rotate the labels:
-#       text(par("usr")[1], mean(s), pid, cex=cex.axis, srt=rotate.id.labels, pos=2, xpd=TRUE );
-#     } else
-#     {
-#       # Don't rotate the labels:
-#       mtext( pid, 2, line=0.5, at=mean(s), las=2, cex=cex.axis );
-#     }
-#
-#     # The participant CMA plot:
-#     if( print.CMA && !is.null(getCMA(cma)) )
-#     {
-#       adh <- getCMA(cma)[x,"CMA"];
-#       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(min(adh,adh.max)), mean(s)+1, col="lightblue", border=NA);
-#       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)), mean(s)+1, col=NA, border="blue");
-#       text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s), labels=sprintf("%.1f%%",adh*100), col="darkblue", cex=cex.axis);
-#     }
-#
-#     # # The participant events:
-#     # if( !is.null(events) && !is.null(events.for.p <- events[ events[,events.ID.colname] == p, ]) && nrow(events.for.p) > 0 )
-#     # {
-#     #   rect(adh.plot.space[2]+as.numeric(difftime(events.for.p[,events.start.colname], earliest.date, "days")),
-#     #        min(s)-0.5,
-#     #        adh.plot.space[2]+as.numeric(difftime(events.for.p[,events.end.colname], earliest.date, "days")),
-#     #        max(s)+0.5,
-#     #        border=col.events, col=col.events, lwd=1, density=20, angle=-60);
-#     # }
-#
-#     # The follow-up and observation windows:
-#     s <- which(cma$data[,cma$ID.colname] == p);
-#     if( !is.null(event.info) && highlight.followup.window )
-#     {
-#       rect(adh.plot.space[2] + as.numeric(cma$data$.FU.START.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[1]-0.25,
-#            adh.plot.space[2] + as.numeric(cma$data$.FU.END.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[length(s)]+0.25,
-#            col=NA, border=followup.window.col, lty="dashed", lwd=2);
-#     }
-#     if( !is.null(event.info) && highlight.observation.window )
-#     {
-#       rect(adh.plot.space[2] + as.numeric(cma$data$.OBS.START.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[1]-0.25,
-#            adh.plot.space[2] + as.numeric(cma$data$.OBS.END.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[length(s)]+0.25,
-#            col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
-#     }
-#   }
-#
-#   # The days/dates axis
-#   #axis( 1, at=adh.plot.space[2]+seq(0,endperiod,by=period.in.days),
-#   #      labels=if(show.period=="dates"){as.character(earliest.date + round(seq(0,endperiod,by=period.in.days),1), format=cma$date.format)} else {as.character(round(seq(0,endperiod,by=period.in.days),1))},
-#   #      las=ifelse(show.period=="dates",1,3), srt=ifelse(show.period=="dates",45,0), cex.axis=cex.axis);
-#   if( period.in.days > 0 )
-#   {
-#     axis( 1, at=adh.plot.space[2]+seq(0,endperiod,by=period.in.days), labels=FALSE);
-#     if( show.period=="dates" )
-#     {
-#       axis.labels <- as.character(earliest.date + round(seq(0,endperiod,by=period.in.days),1), format=cma$date.format);
-#     } else
-#     {
-#       axis.labels <- as.character(round(seq(0,endperiod,by=period.in.days),1));
-#     }
-#     # text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days), par("usr")[3] - max(nchar(axis.labels))/2 * cos(30*pi/180), # cos needs radians
-#     #      labels=axis.labels,
-#     #      cex=cex.axis, srt=30, pos=1, xpd=TRUE);
-#     #text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
-#          # par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
-#          # labels=axis.labels,
-#          # cex=cex.axis, srt=30, pos=1, xpd=TRUE);
-#     text(adh.plot.space[2]+seq(0,endperiod,by=period.in.days),
-#          par("usr")[3],
-#          labels=axis.labels,
-#          cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-#   }
-#
-#   # The legend:
-#   .legend <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
-#   {
-#     # Legend rectangle:
-#     if( do.plot ) rect(x, y, x + width, y + height, border=gray(0.6), lwd=2, col=rgb(0.99,0.99,0.99,legend.bkg.opacity));
-#
-#     cur.y <- y + height; # current y
-#     max.width <- width; # maximum width
-#
-#     # Legend title:
-#     if( do.plot ) text(x + width/2, cur.y, "Legend", pos=1, col=gray(0.3), cex=legend.cex.title);
-#     cur.y <- cur.y - strheight("Legend", cex=legend.cex.title) - 3*legend.char.height; max.width <- max(max.width, strwidth("Legend", cex=legend.cex.title));
-#
-#     # Event:
-#     if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event, col="black");
-#     if( do.plot ) points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
-#     if( do.plot ) points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
-#     if( !plot.dose )
-#     {
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "event", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("event", cex=legend.cex));
-#     } else
-#     {
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "event (min. dose)", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("event (min. dose)", cex=legend.cex));
-#       if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event.max.dose, col="black");
-#       if( do.plot ) points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=1.0, col="black");
-#       if( do.plot ) points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=1.0, col="black");
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "event (max. dose)", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("event (max. dose)", cex=legend.cex));
-#     }
-#
-#     # No event:
-#     if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.continuation, lwd=lwd.continuation, col=col.continuation);
-#     if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "no event", col="black", cex=legend.cex, pos=4);
-#     cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("no event", cex=legend.cex));
-#
-#     # Events with names:
-#     for( i in 1:length(cols) )
-#     {
-#       if( do.plot ) segments(x + 1.0*legend.char.width, cur.y - 0.5*legend.char.height, x + 4.0*legend.char.width, cur.y - 0.5*legend.char.height, col=adjustcolor(cols[i],alpha.f=0.5), lwd=2, lty="solid");
-#       if( do.plot )
-#       {
-#         med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
-#         if( print.dose || plot.dose )
-#         {
-#           dose.for.cat <- (dose.range$category == med.class.name);
-#           if( sum(dose.for.cat,na.rm=TRUE) == 1 )
-#           {
-#             med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
-#           }
-#         }
-#         text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, med.class.name, col="black", cex=legend.cex, pos=4);
-#       }
-#       cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth(names(cols)[i], cex=legend.cex));
-#     }
-#     cur.y <- cur.y - 0.5*legend.char.height;
-#
-#     # Follow-up window:
-#     if( !is.null(event.info) && highlight.followup.window )
-#     {
-#       if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=followup.window.col, lty="dotted", lwd=2, col=rgb(1,1,1,0.0));
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "follow-up wnd.", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("follow-up wnd.", cex=legend.cex));
-#     }
-#
-#     # Observation window:
-#     if( !is.null(event.info) && highlight.observation.window )
-#     {
-#       if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=observation.window.density, angle=observation.window.angle);
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "observation wnd.", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("observation wnd.", cex=legend.cex));
-#     }
-#
-#     # Required size:
-#     return (c("width" =max.width + 5.0*legend.char.width,
-#               "height"=(y + height - cur.y) + 1.0*legend.char.height));
-#   }
-#   if( show.legend )
-#   {
-#     # Character size for the legend:
-#     legend.char.width <- strwidth("O",cex=legend.cex); legend.char.height <- strheight("O",cex=legend.cex);
-#
-#     legend.size <- .legend(do.plot=FALSE);
-#     if( is.na(legend.x) || legend.x == "right" )
-#     {
-#       legend.x <- par("usr")[2] - legend.size["width"] - legend.char.width;
-#     } else if( legend.x == "left" )
-#     {
-#       legend.x <- par("usr")[1] + legend.char.width;
-#     } else if( !is.numeric(legend.x) && length(legend.x) != 1 )
-#     {
-#       legend.x <- par("usr")[2] - legend.size["width"] - legend.char.width;
-#     }
-#     if( is.na(legend.y) || legend.y == "bottom" )
-#     {
-#       legend.y <- par("usr")[3] + legend.char.height;
-#     } else if( legend.y == "top" )
-#     {
-#       legend.y <- par("usr")[4] - legend.size["height"] - legend.char.height;
-#     } else if( !is.numeric(legend.y) && length(legend.y) != 1 )
-#     {
-#       legend.y <- par("usr")[3] + legend.char.height;
-#     }
-#     ret.val <- .legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
-#   }
-#   else
-#   {
-#     ret.val <- c("width"=NA, "height"=NA);
-#   }
-#
-#   par(old.par); # restore graphical params
-#   return (invisible(ret.val));
-# }
+
 
 #' Access the actual CMA estimate from a CMA object.
 #'
@@ -1599,10 +1012,10 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
   }
   if( length(patients.to.keep) == 0 )
   {
-    if( !suppress.warnings ) warning("No patients to subset on!\n");
+    if( !suppress.warnings ) .report.ewms("No patients to subset on!\n", "error", "subsetCMA.CMA0", "AdhereR");
     return (NULL);
   }
-  if( length(patients.to.keep) < length(patients) && !suppress.warnings ) warning("Some patients in the subsetting set are not in the CMA itsefl and are ignored!\n");
+  if( length(patients.to.keep) < length(patients) && !suppress.warnings ) .report.ewms("Some patients in the subsetting set are not in the CMA itself and are ignored!\n", "warning", "subsetCMA.CMA0", "AdhereR");
 
   ret.val <- cma;
   ret.val$data <- ret.val$data[ ret.val$data[,ret.val$ID.colname] %in% patients.to.keep, ];
@@ -1622,12 +1035,12 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
   # Checks
   if( !inherits(start.date,"Date") )
   {
-    if( !suppress.warnings ) warning("start.date to '.add.time.interval.to.date' must be a Date() object.\n");
+    if( !suppress.warnings ) .report.ewms("start.date to '.add.time.interval.to.date' must be a Date() object.\n", "error", ".add.time.interval.to.date", "AdhereR");
     return (NA);
   }
   if( !is.numeric(time.interval) || any(time.interval < 0) )
   {
-    if( !suppress.warnings ) warning("time.interval to '.add.time.interval.to.date' must be a positive integer.\n");
+    if( !suppress.warnings ) .report.ewms("time.interval to '.add.time.interval.to.date' must be a positive integer.\n", "error", ".add.time.interval.to.date", "AdhereR");
     return (NA);
   }
   time.interval <- round(time.interval);
@@ -1643,7 +1056,7 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
   #                             i <- which(is.na(tmp));
   #                             if( length(i) > 0 ) tmp[i] <- start.date[i] + lubridate::days(1) + lubridate::years(time.interval);
   #                             tmp;},
-  #                 {if( !suppress.warnings ) warning(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n")); NA;} # default
+  #                 {if( !suppress.warnings ) .report.ewms(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n"), "error", ".add.time.interval.to.date", "AdhereR"); NA;} # default
   # ));
 
   # Faster but assumes that the internal representation of "Date" object is in number of days since the begining of time (probably stably true):
@@ -1652,19 +1065,19 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
                             "weeks" = structure(unclass(start.date) + time.interval*7, class="Date"),
                             "months" = lubridate::add_with_rollback(start.date, lubridate::period(time.interval,"months"), roll_to_first=TRUE), # take care of cases such as 2001/01/29 + 1 month
                             "years"  = lubridate::add_with_rollback(start.date, lubridate::period(time.interval,"years"),  roll_to_first=TRUE), # take care of cases such as 2000/02/29 + 1 year
-                            {if( !suppress.warnings ) warning(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n")); NA;} # default
+                            {if( !suppress.warnings ) .report.ewms(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n"), "error", ".add.time.interval.to.date", "AdhereR"); NA;} # default
   ));
 }
 
 # Auxiliary function: subtract two dates to obtain the number of days in between:
 # WARNING! Faster than difftime() but makes the assumption that the internal representation of Date objects is the number of days since a given begining of time
-# (true as of R 3.4 and probably conserved in the future versions)
+# (true as of R 3.4 and probably conserved in future versions)
 .difftime.Dates.as.days <- function( start.dates, end.dates, suppress.warnings=FALSE )
 {
   # Checks
   if( !inherits(start.dates,"Date") || !inherits(end.dates,"Date") )
   {
-    if( !suppress.warnings ) warning("start.dates and end.dates to '.difftime.Dates.as.days' must be a Date() objects.\n");
+    if( !suppress.warnings ) .report.ewms("start.dates and end.dates to '.difftime.Dates.as.days' must be a Date() objects.\n", "error", ".difftime.Dates.as.days", "AdhereR");
     return (NA);
   }
   return (unclass(start.dates) - unclass(end.dates)); # the difference between the raw internal representations of Date objects is in days
@@ -1740,7 +1153,7 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
     if( .Platform$OS.type == "windows" )
     {
       # Can't do multicore on Windows!
-      if( !suppress.warnings ) warning(paste0("Parallel processing backend \"multicore\" is not currently supported on Windows: will use SNOW instead.\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Parallel processing backend \"multicore\" is not currently supported on Windows: will use SNOW instead.\n"), "warning", ".compute.function", "AdhereR");
       parallel.backend <- "snow"; # try to do SNOW...
     } else
     {
@@ -1752,7 +1165,7 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
         parallel.threads <- getOption("mc.cores", 2L);
       } else if( is.na(parallel.threads) || !is.numeric(parallel.threads) || (parallel.threads < 1) || (parallel.threads %% 1 != 0) )
       {
-        if( !suppress.warnings ) warning(paste0("Number of parallel processing threads \"",parallel.threads,"\" must be either \"auto\" or a positive integer; forcing \"auto\".\n"));
+        if( !suppress.warnings ) .report.ewms(paste0("Number of parallel processing threads \"",parallel.threads,"\" must be either \"auto\" or a positive integer; forcing \"auto\".\n"), "warning", ".compute.function", "AdhereR");
         parallel.threads <- getOption("mc.cores", 2L);
       }
 
@@ -1814,7 +1227,7 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
                         );
   if( is.na(cluster.type) )
   {
-    if( !suppress.warnings ) warning(paste0("Unknown parallel processing backend \"",parallel.backend,"\": will force sequential (\"none\").\n"));
+    if( !suppress.warnings ) .report.ewms(paste0("Unknown parallel processing backend \"",parallel.backend,"\": will force sequential (\"none\").\n"), "warning", ".compute.function", "AdhereR");
     # Force single threaded: simply call the function with the given data:
     return (fnc(data=data,
                 ID.colname=ID.colname,
@@ -1852,7 +1265,7 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
       parallel.threads <- 2L;
     } else if( is.na(parallel.threads) || (is.numeric(parallel.threads) && ((parallel.threads < 1) || (parallel.threads %% 1 != 0))) )
     {
-      if( !suppress.warnings ) warning(paste0("Number of parallel processing threads \"",parallel.threads,"\", if numeric, must be either a positive integer; forcing \"auto\".\n"));
+      if( !suppress.warnings ) .report.ewms(paste0("Number of parallel processing threads \"",parallel.threads,"\", if numeric, must be either a positive integer; forcing \"auto\".\n"), "warning", ".compute.function", "AdhereR");
       parallel.threads <- 2L;
     }
     if( is.numeric(parallel.threads) ) parallel.threads <- min(parallel.threads, length(patids)); # make sure we're not starting more threads than patients
@@ -1863,7 +1276,7 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
                                    type = cluster.type);
   if( is.null(cluster) )
   {
-    if( !suppress.warnings ) warning(paste0("Failed to create the cluster \"",parallel.backend,"\" with parallel.threads \"",parallel.threads,"\": will force sequential (\"none\").\n"));
+    if( !suppress.warnings ) .report.ewms(paste0("Failed to create the cluster \"",parallel.backend,"\" with parallel.threads \"",parallel.threads,"\": will force sequential (\"none\").\n"), "warning", ".compute.function", "AdhereR");
     # Force single threaded: simply call the function with the given data:
     return (fnc(data=data,
                 ID.colname=ID.colname,
@@ -2108,7 +1521,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   # preconditions concerning column names:
   if( is.null(data) || !inherits(data,"data.frame") || nrow(data) < 1 )
   {
-    if( !suppress.warnings ) warning("Event data must be a non-empty data frame!\n")
+    if( !suppress.warnings ) .report.ewms("Event data must be a non-empty data frame!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   data.names <- names(data); # cache names(data) as it is used a lot
@@ -2119,7 +1532,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       !(ID.colname %in% data.names)                                                         # make sure it's a valid column name
       )
   {
-    if( !suppress.warnings ) warning("The patient ID column \"",ID.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
+    if( !suppress.warnings ) .report.ewms(paste0("The patient ID column \"",ID.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n"), "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( is.null(event.date.colname) || is.na(event.date.colname) ||                                                   # avoid empty stuff
@@ -2129,7 +1542,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       !(event.date.colname %in% data.names)                                                                         # make sure it's a valid column name
       )
   {
-    if( !suppress.warnings ) warning("The event date column \"",event.date.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
+    if( !suppress.warnings ) .report.ewms(paste0("The event date column \"",event.date.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n"), "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( is.null(event.duration.colname) || is.na(event.duration.colname) ||                                                       # avoid empty stuff
@@ -2139,7 +1552,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       !(event.duration.colname %in% data.names)                                                                                 # make sure it's a valid column name
       )
   {
-    if( !suppress.warnings ) warning("The event duration column \"",event.duration.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n")
+    if( !suppress.warnings ) .report.ewms(paste0("The event duration column \"",event.duration.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n"), "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( (!is.null(event.daily.dose.colname) && !is.na(event.daily.dose.colname)) &&                                                      # if actually given:
@@ -2149,7 +1562,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
        !(event.daily.dose.colname %in% data.names))                                                                                    # make sure it's a valid column name
       )
   {
-    if( !suppress.warnings ) warning("If given, the event daily dose column \"",event.daily.dose.colname,"\" must be a single value and must be present in the event data!\n")
+    if( !suppress.warnings ) .report.ewms(paste0("If given, the event daily dose column \"",event.daily.dose.colname,"\" must be a single value and must be present in the event data!\n"), "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( (!is.null(medication.class.colname) && !is.na(medication.class.colname)) &&                                                      # if actually given:
@@ -2159,7 +1572,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
        !(medication.class.colname %in% data.names))                                                                                    # make sure it's a valid column name
       )
   {
-    if( !suppress.warnings ) warning("If given, the event type column \"",medication.class.colname,"\" must be a single value and must be present in the event data!\n")
+    if( !suppress.warnings ) .report.ewms(paste0("If given, the event type column \"",medication.class.colname,"\" must be a single value and must be present in the event data!\n"), "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
 
@@ -2168,19 +1581,19 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
       !is.logical(carryover.into.obs.window)      || is.na(carryover.into.obs.window)      || length(carryover.into.obs.window) != 1      ||
       !is.logical(carry.only.for.same.medication) || is.na(carry.only.for.same.medication) || length(carry.only.for.same.medication) != 1 )
   {
-    if( !suppress.warnings ) warning("Carry over arguments must be single value logicals!\n")
+    if( !suppress.warnings ) .report.ewms("Carry over arguments must be single value logicals!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( !carryover.within.obs.window && !carryover.into.obs.window && carry.only.for.same.medication )
   {
-    if( !suppress.warnings ) warning("Cannot carry over only for same medication when no carry over at all is considered!\n")
+    if( !suppress.warnings ) .report.ewms("Cannot carry over only for same medication when no carry over at all is considered!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
 
   # preconditions concerning dosage change:
   if( !is.logical(consider.dosage.change) || is.na(consider.dosage.change) || length(consider.dosage.change) != 1 )
   {
-    if( !suppress.warnings ) warning("Consider dosage change must be single value logical!\n")
+    if( !suppress.warnings ) .report.ewms("Consider dosage change must be single value logical!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
 
@@ -2192,14 +1605,14 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
              (is.factor(followup.window.start) && is.character(followup.window.start <- as.character(followup.window.start)))) || # ...or a factor (forced to character)
            !(followup.window.start %in% data.names))) )                                                                           # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The follow-up window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n")
+    if( !suppress.warnings ) .report.ewms("The follow-up window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( is.null(followup.window.start.unit) || is.na(followup.window.start.unit) ||
       length(followup.window.start.unit) != 1 ||
       !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The follow-up window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
+    if( !suppress.warnings ) .report.ewms("The follow-up window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( is.numeric(followup.window.duration) && (followup.window.duration <= 0 || length(followup.window.duration) != 1) ||               # cannot be missing or have more than one values
@@ -2208,14 +1621,14 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
           (is.factor(followup.window.duration) && is.character(followup.window.duration <- as.character(followup.window.duration)))) || # ...or a factor (forced to character)
         !(followup.window.duration %in% data.names))))                                                                                  # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The follow-up window duration must be a single value, either a positive number, or a string giving a column name in the data!\n")
+    if( !suppress.warnings ) .report.ewms("The follow-up window duration must be a single value, either a positive number, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( is.null(followup.window.duration.unit) || is.na(followup.window.duration.unit) ||
       length(followup.window.duration.unit) != 1 ||
       !(followup.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The follow-up window duration unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
+    if( !suppress.warnings ) .report.ewms("The follow-up window duration unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
 
@@ -2227,14 +1640,14 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
              (is.factor(observation.window.start) && is.character(observation.window.start <- as.character(observation.window.start)))) || # ...or a factor (forced to character)
            !(observation.window.start %in% data.names))) )                                                                                 # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The observation window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n")
+    if( !suppress.warnings ) .report.ewms("The observation window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( is.null(observation.window.start.unit) || is.na(observation.window.start.unit) ||
       length(observation.window.start.unit) != 1 ||
       !(observation.window.start.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The observation window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
+    if( !suppress.warnings ) .report.ewms("The observation window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( is.numeric(observation.window.duration) && (observation.window.duration <= 0 || length(observation.window.duration) != 1) ||               # cannot be missing or have more than one values
@@ -2243,33 +1656,33 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
           (is.factor(observation.window.duration) && is.character(observation.window.duration <- as.character(observation.window.duration)))) || # ...or a factor (forced to character)
         !(observation.window.duration %in% data.names))))                                                                                        # make sure it's a valid column name
   {
-    if( !suppress.warnings ) warning("The observation window duration must be a single value, either a positive number, or a string giving a column name in the data!\n")
+    if( !suppress.warnings ) .report.ewms("The observation window duration must be a single value, either a positive number, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( is.null(observation.window.duration.unit) || is.na(observation.window.duration.unit) ||
       length(observation.window.duration.unit) != 1 ||
       !(observation.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The observation window duration unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n")
+    if( !suppress.warnings ) .report.ewms("The observation window duration unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
 
   # Check the patient IDs:
   if( anyNA(data[,ID.colname]) )
   {
-    if( !suppress.warnings ) warning(paste0("The patient unique identifiers in the \"",ID.colname,"\" column must not contain NAs; the first occurs on row ",min(which(is.na(data[,ID.colname]))),"!\n"));
+    if( !suppress.warnings ) .report.ewms(paste0("The patient unique identifiers in the \"",ID.colname,"\" column must not contain NAs; the first occurs on row ",min(which(is.na(data[,ID.colname]))),"!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
 
   # Check the date format (and save the conversion to Date() for later use):
   if( is.na(date.format) || is.null(date.format) || length(date.format) != 1 || !is.character(date.format) )
   {
-    if( !suppress.warnings ) warning(paste0("The date format must be a single string!\n"));
+    if( !suppress.warnings ) .report.ewms(paste0("The date format must be a single string!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
   if( anyNA(Date.converted.to.DATE <- as.Date(data[,event.date.colname],format=date.format)) )
   {
-    if( !suppress.warnings ) warning(paste0("Not all entries in the event date \"",event.date.colname,"\" column are valid dates or conform to the date format \"",date.format,"\"; first issue occurs on row ",min(which(is.na(Date.converted.to.DATE))),"!\n"));
+    if( !suppress.warnings ) .report.ewms(paste0("Not all entries in the event date \"",event.date.colname,"\" column are valid dates or conform to the date format \"",date.format,"\"; first issue occurs on row ",min(which(is.na(Date.converted.to.DATE))),"!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
 
@@ -2277,7 +1690,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   tmp <- data[,event.duration.colname]; # caching for speed
   if( !is.numeric(tmp) || any(is.na(tmp) | tmp <= 0) )
   {
-    if( !suppress.warnings ) warning(paste0("The event durations in the \"",event.duration.colname,"\" column must be non-missing strictly positive numbers!\n"));
+    if( !suppress.warnings ) .report.ewms(paste0("The event durations in the \"",event.duration.colname,"\" column must be non-missing strictly positive numbers!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
 
@@ -2285,19 +1698,19 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   if( !is.na(event.daily.dose.colname) && !is.null(event.daily.dose.colname) &&             # if actually given:
       (!is.numeric(tmp <- data[,event.daily.dose.colname]) || any(is.na(tmp) | tmp <= 0)) ) # must be a non-missing strictly positive number (and cache it for speed)
   {
-    if( !suppress.warnings ) warning(paste0("If given, the event daily dose in the \"",event.daily.dose.colname,"\" column must be a non-missing strictly positive numbers!\n"));
+    if( !suppress.warnings ) .report.ewms(paste0("If given, the event daily dose in the \"",event.daily.dose.colname,"\" column must be a non-missing strictly positive numbers!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
 
   # Check the newly created columns:
   if( is.na(event.interval.colname) || is.null(event.interval.colname) || !is.character(event.interval.colname) || (event.interval.colname %in% data.names) )
   {
-    if( !suppress.warnings ) warning(paste0("The column name where the event interval will be stored \"",event.interval.colname,"\" cannot be missing nor already present in the event data!\n"));
+    if( !suppress.warnings ) .report.ewms(paste0("The column name where the event interval will be stored \"",event.interval.colname,"\" cannot be missing nor already present in the event data!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
   if( is.na(gap.days.colname) || is.null(gap.days.colname) || !is.character(gap.days.colname) || (gap.days.colname %in% data.names) )
   {
-    if( !suppress.warnings ) warning(paste0("The column name where the gap days will be stored \"",gap.days.colname,"\" cannot be mising nor already present in the event data.\n"));
+    if( !suppress.warnings ) .report.ewms(paste0("The column name where the gap days will be stored \"",gap.days.colname,"\" cannot be mising nor already present in the event data.\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
 
@@ -2710,12 +2123,12 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 
   if( is.null(ret.val) || nrow(ret.val) < 1 )
   {
-    if( !suppress.warnings ) warning("Computing event intervals and gap days failed!\n");
+    if( !suppress.warnings ) .report.ewms("Computing event intervals and gap days failed!\n", "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
   if( any(!ret.val$.OBS.WITHIN.FU) )
   {
-    if( !suppress.warnings ) warning("The observation window is not within the follow-up window for participant(s) ",paste0(unique(ret.val[!ret.val$.OBS.WITHIN.FU,get(ID.colname)]),collpase=", ")," !\n");
+    if( !suppress.warnings ) .report.ewms(paste0("The observation window is not within the follow-up window for participant(s) ",paste0(unique(ret.val[!ret.val$.OBS.WITHIN.FU,get(ID.colname)]),collapse=", ")," !\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
 
@@ -2727,7 +2140,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   # If the results are empty return NULL:
   if( is.null(ret.val) || nrow(ret.val) < 1 )
   {
-    if( !suppress.warnings ) warning("No observations fall within the follow-up and observation windows!\n");
+    if( !suppress.warnings ) .report.ewms("No observations fall within the follow-up and observation windows!\n", "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
 
@@ -2972,12 +2385,12 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   # Episode-specific stuff:
   if( is.na(medication.class.colname) && medication.change.means.new.treatment.episode )
   {
-    if( !suppress.warnings ) warning("When 'medication.class.colname' is NA, 'medication.change.means.new.treatment.episode' must be FALSE!\n");
+    if( !suppress.warnings ) .report.ewms("When 'medication.class.colname' is NA, 'medication.change.means.new.treatment.episode' must be FALSE!\n", "error", "compute.treatment.episodes", "AdhereR");
     return (NULL);
   }
   if( is.na(event.daily.dose.colname) && dosage.change.means.new.treatment.episode )
   {
-    if( !suppress.warnings ) warning("When 'event.daily.dose.colname' is NA, 'dosage.change.means.new.treatment.episode' must be FALSE!\n");
+    if( !suppress.warnings ) .report.ewms("When 'event.daily.dose.colname' is NA, 'dosage.change.means.new.treatment.episode' must be FALSE!\n", "error", "compute.treatment.episodes", "AdhereR");
     return (NULL);
   }
 
@@ -2989,7 +2402,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                     "months" = maximum.permissible.gap * 30,
                                     "years" = maximum.permissible.gap * 365,
                                     "percent" = {maximum.permissible.gap.as.percent <- TRUE; maximum.permissible.gap / 100;}, # transform it into a proportion for faster computation
-                                    {if(!suppress.warnings) warning(paste0("Unknown maximum.permissible.gap.unit '",maximum.permissible.gap.unit,"': assuming you meant 'days'."));  maximum.permissible.gap;} # otherwise force it to "days"
+                                    {if(!suppress.warnings) .report.ewms(paste0("Unknown maximum.permissible.gap.unit '",maximum.permissible.gap.unit,"': assuming you meant 'days'."), "warning", "compute.treatment.episodes", "AdhereR");  maximum.permissible.gap;} # otherwise force it to "days"
                                    );
   if( maximum.permissible.gap < 0 ) maximum.permissible.gap <- 0; # make sure this is positive
 
@@ -3263,644 +2676,6 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              max.patients.to.plot=max.patients.to.plot,
              suppress.warnings=suppress.warnings);
 }
-# {
-#   if( is.null(cma) || !inherits(cma, "CMA1") || is.null(cma$data) || nrow(cma$data) < 1 ||
-#       is.na(cma$ID.colname) || !(cma$ID.colname %in% names(cma$data)) ||
-#       is.na(cma$event.date.colname) || !(cma$event.date.colname %in% names(cma$data)) ||
-#       !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (plot.CMA0(cma,...));
-#
-#   # Check compatibility between subtypes of plots:
-#   if( align.all.patients && show.period != "days" ){ show.period <- "days"; warning("When aligning all patients, cannot show actual dates: showing days instead!\n"); }
-#
-#   # Make sure the dates are strings of the right fomat:
-#   if( inherits(cma$data[,cma$event.date.colname], "Date") )
-#   {
-#     cma$date.format <- "%m/%d/%Y"; # use the default format
-#     cma$data[,cma$event.date.colname] <- as.character(cma$data[,cma$event.date.colname], format=cma$date.format);
-#   }
-#
-#   # The patients (use event.info as it contains all the info required, plus the specifics of the CMA):
-#   patids <- unique(cma$event.info[,cma$ID.colname]); patids <- patids[!is.na(patids)];
-#   if( !is.null(patients.to.plot) ) patids <- intersect(as.character(patids), as.character(patients.to.plot));
-#   if( length(patids) == 0 )
-#   {
-#     cat("No patients to plot!\n");
-#     return (invisible(NULL));
-#   } else if( length(patids) > max.patients.to.plot )
-#   {
-#     cat(paste0("Too many patients to plot (",length(patids),
-#                ")! If you really want that, please change the 'max.patients.to.plot' parameter value (now set at ",
-#                max.patients.to.plot,"!\n"));
-#     return (invisible(NULL));
-#   }
-#   # Select only the patients to display:
-#   cma$data <- cma$data[ cma$data[,cma$ID.colname] %in% patids, ];
-#   cma$event.info <- cma$event.info[ cma$event.info[,cma$ID.colname] %in% patids, ];
-#   # Make sure the patients are ordered by ID and date:
-#   cma$event.info <- cma$event.info[ order( cma$event.info[,cma$ID.colname], as.Date(cma$event.info[,cma$event.date.colname],format=cma$date.format)), ];
-#
-#   # Grayscale plotting:
-#   if( bw.plot )
-#   {
-#       if( is.function(col.cats) ) col.cats <- .bw.colors else col.cats <- gray(0.1);
-#       followup.window.col <- "black";
-#       observation.window.col <- gray(0.3);
-#       CMA.plot.col <- gray(0.8);
-#       CMA.plot.border <- gray(0.2);
-#       CMA.plot.bkg <- gray(0.5);
-#       CMA.plot.text <- CMA.plot.border;
-#   }
-#
-#   # The colors for the categories:
-#   if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$event.info)) )
-#   {
-#     categories <- unspecified.category.label;
-#   } else
-#   {
-#     categories <- sort(unique(as.character(cma$event.info[,cma$medication.class.colname])), na.last=FALSE); # all categories making sure NA is first
-#   }
-#   if( is.na(categories[1]) )
-#   {
-#     if( is.function(col.cats) ) cols <- c(col.na, col.cats(length(categories)-1)) else cols <- c(col.na, rep(col.cats,length(categories)-1));
-#   } else
-#   {
-#     if( is.function(col.cats) ) cols <- col.cats(length(categories)) else cols <- rep(col.cats,length(categories));
-#   }
-#   names(cols) <- categories;
-#   .map.category.to.color <- function( category ) ifelse( is.na(category), cols[1], ifelse( category %in% names(cols), cols[category], "black") );
-#
-#   # Daily dose:
-#   if( is.na(cma$event.daily.dose.colname) || !(cma$event.daily.dose.colname %in% names(cma$data)) )
-#   {
-#     print.dose <- plot.dose <- FALSE; # can't show daily dose if column is not defined
-#   }
-#   if( plot.dose || print.dose ) # consistency checks:
-#   {
-#     if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
-#   }
-#   if( plot.dose || print.dose ) # consistency checks:
-#   {
-#     if( lwd.event.max.dose < lwd.event ) lwd.event.max.dose <- lwd.event;
-#   }
-#   if( plot.dose || print.dose )
-#   {
-#     if( length(categories) == 1 && categories == unspecified.category.label )
-#     {
-#       # Really, no category:
-#       dose.range <- data.frame("category"=categories, "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
-#     } else
-#     {
-#       # Range per category:
-#       tmp <- aggregate(cma$data[,cma$event.daily.dose.colname], by=list("category"=cma$data[,cma$medication.class.colname]), FUN=function(x) range(x,na.rm=TRUE));
-#       dose.range <- data.frame("category"=tmp$category, "min"=tmp$x[,1], "max"=tmp$x[,2]);
-#       if( plot.dose.lwd.across.medication.classes )
-#       {
-#         dose.range.global <- data.frame("category"="ALL", "min"=min(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE), "max"=max(cma$data[,cma$event.daily.dose.colname], na.rm=TRUE));
-#       }
-#     }
-#
-#     # Function for the linear interpolation of dose between lwd.min and lwd.max:
-#     adjust.dose.lwd <- function(dose, lwd.min=lwd.event, lwd.max=lwd.event.max.dose, dose.min=dose.range$min[1], dose.max=dose.range$max[1])
-#     {
-#       delta <- ifelse(dose.max == dose.min, 1.0, (dose.max - dose.min)); # avoid dividing by zero when there's only one dose
-#       return (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / delta);
-#     }
-#   }
-#
-#   # Find the earliest date:
-#   earliest.date <- min(cma$event.info$.DATE.as.Date, cma$event.info$.OBS.START.DATE, cma$event.info$.FU.START.DATE);
-#
-#   # If aligning all participants to the same date, simply relocate all dates relative to the earliest date:
-#   if( align.all.patients )
-#   {
-#     for( i in 1:nrow(cma$event.info) )
-#     {
-#       if( i == 1 || cma$event.info[i,cma$ID.colname] != cma$event.info[i-1,cma$ID.colname] ) align.to <- cma$event.info$.DATE.as.Date[i];
-#       cma$event.info$.DATE.as.Date[i] <- earliest.date + (cma$event.info$.DATE.as.Date[i] - align.to);
-#       cma$event.info$.FU.START.DATE[i] <- earliest.date + (cma$event.info$.FU.START.DATE[i] - align.to);
-#       cma$event.info$.FU.END.DATE[i] <- earliest.date + (cma$event.info$.FU.END.DATE[i] - align.to);
-#       cma$event.info$.OBS.START.DATE[i] <- earliest.date + (cma$event.info$.OBS.START.DATE[i] - align.to);
-#       cma$event.info$.OBS.END.DATE[i] <- earliest.date + (cma$event.info$.OBS.END.DATE[i] - align.to);
-#     }
-#     correct.earliest.followup.window <- min(cma$event.info$.DATE.as.Date - min(cma$event.info$.FU.START.DATE,na.rm=TRUE),na.rm=TRUE);
-#   } else
-#   {
-#     correct.earliest.followup.window <- 0;
-#   }
-#
-#   # Compute the duration if not given:
-#   if( is.na(duration) )
-#   {
-#     latest.date <- max(c(cma$event.info$.DATE.as.Date + cma$event.info$event.interval,
-#                          cma$event.info$.DATE.as.Date + cma$event.info[,cma$event.duration.colname],
-#                          cma$event.info$.FU.END.DATE),na.rm=TRUE);
-#     duration <- as.numeric(latest.date - earliest.date) + correct.earliest.followup.window;
-#   }
-#   endperiod <- duration;
-#
-#   # Reserve space for the CMA plotting:
-#   adh.plot.space <- c(0, ifelse( plot.CMA && !is.null(getCMA(cma)), duration*CMA.plot.ratio, 0) );
-#   duration.total <- duration + adh.plot.space[2];
-#
-#   # Save the graphical params and restore them later:
-#   old.par <- par(no.readonly=TRUE);
-#
-#   # Make sure there's enough space to actually plot the patient IDs on the y-axis:
-#   id.labels <- do.call(rbind,lapply(as.character(patids), # for each patient ID, compute the string dimensions in inches
-#                                     function(p)
-#                                     {
-#                                       # The participant axis text:
-#                                       s <- which(cma$event.info[,cma$ID.colname] == p);
-#                                       x <- which(getCMA(cma)[cma$ID.colname] == p);
-#                                       pid <- ifelse( print.CMA && !is.null(getCMA(cma)) && length(x)==1 && !is.na(getCMA(cma)[x,"CMA"]),
-#                                                      paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)),
-#                                                      p);
-#                                       data.frame("ID"=p, "string"=pid, "width"=strwidth(pid, units="inches", cex=cex.axis), "height"=strheight(pid, units="inches", cex=cex.axis));
-#                                     }));
-#   y.label <- data.frame("string"=(tmp <- ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient")), # soace needed for the label as well (in inches)
-#                         "width"=strwidth(tmp, units="inches", cex=cex.lab), "height"=strheight(tmp, units="inches", cex=cex.lab));
-#   left.margin <- (cur.mai <- par("mai"))[2]; # left margin in inches (and cache the current margins too)
-#   # If there's enough space as it is, don't do anything:
-#   if( left.margin < (y.label$height + max(id.labels$width,na.rm=TRUE)) ) # remeber that the y.label is vertical
-#   {
-#     # Well, there isn't so:
-#     rotate.id.labels <- 30; # rotate the labels (in degrees)
-#     new.left.margin <- (y.label$height + (cos(rotate.id.labels*pi/180) * max(id.labels$width,na.rm=TRUE)) + strwidth("0000", units="inches", cex=cex.axis)); # ask for enough space
-#     par(mai=c(cur.mai[1], new.left.margin, cur.mai[3], cur.mai[4]));
-#   } else
-#   {
-#     # Seems to fit, so don't do anything:
-#     rotate.id.labels <- 0;
-#   }
-#
-#   # The actual plotting:
-#   if(inherits(msg <- try(plot( 0, 1,
-#                                #xlim=c(0-2*duration.total/100,duration.total), xaxs="i",
-#                                xlim=c(0-5,duration.total+5), xaxs="i", # pad with 5 days to improve plotting
-#                                ylim=c(0,nrow(cma$event.info)+1), yaxs="i", type="n",
-#                                axes=FALSE,
-#                                xlab="", ylab=""),
-#                          silent=TRUE),
-#               "try-error"))
-#   {
-#     # Some error occured when creatig the plot...
-#     cat(msg);
-#     par(old.par); # restore graphical params
-#     return (invisible(NULL));
-#   }
-#
-#   if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose); # the vertical height of the dose text for plotting adjustment
-#
-#   # Character height and width in the current plotting system:
-#   char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
-#
-#   # Minimum plot dimensions:
-#   if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
-#       abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * nrow(cma$event.info))
-#   {
-#     cat(paste0("Plotting area is too small (it must be at least ",
-#                min.plot.size.in.characters.horiz,
-#                " x ",
-#                min.plot.size.in.characters.vert,
-#                " characters per event, but now it is only ",
-#                round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
-#                " x ",
-#                round(abs(par("usr")[4] - par("usr")[3]) / (char.height * nrow(cma$event.info)),1),
-#                ")!\n"));
-#     #segments(x0=c(par("usr")[1], par("usr")[1]),
-#     #         y0=c(par("usr")[3], par("usr")[4]),
-#     #         x1=c(par("usr")[2], par("usr")[2]),
-#     #         y1=c(par("usr")[4], par("usr")[3]),
-#     #         col="red", lwd=3);
-#     par(old.par); # restore graphical params
-#     return (invisible(NULL));
-#   }
-#
-#   # Continue plotting:
-#   box();
-#   title(main=paste0(ifelse(align.all.patients, "Event patterns (all patients aligned)", "Event patterns"),
-#                     ifelse(show.cma,paste0(" (",class(cma)[1],")"),"")),
-#         xlab=ifelse(show.period=="dates","date","days"),
-#         #ylab=ifelse((print.CMA || plot.CMA) && !is.null(getCMA(cma)),"patient (& CMA)","patient"),
-#         cex.lab=cex.lab);
-#   #text(par("usr")[1] - ((cos(rotate.id.labels*pi/180) * max(vapply(id.labels$string, function(p) strwidth(p, cex=cex.axis), numeric(1)),na.rm=TRUE)) + strwidth("0000", cex=cex.axis)),
-#   #     (par("usr")[4] + par("usr")[3])/2, y.label$string, cex=cex.lab, srt=90, xpd=TRUE);
-#   mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3);
-#
-#   # The patient axis and CMA plots:
-#   if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
-#   {
-#     # Maximum achieved CMA:
-#     adh.max <- max(c(getCMA(cma)$CMA, 1.0),na.rm=TRUE);
-#     # Function mapping the CMA values to the appropriate x-coordinates:
-#     .rescale.xcoord.for.CMA.plot <- function(x,pfree=0.20) return (adh.plot.space[1] + x/adh.max*(adh.plot.space[2]*(1-pfree) - adh.plot.space[1]));
-#   }
-#   draw.gray.band <- FALSE;
-#   for( p in as.character(patids) )
-#   {
-#     # The participant axis text:
-#     s <- which(cma$event.info[,cma$ID.colname] == p);
-#     x <- which(getCMA(cma)[cma$ID.colname] == p);
-#     #pid <- ifelse( print.CMA && !is.null(getCMA(cma)) && length(x)==1 && !is.na(getCMA(cma)[x,"CMA"]), paste0(p,"\n",sprintf("%.1f%%",getCMA(cma)[x,"CMA"]*100)), p);
-#     pid <- id.labels$string[ id.labels$ID == p ];
-#     if( rotate.id.labels > 0 )
-#     {
-#       # Rotate the labels:
-#       text(par("usr")[1], mean(s), pid, cex=cex.axis, srt=rotate.id.labels, pos=2, xpd=TRUE );
-#     } else
-#     {
-#       # Don't rotate the labels:
-#       mtext( pid, 2, line=0.5, at=mean(s), las=2, cex=cex.axis );
-#     }
-#
-#     # The alternating gray bands:
-#     if( draw.gray.band )
-#       rect( 0-1, min(s)-0.5, duration.total+1, max(s)+0.5, col=gray(0.95), border=NA );
-#     draw.gray.band <- !draw.gray.band;
-#
-#     # The participant CMA plot:
-#     if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
-#     {
-#       adh <- getCMA(cma)[x,"CMA"];
-#       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(min(adh,adh.max)), mean(s)+1, col=CMA.plot.col, border=NA);
-#       rect(.rescale.xcoord.for.CMA.plot(0), mean(s)-1, .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)), mean(s)+1, col=NA, border=CMA.plot.border);
-#       if( !is.na(adh) )
-#       {
-#         cma.string <- sprintf("%.1f%%",adh*100); available.x.space <- abs(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0));
-#         if( strwidth(cma.string, cex=CMA.cex) <= available.x.space )
-#         { # horizontal writing of the CMA:
-#           text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s),
-#                labels=cma.string, col=CMA.plot.text, cex=CMA.cex);
-#         } else if( strheight(cma.string, cex=CMA.cex) <= available.x.space )
-#         { # vertical writing of the CMA:
-#           text(x=(.rescale.xcoord.for.CMA.plot(0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s),
-#                labels=cma.string, col=CMA.plot.text, cex=CMA.cex, srt=90);
-#         } # otherwise, theres' no space for showing the CMA here
-#       }
-#     }
-#
-#     # The follow-up and observation windows:
-#     if( highlight.followup.window )
-#       rect(adh.plot.space[2] + as.numeric(cma$event.info$.FU.START.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[1]-0.25,
-#            adh.plot.space[2] + as.numeric(cma$event.info$.FU.END.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[length(s)]+0.25,
-#            col=NA, border=followup.window.col, lty="dashed", lwd=2);
-#     if( highlight.observation.window )
-#     {
-#       if( inherits(cma,"CMA8") && !is.null(cma$real.obs.window) && show.real.obs.window.start )
-#       {
-#         # The given observation window:
-#         rect(adh.plot.space[2] + as.numeric(cma$event.info$.OBS.START.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[1]-0.25,
-#              adh.plot.space[2] + as.numeric(cma$event.info$.OBS.END.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[length(s)]+0.25,
-#              col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
-#         # For some CMAs, also show the real observation window:
-#         ss <- which(cma$real.obs.window[,cma$ID.colname]==p);
-#         if( length(ss) == 1)
-#         {
-#           if( !is.null(cma$real.obs.windows$window.start) && !is.na(cma$real.obs.windows$window.start[ss]) )
-#           {
-#             real.obs.window.start <- cma$real.obs.windows$window.start[ss];
-#           } else
-#           {
-#             real.obs.window.start <- cma$event.info$.OBS.START.DATE[s[1]];
-#           }
-#           if( !is.null(cma$real.obs.windows$window.end) && !is.na(cma$real.obs.windows$window.end[ss]) )
-#           {
-#             real.obs.window.end <- cma$real.obs.windows$window.end[ss];
-#           } else
-#           {
-#             real.obs.window.end <- cma$event.info$.OBS.END.DATE[s[1]];
-#           }
-#           rect(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window, s[1]-0.25,
-#                adh.plot.space[2] + as.numeric(real.obs.window.end - earliest.date) + correct.earliest.followup.window, s[length(s)]+0.25,
-#                col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=real.obs.window.density, angle=real.obs.window.angle);
-#         }
-#       } else
-#       {
-#         # The given observation window:
-#         rect(adh.plot.space[2] + as.numeric(cma$event.info$.OBS.START.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[1]-0.25,
-#              adh.plot.space[2] + as.numeric(cma$event.info$.OBS.END.DATE[s[1]] - earliest.date) + correct.earliest.followup.window, s[length(s)]+0.25,
-#              col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA, density=observation.window.density, angle=observation.window.angle);
-#       }
-#     }
-#   }
-#   if( plot.CMA && !is.null(getCMA(cma)) && adh.plot.space[2] > 0 )
-#   {
-#     # Mark the drawing area:
-#     if( adh.max > 1.0 )
-#     {
-#       rect(.rescale.xcoord.for.CMA.plot(0), par("usr")[3], .rescale.xcoord.for.CMA.plot(adh.max), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
-#       abline(v=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0), .rescale.xcoord.for.CMA.plot(adh.max)), col=CMA.plot.border, lty=c("solid","dotted","solid"), lwd=1);
-#       mtext( c("0%",sprintf("%.1f%%",adh.max*100)), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(adh.max)), las=2, cex=cex.axis, col=CMA.plot.border );
-#       if( (.rescale.xcoord.for.CMA.plot(adh.max) - .rescale.xcoord.for.CMA.plot(1.0)) > 1.5*strwidth("0", cex=cex.axis) ) # Don't overcrowd the 100% and maximum CMA by omitting 100%
-#       {
-#         mtext( c("100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col=CMA.plot.border );
-#       }
-#     } else
-#     {
-#       rect(.rescale.xcoord.for.CMA.plot(0), par("usr")[3], .rescale.xcoord.for.CMA.plot(1.0), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
-#       abline(v=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.border, lty="solid", lwd=1);
-#       mtext( c("0%","100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col=CMA.plot.border );
-#     }
-#   }
-#
-#   # Plot each event:
-#   curpat <- TRUE;
-#   for( i in 1:nrow(cma$event.info) )
-#   {
-#     start <- as.numeric(cma$event.info$.DATE.as.Date[i] - earliest.date);
-#     end <- start + cma$event.info[i,cma$event.duration.colname];
-#     if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
-#     {
-#       col <- .map.category.to.color(unspecified.category.label);
-#     } else
-#     {
-#       col <- .map.category.to.color(cma$event.info[i,cma$medication.class.colname]);
-#     }
-#     points( adh.plot.space[2]+start+correct.earliest.followup.window, i, pch=pch.start.event, col=col, cex=cex);
-#     points(adh.plot.space[2]+end+correct.earliest.followup.window, i, pch=pch.end.event, col=col, cex=cex);
-#     if( plot.dose )
-#     {
-#       if( nrow(dose.range) == 1 )
-#       {
-#         segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i,
-#                   col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname]));
-#       } else
-#       {
-#         if( plot.dose.lwd.across.medication.classes )
-#         {
-#           segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i,
-#                     col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max));
-#         } else
-#         {
-#           dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
-#           if( sum(dose.for.cat,na.rm=TRUE) == 1 )
-#           {
-#             segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i,
-#                       col=col, lty=lty.event, lwd=adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]));
-#           } else
-#           {
-#             segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
-#           }
-#         }
-#       }
-#     } else
-#     {
-#       segments( adh.plot.space[2]+start+correct.earliest.followup.window, i, adh.plot.space[2]+end+correct.earliest.followup.window, i, col=col, lty=lty.event, lwd=lwd.event);
-#     }
-#
-#     if( show.event.intervals && !is.na(cma$event.info$event.interval[i]) )
-#     {
-#       end.pi <- start + cma$event.info$event.interval[i] - cma$event.info$gap.days[i];
-#       rect(adh.plot.space[2]+start+correct.earliest.followup.window, i-char.height/2,
-#            adh.plot.space[2]+end.pi+correct.earliest.followup.window, i+char.height/2,
-#            col=adjustcolor(col,alpha.f=0.2), border=col);
-#       if( cma$event.info$gap.days[i] > 0 )
-#         rect(adh.plot.space[2]+end.pi+correct.earliest.followup.window, i-char.height/2,
-#              adh.plot.space[2]+end.pi+cma$event.info$gap.days[i]+correct.earliest.followup.window, i+char.height/2,
-#              density=25, col=adjustcolor(col,alpha.f=0.5), border=col);
-#     }
-#
-#     if( print.dose ) # print daily dose
-#     {
-#       if( !print.dose.centered ) # print it on or to the left of the dose segment?
-#       {
-#         if( is.na(print.dose.outline.col) ) # simple or outlined?
-#         {
-#           text(adh.plot.space[2]+start+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, pos=2, offset=0.25);
-#         } else
-#         {
-#           .shadow.text(adh.plot.space[2]+start+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col, pos=2, offset=0.25);
-#         }
-#       } else
-#       {
-#         if( is.na(print.dose.outline.col) ) # simple or outlined?
-#         {
-#           text(adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col);
-#         } else
-#         {
-#           .shadow.text(adh.plot.space[2]+(start+end)/2+correct.earliest.followup.window, i, cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=col, bg=print.dose.outline.col);
-#         }
-#       }
-#     }
-#
-#     if( i < nrow(cma$event.info) )
-#     {
-#       if( cma$event.info[i,cma$ID.colname] == cma$event.info[i+1,cma$ID.colname] )
-#       {
-#         if( show.event.intervals && !is.na(cma$event.info$event.interval[i]) )
-#         {
-#           #start.next <- as.numeric(cma$event.info$.DATE.as.Date[i+1] - earliest.date);
-#           #segments( adh.plot.space[2]+end.pi, i, adh.plot.space[2]+start.next, i, col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
-#           #segments( adh.plot.space[2]+start.next, i, adh.plot.space[2]+start.next, i+1, col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
-#         }
-#       } else
-#       {
-#         # Now the patient is changing:
-#         if( curpat )
-#         {
-#           #y <- which(cma$event.info[,cma$ID.colname] == cma$event.info[i+1,cma$ID.colname]);
-#           #rect( 0-1, min(y)-0.5, duration.total+1, max(y)+0.5, col=gray(0.95), border=NA );
-#         }
-#         curpat <- !curpat;
-#       }
-#     }
-#   }
-#
-#   # The days/dates axis and the grid at those important days/dates:
-#   if( period.in.days > 0 )
-#   {
-#     if( show.period=="dates" )
-#     {
-#         #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-#         #      labels=as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format),
-#         #      las=3, cex.axis=cex.axis);
-#         axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
-#         axis.labels <- as.character(earliest.date + round(seq(0,as.numeric(endperiod),by=period.in.days),1), format=cma$date.format);
-#         # text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
-#         #      par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
-#         #      labels=axis.labels,
-#         #      cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-#         text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-#              par("usr")[3],
-#              labels=axis.labels,
-#              cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-#         abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
-#         abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
-#     } else
-#     {
-#         if( align.first.event.at.zero )
-#         {
-#             xpos <- c(correct.earliest.followup.window-seq(0,as.numeric(correct.earliest.followup.window),by=period.in.days),
-#                       seq(0,as.numeric(endperiod),by=period.in.days)+correct.earliest.followup.window);
-#             xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
-#             #axis( 1, at=adh.plot.space[2]+xpos,
-#             #      labels=as.character(round(xpos-correct.earliest.followup.window,1)),
-#             #      las=3, cex.axis=cex.axis);
-#             axis( 1, at=adh.plot.space[2]+xpos, labels=FALSE);
-#             axis.labels <- as.character(round(xpos-correct.earliest.followup.window,1));
-#             # text(adh.plot.space[2]+xpos - strwidth(axis.labels, cex=cex.axis)/2,
-#             #      par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
-#             #      labels=axis.labels,
-#             #      cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-#             text(adh.plot.space[2]+xpos,
-#                  par("usr")[3],
-#                  labels=axis.labels,
-#                  cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-#             abline( v=adh.plot.space[2]+xpos, lty="dotted", col=gray(0.5) );
-#             abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
-#         } else
-#         {
-#             #axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-#             #      labels=as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1)),
-#             #      las=3, cex.axis=cex.axis);
-#             axis( 1, at=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), labels=FALSE);
-#             axis.labels <- as.character(round(seq(0,as.numeric(endperiod),by=period.in.days),1));
-#             # text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days) - strwidth(axis.labels, cex=cex.axis)/2,
-#             #      par("usr")[3] - max(strheight(axis.labels, cex=cex.axis)),
-#             #      labels=axis.labels,
-#             #      cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-#             text(adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days),
-#                  par("usr")[3],
-#                  labels=axis.labels,
-#                  cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-#             abline( v=adh.plot.space[2]+seq(0,as.numeric(endperiod),by=period.in.days), lty="dotted", col=gray(0.5) );
-#             abline( v=adh.plot.space[2]+endperiod, lty="solid", col=gray(0.5) );
-#         }
-#     }
-#   }
-#
-#   # The legend:
-#   .legend <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
-#   {
-#     # Legend rectangle:
-#     if( do.plot ) rect(x, y, x + width, y + height, border=gray(0.6), lwd=2, col=rgb(0.99,0.99,0.99,legend.bkg.opacity));
-#
-#     cur.y <- y + height; # current y
-#     max.width <- width; # maximum width
-#
-#     # Legend title:
-#     if( do.plot ) text(x + width/2, cur.y, "Legend", pos=1, col=gray(0.3), cex=legend.cex.title);
-#     cur.y <- cur.y - strheight("Legend", cex=legend.cex.title) - 3*legend.char.height; max.width <- max(max.width, strwidth("Legend", cex=legend.cex.title));
-#
-#     # Event:
-#     if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event, col="black");
-#     if( do.plot ) points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
-#     if( do.plot ) points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
-#     if( !plot.dose )
-#     {
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "duration", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration", cex=legend.cex));
-#     } else
-#     {
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "duration (min. dose)", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration (min. dose)", cex=legend.cex));
-#       if( do.plot ) segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event.max.dose, col="black");
-#       if( do.plot ) points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
-#       if( do.plot ) points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y, "duration (max. dose)", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration (max. dose)", cex=legend.cex));
-#     }
-#
-#     # Event intervals:
-#     if( show.event.intervals )
-#     {
-#       if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor("black",alpha.f=0.5));
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "days covered", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("days covered", cex=legend.cex));
-#       if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col="black", density=25);
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "gap days", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("gap days", cex=legend.cex));
-#     }
-#
-#     # Events with names:
-#     for( i in 1:length(cols) )
-#     {
-#       if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor(cols[i],alpha.f=0.5));
-#       if( do.plot )
-#       {
-#         med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
-#         if( print.dose || plot.dose )
-#         {
-#           dose.for.cat <- (dose.range$category == med.class.name);
-#           if( sum(dose.for.cat,na.rm=TRUE) == 1 )
-#           {
-#             med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
-#           }
-#         }
-#         text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, med.class.name, col="black", cex=legend.cex, pos=4);
-#       }
-#       cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth(names(cols)[i], cex=legend.cex));
-#     }
-#     cur.y <- cur.y - 0.5*legend.char.height;
-#
-#     # Follow-up window:
-#     if( highlight.followup.window )
-#     {
-#       if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=followup.window.col, lty="dotted", lwd=2, col=rgb(1,1,1,0.0));
-#       if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "follow-up wnd.", col="black", cex=legend.cex, pos=4);
-#       cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("follow-up wnd.", cex=legend.cex));
-#     }
-#
-#     # Observation window:
-#     if( highlight.observation.window )
-#     {
-#       if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
-#       {
-#         if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=observation.window.density, angle=observation.window.angle);
-#         if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "theor. obs. wnd.", col="black", cex=legend.cex, pos=4);
-#         cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("theor. obs. wnd.", cex=legend.cex));
-#         if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=real.obs.window.density, angle=real.obs.window.angle);
-#         if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "real obs.wnd.", col="black", cex=legend.cex, pos=4);
-#         cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("real obs.wnd.", cex=legend.cex));
-#       } else
-#       {
-#         if( do.plot ) rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), density=observation.window.density, angle=observation.window.angle);
-#         if( do.plot ) text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "observation wnd.", col="black", cex=legend.cex, pos=4);
-#         cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("observation wnd.", cex=legend.cex));
-#       }
-#     }
-#
-#     # Required size:
-#     return (c("width" =max.width + 5.0*legend.char.width,
-#               "height"=(y + height - cur.y) + 1.0*legend.char.height));
-#   }
-#   if( show.legend )
-#   {
-#     # Character size for the legend:
-#     legend.char.width <- strwidth("O",cex=legend.cex); legend.char.height <- strheight("O",cex=legend.cex);
-#
-#     legend.size <- .legend(do.plot=FALSE);
-#     if( is.na(legend.x) || legend.x == "right" )
-#     {
-#       legend.x <- par("usr")[2] - legend.size["width"] - legend.char.width;
-#     } else if( legend.x == "left" )
-#     {
-#       legend.x <- par("usr")[1] + legend.char.width;
-#     } else if( !is.numeric(legend.x) && length(legend.x) != 1 )
-#     {
-#       legend.x <- par("usr")[2] - legend.size["width"] - legend.char.width;
-#     }
-#     if( is.na(legend.y) || legend.y == "bottom" )
-#     {
-#       legend.y <- par("usr")[3] + legend.char.height;
-#     } else if( legend.y == "top" )
-#     {
-#       legend.y <- par("usr")[4] - legend.size["height"] - legend.char.height;
-#     } else if( !is.numeric(legend.y) && length(legend.y) != 1 )
-#     {
-#       legend.y <- par("usr")[3] + legend.char.height;
-#     }
-#     ret.val <- .legend(legend.x, legend.y, as.numeric(legend.size["width"]), as.numeric(legend.size["height"]));
-#   }
-#   else
-#   {
-#     ret.val <- c("width"=NA, "height"=NA);
-#   }
-#
-#   par(old.par); # restore graphical params
-#   return (invisible(ret.val));
-# }
-
 
 
 
@@ -4124,7 +2899,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
     {
       for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
+        .report.ewms(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"), "warning", "CMA1", "AdhereR");
       }
     }
   }
@@ -4732,7 +3507,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
     {
       for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
+        .report.ewms(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"), "warning", "CMA2", "AdhereR");
       }
     }
   }
@@ -4944,7 +3719,7 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
     {
       for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
+        .report.ewms(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"), "warning", "CMA3", "AdhereR");
       }
     }
   }
@@ -5044,7 +3819,7 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
     {
       for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
+        .report.ewms(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"), "warning", "CMA4", "AdhereR");
       }
     }
   }
@@ -5338,7 +4113,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
     {
       for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
+        .report.ewms(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"), "warning", "CMA5", "AdhereR");
       }
     }
   }
@@ -5746,7 +4521,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
     {
       for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
+        .report.ewms(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"), "warning", "CMA6", "AdhereR");
       }
     }
   }
@@ -6152,7 +4927,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
     {
       for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
+        .report.ewms(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"), "warning", "CMA7", "AdhereR");
       }
     }
   }
@@ -6619,7 +5394,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
     {
       for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
+        .report.ewms(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"), "warning", "CMA8", "AdhereR");
       }
     }
   }
@@ -7058,7 +5833,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
     {
       for( i in which(args.mathing) )
       {
-        warning(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"));
+        .report.ewms(paste0("Please note that '",args.list[[1]],"' overrides argument '",names(arguments.that.should.not.be.defined)[i],"' with value '",arguments.that.should.not.be.defined[i],"'!\n"), "warning", "CMA9", "AdhereR");
       }
     }
   }
@@ -7566,7 +6341,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
   # Get the CMA function corresponding to the name:
   if( !(is.character(CMA.to.apply) || is.factor(CMA.to.apply)) )
   {
-    if( !suppress.warnings ) warning(paste0("'CMA.to.apply' must be a string contining the name of the simple CMA to apply!\n)"));
+    if( !suppress.warnings ) .report.ewms(paste0("'CMA.to.apply' must be a string contining the name of the simple CMA to apply!\n)"), "error", "CMA_per_episode", "AdhereR");
     return (NULL);
   }
   CMA.FNC <- switch(as.character(CMA.to.apply), # if factor, force it to string
@@ -7579,16 +6354,16 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                     "CMA7" = CMA7,
                     "CMA8" = CMA8,
                     "CMA9" = CMA9,
-                    {if( !suppress.warnings ) warning(paste0("Unknown 'CMA.to.apply' '",CMA.to.apply,"': defaulting to CMA0!\n)")); CMA0;}); # by default, fall back to CMA0
+                    {if( !suppress.warnings ) .report.ewms(paste0("Unknown 'CMA.to.apply' '",CMA.to.apply,"': defaulting to CMA0!\n)"), "warning", "CMA_per_episode", "AdhereR"); CMA0;}); # by default, fall back to CMA0
 
   # Default argument values and overrides:
   def.vals <- formals(CMA.FNC);
   if( CMA.to.apply %in% c("CMA1", "CMA2", "CMA3", "CMA4") )
   {
     carryover.into.obs.window <- carryover.within.obs.window <- FALSE;
-    if( !is.na(carry.only.for.same.medication) && carry.only.for.same.medication && !suppress.warnings ) cat("Warning: 'carry.only.for.same.medication' cannot be defined for CMAs 1-4!\n");
+    if( !is.na(carry.only.for.same.medication) && carry.only.for.same.medication && !suppress.warnings ) .report.ewms("'carry.only.for.same.medication' cannot be defined for CMAs 1-4!\n", "warning", "CMA_per_episode", "AdhereR");
     carry.only.for.same.medication <- FALSE;
-    if( !is.na(consider.dosage.change) && consider.dosage.change && !suppress.warnings ) cat("Warning: 'consider.dosage.change' cannot be defined for CMAs 1-4!\n");
+    if( !is.na(consider.dosage.change) && consider.dosage.change && !suppress.warnings ) .report.ewms("'consider.dosage.change' cannot be defined for CMAs 1-4!\n", "warning", "CMA_per_episode", "AdhereR");
     consider.dosage.change <- FALSE;
   } else if( CMA.to.apply %in% c("CMA5", "CMA6") )
   {
@@ -7603,7 +6378,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     if( is.na(consider.dosage.change) ) consider.dosage.change <- def.vals[["consider.dosage.change"]]; # use the default value from CMA
   } else
   {
-    if( !suppress.warnings ) warning("I know how to do CMA per episodes only for CMAs 1 to 9!\n");
+    if( !suppress.warnings ) .report.ewms("I know how to do CMA per episodes only for CMAs 1 to 9!\n", "error", "CMA_per_episode", "AdhereR");
     return (NULL);
   }
 
@@ -7897,10 +6672,10 @@ subsetCMA.CMA_per_episode <- function(cma, patients, suppress.warnings=FALSE)
   }
   if( length(patients.to.keep) == 0 )
   {
-    if( !suppress.warnings ) warning("No patients to subset on!\n");
+    if( !suppress.warnings ) .report.ewms("No patients to subset on!\n", "error", "subsetCMA.CMA_per_episode", "AdhereR");
     return (NULL);
   }
-  if( length(patients.to.keep) < length(patients) && !suppress.warnings ) warning("Some patients in the subsetting set are not in the CMA itsefl and are ignored!\n");
+  if( length(patients.to.keep) < length(patients) && !suppress.warnings ) .report.ewms("Some patients in the subsetting set are not in the CMA itself and are ignored!\n", "warning", "subsetCMA.CMA_per_episode", "AdhereR");
 
   ret.val <- cma;
   ret.val$data <- ret.val$data[ ret.val$data[,ret.val$ID.colname] %in% patients.to.keep, ];
@@ -7978,7 +6753,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                ifelse(print.data && !is.null(cma$data),paste0(" (on ",nrow(cma$data)," rows x ",ncol(cma$data)," columns",", ",length(unique(cma$data[,cma$ID.colname]))," patients",")"),"")));
   } else
   {
-    warning("Unknown format for printing!\n");
+    .report.ewms("Unknown format for printing!\n", "error", "print.CMA_per_episode", "AdhereR");
     return (invisible(NULL));
   }
 }
@@ -8551,49 +7326,49 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
   # Preconditions:
   if( is.numeric(sliding.window.start) && sliding.window.start < 0 )
   {
-    if( !suppress.warnings ) warning("The sliding window must start a positive number of time units after the start of the observation window!\n")
+    if( !suppress.warnings ) .report.ewms("The sliding window must start a positive number of time units after the start of the observation window!\n", "error", "CMA_sliding_window", "AdhereR")
     return (NULL);
   }
   if( !inherits(sliding.window.start,"Date") && !is.numeric(sliding.window.start) && !(sliding.window.start %in% names(data)) )
   {
-    if( !suppress.warnings ) warning("The sliding window start must be a valid column name!\n")
+    if( !suppress.warnings ) .report.ewms("The sliding window start must be a valid column name!\n", "error", "CMA_sliding_window", "AdhereR")
     return (NULL);
   }
   if( !(sliding.window.start.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The sliding window start unit is not recognized!\n")
+    if( !suppress.warnings ) .report.ewms("The sliding window start unit is not recognized!\n", "error", "CMA_sliding_window", "AdhereR")
     return (NULL);
   }
   if( !is.numeric(sliding.window.duration) || sliding.window.duration <= 0 )
   {
-    if( !suppress.warnings ) warning("The sliding window duration must be greater than 0!\n")
+    if( !suppress.warnings ) .report.ewms("The sliding window duration must be greater than 0!\n", "error", "CMA_sliding_window", "AdhereR")
     return (NULL);
   }
   if( !(sliding.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The sliding window duration unit is not recognized!\n")
+    if( !suppress.warnings ) .report.ewms("The sliding window duration unit is not recognized!\n", "error", "CMA_sliding_window", "AdhereR")
     return (NULL);
   }
   if( is.numeric(sliding.window.step.duration) && sliding.window.step.duration < 1 )
   {
-    if( !suppress.warnings ) warning("The sliding window's step duration must be at least 1 unit!\n")
+    if( !suppress.warnings ) .report.ewms("The sliding window's step duration must be at least 1 unit!\n", "error", "CMA_sliding_window", "AdhereR")
     return (NULL);
   }
   if( !(sliding.window.step.unit %in% c("days", "weeks", "months", "years") ) )
   {
-    if( !suppress.warnings ) warning("The sliding window's step duration unit is not recognized!\n")
+    if( !suppress.warnings ) .report.ewms("The sliding window's step duration unit is not recognized!\n", "error", "CMA_sliding_window", "AdhereR")
     return (NULL);
   }
   if( is.numeric(sliding.window.no.steps) && sliding.window.no.steps < 1 )
   {
-    if( !suppress.warnings ) warning("The sliding window must move at least once!\n")
+    if( !suppress.warnings ) .report.ewms("The sliding window must move at least once!\n", "error", "CMA_sliding_window", "AdhereR")
     return (NULL);
   }
 
   # Get the CMA function corresponding to the name:
   if( !(is.character(CMA.to.apply) || is.factor(CMA.to.apply)) )
   {
-    if( !suppress.warnings ) warning(paste0("'CMA.to.apply' must be a string contining the name of the simple CMA to apply!\n)"));
+    if( !suppress.warnings ) .report.ewms(paste0("'CMA.to.apply' must be a string contining the name of the simple CMA to apply!\n)"), "error", "CMA_sliding_window", "AdhereR");
     return (NULL);
   }
   CMA.FNC <- switch(as.character(CMA.to.apply), # if factor, force it to string
@@ -8606,16 +7381,16 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                     "CMA7" = CMA7,
                     "CMA8" = CMA8,
                     "CMA9" = CMA9,
-                    {if( !suppress.warnings ) warning(paste0("Unknown 'CMA.to.apply' '",CMA.to.apply,"': defaulting to CMA0!\n)")); CMA0;}); # by default, fall back to CMA0
+                    {if( !suppress.warnings ) .report.ewms(paste0("Unknown 'CMA.to.apply' '",CMA.to.apply,"': defaulting to CMA0!\n)"), "warning", "CMA_sliding_window", "AdhereR"); CMA0;}); # by default, fall back to CMA0
 
   # Default argument values and overrides:
   def.vals <- formals(CMA.FNC);
   if( CMA.to.apply %in% c("CMA1", "CMA2", "CMA3", "CMA4") )
   {
     carryover.into.obs.window <- carryover.within.obs.window <- FALSE;
-    if( !is.na(carry.only.for.same.medication) && carry.only.for.same.medication && !suppress.warnings ) cat("Warning: 'carry.only.for.same.medication' cannot be defined for CMAs 1-4!\n");
+    if( !is.na(carry.only.for.same.medication) && carry.only.for.same.medication && !suppress.warnings ) .report.ewms("'carry.only.for.same.medication' cannot be defined for CMAs 1-4!\n", "warning", "CMA_sliding_window", "AdhereR");
     carry.only.for.same.medication <- FALSE;
-    if( !is.na(consider.dosage.change) && consider.dosage.change && !suppress.warnings ) cat("Warning: 'consider.dosage.change' cannot be defined for CMAs 1-4!\n");
+    if( !is.na(consider.dosage.change) && consider.dosage.change && !suppress.warnings ) .report.ewms("'consider.dosage.change' cannot be defined for CMAs 1-4!\n", "warning", "CMA_sliding_window", "AdhereR");
     consider.dosage.change <- FALSE;
   } else if( CMA.to.apply %in% c("CMA5", "CMA6") )
   {
@@ -8630,7 +7405,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
     if( is.na(consider.dosage.change) ) consider.dosage.change <- def.vals[["consider.dosage.change"]]; # use the default value from CMA
   } else
   {
-    if( !suppress.warnings ) warning("I know how to do CMA per episodes only for CMAs 1 to 9!\n");
+    if( !suppress.warnings ) .report.ewms("I know how to do CMA sliding windows only for CMAs 1 to 9!\n", "error", "CMA_sliding_window", "AdhereR");
     return (NULL);
   }
 
@@ -8872,10 +7647,10 @@ subsetCMA.CMA_sliding_window <- function(cma, patients, suppress.warnings=FALSE)
   patients.to.keep <- intersect(patients, unique(cma$data[,cma$ID.colname]));
   if( length(patients.to.keep) == 0 )
   {
-    if( !suppress.warnings ) warning("No patients to subset on!\n");
+    if( !suppress.warnings ) .report.ewms("No patients to subset on!\n", "error", "subsetCMA.CMA_sliding_window", "AdhereR");
     return (NULL);
   }
-  if( length(patients.to.keep) < length(patients) && !suppress.warnings ) warning("Some patients in the subsetting set are not in the CMA itsefl and are ignored!\n");
+  if( length(patients.to.keep) < length(patients) && !suppress.warnings ) .report.ewms("Some patients in the subsetting set are not in the CMA itsefl and are ignored!\n", "warning", "subsetCMA.CMA_sliding_window", "AdhereR");
 
   ret.val <- cma;
   ret.val$data <- ret.val$data[ ret.val$data[,ret.val$ID.colname] %in% patients.to.keep, ];
@@ -8928,7 +7703,26 @@ plot_interactive_cma <- function(...)
     # Pass the parameters to AdhereRViz:
     AdhereRViz::plot_interactive_cma(...);
   } else {
-    warning("Package 'AdhereRViz' must be installed for the interactive plotting to work! Please either install it or use the 'normal' plotting functions provided by 'AdhereR'...\n");
-    return (invisible(NULL));
+    .report.ewms("Package 'AdhereRViz' must be installed for the interactive plotting to work! Please either install it or use the 'normal' plotting functions provided by 'AdhereR'...\n", "error", "plot_interactive_cma", "AdhereR");
+    if( interactive() )
+    {
+      if( menu(c("Yes", "No"), graphics=FALSE, title="Do you want to install 'AdhereRViz' now?") == 1 )
+      {
+        # Try to install AdhereRViz:
+        install.packages("AdhereRViz", dep=TRUE);
+        if( requireNamespace("AdhereRViz", quietly=TRUE) )
+        {
+          # Pass the parameters to AdhereRViz:
+          AdhereRViz::plot_interactive_cma(...);
+        } else
+        {
+          .report.ewms("Failed to install 'AdhereRViz'!\n", "error", "plot_interactive_cma", "AdhereR");
+          return (invisible(NULL));
+        }
+      } else
+      {
+        return (invisible(NULL));
+      }
+    }
   }
 }
