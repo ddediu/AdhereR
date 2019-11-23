@@ -4,10 +4,20 @@
 \alias{cover_special_periods}
 \title{Cover special periods.}
 \usage{
-cover_special_periods(events.data, special.periods.data, ID.colname,
-  medication.class.colnames, disp.start.colname, duration.colname,
-  days.before, days.after, date.format, suppress.warnings = FALSE,
-  return.data.table = FALSE, ...)
+cover_special_periods(
+  events.data,
+  special.periods.data,
+  ID.colname,
+  medication.class.colnames,
+  disp.start.colname,
+  duration.colname,
+  days.before,
+  days.after,
+  date.format,
+  suppress.warnings = FALSE,
+  return.data.table = FALSE,
+  ...
+)
 }
 \arguments{
 \item{events.data}{A \emph{\code{data.frame}} or \emph{\code{data.table}} with the event durations.}

@@ -4,15 +4,29 @@
 \alias{compute_event_durations}
 \title{Computation of event durations.}
 \usage{
-compute_event_durations(disp.data = NULL, presc.data = NULL,
-  special.periods.data = NULL, ID.colname, medication.class.colnames,
-  disp.date.colname, total.dose.colname, presc.date.colname,
-  presc.daily.dose.colname, presc.duration.colname, visit.colname,
-  split.on.dosage.change = TRUE, force.init.presc = FALSE,
-  force.presc.renew = FALSE, trt.interruption = c("continue",
-  "discard", "carryover")[1], special.periods.method = trt.interruption,
-  date.format = "\%d.\%m.\%Y", suppress.warnings = FALSE,
-  return.data.table = FALSE, progress.bar = TRUE, ...)
+compute_event_durations(
+  disp.data = NULL,
+  presc.data = NULL,
+  special.periods.data = NULL,
+  ID.colname,
+  medication.class.colnames,
+  disp.date.colname,
+  total.dose.colname,
+  presc.date.colname,
+  presc.daily.dose.colname,
+  presc.duration.colname,
+  visit.colname,
+  split.on.dosage.change = TRUE,
+  force.init.presc = FALSE,
+  force.presc.renew = FALSE,
+  trt.interruption = c("continue", "discard", "carryover")[1],
+  special.periods.method = trt.interruption,
+  date.format = "\%d.\%m.\%Y",
+  suppress.warnings = FALSE,
+  return.data.table = FALSE,
+  progress.bar = TRUE,
+  ...
+)
 }
 \arguments{
 \item{disp.data}{A \emph{\code{data.frame}} or \emph{\code{data.table}} containing

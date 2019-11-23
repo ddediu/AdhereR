@@ -4,29 +4,40 @@
 \alias{CMA_per_episode}
 \title{CMA_per_episode constructor.}
 \usage{
-CMA_per_episode(CMA.to.apply, data, treat.epi = NULL, ID.colname = NA,
-  event.date.colname = NA, event.duration.colname = NA,
-  event.daily.dose.colname = NA, medication.class.colname = NA,
-  carry.only.for.same.medication = NA, consider.dosage.change = NA,
+CMA_per_episode(
+  CMA.to.apply,
+  data,
+  treat.epi = NULL,
+  ID.colname = NA,
+  event.date.colname = NA,
+  event.duration.colname = NA,
+  event.daily.dose.colname = NA,
+  medication.class.colname = NA,
+  carry.only.for.same.medication = NA,
+  consider.dosage.change = NA,
   medication.change.means.new.treatment.episode = TRUE,
   dosage.change.means.new.treatment.episode = FALSE,
   maximum.permissible.gap = 180,
-  maximum.permissible.gap.unit = c("days", "weeks", "months", "years",
-  "percent")[1], followup.window.start = 0,
+  maximum.permissible.gap.unit = c("days", "weeks", "months", "years", "percent")[1],
+  followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
   followup.window.duration = 365 * 2,
-  followup.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.start = 0,
-  observation.window.start.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.duration = 365 * 2,
-  observation.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], date.format = "\%m/\%d/\%Y",
+  followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.start = 0,
+  observation.window.start.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.duration = 365 * 2,
+  observation.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  date.format = "\%m/\%d/\%Y",
   summary = "CMA per treatment episode",
   event.interval.colname = "event.interval",
   gap.days.colname = "gap.days",
-  force.NA.CMA.for.failed.patients = TRUE, parallel.backend = c("none",
-  "multicore", "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)")[1],
-  parallel.threads = "auto", suppress.warnings = FALSE, ...)
+  force.NA.CMA.for.failed.patients = TRUE,
+  parallel.backend = c("none", "multicore", "snow", "snow(SOCK)", "snow(MPI)",
+    "snow(NWS)")[1],
+  parallel.threads = "auto",
+  suppress.warnings = FALSE,
+  ...
+)
 }
 \arguments{
 \item{CMA.to.apply}{A \emph{string} giving the name of the CMA function (1 to
