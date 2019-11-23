@@ -19,7 +19,7 @@ Description: Interactive graphical user interface (GUI) for the package
 URL: https://github.com/ddediu/AdhereR 
 License: GPL (>= 2)
 LazyData: TRUE
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.0
 Imports: AdhereR (>= 0.6),
     lubridate (>= 1.5),
     parallel (>= 3.0),
