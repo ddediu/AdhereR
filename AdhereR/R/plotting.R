@@ -1316,6 +1316,18 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
 
   ##
+  ## Checks and conversions of various column types
+  ##
+
+  # Patient IDs and medical class better be characters:
+  cma$data[, cma$ID.colname] <- as.character(cma$data[, cma$ID.colname]);
+  if(!is.na(cma$medication.class.colname) && cma$medication.class.colname %in% names(cma$data))
+  {
+    cma$data[, cma$medication.class.colname] <- as.character(cma$data[, cma$medication.class.colname]);
+  }
+
+
+  ##
   ## Cache, consolidate and homogenise the needed info (events, CMAs, FUW an OW) ####
   ##
 
@@ -1897,6 +1909,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                      generate.R.plot=generate.R.plot);
       return (invisible(NULL));
     }
+
+    # Make sure we're initially plotting on white:
+    par(mar=c(0,0,0,0), bg="white");
 
     # Character width and height in the current plotting system:
     if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose);
@@ -4491,10 +4506,12 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
   if( .do.R )
   {
     #dev.new(); # clear any previous plots
+    old.par <- par(no.readonly=TRUE); # save the origial par
     par(mar=c(0,0,0,0), bg="gray60");
     plot.new();
     segments(0, 0, 1, 1, col="gray40", lwd=10);
     segments(0, 1, 1, 0, col="gray40", lwd=10);
+    par(old.par); # restore the original par at the end
   }
 
   exported.file.names <- NULL; # the list of exported files (if any)
