@@ -1,0 +1,20 @@
+citHeader("To cite AdhereRViz in publications use:")
+
+year <- format(Sys.Date(), "%Y")
+vers <- paste("R package version", meta$Version)
+
+citEntry(entry = "Manual",
+  title        = "AdhereRViz: Interactive visualisations for AdhereR.",
+  author       = personList(as.person("Dan Dediu"),
+                   as.person("Samuel Allemann"),
+                   as.person("Alexandra L. Dima")),
+  year         = year,
+  note         = vers,
+
+  textVersion  =
+  paste0("Dediu D, Allemann S, Dima AL (",year,"). ",
+         "AdhereRViz: Interactive visualisations for AdhereR. ",
+         vers,
+         ".")
+)
+
