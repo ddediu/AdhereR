@@ -51,10 +51,29 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 .clear.ewms <- function() { assign(".ewms", NULL, envir=.adherer.env); }
 
 # Get the info about errors, warnings and messages (basically, a data.frame contaning all the important info, one thing per row):
-.get.ewms <- function() { return (get(".ewms", envir=.adherer.env)); }
+.get.ewms <- function()
+{
+  if( !exists(".ewms", envir=.adherer.env, inherits=FALSE) )
+  {
+    return (NULL);
+  } else
+  {
+    return (get(".ewms", envir=.adherer.env, inherits=FALSE));
+  }
+}
 
 # Are we recording the errors, warnings and messages?
-.is.recording.ewms <- function() { return (!is.null(.record.ewms <- get(".record.ewms", envir=.adherer.env)) && .record.ewms); }
+.is.recording.ewms <- function()
+{
+  if( !exists(".record.ewms", envir=.adherer.env, inherits=FALSE) )
+  {
+    return (FALSE);
+  } else
+  {
+    .record.ewms <- get(".record.ewms", envir=.adherer.env, inherits=FALSE);
+    return (!is.null(.record.ewms) && !inherits(.record.ewms, "logical") && .record.ewms);
+  }
+}
 
 # Start/stop recording the errors, warnings and messages:
 .record.ewms <- function(record=TRUE) { .clear.ewms(); assign(".record.ewms", record, envir=.adherer.env); }
@@ -7709,7 +7728,7 @@ plot_interactive_cma <- function(...)
       if( menu(c("Yes", "No"), graphics=FALSE, title="Do you want to install 'AdhereRViz' now?") == 1 )
       {
         # Try to install AdhereRViz:
-        install.packages("AdhereRViz", dep=TRUE);
+        install.packages("AdhereRViz", dependencies=TRUE);
         if( requireNamespace("AdhereRViz", quietly=TRUE) )
         {
           # Pass the parameters to AdhereRViz:
