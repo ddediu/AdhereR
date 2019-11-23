@@ -4231,10 +4231,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           l2 <- c(l2,
                   .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                             stroke=followup.window.col, fill="none", stroke_width=2, lty="dashed",
-                            class="legend-fuw"),
+                            class="legend-fuw-rect"),
                   .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="follow-up wnd.",
                             col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                            class="legend-interval", suppress.warnings=suppress.warnings));
+                            class="legend-fuw-label", suppress.warnings=suppress.warnings));
           # Save the info:
           .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
                                                               data.frame("string"="follow-up wnd.",
@@ -4257,10 +4257,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             l2 <- c(l2,
                     .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                               stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                              class="legend-ow-theoretical"),
+                              class="legend-ow-rect"),
                     .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="theor. obs. wnd.",
                               col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                              class="legend-ow-theoretical", suppress.warnings=suppress.warnings));
+                              class="legend-ow-label", suppress.warnings=suppress.warnings));
             # Save the info:
             .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
                                                                 data.frame("string"="theor. obs. wnd.",
@@ -4295,10 +4295,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             l2 <- c(l2,
                     .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                               stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                              class="legend-ow"),
+                              class="legend-ow-rect"),
                     .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="observation wnd.",
                               col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                              class="legend-ow", suppress.warnings=suppress.warnings));
+                              class="legend-ow-label", suppress.warnings=suppress.warnings));
             # Save the info:
             .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
                                                                 data.frame("string"="observation wnd.",
