@@ -1910,7 +1910,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
 
     # Make sure we're initially plotting on white:
-    par(mar=c(0,0,0,0), bg="white");
+    par(bg="white");
 
     # Character width and height in the current plotting system:
     if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose);
