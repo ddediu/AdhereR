@@ -210,8 +210,10 @@ var adh_svg = { // begin namespace
    */
   get_plot_size : function() {
     svg = document.getElementById(adh_svg.plot_id);
-    return {"w" : (svg.style.width) ? svg.style.width : "auto",
-            "h" : (svg.style.height) ? svg.style.height : "auto"}; // this is special: we go for CSS attributes directly
+    /*return {"w" : (svg.style.width) ? svg.style.width : "auto",
+            "h" : (svg.style.height) ? svg.style.height : "auto"}; // this is special: we go for CSS attributes directly*/
+    return {"w" : (svg.clientWidth) ? svg.clientWidth : "auto",
+            "h" : (svg.clientHeight) ? svg.clientHeight : "auto"}; // get the actual size in pixels
   },
 
   /**
