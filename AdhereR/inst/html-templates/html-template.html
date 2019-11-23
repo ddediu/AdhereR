@@ -4,25 +4,40 @@
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>TEMPLATE</title>
 
-    <!-- JavaScript -->
+    <!-- SVG-related JavaScript -->
     <script type="text/javascript" src="PATH-TO-JS"></script>
 
-    <!-- CSS -->
+    <!-- SVG-related CSS -->
     <link rel="stylesheet" href="PATH-TO-CSS">
+
+    <!-- JavaScript having for this HTML document -->
+    <script type="text/javascript">
+      function image_change_size(ds) {
+        img_dims = adh_svg.get_plot_size(); // get the current image dimensions
+
+        new_w = img_dims.w * ds; new_h = img_dims.h * ds; // the new size
+        if(new_w < 1 || new_h < 1) return; // can't go below 1!
+
+        adh_svg.set_plot_size(new_w, new_h); // set the new dimension
+      }
+    </script>
+
   </head>
 
   <body>
-    <h1>Template HTML/CSS/JavaScript for SVG</h1>
-    <p>This is just an example!</p>
+    <h1>Image controls:</h1>
 
-    <p>
-			<button onclick='adh_svg.set_plot_size(w="100px")'>Tiny</button>
-			<button onclick='adh_svg.set_plot_size(w="300px")'>Small</button>
-			<button onclick='adh_svg.set_plot_size(w="600px")'>Standard</button>
-			<button onclick='adh_svg.set_plot_size()'>Default</button>
-			<button onclick='adh_svg.set_plot_size(w="1000px")'>Big</button>
-			<button onclick='adh_svg.set_plot_size(w="10000px")'>Huge</button>
-		</p>
+    <span style="padding: 5px; margin: 5px;">
+      <!-- Image size -->
+      <b>Image size: &nbsp;</b>
+      <span title="Restore plot to its default dimensions">
+        <button onclick='adh_svg.set_plot_size()'>default</button>
+      </span>
+      &nbsp;
+      <span title="Increase/decrease image dimensions by 25%">
+        <button onclick='image_change_size(0.75)'>-</button><button onclick='image_change_size(1.25)'>+</button>
+      </span>
+    </span>
 
     <p>
 			<button onclick='x=adh_svg.get_bkg_color(); adh_svg.set_bkg_color((x != "white" && x != "rgb(255,255,255)" && x != "rgb(255, 255, 255)") ? "white" : "yellow")'>Toggle background color!</button>
