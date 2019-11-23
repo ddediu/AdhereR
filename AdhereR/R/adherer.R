@@ -37,7 +37,7 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
 
 ## Package private info ####
 # Store various info relevant to the package (such as info about the last plot or the last error).
-# As this is inside a paclage and we must avoid locking, we ned to use an environment (see, e.g. https://www.r-bloggers.com/package-wide-variablescache-in-r-packages/)
+# As this is inside a package and we must avoid locking, we ned to use an environment (see, e.g. https://www.r-bloggers.com/package-wide-variablescache-in-r-packages/)
 .adherer.env <- new.env();
 
 # Info about the last plot (initially, none):

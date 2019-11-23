@@ -86,10 +86,10 @@ var adh_svg = { // begin namespace
    * @return {String}   the attribute value.
    */
   get_svg_attribute : function(elem, attr, elem_type) {
-    if( !elem ) {
+    if( !elem || elem.length == 0 ) {
       return undefined;
     } else {
-      if( elem.length > 0 ) elem = elem[0]; //assume that for arrays the first element is enough
+      if( elem.length > 1 ) elem = elem[0]; //assume that for arrays the first element is enough
 
       if( adh_svg._hasAttribute(elem, attr) ) {
         return elem.getAttribute(attr);
@@ -126,7 +126,7 @@ var adh_svg = { // begin namespace
    * @param {Boolean} force_svg_attr  If undefined or true, set the SVG attribute avan if not yet defined (needed in some cases for some browsers).
    */
   set_svg_attribute : function(elem, attr, val, elem_type, force_svg_attr) {
-    if( !elem ) {
+    if( !elem || elem.length == 0 ) {
       return;
     } else {
       // Local function dealing with a single element at a time:
@@ -366,6 +366,87 @@ var adh_svg = { // begin namespace
 
 
   /**
+   * Is the follow-up window (FUW) visible?
+   * @return {Boolean} true if the FUW is visible
+   */
+  is_visible_fuw : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "fuw");
+    return adh_svg.is_visible_svg_element(x);
+  },
+
+  /**
+   * Show/hide the follow-up window (FUW).
+   * @param {Boolean} show  show FUW if true, otherwise hide it.
+   * @return {None}
+   */
+  show_fuw : function(show) {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "fuw");
+    //x_legend_rect = adh_svg._getElementsByClassName(svg, "legend-fuw-rect");
+    x_legend_text = adh_svg._getElementsByClassName(svg, "legend-fuw-label");
+
+    adh_svg.show_svg_element(x, show);
+    //adh_svg.set_svg_attribute(x_legend_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
+    adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
+  },
+
+
+  /**
+   * Is the observation window (OW) visible?
+   * @return {Boolean} true if the OW is visible
+   */
+  is_visible_ow : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "ow");
+    return adh_svg.is_visible_svg_element(x);
+  },
+
+  /**
+   * Show/hide the observation window (OW).
+   * @param {Boolean} show  show OW if true, otherwise hide it.
+   * @return {None}
+   */
+  show_ow : function(show) {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "ow");
+    //x_legend_rect = adh_svg._getElementsByClassName(svg, "legend-ow-rect");
+    x_legend_text = adh_svg._getElementsByClassName(svg, "legend-ow-label");
+
+    adh_svg.show_svg_element(x, show);
+    //adh_svg.set_svg_attribute(x_legend_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
+    adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
+  },
+
+
+  /**
+   * Is the "real" observation window (CMA8 only) visible?
+   * @return {Boolean} true if the "real" observation window is visible
+   */
+  is_visible_ow_real : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "ow-real");
+    return adh_svg.is_visible_svg_element(x);
+  },
+
+  /**
+   * Show/hide the "real" observation window (OW).
+   * @param {Boolean} show  the "real" OW if true, otherwise hide it.
+   * @return {None}
+   */
+  show_ow_real : function(show) {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "ow-real");
+    //x_legend_rect = adh_svg._getElementsByClassName(svg, "legend-ow-real-rect");
+    x_legend_text = adh_svg._getElementsByClassName(svg, "legend-ow-real-label");
+
+    adh_svg.show_svg_element(x, show);
+    //adh_svg.set_svg_attribute(x_legend_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
+    adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
+  },
+
+
+  /**
    * Are there medication classes defined?
    * @return {Boolean} true if there are medication classes, false otherwise
    */
@@ -504,6 +585,39 @@ window.onload = function() {
         l_label[j].addEventListener("click", (function(x){ return function() { adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })(m[i]), false);
       }
     }
+  }
+  // The FUW (if any):
+  l_rect = adh_svg._getElementsByClassName(svg, "legend-fuw-rect");
+  for(j=0; j<l_rect.length; j++) {
+    l_rect[j].style.cursor = "pointer";
+    l_rect[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); }, false);
+  }
+  l_label = adh_svg._getElementsByClassName(svg, "legend-fuw-label");
+  for(j=0; j<l_label.length; j++) {
+    l_label[j].style.cursor = "pointer";
+    l_label[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); }, false);
+  }
+  // The OW (if any):
+  l_rect = adh_svg._getElementsByClassName(svg, "legend-ow-rect");
+  for(j=0; j<l_rect.length; j++) {
+    l_rect[j].style.cursor = "pointer";
+    l_rect[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); }, false);
+  }
+  l_label = adh_svg._getElementsByClassName(svg, "legend-ow-label");
+  for(j=0; j<l_label.length; j++) {
+    l_label[j].style.cursor = "pointer";
+    l_label[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); }, false);
+  }
+  // The "real" OW [CMA8] (if any):
+  l_rect = adh_svg._getElementsByClassName(svg, "legend-ow-real-rect");
+  for(j=0; j<l_rect.length; j++) {
+    l_rect[j].style.cursor = "pointer";
+    l_rect[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); }, false);
+  }
+  l_label = adh_svg._getElementsByClassName(svg, "legend-ow-real-label");
+  for(j=0; j<l_label.length; j++) {
+    l_label[j].style.cursor = "pointer";
+    l_label[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); }, false);
   }
 
   /*// TEST:
