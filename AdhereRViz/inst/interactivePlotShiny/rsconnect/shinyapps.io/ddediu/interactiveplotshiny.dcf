@@ -1,0 +1,10 @@
+name: interactiveplotshiny
+title:
+username:
+account: ddediu
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 999104
+bundleId: 2179335
+url: https://ddediu.shinyapps.io/interactiveplotshiny/
+when: 1561535820.68624
