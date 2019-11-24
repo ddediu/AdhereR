@@ -229,12 +229,23 @@ var adh_svg = { // begin namespace
 
 
   /**
+   * Are there alternating bands visible in the document?
+   * @return {Boolean}  true if they do exist
+   */
+  exists_alternating_bands : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    alt_bands = svg.querySelectorAll('[class^="alternating-bands-"]');
+    return !(!alt_bands || alt_bands.length < 1);
+  },
+
+  /**
    * Are the alternating bands visible?
    * @return {Boolean}  true if they are visible
    */
   is_visible_alternating_bands : function() {
     svg = document.getElementById(adh_svg.plot_id);
     alt_bands = svg.querySelectorAll('[class^="alternating-bands-"]');
+    if(!alt_bands || alt_bands.length < 1) return undefined;
     return adh_svg.is_visible_svg_element(alt_bands);
   },
 
@@ -246,9 +257,21 @@ var adh_svg = { // begin namespace
   show_alternating_bands : function(show) {
     svg = document.getElementById(adh_svg.plot_id);
     alt_bands = svg.querySelectorAll('[class^="alternating-bands-"]');
-    adh_svg.show_svg_element(alt_bands, show);
+    if(!(!alt_bands || alt_bands.length < 1)) adh_svg.show_svg_element(alt_bands, show);
   },
 
+
+  /**
+   * Are the axis names defined?
+   * @return {Dictionary{x,y}} true if the corresponding axis name is defined
+   */
+  exists_axis_names : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    ret_val = {"x":false, "y":false}; // the return value
+    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); ret_val["x"] = !(!x || x.length < 1);
+    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); ret_val["y"] = !(!y || y.length < 1);
+    return ret_val;
+  },
 
   /**
    * Are the axis names visible?
@@ -257,8 +280,8 @@ var adh_svg = { // begin namespace
   is_visible_axis_names : function() {
     svg = document.getElementById(adh_svg.plot_id);
     ret_val = {"x":false, "y":false}; // the return value
-    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); ret_val["x"] = adh_svg.is_visible_svg_element(x);
-    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); ret_val["y"] = adh_svg.is_visible_svg_element(y);
+    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); ret_val["x"] = adh_svg.is_visible_svg_element(x[0]);
+    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); ret_val["y"] = adh_svg.is_visible_svg_element(y[0]);
     return ret_val;
   },
 
@@ -270,10 +293,22 @@ var adh_svg = { // begin namespace
    */
   show_axis_names : function(show_x, show_y) {
     svg = document.getElementById(adh_svg.plot_id);
-    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); adh_svg.show_svg_element(x, show_x);
-    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); adh_svg.show_svg_element(y, show_y);
+    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); adh_svg.show_svg_element(x[0], show_x);
+    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); adh_svg.show_svg_element(y[0], show_y);
   },
 
+
+  /**
+   * Are the axis labels defined?
+   * @return {Dictionary{x,y}} true if the corresponding axis label is defined
+   */
+  exists_axis_labels : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    ret_val = {"x":false, "y":false}; // the return value
+    x = adh_svg._getElementsByClassName(svg, "axis-labels-x"); ret_val["x"] = !(!x || x.length < 1);
+    y = adh_svg._getElementsByClassName(svg, "axis-labels-y"); ret_val["y"] = !(!y || y.length < 1);
+    return ret_val;
+  },
 
   /**
    * Are the axis labels visible?
@@ -302,12 +337,23 @@ var adh_svg = { // begin namespace
 
 
   /**
+   * Does the legend exist?
+   * @return {Boolean} true if the legend exists
+   */
+  exists_legend : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = svg.getElementById("legend");
+    return !(!x || x.length < 1);
+  },
+
+  /**
    * Is the legend visible?
    * @return {Boolean} true if the legend is visible
    */
   is_visible_legend : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = svg.getElementById("legend");
+    if(!x || x.length < 1) return undefined;
     return adh_svg.is_visible_svg_element(x);
   },
 
@@ -319,9 +365,19 @@ var adh_svg = { // begin namespace
   show_legend : function(show) {
     svg = document.getElementById(adh_svg.plot_id);
     x = svg.getElementById("legend");
-    adh_svg.show_svg_element(x, show);
+    if(x) adh_svg.show_svg_element(x, show);
   },
 
+
+  /**
+   * Does the title exist?
+   * @return {Boolean} true if the title exists
+   */
+  exists_title : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "main-title");
+    return !(!x || x.length < 1);
+  },
 
   /**
    * Is the title visible?
@@ -330,7 +386,8 @@ var adh_svg = { // begin namespace
   is_visible_title : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "main-title");
-    return adh_svg.is_visible_svg_element(x);
+    if(!x || x.length < 1) return undefined;
+    return adh_svg.is_visible_svg_element(x[0]);
   },
 
   /**
@@ -341,7 +398,7 @@ var adh_svg = { // begin namespace
   show_title : function(show) {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "main-title");
-    adh_svg.show_svg_element(x, show);
+    if(x) adh_svg.show_svg_element(x[0], show);
   },
 
 
@@ -368,12 +425,23 @@ var adh_svg = { // begin namespace
 
 
   /**
+   * Does the follow-up window (FUW) exist?
+   * @return {Boolean} true if the FUW exists
+   */
+  exists_fuw : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "fuw");
+    return !(!x || x.length < 1);
+  },
+
+  /**
    * Is the follow-up window (FUW) visible?
    * @return {Boolean} true if the FUW is visible
    */
   is_visible_fuw : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "fuw");
+    if(!x || x.length < 1) return undefined;
     return adh_svg.is_visible_svg_element(x);
   },
 
@@ -385,14 +453,24 @@ var adh_svg = { // begin namespace
   show_fuw : function(show) {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "fuw");
-    //x_legend_rect = adh_svg._getElementsByClassName(svg, "legend-fuw-rect");
-    x_legend_text = adh_svg._getElementsByClassName(svg, "legend-fuw-label");
+    //x_fuw_rect = adh_svg._getElementsByClassName(svg, "legend-fuw-rect");
+    x_fuw_text = adh_svg._getElementsByClassName(svg, "legend-fuw-label");
 
-    adh_svg.show_svg_element(x, show);
-    //adh_svg.set_svg_attribute(x_legend_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
-    adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
+    if(x) adh_svg.show_svg_element(x, show);
+    //adh_svg.set_svg_attribute(x_fuw_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
+    if(x_fuw_text) adh_svg.set_svg_attribute(x_fuw_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
   },
 
+
+  /**
+   * Does the observation window (OW) exist?
+   * @return {Boolean} true if the OW exists
+   */
+  exists_ow : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "ow");
+    return !(!x || x.length < 1);
+  },
 
   /**
    * Is the observation window (OW) visible?
@@ -401,6 +479,7 @@ var adh_svg = { // begin namespace
   is_visible_ow : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "ow");
+    if(!x || x.length < 1) return undefined;
     return adh_svg.is_visible_svg_element(x);
   },
 
@@ -412,14 +491,24 @@ var adh_svg = { // begin namespace
   show_ow : function(show) {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "ow");
-    //x_legend_rect = adh_svg._getElementsByClassName(svg, "legend-ow-rect");
-    x_legend_text = adh_svg._getElementsByClassName(svg, "legend-ow-label");
+    //x_ow_rect = adh_svg._getElementsByClassName(svg, "legend-ow-rect");
+    x_ow_text = adh_svg._getElementsByClassName(svg, "legend-ow-label");
 
-    adh_svg.show_svg_element(x, show);
-    //adh_svg.set_svg_attribute(x_legend_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
-    adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
+    if(x) adh_svg.show_svg_element(x, show);
+    //adh_svg.set_svg_attribute(x_ow_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
+    if(x_ow_text) adh_svg.set_svg_attribute(x_ow_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
   },
 
+
+  /**
+   * Is there a "real" observation window (CMA8 only) defined?
+   * @return {Boolean} true if the "real" observation window is defined
+   */
+  exists_ow_real : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "ow-real");
+    return !(!x || x.length < 1);
+  },
 
   /**
    * Is the "real" observation window (CMA8 only) visible?
@@ -428,6 +517,7 @@ var adh_svg = { // begin namespace
   is_visible_ow_real : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "ow-real");
+    if(!x || x.length < 1) return undefined;
     return adh_svg.is_visible_svg_element(x);
   },
 
@@ -442,9 +532,9 @@ var adh_svg = { // begin namespace
     //x_legend_rect = adh_svg._getElementsByClassName(svg, "legend-ow-real-rect");
     x_legend_text = adh_svg._getElementsByClassName(svg, "legend-ow-real-label");
 
-    adh_svg.show_svg_element(x, show);
+    if(x) adh_svg.show_svg_element(x, show);
     //adh_svg.set_svg_attribute(x_legend_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
-    adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
+    if(x_legend_text) adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
   },
 
 
@@ -552,6 +642,19 @@ var adh_svg = { // begin namespace
 }; // end namespace
 
 
+// Other functions used for HTML interactions
+
+// Change the SVG image size up and down by a given multiplier:
+function image_change_size(ds) {
+  img_dims = adh_svg.get_plot_size(); // get the current image dimensions
+
+  new_w = img_dims.w * ds; new_h = img_dims.h * ds; // the new size
+  if(new_w < 1 || new_h < 1) return; // can't go below 1!
+
+  adh_svg.set_plot_size(new_w, new_h); // set the new dimension
+}
+
+
 // Initialisation stuff:
 window.onload = function() {
   //adh_svg.set_bkg_color("white");
@@ -620,6 +723,92 @@ window.onload = function() {
   for(j=0; j<l_label.length; j++) {
     l_label[j].style.cursor = "pointer";
     l_label[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); }, false);
+  }
+
+  // (Un)check and (dis)able various components in the HTML document:
+  tmp = document.getElementById("button_toggle_alt_bands");
+  label_style_default = tmp ? tmp.style : "none"; // save the default lablel CSS style
+  label_style_disabled = "color: #aaa;" // and this is the disabled lable look
+
+  // The idea is to disable the check button and the label if the element does not exist in the SVG, and to enable it if the element exists and is visible...
+  if(adh_svg.exists_alternating_bands()) {
+    tmp = document.getElementById("button_toggle_alt_bands"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_alternating_bands(); }
+    tmp = document.getElementById("label_toggle_alt_bands"); if(tmp) { tmp.disabled = true; tmp.style = label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_alt_bands"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_alt_bands"); if(tmp) { tmp.disabled = true; tmp.style = label_style_disabled; }
+  }
+
+  if(adh_svg.exists_axis_names()["x"]) {
+    tmp = document.getElementById("button_toggle_x_axis_name"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_names()["x"]; }
+    tmp = document.getElementById("label_toggle_x_axis_name"); if(tmp) { tmp.disabled = true; tmp.style = label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_x_axis_name"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_x_axis_name"); if(tmp) { tmp.disabled = true; tmp.style = label_style_disabled; }
+  }
+
+  if(adh_svg.exists_axis_labels()["x"]) {
+    tmp = document.getElementById("button_toggle_x_axis_labels"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_labels()["x"]; }
+    tmp = document.getElementById("label_toggle_x_axis_labels"); if(tmp) { tmp.disabled = true; tmp.style = label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_x_axis_labels"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_x_axis_labels"); if(tmp) { tmp.disabled = true; tmp.style = label_style_disabled; }
+  }
+
+  if(adh_svg.exists_axis_names()["y"]) {
+    tmp = document.getElementById("button_toggle_y_axis_name"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_names()["y"]; }
+    tmp = document.getElementById("label_toggle_y_axis_name"); if(tmp) { tmp.disabled = true; tmp.style = label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_y_axis_name"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_y_axis_name"); if(tmp) { tmp.disabled = true; tmp.style = label_style_disabled; }
+  }
+
+  if(adh_svg.exists_axis_labels()["y"]) {
+    tmp = document.getElementById("button_toggle_y_axis_labels"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_labels()["y"]; }
+    tmp = document.getElementById("label_toggle_y_axis_labels"); if(tmp) { tmp.disabled = true; tmp.style = label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_y_axis_labels"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_y_axis_labels"); if(tmp) { tmp.disabled = true; tmp.style = label_style_disabled; }
+  }
+
+  if(adh_svg.exists_title()) {
+    tmp = document.getElementById("button_toggle_title"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_title(); }
+    tmp = document.getElementById("label_toggle_title"); if(tmp) { tmp.disabled = true; tmp.style = label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_title"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_title"); if(tmp) { tmp.disabled = true; tmp.style = label_style_disabled; }
+  }
+
+  if(adh_svg.exists_legend()) {
+    tmp = document.getElementById("button_toggle_legend"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_legend(); }
+    tmp = document.getElementById("label_toggle_legend"); if(tmp) { tmp.disabled = true; tmp.style = label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_legend"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_legend"); if(tmp) { tmp.disabled = true; tmp.style = label_style_disabled; }
+  }
+
+  if(adh_svg.exists_fuw()) {
+    tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_fuw(); }
+    tmp = document.getElementById("label_toggle_fuw"); if(tmp) { tmp.disabled = true; tmp.style = label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_fuw"); if(tmp) { tmp.disabled = true; tmp.style = label_style_disabled; }
+  }
+
+  if(adh_svg.exists_ow()) {
+    tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_ow(); }
+    tmp = document.getElementById("label_toggle_ow"); if(tmp) { tmp.disabled = true; tmp.style = label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_ow"); if(tmp) { tmp.disabled = true; tmp.style = label_style_disabled; }
+  }
+
+  if(adh_svg.exists_ow_real()) {
+    tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_ow_real(); }
+    tmp = document.getElementById("label_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.style = label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.style = label_style_disabled; }
   }
 
   /*// TEST:
