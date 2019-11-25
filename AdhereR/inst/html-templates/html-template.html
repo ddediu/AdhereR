@@ -78,8 +78,32 @@
       &nbsp;
     </div>
 
+    <div style="padding: 5px; margin: 5px;">
+      <!-- Various font sizes -->
+      <b>Font size: &nbsp;</b>
+      <span title="Increase/decrease title font size">
+        title:
+        <button id="button_font_size_default_title" onclick='adh_svg.set_font_size_title(adh_svg.default_font_size_title)'>default</button>
+        <button id="button_font_size_decrease_title" onclick='x=parseInt(adh_svg.get_font_size_title(),10); if(x >= 2) adh_svg.set_font_size_title((x-1).toString(10) + "px")'>-</button>
+        <button id="button_font_size_increase_title" onclick='x=parseInt(adh_svg.get_font_size_title(),10); adh_svg.set_font_size_title((x+1).toString(10) + "px")'>+</button>
+      </span>
+      &nbsp;
+      <span title="Increase/decrease axe names' font size">
+        axis names:
+        <button id="button_font_size_default_axe_names" onclick='adh_svg.set_font_size_axis_names(adh_svg.default_font_size_axis_names["x"], adh_svg.default_font_size_axis_names["y"])'>default</button>
+        <button id="button_font_size_decrease_axe_names" onclick='x=adh_svg.get_font_size_axis_names(); x["x"]=parseInt(x["x"],10); x["y"]=parseInt(x["y"],10); if(x["x"] >= 2 && x["y"] >= 2) adh_svg.set_font_size_axis_names((x["x"]-1).toString(10) + "px", (x["y"]-1).toString(10) + "px")'>-</button>
+        <button id="button_font_size_increase_axe_names" onclick='x=adh_svg.get_font_size_axis_names(); x["x"]=parseInt(x["x"],10); x["y"]=parseInt(x["y"],10); if(x["x"] >= 2 && x["y"] >= 2) adh_svg.set_font_size_axis_names((x["x"]+1).toString(10) + "px", (x["y"]+1).toString(10) + "px")'>+</button>
+      </span>
+      &nbsp;
+      <span title="Increase/decrease axe labels' font size">
+        axis labels:
+        <button id="button_font_size_default_axe_labels" onclick='adh_svg.set_font_size_axis_labels(adh_svg.default_font_size_axis_labels["x"], adh_svg.default_font_size_axis_labels["y"])'>default</button>
+        <button id="button_font_size_decrease_axe_labels" onclick='x=adh_svg.get_font_size_axis_labels(); x["x"]=parseInt(x["x"],10); x["y"]=parseInt(x["y"],10); if(x["x"] >= 2 && x["y"] >= 2) adh_svg.set_font_size_axis_labels((x["x"]-1).toString(10) + "px", (x["y"]-1).toString(10) + "px")'>-</button>
+        <button id="button_font_size_increase_axe_labels" onclick='x=adh_svg.get_font_size_axis_labels(); x["x"]=parseInt(x["x"],10); x["y"]=parseInt(x["y"],10); if(x["x"] >= 2 && x["y"] >= 2) adh_svg.set_font_size_axis_labels((x["x"]+1).toString(10) + "px", (x["y"]+1).toString(10) + "px")'>+</button>
+      </span>
+    </div>
+
     <p>
-			<button onclick='x=adh_svg.get_font_size_title(); adh_svg.set_font_size_title(x=="15" || x=="15px" ? "18px" : "15px")'>Toggle title font size!</button>
       <button onclick='alert(adh_svg.get_medication_classes())'>List medication classes!</button>
 			<button onclick='adh_svg.show_medication_class("medA", !adh_svg.is_visible_medication_class("medA"))'>Show medication class "medA"!</button>
 		</p>
