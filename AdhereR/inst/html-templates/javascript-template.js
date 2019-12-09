@@ -772,7 +772,25 @@ window.onload = function() {
   // Check if browser supports embedded SVG:
   if( !adh_svg.is_embedded_SVG_supported() ) {
     // No SVG support:
-    document.documentElemement.classList.add("no-svg");
+
+    // Remove the SVG and assoctaed control elements:
+    var item = document.getElementById(adh_svg.plot_id);
+    item.parentNode.removeChild(item);
+    item = document.getElementById("svg_controls");
+    item.parentNode.removeChild(item);
+
+    // ... and replace them by the placeholder image and a short message:
+    var item = document.createElement("img");
+    item.setAttribute("src", "https://upload.wikimedia.org/wikipedia/commons/d/db/Patern_test.jpg");
+    //item.setAttribute("height", "600");
+    item.setAttribute("alt", "Adherence plot");
+    document.body.appendChild(item);
+    item = document.createElement("div");
+    item.innerHTML = "<br/></br><b>Note:</b> your browser doe not seem to support embedded SVGs, so we are displaying a PNG image instead.<br/>However, if you think that SVG should be supported, please check your browser settings (e.g., for Internet Explorer 9 make sure it is not set to compatibility mode) and reload this page.";
+    document.body.appendChild(item);
+
+    // End the function now:
+    return;
   }
 
   // Various set-up things:
@@ -932,10 +950,6 @@ window.onload = function() {
     tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
   }
-
-  /*// TEST:
-  e1 = adh_svg._getElementsByClassName(svg, "main-title")[0];
-  e1.style.cursor = "pointer"; e1.addEventListener("click", (function(x){ return function() { console.log('AddEvent()!'); adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })("medA"), false);*/
 }
 
 
