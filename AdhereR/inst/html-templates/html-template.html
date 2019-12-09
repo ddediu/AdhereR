@@ -103,10 +103,11 @@
       </span>
     </div>
 
-    <p>
-      <button onclick='alert(adh_svg.get_medication_classes())'>List medication classes!</button>
-			<button onclick='adh_svg.show_medication_class("medA", !adh_svg.is_visible_medication_class("medA"))'>Show medication class "medA"!</button>
-		</p>
+    <div style="padding: 5px; margin: 5px; display: none;" id="medication_classes_div">
+      <!-- Medication classes -->
+      <b>Medications: &nbsp;</b>
+      <!-- Initially this list is empty, as it will be (possibly) populated based on the classes in the SVG file -->
+    </div>
 
     <!--img class="adherence_plot" src="PATH-TO-IMAGE"/-->
     <object id="adherence_plot" data="PATH-TO-IMAGE" type="image/svg+xml">Please use a modern browser!</object>

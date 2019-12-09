@@ -740,18 +740,31 @@ window.onload = function() {
   // The medication classes (if any):
   m = adh_svg.get_medication_classes();
   if(m) {
+    // Hide the medication classes controls:
+    tmp = document.getElementById("medication_classes_div"); if(tmp) { tmp.style.display = 'block'; }
+
+    // Iterate through all medication classes:
     for(i=0; i<m.length; i++) {
       l_rect = adh_svg._getElementsByClassName(svg, "legend-medication-class-rect-" + adh_svg.get_id_for_medication_class(m[i]));
       for(j=0; j<l_rect.length; j++) {
         l_rect[j].style.cursor = "pointer";
-        l_rect[j].addEventListener("click", (function(x){ return function() { /*console.log('AddEvent()!');*/ adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })(m[i]), false);
+        l_rect[j].addEventListener("click", (function(x){ return function() { adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); tmp = document.getElementById("button_toggle_class_" + adh_svg.get_id_for_medication_class(x)); if(tmp) { tmp.checked = !tmp.checked; } }; })(m[i]), false);
       }
       l_label = adh_svg._getElementsByClassName(svg, "legend-medication-class-label-" + adh_svg.get_id_for_medication_class(m[i]));
       for(j=0; j<l_label.length; j++) {
         l_label[j].style.cursor = "pointer";
-        l_label[j].addEventListener("click", (function(x){ return function() { adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })(m[i]), false);
+        l_label[j].addEventListener("click", (function(x){ return function() { adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); tmp = document.getElementById("button_toggle_class_" + adh_svg.get_id_for_medication_class(x)); if(tmp) { tmp.checked = !tmp.checked; } }; })(m[i]), false);
       }
+      // Add the HTML elements as well:
+      node = document.createElement('span'); // the contaning <span>
+      node.title = "Show/hide " + m[i]; // the tooltip (title)
+      node.innerHTML = '<label id="label_toggle_class_' + adh_svg.get_id_for_medication_class(m[i]) + '"><input id="button_toggle_class_' + adh_svg.get_id_for_medication_class(m[i]) + '" type="checkbox" onclick=\'adh_svg.show_medication_class("' + m[i] + '", !adh_svg.is_visible_medication_class("' + m[i] + '"))\' checked="checked">' + m[i] + '</label> &nbsp;'; // the HTML content
+      tmp.appendChild(node); // ad it to the document
     }
+  } else
+  {
+    // Hide the medication classes controls:
+    tmp = document.getElementById("medication_classes_div"); if(tmp) { tmp.style.display = 'none'; }
   }
   // The FUW (if any):
   l_rect = adh_svg._getElementsByClassName(svg, "legend-fuw-rect");
