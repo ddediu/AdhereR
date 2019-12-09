@@ -1017,16 +1017,18 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
                        suppress.warnings=FALSE,         # suppress warnings?
-                       export.formats=NULL,             # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "png", "webp", "ps" and "pdf"
+                       export.formats=NULL,             # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
                        export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
+                       export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
+                       export.formats.save.svg.placeholder=TRUE, # if TRUE, save a JPG placeholder for the SVG image
                        export.formats.directory=NA,     # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                        generate.R.plot=TRUE,            # generate standard (base R) plot for plotting within R?
                        ...
 )
 {
 
-  # FORCE SVG PLOTTING ####
-  if( TRUE )
+  # DEBUG: FORCE SVG PLOTTING ####
+  if( FALSE )
   {
    # Force debugging SVG plotting:
    export.formats <- c("html");
@@ -1036,7 +1038,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
 
   # What sorts of plots to generate (use short names for short if statements):
-  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "png", "webp", "ps", "pdf") %in% export.formats));
+  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "jpg", "png", "webp", "ps", "pdf") %in% export.formats));
   if( !.do.R && !.do.SVG )
   {
     # Nothing to plot!
@@ -4456,10 +4458,21 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
         # Add the medication categories to class names mapping as a dictionary:
         js.template <- c(js.template,
-                         '// Mapping between medication categories and -med-class-X class names\n',
+                         '// Mapping between medication categories and -med-class-X class names',
                          'adh_svg["medication_classes"] = {\n',
                          paste0('  "',names(categories.to.classes),'" : "',categories.to.classes,'"',collapse=",\n"),
-                         '\n};\n\n');
+                         '\n};\n');
+
+        if( export.formats.save.svg.placeholder )
+        {
+          # Add the JPG placeholder's filename:
+          svg.placeholder.filename <- ifelse( is.na(export.formats.directory),
+                                              tempfile(paste0(export.formats.fileprefix,"-svg-placeholder"), fileext=".jpg"),
+                                              file.path(export.formats.directory, paste0(paste0(export.formats.fileprefix,"-svg-placeholder"),".jpg")) );
+          js.template <- c(js.template,
+                           "// The SVG placeholder's filename:",
+                           paste0('adh_svg["svg_placeholder_file_name"] = "',basename(svg.placeholder.filename),'";\n'));
+        }
 
         # Load the HTML template and replace generics by their actual values before saving it in the desired location:
         html.template.path <- system.file('html-templates/html-template.html', package='AdhereR');
@@ -4495,7 +4508,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         writeLines(html.template, file.html, sep="\n");
       }
 
-      if( any(c("png", "ps", "pdf", "webp") %in% export.formats) )
+      if( export.formats.save.svg.placeholder ||
+          any(c("jpg", "png", "ps", "pdf", "webp") %in% export.formats) )
       {
         ## Export to flat file formats (PNG, JPG, PS, PDF or WEBP) ####
         # Need to covert the SVG to one of these, so we need to export it (if not already exported):
@@ -4505,24 +4519,52 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           writeLines(c(svg.header, svg.str), file.svg, sep="");
         }
 
-        if( "png" %in% export.formats )
+        if( export.formats.save.svg.placeholder ||
+            any(c("jpg", "png","webp") %in% export.formats) )
         {
-          # PNG file:
-          file.png <- ifelse( is.na(export.formats.directory),
-                              tempfile(export.formats.fileprefix, fileext=".png"),
-                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
-          exported.file.names <- c(exported.file.names, file.png);
-          rsvg::rsvg_png(file.svg, file=file.png);
-        }
+          # For the bitmapped formats, render it once:
+          bitmap <- rsvg::rsvg(file.svg,
+                               height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                               width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
 
-        if( "webp" %in% export.formats )
-        {
-          # WEBP file:
-          file.webp <- ifelse( is.na(export.formats.directory),
-                               tempfile(export.formats.fileprefix, fileext=".webp"),
-                               file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
-          exported.file.names <- c(exported.file.names, file.webp);
-          rsvg::rsvg_webp(file.svg, file=file.webp);
+          if( export.formats.save.svg.placeholder )
+          {
+            # The JPG placeholder:
+            exported.file.names <- c(exported.file.names, svg.placeholder.filename);
+            jpeg::writeJPEG(bitmap, svg.placeholder.filename, quality=0.90);
+          }
+
+          if( "jpg" %in% export.formats )
+          {
+            # JPG file:
+            file.jpg <- ifelse( is.na(export.formats.directory),
+                                tempfile(export.formats.fileprefix, fileext=".jpg"),
+                                file.path(export.formats.directory, paste0(export.formats.fileprefix,".jpg")) );
+            exported.file.names <- c(exported.file.names, file.jpg);
+            jpeg::writeJPEG(bitmap, file.jpg, quality=0.90);
+          }
+
+          if( "png" %in% export.formats )
+          {
+            # PNG file:
+            file.png <- ifelse( is.na(export.formats.directory),
+                                tempfile(export.formats.fileprefix, fileext=".png"),
+                                file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
+            exported.file.names <- c(exported.file.names, file.png);
+            #rsvg::rsvg_png(file.svg, file=file.png);
+            png::writePNG(bitmap, file.png, dpi=150);
+          }
+
+          if( "webp" %in% export.formats )
+          {
+            # WEBP file:
+            file.webp <- ifelse( is.na(export.formats.directory),
+                                 tempfile(export.formats.fileprefix, fileext=".webp"),
+                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
+            exported.file.names <- c(exported.file.names, file.webp);
+            #rsvg::rsvg_webp(file.svg, file=file.webp);
+            webp::write_webp(bitmap, file.webp, quality=90);
+          }
         }
 
         if( "ps" %in% export.formats )
@@ -4564,7 +4606,7 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
 )
 {
   # What sorts of plots to generate (use short names for short if statements):
-  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "png", "webp", "ps", "pdf") %in% export.formats));
+  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "jpg", "png", "webp", "ps", "pdf") %in% export.formats));
   if( !.do.R && !.do.SVG )
   {
     # Nothing to plot!
@@ -4688,7 +4730,7 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
         writeLines(html.template, file.html, sep="\n");
       }
 
-      if( any(c("png", "ps", "pdf", "webp") %in% export.formats) )
+      if( any(c("jpg", "png", "ps", "pdf", "webp") %in% export.formats) )
       {
         ## Export to flat file formats (PNG, JPG, PS, PDF or WEBP) ####
         # Need to covert the SVG to one of these, so we need to export it (if not already exported):
@@ -4698,24 +4740,42 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
           writeLines(c(svg.header, svg.str), file.svg, sep="");
         }
 
-        if( "png" %in% export.formats )
+        if( any(c("jpg", "png","webp") %in% export.formats) )
         {
-          # PNG file:
-          file.png <- ifelse( is.na(export.formats.directory),
-                              tempfile(export.formats.fileprefix, fileext=".png"),
-                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
-          exported.file.names <- c(exported.file.names, file.png);
-          rsvg::rsvg_png(file.svg, file=file.png);
-        }
+          # For the bitmapped formats, render it once:
+          bitmap <- rsvg(file.svg); # , height = 1440
 
-        if( "webp" %in% export.formats )
-        {
-          # WEBP file:
-          file.webp <- ifelse( is.na(export.formats.directory),
-                               tempfile(export.formats.fileprefix, fileext=".webp"),
-                               file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
-          exported.file.names <- c(exported.file.names, file.webp);
-          rsvg::rsvg_webp(file.svg, file=file.webp);
+          if( "jpg" %in% export.formats )
+          {
+            # JPG file:
+            file.jpg <- ifelse( is.na(export.formats.directory),
+                                tempfile(export.formats.fileprefix, fileext=".jpg"),
+                                file.path(export.formats.directory, paste0(export.formats.fileprefix,".jpg")) );
+            exported.file.names <- c(exported.file.names, file.jpg);
+            jpeg::writeJPEG(bitmap, file.jpg, quality=0.90);
+          }
+
+          if( "png" %in% export.formats )
+          {
+            # PNG file:
+            file.png <- ifelse( is.na(export.formats.directory),
+                                tempfile(export.formats.fileprefix, fileext=".png"),
+                                file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
+            exported.file.names <- c(exported.file.names, file.png);
+            #rsvg::rsvg_png(file.svg, file=file.png);
+            png::writePNG(bitmap, file.png, dpi=150);
+          }
+
+          if( "webp" %in% export.formats )
+          {
+            # WEBP file:
+            file.webp <- ifelse( is.na(export.formats.directory),
+                                 tempfile(export.formats.fileprefix, fileext=".webp"),
+                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
+            exported.file.names <- c(exported.file.names, file.webp);
+            #rsvg::rsvg_webp(file.svg, file=file.webp);
+            webp::write_webp(bitmap, file.webp, quality=90);
+          }
         }
 
         if( "ps" %in% export.formats )

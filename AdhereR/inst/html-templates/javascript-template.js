@@ -69,6 +69,9 @@ var adh_svg = { // begin namespace
   // The SVG plot's ID:
   plot_id : 'adherence_plot',
 
+  // SVG placeholder (if any):
+  svg_placeholder_file_name : '',
+
   // Default values so we are able to restore them later if need be:
   label_style_default : "color: black", // the default lablel CSS style
   label_style_disabled : "color: #aaa;", // the disabled label look
@@ -781,12 +784,12 @@ window.onload = function() {
 
     // ... and replace them by the placeholder image and a short message:
     var item = document.createElement("img");
-    item.setAttribute("src", "https://upload.wikimedia.org/wikipedia/commons/d/db/Patern_test.jpg");
+    item.setAttribute("src", adh_svg.svg_placeholder_file_name);
     //item.setAttribute("height", "600");
     item.setAttribute("alt", "Adherence plot");
     document.body.appendChild(item);
     item = document.createElement("div");
-    item.innerHTML = "<br/></br><b>Note:</b> your browser doe not seem to support embedded SVGs, so we are displaying a PNG image instead.<br/>However, if you think that SVG should be supported, please check your browser settings (e.g., for Internet Explorer 9 make sure it is not set to compatibility mode) and reload this page.";
+    item.innerHTML = "<br/></br><b>Note:</b> your browser does not seem to support embedded SVGs, so we are displaying a JPEG image instead.<br/>However, if you think that SVG should be supported, please check your browser settings (e.g., for Internet Explorer 9 make sure it is not set to compatibility mode) and reload this page.";
     document.body.appendChild(item);
 
     // End the function now:
