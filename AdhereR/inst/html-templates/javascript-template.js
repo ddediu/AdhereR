@@ -72,6 +72,7 @@ var adh_svg = { // begin namespace
   // Default values so we are able to restore them later if need be:
   label_style_default : "color: black", // the default lablel CSS style
   label_style_disabled : "color: #aaa;", // the disabled label look
+  default_svg_width : "auto", default_svg_height : "auto", // default SVG size
   default_font_size_title : "15px", // default axes font sizes
   default_font_size_axis_names : {"x":"10px", "y":"10px"}, // default axes names font sizes
   default_font_size_axis_labels : {"x":"8px", "y":"8px"}, // default axes labels font sizes
@@ -754,7 +755,7 @@ function image_change_size(ds) {
   new_w = img_dims.w * ds; new_h = img_dims.h * ds; // the new size
   if(new_w < 1 || new_h < 1) return; // can't go below 1!
 
-  adh_svg.set_plot_size(new_w, new_h); // set the new dimension
+  adh_svg.set_plot_size(new_w + 'px', new_h + 'px'); // set the new dimension
 }
 
 
@@ -781,6 +782,7 @@ window.onload = function() {
   tmp = document.getElementById("button_toggle_alt_bands");
   adh_svg.label_style_default = tmp ? tmp.style : "none"; // save the default lablel CSS style
   adh_svg.label_style_disabled = "color: #aaa;" // and this is the disabled lable look
+  img_dims = adh_svg.get_plot_size(); adh_svg.default_svg_width = (img_dims.w === undefined) ? "auto" : img_dims.w; adh_svg.default_svg_height = (img_dims.h === undefined) ? "auto" : img_dims.h; // default SVG size
   adh_svg.default_font_size_title = adh_svg.get_font_size_title(); // default title font sizes
   adh_svg.default_font_size_axis_names = adh_svg.get_font_size_axis_names(); // default axes names font sizes
   adh_svg.default_font_size_axis_labels = adh_svg.get_font_size_axis_labels(); // default axes labels font sizes

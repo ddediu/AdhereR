@@ -19,7 +19,7 @@
       <!-- Image size -->
       <b>Image size: &nbsp;</b>
       <span title="Restore plot to its default dimensions">
-        <button id="button_image_size_default" onclick='adh_svg.set_plot_size()'>default</button>
+        <button id="button_image_size_default" onclick='adh_svg.set_plot_size( isNaN(adh_svg.default_svg_width) ? adh_svg.default_svg_width : adh_svg.default_svg_width+"px", isNaN(adh_svg.default_svg_height) ?  adh_svg.default_svg_height : adh_svg.default_svg_height+"px")'>default</button>
       </span>
       &nbsp;
       <span title="Increase/decrease image dimensions by 25%">
