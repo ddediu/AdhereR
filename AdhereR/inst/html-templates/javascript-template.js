@@ -13,6 +13,55 @@
 //      - does not implement getElementsByClassName() so use: https://stackoverflow.com/questions/7410949/javascript-document-getelementsbyclassname-compatibility-with-ie
 //      - does not implement hasAttribute() so use: https://andrewdupont.net/2007/01/10/code-hasattribute-for-ie/
 
+// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys
+if (!Object.keys) {
+  Object.keys = (function() {
+    'use strict';
+    var hasOwnProperty = Object.prototype.hasOwnProperty,
+        hasDontEnumBug = !({ toString: null }).propertyIsEnumerable('toString'),
+        dontEnums = [
+          'toString',
+          'toLocaleString',
+          'valueOf',
+          'hasOwnProperty',
+          'isPrototypeOf',
+          'propertyIsEnumerable',
+          'constructor'
+        ],
+        dontEnumsLength = dontEnums.length;
+
+    return function(obj) {
+      if (typeof obj !== 'function' && (typeof obj !== 'object' || obj === null)) {
+        throw new TypeError('Object.keys called on non-object');
+      }
+
+      var result = [], prop, i;
+
+      for (prop in obj) {
+        if (hasOwnProperty.call(obj, prop)) {
+          result.push(prop);
+        }
+      }
+
+      if (hasDontEnumBug) {
+        for (i = 0; i < dontEnumsLength; i++) {
+          if (hasOwnProperty.call(obj, dontEnums[i])) {
+            result.push(dontEnums[i]);
+          }
+        }
+      }
+      return result;
+    };
+  }());
+}
+
+// From: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/isArray
+if (!Array.isArray) {
+  Array.isArray = function(arg) {
+    return Object.prototype.toString.call(arg) === '[object Array]';
+  };
+}
+
 
 // Simulate a namespace 'adh_svg' to avoid potential conflicts with other JavaScript libraries:
 var adh_svg = { // begin namespace
@@ -804,7 +853,7 @@ window.onload = function() {
   // the idea is to disable the check button and the label if the element does not exist in the SVG, and to enable it if the element exists and is visible...
   if(adh_svg.exists_alternating_bands()) {
     tmp = document.getElementById("button_toggle_alt_bands"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_alternating_bands(); }
-    tmp = document.getElementById("label_toggle_alt_bands"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_default; }
+    tmp = document.getElementById("label_toggle_alt_bands"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
   } else {
     tmp = document.getElementById("button_toggle_alt_bands"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_alt_bands"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
@@ -812,7 +861,7 @@ window.onload = function() {
 
   if(adh_svg.exists_axis_names()["x"]) {
     tmp = document.getElementById("button_toggle_x_axis_name"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_names()["x"]; }
-    tmp = document.getElementById("label_toggle_x_axis_name"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_default; }
+    tmp = document.getElementById("label_toggle_x_axis_name"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
   } else {
     tmp = document.getElementById("button_toggle_x_axis_name"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_x_axis_name"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
@@ -820,7 +869,7 @@ window.onload = function() {
 
   if(adh_svg.exists_axis_labels()["x"]) {
     tmp = document.getElementById("button_toggle_x_axis_labels"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_labels()["x"]; }
-    tmp = document.getElementById("label_toggle_x_axis_labels"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_default; }
+    tmp = document.getElementById("label_toggle_x_axis_labels"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
   } else {
     tmp = document.getElementById("button_toggle_x_axis_labels"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_x_axis_labels"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
@@ -828,7 +877,7 @@ window.onload = function() {
 
   if(adh_svg.exists_axis_names()["y"]) {
     tmp = document.getElementById("button_toggle_y_axis_name"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_names()["y"]; }
-    tmp = document.getElementById("label_toggle_y_axis_name"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_default; }
+    tmp = document.getElementById("label_toggle_y_axis_name"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
   } else {
     tmp = document.getElementById("button_toggle_y_axis_name"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_y_axis_name"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
@@ -836,7 +885,7 @@ window.onload = function() {
 
   if(adh_svg.exists_axis_labels()["y"]) {
     tmp = document.getElementById("button_toggle_y_axis_labels"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_labels()["y"]; }
-    tmp = document.getElementById("label_toggle_y_axis_labels"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_default; }
+    tmp = document.getElementById("label_toggle_y_axis_labels"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
   } else {
     tmp = document.getElementById("button_toggle_y_axis_labels"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_y_axis_labels"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
@@ -844,7 +893,7 @@ window.onload = function() {
 
   if(adh_svg.exists_title()) {
     tmp = document.getElementById("button_toggle_title"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_title(); }
-    tmp = document.getElementById("label_toggle_title"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_default; }
+    tmp = document.getElementById("label_toggle_title"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
   } else {
     tmp = document.getElementById("button_toggle_title"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_title"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
@@ -852,7 +901,7 @@ window.onload = function() {
 
   if(adh_svg.exists_legend()) {
     tmp = document.getElementById("button_toggle_legend"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_legend(); }
-    tmp = document.getElementById("label_toggle_legend"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_default; }
+    tmp = document.getElementById("label_toggle_legend"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
   } else {
     tmp = document.getElementById("button_toggle_legend"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_legend"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
@@ -860,7 +909,7 @@ window.onload = function() {
 
   if(adh_svg.exists_fuw()) {
     tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_fuw(); }
-    tmp = document.getElementById("label_toggle_fuw"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_default; }
+    tmp = document.getElementById("label_toggle_fuw"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
   } else {
     tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_fuw"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
@@ -868,7 +917,7 @@ window.onload = function() {
 
   if(adh_svg.exists_ow()) {
     tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_ow(); }
-    tmp = document.getElementById("label_toggle_ow"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_default; }
+    tmp = document.getElementById("label_toggle_ow"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
   } else {
     tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_ow"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
@@ -876,7 +925,7 @@ window.onload = function() {
 
   if(adh_svg.exists_ow_real()) {
     tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_ow_real(); }
-    tmp = document.getElementById("label_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_default; }
+    tmp = document.getElementById("label_toggle_ow_real"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
   } else {
     tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
