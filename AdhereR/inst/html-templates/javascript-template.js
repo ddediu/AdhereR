@@ -757,34 +757,34 @@ window.onload = function() {
   l_rect = adh_svg._getElementsByClassName(svg, "legend-fuw-rect");
   for(j=0; j<l_rect.length; j++) {
     l_rect[j].style.cursor = "pointer";
-    l_rect[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); }, false);
+    l_rect[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
   l_label = adh_svg._getElementsByClassName(svg, "legend-fuw-label");
   for(j=0; j<l_label.length; j++) {
     l_label[j].style.cursor = "pointer";
-    l_label[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); }, false);
+    l_label[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
   // The OW (if any):
   l_rect = adh_svg._getElementsByClassName(svg, "legend-ow-rect");
   for(j=0; j<l_rect.length; j++) {
     l_rect[j].style.cursor = "pointer";
-    l_rect[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); }, false);
+    l_rect[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
   l_label = adh_svg._getElementsByClassName(svg, "legend-ow-label");
   for(j=0; j<l_label.length; j++) {
     l_label[j].style.cursor = "pointer";
-    l_label[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); }, false);
+    l_label[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
   // The "real" OW [CMA8] (if any):
   l_rect = adh_svg._getElementsByClassName(svg, "legend-ow-real-rect");
   for(j=0; j<l_rect.length; j++) {
     l_rect[j].style.cursor = "pointer";
-    l_rect[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); }, false);
+    l_rect[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
   l_label = adh_svg._getElementsByClassName(svg, "legend-ow-real-label");
   for(j=0; j<l_label.length; j++) {
     l_label[j].style.cursor = "pointer";
-    l_label[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); }, false);
+    l_label[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
 
   // (Un)check and (dis)able various components in the HTML document
