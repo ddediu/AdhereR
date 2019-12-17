@@ -988,6 +988,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
                        lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                        show.event.intervals=TRUE,             # show the actual prescription intervals
+                       plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                        print.dose=FALSE, cex.dose=0.75, print.dose.col="black", print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                        plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                        col.na="lightgray",                    # color for mising data
@@ -1017,16 +1018,18 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
                        suppress.warnings=FALSE,         # suppress warnings?
-                       export.formats=NULL,             # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "png", "webp", "ps" and "pdf"
+                       export.formats=NULL,             # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
                        export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
+                       export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
+                       export.formats.save.svg.placeholder=TRUE, # if TRUE, save a JPG placeholder for the SVG image
                        export.formats.directory=NA,     # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                        generate.R.plot=TRUE,            # generate standard (base R) plot for plotting within R?
                        ...
 )
 {
 
-  # FORCE SVG PLOTTING ####
-  if( TRUE )
+  # DEBUG: FORCE SVG PLOTTING ####
+  if( FALSE )
   {
    # Force debugging SVG plotting:
    export.formats <- c("html");
@@ -1036,7 +1039,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
 
   # What sorts of plots to generate (use short names for short if statements):
-  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "png", "webp", "ps", "pdf") %in% export.formats));
+  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "jpg", "png", "webp", "ps", "pdf") %in% export.formats));
   if( !.do.R && !.do.SVG )
   {
     # Nothing to plot!
@@ -1678,6 +1681,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     par(mai=c(cur.mai[1], new.left.margin, cur.mai[3], cur.mai[4]));
   }
 
+  # Vertical space needed by the events ####
+  vert.space.events <- ifelse(plot.events.vertically.displaced, # are the events for the same patient displayed on different rows?
+                              nrow(cma$data), # if yes, we need space for all individual events
+                              length(unique(cma$data[,cma$ID.colname]))); # otherwise, we only needs space for each patient
+
   # Vertical space needed for showing the partial CMAs:
   vert.space.cmas <- 0;
   if( is.cma.TS.or.SW )
@@ -1730,6 +1738,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     date.labels <- data.frame("position"=adh.plot.space[2] + xpos, "string"=axis.labels);
   }
 
+
   ##
   ## SVG definitions and setup ####
   ##
@@ -1758,7 +1767,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     dims.plot.x           <- (dims.axis.y + dims.chr.std);
     dims.plot.y           <- (dims.chr.title + dims.chr.std);
     dims.plot.width       <- (dims.event.x * (duration.total + 10)/dims.day);
-    dims.plot.height      <- (dims.event.y * (nrow(cma$data)+vert.space.cmas+1));
+    dims.plot.height      <- (dims.event.y * (vert.space.events+vert.space.cmas+1));
     dims.total.width      <- (dims.plot.x + dims.plot.width);
     dims.total.height     <- (dims.plot.y + dims.plot.height + dims.axis.x);
 
@@ -1875,7 +1884,6 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                  '\n');
   }
 
-
   ##
   ## The actual plotting ####
   ##
@@ -1889,7 +1897,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if(inherits(msg <- try(plot( 0, 1,
                                  xlim=c(0-5,duration.total+5), # pad left and right by 5 days to improve plotting
                                  xaxs="i",
-                                 ylim=c(0,nrow(cma$data)+vert.space.cmas+1),
+                                 ylim=c(0,vert.space.events+vert.space.cmas+1),
                                  yaxs="i",
                                  type="n",
                                  axes=FALSE,
@@ -1919,7 +1927,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
     # Minimum plot dimensions:
     if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
-        abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * (nrow(cma$data) + ifelse(is.cma.TS.or.SW && plot.CMA && has.estimated.CMA, nrow(cmas), 0)) )
+        abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * (vert.space.events + ifelse(is.cma.TS.or.SW && plot.CMA && has.estimated.CMA, nrow(cmas), 0)) )
     {
       .report.ewms(paste0("Plotting area is too small (it must be at least ",
                      min.plot.size.in.characters.horiz,
@@ -1928,7 +1936,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                      " characters per patient, but now it is only ",
                      round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
                      " x ",
-                     round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (nrow(cma$data) + ifelse(is.cma.TS.or.SW && plot.CMA && has.estimated.CMA, nrow(cmas), 0))),1),
+                     round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (vert.space.events + ifelse(is.cma.TS.or.SW && plot.CMA && has.estimated.CMA, nrow(cmas), 0))),1),
                      ")!\n"), "error", ".plot.CMAs", "AdhereR");
       par(old.par); # restore graphical params
       #assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
@@ -1995,8 +2003,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       # Computed things:
       "old.par"=old.par,
       "used.par"=par(no.readonly=TRUE),
-      "xlim"=c(0-5,duration.total+5), "ylim"=c(0,nrow(cma$data)+vert.space.cmas+1),
-      "x.min"=0, "x.max"=duration.total, "y.min"=1, "y.max"=nrow(cma$data)+vert.space.cmas,
+      "xlim"=c(0-5,duration.total+5), "ylim"=c(0,vert.space.events+vert.space.cmas+1),
+      "x.min"=0, "x.max"=duration.total, "y.min"=1, "y.max"=vert.space.events+vert.space.cmas,
       "dose.text.height"=ifelse(print.dose, dose.text.height, NA),
       "char.width"=char.width, "char.height"=char.height,
       "char.height.CMA"=char.height.CMA,
@@ -2083,7 +2091,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       # Computed things:
       "x"=0, "y"=0,
       "width"=dims.total.width, "height"=dims.total.height,
-      "x.min"=0, "x.max"=duration.total, "y.min"=1, "y.max"=nrow(cma$data)+vert.space.cmas,
+      "x.min"=0, "x.max"=duration.total, "y.min"=1, "y.max"=vert.space.events+vert.space.cmas,
       "dims.chr.std"=dims.chr.std,
       "dims.chr.event"=dims.chr.event,
       "dims.chr.title"=dims.chr.title,
@@ -2233,8 +2241,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       s.events <- which(cma$data[,cma$ID.colname] == cur_pat_id);
       s.cmas   <- which(cmas[,cma$ID.colname]     == cur_pat_id);
 
-      # Total vartical space neede by this patient:
-      vspace.needed <- length(s.events) +
+      # Vertical space needed by this patient for the events and overall:
+      vspace.needed.events <- ifelse(plot.events.vertically.displaced, length(s.events), 1);
+      vspace.needed.total  <- vspace.needed.events +
         ifelse(plot.CMA && has.estimated.CMA && adh.plot.space[2] > 0,
                (length(s.cmas)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
                  3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
@@ -2251,14 +2260,14 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       {
         if( .do.R ) # Rplot:
         {
-          rect( 0.0 - 1.0, y.cur - 0.5, duration.total + 1.0, y.cur + vspace.needed - 0.5, col=alternating.bands.cols[alternating.band.to.draw], border=NA );
+          rect( 0.0 - 1.0, y.cur - 0.5, duration.total + 1.0, y.cur + vspace.needed.total - 0.5, col=alternating.bands.cols[alternating.band.to.draw], border=NA );
         }
 
         if( .do.SVG ) # SVG:
         {
           svg.str <- c(svg.str,
-                       .SVG.rect(x=.scale.x.to.SVG.plot(0), y=.scale.y.to.SVG.plot(y.cur - 0.5 + vspace.needed),
-                                 width=dims.plot.width, height=.scale.height.to.SVG.plot(vspace.needed),
+                       .SVG.rect(x=.scale.x.to.SVG.plot(0), y=.scale.y.to.SVG.plot(y.cur - 0.5 + vspace.needed.total),
+                                 width=dims.plot.width, height=.scale.height.to.SVG.plot(vspace.needed.total),
                                  fill=alternating.bands.cols[alternating.band.to.draw],
                                  class=paste0("alternating-bands-",alternating.band.to.draw), comment="The alternating band")
           );
@@ -2281,7 +2290,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
           .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.START"] <- (y.cur - 0.5);
           .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.END"]   <- (y.cur + length(s.events) - 0.5);
+          .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.END"]   <- (y.cur + vspace.needed.events - 0.5);
 
           # Draw:
           rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.FUW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.FUW.START"],
@@ -2293,7 +2302,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         {
           # Save the info:
           .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.START"] <- .scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5);
+          .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
           .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
           .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
 
@@ -2302,7 +2311,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        # FUW:
                        .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.FUW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.FUW.START"],
                                  width=.scale.width.to.SVG.plot(as.numeric(cmas$.FU.END.DATE[s.cmas[1]] - cmas$.FU.START.DATE[s.cmas[1]])),
-                                 height=.scale.height.to.SVG.plot(length(s.events)),
+                                 height=.scale.height.to.SVG.plot(vspace.needed.events),
                                  stroke=followup.window.col, stroke_width=2, lty="dashed", fill="white", fill_opacity=0.0, # fully transparent but tooltips also work
                                  class="fuw", comment="The Follow-Up Window (FUW)", tooltip="Follow-Up Window (FUW)")
           );
@@ -2317,7 +2326,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
           .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.START"] <- (y.cur - 0.5);
           .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.END"]   <- (y.cur + length(s.events) - 0.5);
+          .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.END"]   <- (y.cur + vspace.needed.events - 0.5);
 
           # Draw:
           rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.OW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.OW.START"],
@@ -2329,7 +2338,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         {
           # Save the info:
           .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.START"] <- .scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5);
+          .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
           .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
           .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
 
@@ -2338,7 +2347,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        # OW:
                        .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.OW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.OW.START"],
                                  width=.scale.width.to.SVG.plot(as.numeric(cmas$.OBS.END.DATE[s.cmas[1]] - cmas$.OBS.START.DATE[s.cmas[1]])),
-                                 height=.scale.height.to.SVG.plot(length(s.events)),
+                                 height=.scale.height.to.SVG.plot(vspace.needed.events),
                                  stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
                                  class="ow", comment="The Observation Window (OW)", tooltip="Observation Window (OW)")
           );
@@ -2374,7 +2383,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
               .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.START"] <- (adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
               .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.START"] <- (y.cur - 0.5);
               .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.END"]   <- (adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + correct.earliest.followup.window);
-              .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.END"]   <- (y.cur + length(s.events) - 0.5);
+              .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.END"]   <- (y.cur + vspace.needed.events - 0.5);
 
               # Draw:
               rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.ROW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.ROW.START"],
@@ -2386,7 +2395,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             {
               # Save the info:
               .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
-              .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.START"] <- .scale.y.to.SVG.plot(y.cur + length(s.events) - 0.5);
+              .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
               .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
               .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
 
@@ -2395,7 +2404,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                            # "real" OW:
                            .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.ROW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.ROW.START"],
                                      width=.scale.width.to.SVG.plot(as.numeric(real.obs.window.end - real.obs.window.start)),
-                                     height=.scale.height.to.SVG.plot(length(s.events)),
+                                     height=.scale.height.to.SVG.plot(vspace.needed.events),
                                      stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
                                      class="ow-real", comment="The 'real' Observation Window", tooltip="'Real' Observation Window")
               );
@@ -2410,7 +2419,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
       # The y-axis label:
       pid <- cur_pat_id;
-      y.mean <- y.cur + vspace.needed/2; # vertical position of the label (centered on patient)
+      y.mean <- y.cur + vspace.needed.total/2 - ifelse(plot.events.vertically.displaced, 0.0, 0.5); # vertical position of the label (centered on patient)
       if( .do.R ) # Rplot:
       {
         text(par("usr")[1], y.mean, pid, cex=cex.axis, srt=-rotate.text, pos=2, xpd=TRUE);
@@ -2425,7 +2434,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       if( .do.SVG ) # SVG:
       {
         svg.str <- c(svg.str,
-                     .SVG.text(x=(dims.plot.x - dims.chr.axis), y=.scale.y.to.SVG.plot(y.cur + vspace.needed/2), text=pid,
+                     .SVG.text(x=(dims.plot.x - dims.chr.axis), y=.scale.y.to.SVG.plot(y.cur + vspace.needed.total/2), text=pid,
                                font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
                                class="axis-labels-y", comment="The y-axis labels", suppress.warnings=suppress.warnings)
         );
@@ -2434,7 +2443,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         .last.cma.plot.info$SVG$y.labels <- rbind(.last.cma.plot.info$SVG$y.labels,
                                                   data.frame("string"=pid,
                                                              "x"=(dims.plot.x - dims.chr.axis),
-                                                             "y"=.scale.y.to.SVG.plot(y.cur + vspace.needed/2),
+                                                             "y"=.scale.y.to.SVG.plot(y.cur + vspace.needed.total/2),
                                                              "font.size"=dims.chr.axis));
       }
 
@@ -2537,14 +2546,27 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
           if( !is.na(adh) )
           {
+            # The vertical position where it will be drawn and its vertical extent:
+            if( plot.events.vertically.displaced )
+            {
+              # Events are vertically displaced:
+              adh.y <- mean(s.events);
+              adh.h <- 1;
+            } else
+            {
+              # Events are all on a single line:
+              adh.y <- y.cur;
+              adh.h <- 0.25;
+            }
+
             if( .do.R ) # Rplot:
             {
               # Draw the background rectangle:
               # Save the info:
               .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.START"] <- .rescale.xcoord.for.CMA.plot(0.0);
-              .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.START"] <- (mean(s.events) - 1);
+              .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.START"] <- (adh.y - adh.h);
               .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.END"]   <- .rescale.xcoord.for.CMA.plot(max(1.0,adh.max));
-              .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.END"]   <- (mean(s.events) + 1);
+              .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.END"]   <- (adh.y + adh.h);
 
               # Draw:
               rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
@@ -2559,9 +2581,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             {
               # Save the info:
               .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.START"] <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0));
-              .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.START"] <- .scale.y.to.SVG.plot(mean(s.events)+1);
+              .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.START"] <- .scale.y.to.SVG.plot(adh.y + adh.h);
               .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.END"]   <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)));
-              .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.END"]   <- .scale.y.to.SVG.plot(mean(s.events)-1);
+              .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.END"]   <- .scale.y.to.SVG.plot(adh.y - adh.h);
 
               # Draw:
               svg.str <- c(svg.str,
@@ -2588,11 +2610,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             {
               if( strwidth(cma.string, cex=CMA.cex) <= available.x.space )
               { # horizontal writing of the CMA:
-                text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s.events),
+                text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
                      labels=cma.string, col=CMA.plot.text, cex=CMA.cex);
               } else if( strheight(cma.string, cex=CMA.cex) <= available.x.space )
               { # vertical writing of the CMA:
-                text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=mean(s.events),
+                text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
                      labels=cma.string, col=CMA.plot.text, cex=CMA.cex, srt=90);
               } # otherwise, theres' no space for showing the CMA here
             }
@@ -2604,7 +2626,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                 svg.str <- c(svg.str,
                              # Write the CMA estimate (always vertically):
                              .SVG.text(x=.scale.x.to.SVG.plot((.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2),
-                                       y=.scale.y.to.SVG.plot(mean(s.events)),
+                                       y=.scale.y.to.SVG.plot(adh.y),
                                        text=cma.string,
                                        col=CMA.plot.text, font_size=dims.chr.cma, h.align="center", v.align="center", rotate=-90,
                                        class="cma-estimate-text", comment="The CMA estimate (as text)", suppress.warnings=suppress.warnings)
@@ -2682,9 +2704,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       {
         # Save the info:
         .last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"] <- (adh.plot.space[2] + start  + correct.earliest.followup.window);
-        .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"] <- (i - char.height/2);
+        .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"] <- (y.cur - char.height/2);
         .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"]   <- (adh.plot.space[2] + end.pi + correct.earliest.followup.window);
-        .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"]   <- (i + char.height/2);
+        .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"]   <- (y.cur + char.height/2);
 
         # Draw:
         rect(.last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"],
@@ -2694,9 +2716,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         {
           # Save the info:
           .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"] <- (adh.plot.space[2] + end.pi + correct.earliest.followup.window);
-          .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"] <- (i - char.height/2);
+          .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"] <- (y.cur - char.height/2);
           .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"]   <- (adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window);
-          .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"]   <- (i + char.height/2);
+          .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"]   <- (y.cur + char.height/2);
 
           # Draw:
           rect(.last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"],
@@ -2844,7 +2866,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
 
     # Advance to the next vertical line:
-    y.cur <- y.cur + 1;
+    if( plot.events.vertically.displaced )
+    {
+      y.cur <- y.cur + 1;
+    }
 
     # Continuation between successive events:
     if( i < nrow(cma$data) && (cur_pat_id == cma$data[i+1,cma$ID.colname]) )
@@ -2852,11 +2877,14 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       # We're still plotting the same patient: show the continuation line:
       start.next <- as.numeric(cma$data$.DATE.as.Date[i+1] - earliest.date);
 
+      # How many lines to jump?
+      cont.v.jump <- ifelse(plot.events.vertically.displaced, 1, 0);
+
       if( .do.R ) # Rplot:
       {
         # Save the info:
         .last.cma.plot.info$baseR$cma$data[i,".X.CNT.START"] <- (adh.plot.space[2] + end        + correct.earliest.followup.window);
-        .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"] <- (y.cur-1);
+        .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"] <- (y.cur - cont.v.jump);
         .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"]   <- (adh.plot.space[2] + start.next + correct.earliest.followup.window);
         .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.END"]   <- (y.cur);
 
@@ -2873,7 +2901,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       {
         # Save the info:
         .last.cma.plot.info$SVG$cma$data[i,".X.CNT.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window);
-        .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"] <- .scale.y.to.SVG.plot(y.cur-1);
+        .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"] <- .scale.y.to.SVG.plot(y.cur - cont.v.jump);
         .last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + start.next + correct.earliest.followup.window);
         .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.END"]   <- .scale.y.to.SVG.plot(y.cur);
 
@@ -2896,6 +2924,13 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       }
     } else
     { # The patient is changing or is the last one:
+
+      # Advance to next line of need be:
+      if( !plot.events.vertically.displaced )
+      {
+        y.cur <- y.cur + 1;
+      }
+
 
       ##
       ## Partial CMAs ####
@@ -4456,10 +4491,21 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
         # Add the medication categories to class names mapping as a dictionary:
         js.template <- c(js.template,
-                         '// Mapping between medication categories and -med-class-X class names\n',
+                         '// Mapping between medication categories and -med-class-X class names',
                          'adh_svg["medication_classes"] = {\n',
                          paste0('  "',names(categories.to.classes),'" : "',categories.to.classes,'"',collapse=",\n"),
-                         '\n};\n\n');
+                         '\n};\n');
+
+        if( export.formats.save.svg.placeholder )
+        {
+          # Add the JPG placeholder's filename:
+          svg.placeholder.filename <- ifelse( is.na(export.formats.directory),
+                                              tempfile(paste0(export.formats.fileprefix,"-svg-placeholder"), fileext=".jpg"),
+                                              file.path(export.formats.directory, paste0(paste0(export.formats.fileprefix,"-svg-placeholder"),".jpg")) );
+          js.template <- c(js.template,
+                           "// The SVG placeholder's filename:",
+                           paste0('adh_svg["svg_placeholder_file_name"] = "',basename(svg.placeholder.filename),'";\n'));
+        }
 
         # Load the HTML template and replace generics by their actual values before saving it in the desired location:
         html.template.path <- system.file('html-templates/html-template.html', package='AdhereR');
@@ -4495,7 +4541,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         writeLines(html.template, file.html, sep="\n");
       }
 
-      if( any(c("png", "ps", "pdf", "webp") %in% export.formats) )
+      if( export.formats.save.svg.placeholder ||
+          any(c("jpg", "png", "ps", "pdf", "webp") %in% export.formats) )
       {
         ## Export to flat file formats (PNG, JPG, PS, PDF or WEBP) ####
         # Need to covert the SVG to one of these, so we need to export it (if not already exported):
@@ -4505,24 +4552,52 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           writeLines(c(svg.header, svg.str), file.svg, sep="");
         }
 
-        if( "png" %in% export.formats )
+        if( export.formats.save.svg.placeholder ||
+            any(c("jpg", "png","webp") %in% export.formats) )
         {
-          # PNG file:
-          file.png <- ifelse( is.na(export.formats.directory),
-                              tempfile(export.formats.fileprefix, fileext=".png"),
-                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
-          exported.file.names <- c(exported.file.names, file.png);
-          rsvg::rsvg_png(file.svg, file=file.png);
-        }
+          # For the bitmapped formats, render it once:
+          bitmap <- rsvg::rsvg(file.svg,
+                               height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                               width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
 
-        if( "webp" %in% export.formats )
-        {
-          # WEBP file:
-          file.webp <- ifelse( is.na(export.formats.directory),
-                               tempfile(export.formats.fileprefix, fileext=".webp"),
-                               file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
-          exported.file.names <- c(exported.file.names, file.webp);
-          rsvg::rsvg_webp(file.svg, file=file.webp);
+          if( export.formats.save.svg.placeholder )
+          {
+            # The JPG placeholder:
+            exported.file.names <- c(exported.file.names, svg.placeholder.filename);
+            jpeg::writeJPEG(bitmap, svg.placeholder.filename, quality=0.90);
+          }
+
+          if( "jpg" %in% export.formats )
+          {
+            # JPG file:
+            file.jpg <- ifelse( is.na(export.formats.directory),
+                                tempfile(export.formats.fileprefix, fileext=".jpg"),
+                                file.path(export.formats.directory, paste0(export.formats.fileprefix,".jpg")) );
+            exported.file.names <- c(exported.file.names, file.jpg);
+            jpeg::writeJPEG(bitmap, file.jpg, quality=0.90);
+          }
+
+          if( "png" %in% export.formats )
+          {
+            # PNG file:
+            file.png <- ifelse( is.na(export.formats.directory),
+                                tempfile(export.formats.fileprefix, fileext=".png"),
+                                file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
+            exported.file.names <- c(exported.file.names, file.png);
+            #rsvg::rsvg_png(file.svg, file=file.png);
+            png::writePNG(bitmap, file.png, dpi=150);
+          }
+
+          if( "webp" %in% export.formats )
+          {
+            # WEBP file:
+            file.webp <- ifelse( is.na(export.formats.directory),
+                                 tempfile(export.formats.fileprefix, fileext=".webp"),
+                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
+            exported.file.names <- c(exported.file.names, file.webp);
+            #rsvg::rsvg_webp(file.svg, file=file.webp);
+            webp::write_webp(bitmap, file.webp, quality=90);
+          }
         }
 
         if( "ps" %in% export.formats )
@@ -4564,7 +4639,7 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
 )
 {
   # What sorts of plots to generate (use short names for short if statements):
-  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "png", "webp", "ps", "pdf") %in% export.formats));
+  .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "jpg", "png", "webp", "ps", "pdf") %in% export.formats));
   if( !.do.R && !.do.SVG )
   {
     # Nothing to plot!
@@ -4688,7 +4763,7 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
         writeLines(html.template, file.html, sep="\n");
       }
 
-      if( any(c("png", "ps", "pdf", "webp") %in% export.formats) )
+      if( any(c("jpg", "png", "ps", "pdf", "webp") %in% export.formats) )
       {
         ## Export to flat file formats (PNG, JPG, PS, PDF or WEBP) ####
         # Need to covert the SVG to one of these, so we need to export it (if not already exported):
@@ -4698,24 +4773,42 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
           writeLines(c(svg.header, svg.str), file.svg, sep="");
         }
 
-        if( "png" %in% export.formats )
+        if( any(c("jpg", "png","webp") %in% export.formats) )
         {
-          # PNG file:
-          file.png <- ifelse( is.na(export.formats.directory),
-                              tempfile(export.formats.fileprefix, fileext=".png"),
-                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
-          exported.file.names <- c(exported.file.names, file.png);
-          rsvg::rsvg_png(file.svg, file=file.png);
-        }
+          # For the bitmapped formats, render it once:
+          bitmap <- rsvg(file.svg); # , height = 1440
 
-        if( "webp" %in% export.formats )
-        {
-          # WEBP file:
-          file.webp <- ifelse( is.na(export.formats.directory),
-                               tempfile(export.formats.fileprefix, fileext=".webp"),
-                               file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
-          exported.file.names <- c(exported.file.names, file.webp);
-          rsvg::rsvg_webp(file.svg, file=file.webp);
+          if( "jpg" %in% export.formats )
+          {
+            # JPG file:
+            file.jpg <- ifelse( is.na(export.formats.directory),
+                                tempfile(export.formats.fileprefix, fileext=".jpg"),
+                                file.path(export.formats.directory, paste0(export.formats.fileprefix,".jpg")) );
+            exported.file.names <- c(exported.file.names, file.jpg);
+            jpeg::writeJPEG(bitmap, file.jpg, quality=0.90);
+          }
+
+          if( "png" %in% export.formats )
+          {
+            # PNG file:
+            file.png <- ifelse( is.na(export.formats.directory),
+                                tempfile(export.formats.fileprefix, fileext=".png"),
+                                file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
+            exported.file.names <- c(exported.file.names, file.png);
+            #rsvg::rsvg_png(file.svg, file=file.png);
+            png::writePNG(bitmap, file.png, dpi=150);
+          }
+
+          if( "webp" %in% export.formats )
+          {
+            # WEBP file:
+            file.webp <- ifelse( is.na(export.formats.directory),
+                                 tempfile(export.formats.fileprefix, fileext=".webp"),
+                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
+            exported.file.names <- c(exported.file.names, file.webp);
+            #rsvg::rsvg_webp(file.svg, file=file.webp);
+            webp::write_webp(bitmap, file.webp, quality=90);
+          }
         }
 
         if( "ps" %in% export.formats )
