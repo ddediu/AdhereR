@@ -13,6 +13,55 @@
 //      - does not implement getElementsByClassName() so use: https://stackoverflow.com/questions/7410949/javascript-document-getelementsbyclassname-compatibility-with-ie
 //      - does not implement hasAttribute() so use: https://andrewdupont.net/2007/01/10/code-hasattribute-for-ie/
 
+// From https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys
+if (!Object.keys) {
+  Object.keys = (function() {
+    'use strict';
+    var hasOwnProperty = Object.prototype.hasOwnProperty,
+        hasDontEnumBug = !({ toString: null }).propertyIsEnumerable('toString'),
+        dontEnums = [
+          'toString',
+          'toLocaleString',
+          'valueOf',
+          'hasOwnProperty',
+          'isPrototypeOf',
+          'propertyIsEnumerable',
+          'constructor'
+        ],
+        dontEnumsLength = dontEnums.length;
+
+    return function(obj) {
+      if (typeof obj !== 'function' && (typeof obj !== 'object' || obj === null)) {
+        throw new TypeError('Object.keys called on non-object');
+      }
+
+      var result = [], prop, i;
+
+      for (prop in obj) {
+        if (hasOwnProperty.call(obj, prop)) {
+          result.push(prop);
+        }
+      }
+
+      if (hasDontEnumBug) {
+        for (i = 0; i < dontEnumsLength; i++) {
+          if (hasOwnProperty.call(obj, dontEnums[i])) {
+            result.push(dontEnums[i]);
+          }
+        }
+      }
+      return result;
+    };
+  }());
+}
+
+// From: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/isArray
+if (!Array.isArray) {
+  Array.isArray = function(arg) {
+    return Object.prototype.toString.call(arg) === '[object Array]';
+  };
+}
+
 
 // Simulate a namespace 'adh_svg' to avoid potential conflicts with other JavaScript libraries:
 var adh_svg = { // begin namespace
@@ -20,6 +69,16 @@ var adh_svg = { // begin namespace
   // The SVG plot's ID:
   plot_id : 'adherence_plot',
 
+  // SVG placeholder (if any):
+  svg_placeholder_file_name : '',
+
+  // Default values so we are able to restore them later if need be:
+  label_style_default : "color: black", // the default lablel CSS style
+  label_style_disabled : "color: #aaa;", // the disabled label look
+  default_svg_width : "auto", default_svg_height : "auto", // default SVG size
+  default_font_size_title : "15px", // default axes font sizes
+  default_font_size_axis_names : {"x":"10px", "y":"10px"}, // default axes names font sizes
+  default_font_size_axis_labels : {"x":"8px", "y":"8px"}, // default axes labels font sizes
 
   /**
    * Check if browser supports embedded SVG
@@ -210,8 +269,10 @@ var adh_svg = { // begin namespace
    */
   get_plot_size : function() {
     svg = document.getElementById(adh_svg.plot_id);
-    return {"w" : (svg.style.width) ? svg.style.width : "auto",
-            "h" : (svg.style.height) ? svg.style.height : "auto"}; // this is special: we go for CSS attributes directly
+    /*return {"w" : (svg.style.width) ? svg.style.width : "auto",
+            "h" : (svg.style.height) ? svg.style.height : "auto"}; // this is special: we go for CSS attributes directly*/
+    return {"w" : (svg.clientWidth) ? svg.clientWidth : "auto",
+            "h" : (svg.clientHeight) ? svg.clientHeight : "auto"}; // get the actual size in pixels
   },
 
   /**
@@ -227,12 +288,23 @@ var adh_svg = { // begin namespace
 
 
   /**
+   * Are there alternating bands visible in the document?
+   * @return {Boolean}  true if they do exist
+   */
+  exists_alternating_bands : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    alt_bands = svg.querySelectorAll('[class^="alternating-bands-"]');
+    return !(!alt_bands || alt_bands.length < 1);
+  },
+
+  /**
    * Are the alternating bands visible?
    * @return {Boolean}  true if they are visible
    */
   is_visible_alternating_bands : function() {
     svg = document.getElementById(adh_svg.plot_id);
     alt_bands = svg.querySelectorAll('[class^="alternating-bands-"]');
+    if(!alt_bands || alt_bands.length < 1) return undefined;
     return adh_svg.is_visible_svg_element(alt_bands);
   },
 
@@ -244,9 +316,21 @@ var adh_svg = { // begin namespace
   show_alternating_bands : function(show) {
     svg = document.getElementById(adh_svg.plot_id);
     alt_bands = svg.querySelectorAll('[class^="alternating-bands-"]');
-    adh_svg.show_svg_element(alt_bands, show);
+    if(!(!alt_bands || alt_bands.length < 1)) adh_svg.show_svg_element(alt_bands, show);
   },
 
+
+  /**
+   * Are the axis names defined?
+   * @return {Dictionary{x,y}} true if the corresponding axis name is defined
+   */
+  exists_axis_names : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    ret_val = {"x":false, "y":false}; // the return value
+    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); ret_val["x"] = !(!x || x.length < 1);
+    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); ret_val["y"] = !(!y || y.length < 1);
+    return ret_val;
+  },
 
   /**
    * Are the axis names visible?
@@ -255,8 +339,8 @@ var adh_svg = { // begin namespace
   is_visible_axis_names : function() {
     svg = document.getElementById(adh_svg.plot_id);
     ret_val = {"x":false, "y":false}; // the return value
-    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); ret_val["x"] = adh_svg.is_visible_svg_element(x);
-    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); ret_val["y"] = adh_svg.is_visible_svg_element(y);
+    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); ret_val["x"] = adh_svg.is_visible_svg_element(x[0]);
+    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); ret_val["y"] = adh_svg.is_visible_svg_element(y[0]);
     return ret_val;
   },
 
@@ -268,10 +352,46 @@ var adh_svg = { // begin namespace
    */
   show_axis_names : function(show_x, show_y) {
     svg = document.getElementById(adh_svg.plot_id);
-    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); adh_svg.show_svg_element(x, show_x);
-    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); adh_svg.show_svg_element(y, show_y);
+    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); adh_svg.show_svg_element(x[0], show_x);
+    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); adh_svg.show_svg_element(y[0], show_y);
   },
 
+  /**
+   * Get font size for axis names.
+   * @return {Dictionary{x,y}} the font sizes
+   */
+  get_font_size_axis_names : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    ret_val = {"x":false, "y":false}; // the return value
+    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); ret_val["x"] = adh_svg.get_svg_attribute(x[0], "font-size");
+    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); ret_val["y"] = adh_svg.get_svg_attribute(y[0], "font-size");
+    return ret_val;
+  },
+
+  /**
+   * Set font size for axis names.
+   * @param {String} sx the new font size for x axis
+   * @param {String} sy the new font size for y axis
+   * @return {None}
+   */
+  set_font_size_axis_names : function(sx, sy) {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "axis-name-x"); adh_svg.set_svg_attribute(x[0], "font-size", (sx === undefined) ? adh_svg.default_font_size_axis_names["x"] : sx);
+    y = adh_svg._getElementsByClassName(svg, "axis-name-y"); adh_svg.set_svg_attribute(y[0], "font-size", (sy === undefined) ? adh_svg.default_font_size_axis_names["y"] : sy);
+  },
+
+
+  /**
+   * Are the axis labels defined?
+   * @return {Dictionary{x,y}} true if the corresponding axis label is defined
+   */
+  exists_axis_labels : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    ret_val = {"x":false, "y":false}; // the return value
+    x = adh_svg._getElementsByClassName(svg, "axis-labels-x"); ret_val["x"] = !(!x || x.length < 1);
+    y = adh_svg._getElementsByClassName(svg, "axis-labels-y"); ret_val["y"] = !(!y || y.length < 1);
+    return ret_val;
+  },
 
   /**
    * Are the axis labels visible?
@@ -298,6 +418,40 @@ var adh_svg = { // begin namespace
     y = adh_svg._getElementsByClassName(svg, "axis-labels-y");    adh_svg.show_svg_element(y, show_y);
   },
 
+  /**
+   * Get font size for axis labels.
+   * @return {Dictionary{x,y}} the font sizes
+   */
+  get_font_size_axis_labels : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    ret_val = {"x":false, "y":false}; // the return value
+    x = adh_svg._getElementsByClassName(svg, "axis-labels-x"); ret_val["x"] = adh_svg.get_svg_attribute(x[0], "font-size");
+    y = adh_svg._getElementsByClassName(svg, "axis-labels-y"); ret_val["y"] = adh_svg.get_svg_attribute(y[0], "font-size");
+    return ret_val;
+  },
+
+  /**
+   * Set font size for axis labels.
+   * @param {String} sx the new font size for x axis
+   * @param {String} sy the new font size for y axis
+   * @return {None}
+   */
+  set_font_size_axis_labels : function(sx, sy) {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "axis-labels-x"); adh_svg.set_svg_attribute(x, "font-size", (sx === undefined) ? adh_svg.default_font_size_axis_labels["x"] : sx);
+    y = adh_svg._getElementsByClassName(svg, "axis-labels-y"); adh_svg.set_svg_attribute(y, "font-size", (sy === undefined) ? adh_svg.default_font_size_axis_labels["y"] : sy);
+  },
+
+
+  /**
+   * Does the legend exist?
+   * @return {Boolean} true if the legend exists
+   */
+  exists_legend : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = svg.getElementById("legend");
+    return !(!x || x.length < 1);
+  },
 
   /**
    * Is the legend visible?
@@ -306,6 +460,7 @@ var adh_svg = { // begin namespace
   is_visible_legend : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = svg.getElementById("legend");
+    if(!x || x.length < 1) return undefined;
     return adh_svg.is_visible_svg_element(x);
   },
 
@@ -317,9 +472,19 @@ var adh_svg = { // begin namespace
   show_legend : function(show) {
     svg = document.getElementById(adh_svg.plot_id);
     x = svg.getElementById("legend");
-    adh_svg.show_svg_element(x, show);
+    if(x) adh_svg.show_svg_element(x, show);
   },
 
+
+  /**
+   * Does the title exist?
+   * @return {Boolean} true if the title exists
+   */
+  exists_title : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "main-title");
+    return !(!x || x.length < 1);
+  },
 
   /**
    * Is the title visible?
@@ -328,7 +493,8 @@ var adh_svg = { // begin namespace
   is_visible_title : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "main-title");
-    return adh_svg.is_visible_svg_element(x);
+    if(!x || x.length < 1) return undefined;
+    return adh_svg.is_visible_svg_element(x[0]);
   },
 
   /**
@@ -339,7 +505,7 @@ var adh_svg = { // begin namespace
   show_title : function(show) {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "main-title");
-    adh_svg.show_svg_element(x, show);
+    if(x) adh_svg.show_svg_element(x[0], show);
   },
 
 
@@ -366,12 +532,23 @@ var adh_svg = { // begin namespace
 
 
   /**
+   * Does the follow-up window (FUW) exist?
+   * @return {Boolean} true if the FUW exists
+   */
+  exists_fuw : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "fuw");
+    return !(!x || x.length < 1);
+  },
+
+  /**
    * Is the follow-up window (FUW) visible?
    * @return {Boolean} true if the FUW is visible
    */
   is_visible_fuw : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "fuw");
+    if(!x || x.length < 1) return undefined;
     return adh_svg.is_visible_svg_element(x);
   },
 
@@ -383,14 +560,24 @@ var adh_svg = { // begin namespace
   show_fuw : function(show) {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "fuw");
-    //x_legend_rect = adh_svg._getElementsByClassName(svg, "legend-fuw-rect");
-    x_legend_text = adh_svg._getElementsByClassName(svg, "legend-fuw-label");
+    //x_fuw_rect = adh_svg._getElementsByClassName(svg, "legend-fuw-rect");
+    x_fuw_text = adh_svg._getElementsByClassName(svg, "legend-fuw-label");
 
-    adh_svg.show_svg_element(x, show);
-    //adh_svg.set_svg_attribute(x_legend_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
-    adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
+    if(x) adh_svg.show_svg_element(x, show);
+    //adh_svg.set_svg_attribute(x_fuw_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
+    if(x_fuw_text) adh_svg.set_svg_attribute(x_fuw_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
   },
 
+
+  /**
+   * Does the observation window (OW) exist?
+   * @return {Boolean} true if the OW exists
+   */
+  exists_ow : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "ow");
+    return !(!x || x.length < 1);
+  },
 
   /**
    * Is the observation window (OW) visible?
@@ -399,6 +586,7 @@ var adh_svg = { // begin namespace
   is_visible_ow : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "ow");
+    if(!x || x.length < 1) return undefined;
     return adh_svg.is_visible_svg_element(x);
   },
 
@@ -410,14 +598,24 @@ var adh_svg = { // begin namespace
   show_ow : function(show) {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "ow");
-    //x_legend_rect = adh_svg._getElementsByClassName(svg, "legend-ow-rect");
-    x_legend_text = adh_svg._getElementsByClassName(svg, "legend-ow-label");
+    //x_ow_rect = adh_svg._getElementsByClassName(svg, "legend-ow-rect");
+    x_ow_text = adh_svg._getElementsByClassName(svg, "legend-ow-label");
 
-    adh_svg.show_svg_element(x, show);
-    //adh_svg.set_svg_attribute(x_legend_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
-    adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
+    if(x) adh_svg.show_svg_element(x, show);
+    //adh_svg.set_svg_attribute(x_ow_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
+    if(x_ow_text) adh_svg.set_svg_attribute(x_ow_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
   },
 
+
+  /**
+   * Is there a "real" observation window (CMA8 only) defined?
+   * @return {Boolean} true if the "real" observation window is defined
+   */
+  exists_ow_real : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "ow-real");
+    return !(!x || x.length < 1);
+  },
 
   /**
    * Is the "real" observation window (CMA8 only) visible?
@@ -426,6 +624,7 @@ var adh_svg = { // begin namespace
   is_visible_ow_real : function() {
     svg = document.getElementById(adh_svg.plot_id);
     x = adh_svg._getElementsByClassName(svg, "ow-real");
+    if(!x || x.length < 1) return undefined;
     return adh_svg.is_visible_svg_element(x);
   },
 
@@ -440,9 +639,9 @@ var adh_svg = { // begin namespace
     //x_legend_rect = adh_svg._getElementsByClassName(svg, "legend-ow-real-rect");
     x_legend_text = adh_svg._getElementsByClassName(svg, "legend-ow-real-label");
 
-    adh_svg.show_svg_element(x, show);
+    if(x) adh_svg.show_svg_element(x, show);
     //adh_svg.set_svg_attribute(x_legend_rect, "stroke", (show === undefined || show) ? "Black" : "LightGray");
-    adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
+    if(x_legend_text) adh_svg.set_svg_attribute(x_legend_text, "fill",   (show === undefined || show) ? "Black" : "LightGray", elem_type="font");
   },
 
 
@@ -550,6 +749,19 @@ var adh_svg = { // begin namespace
 }; // end namespace
 
 
+// Other functions used for HTML interactions
+
+// Change the SVG image size up and down by a given multiplier:
+function image_change_size(ds) {
+  img_dims = adh_svg.get_plot_size(); // get the current image dimensions
+
+  new_w = img_dims.w * ds; new_h = img_dims.h * ds; // the new size
+  if(new_w < 1 || new_h < 1) return; // can't go below 1!
+
+  adh_svg.set_plot_size(new_w + 'px', new_h + 'px'); // set the new dimension
+}
+
+
 // Initialisation stuff:
 window.onload = function() {
   //adh_svg.set_bkg_color("white");
@@ -563,66 +775,184 @@ window.onload = function() {
   // Check if browser supports embedded SVG:
   if( !adh_svg.is_embedded_SVG_supported() ) {
     // No SVG support:
-    document.documentElemement.classList.add("no-svg");
+
+    // Remove the SVG and assoctaed control elements:
+    var item = document.getElementById(adh_svg.plot_id);
+    item.parentNode.removeChild(item);
+    item = document.getElementById("svg_controls");
+    item.parentNode.removeChild(item);
+
+    // ... and replace them by the placeholder image and a short message:
+    var item = document.createElement("img");
+    item.setAttribute("src", adh_svg.svg_placeholder_file_name);
+    //item.setAttribute("height", "600");
+    item.setAttribute("alt", "Adherence plot");
+    document.body.appendChild(item);
+    item = document.createElement("div");
+    item.innerHTML = "<br/></br><b>Note:</b> your browser does not seem to support embedded SVGs, so we are displaying a JPEG image instead.<br/>However, if you think that SVG should be supported, please check your browser settings (e.g., for Internet Explorer 9 make sure it is not set to compatibility mode) and reload this page.";
+    document.body.appendChild(item);
+
+    // End the function now:
+    return;
   }
 
   // Various set-up things:
   svg = document.getElementById(adh_svg.plot_id);
 
+  // Save default values so we are able to restore them later if need be:
+  tmp = document.getElementById("button_toggle_alt_bands");
+  adh_svg.label_style_default = tmp ? tmp.style : "none"; // save the default lablel CSS style
+  adh_svg.label_style_disabled = "color: #aaa;" // and this is the disabled lable look
+  img_dims = adh_svg.get_plot_size(); adh_svg.default_svg_width = (img_dims.w === undefined) ? "auto" : img_dims.w; adh_svg.default_svg_height = (img_dims.h === undefined) ? "auto" : img_dims.h; // default SVG size
+  adh_svg.default_font_size_title = adh_svg.get_font_size_title(); // default title font sizes
+  adh_svg.default_font_size_axis_names = adh_svg.get_font_size_axis_names(); // default axes names font sizes
+  adh_svg.default_font_size_axis_labels = adh_svg.get_font_size_axis_labels(); // default axes labels font sizes
+
   // Make (parts of) the legend clickable:
   // The medication classes (if any):
   m = adh_svg.get_medication_classes();
   if(m) {
+    // Hide the medication classes controls:
+    tmp = document.getElementById("medication_classes_div"); if(tmp) { tmp.style.display = 'block'; }
+
+    // Iterate through all medication classes:
     for(i=0; i<m.length; i++) {
       l_rect = adh_svg._getElementsByClassName(svg, "legend-medication-class-rect-" + adh_svg.get_id_for_medication_class(m[i]));
       for(j=0; j<l_rect.length; j++) {
         l_rect[j].style.cursor = "pointer";
-        l_rect[j].addEventListener("click", (function(x){ return function() { /*console.log('AddEvent()!');*/ adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })(m[i]), false);
+        l_rect[j].addEventListener("click", (function(x){ return function() { adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); tmp = document.getElementById("button_toggle_class_" + adh_svg.get_id_for_medication_class(x)); if(tmp) { tmp.checked = !tmp.checked; } }; })(m[i]), false);
       }
       l_label = adh_svg._getElementsByClassName(svg, "legend-medication-class-label-" + adh_svg.get_id_for_medication_class(m[i]));
       for(j=0; j<l_label.length; j++) {
         l_label[j].style.cursor = "pointer";
-        l_label[j].addEventListener("click", (function(x){ return function() { adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })(m[i]), false);
+        l_label[j].addEventListener("click", (function(x){ return function() { adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); tmp = document.getElementById("button_toggle_class_" + adh_svg.get_id_for_medication_class(x)); if(tmp) { tmp.checked = !tmp.checked; } }; })(m[i]), false);
       }
+      // Add the HTML elements as well:
+      node = document.createElement('span'); // the contaning <span>
+      node.title = "Show/hide " + m[i]; // the tooltip (title)
+      node.innerHTML = '<label id="label_toggle_class_' + adh_svg.get_id_for_medication_class(m[i]) + '"><input id="button_toggle_class_' + adh_svg.get_id_for_medication_class(m[i]) + '" type="checkbox" onclick=\'adh_svg.show_medication_class("' + m[i] + '", !adh_svg.is_visible_medication_class("' + m[i] + '"))\' checked="checked">' + m[i] + '</label> &nbsp;'; // the HTML content
+      tmp.appendChild(node); // ad it to the document
     }
+  } else
+  {
+    // Hide the medication classes controls:
+    tmp = document.getElementById("medication_classes_div"); if(tmp) { tmp.style.display = 'none'; }
   }
   // The FUW (if any):
   l_rect = adh_svg._getElementsByClassName(svg, "legend-fuw-rect");
   for(j=0; j<l_rect.length; j++) {
     l_rect[j].style.cursor = "pointer";
-    l_rect[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); }, false);
+    l_rect[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
   l_label = adh_svg._getElementsByClassName(svg, "legend-fuw-label");
   for(j=0; j<l_label.length; j++) {
     l_label[j].style.cursor = "pointer";
-    l_label[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); }, false);
+    l_label[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
   // The OW (if any):
   l_rect = adh_svg._getElementsByClassName(svg, "legend-ow-rect");
   for(j=0; j<l_rect.length; j++) {
     l_rect[j].style.cursor = "pointer";
-    l_rect[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); }, false);
+    l_rect[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
   l_label = adh_svg._getElementsByClassName(svg, "legend-ow-label");
   for(j=0; j<l_label.length; j++) {
     l_label[j].style.cursor = "pointer";
-    l_label[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); }, false);
+    l_label[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
   // The "real" OW [CMA8] (if any):
   l_rect = adh_svg._getElementsByClassName(svg, "legend-ow-real-rect");
   for(j=0; j<l_rect.length; j++) {
     l_rect[j].style.cursor = "pointer";
-    l_rect[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); }, false);
+    l_rect[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
   l_label = adh_svg._getElementsByClassName(svg, "legend-ow-real-label");
   for(j=0; j<l_label.length; j++) {
     l_label[j].style.cursor = "pointer";
-    l_label[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); }, false);
+    l_label[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
 
-  /*// TEST:
-  e1 = adh_svg._getElementsByClassName(svg, "main-title")[0];
-  e1.style.cursor = "pointer"; e1.addEventListener("click", (function(x){ return function() { console.log('AddEvent()!'); adh_svg.show_medication_class(x, !adh_svg.is_visible_medication_class(x)); }; })("medA"), false);*/
+  // (Un)check and (dis)able various components in the HTML document
+  // the idea is to disable the check button and the label if the element does not exist in the SVG, and to enable it if the element exists and is visible...
+  if(adh_svg.exists_alternating_bands()) {
+    tmp = document.getElementById("button_toggle_alt_bands"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_alternating_bands(); }
+    tmp = document.getElementById("label_toggle_alt_bands"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_alt_bands"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_alt_bands"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
+
+  if(adh_svg.exists_axis_names()["x"]) {
+    tmp = document.getElementById("button_toggle_x_axis_name"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_names()["x"]; }
+    tmp = document.getElementById("label_toggle_x_axis_name"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_x_axis_name"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_x_axis_name"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
+
+  if(adh_svg.exists_axis_labels()["x"]) {
+    tmp = document.getElementById("button_toggle_x_axis_labels"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_labels()["x"]; }
+    tmp = document.getElementById("label_toggle_x_axis_labels"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_x_axis_labels"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_x_axis_labels"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
+
+  if(adh_svg.exists_axis_names()["y"]) {
+    tmp = document.getElementById("button_toggle_y_axis_name"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_names()["y"]; }
+    tmp = document.getElementById("label_toggle_y_axis_name"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_y_axis_name"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_y_axis_name"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
+
+  if(adh_svg.exists_axis_labels()["y"]) {
+    tmp = document.getElementById("button_toggle_y_axis_labels"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_axis_labels()["y"]; }
+    tmp = document.getElementById("label_toggle_y_axis_labels"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_y_axis_labels"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_y_axis_labels"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
+
+  if(adh_svg.exists_title()) {
+    tmp = document.getElementById("button_toggle_title"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_title(); }
+    tmp = document.getElementById("label_toggle_title"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_title"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_title"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
+
+  if(adh_svg.exists_legend()) {
+    tmp = document.getElementById("button_toggle_legend"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_legend(); }
+    tmp = document.getElementById("label_toggle_legend"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_legend"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_legend"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
+
+  if(adh_svg.exists_fuw()) {
+    tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_fuw(); }
+    tmp = document.getElementById("label_toggle_fuw"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_fuw"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
+
+  if(adh_svg.exists_ow()) {
+    tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_ow(); }
+    tmp = document.getElementById("label_toggle_ow"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_ow"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
+
+  if(adh_svg.exists_ow_real()) {
+    tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_ow_real(); }
+    tmp = document.getElementById("label_toggle_ow_real"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
 }
 
 

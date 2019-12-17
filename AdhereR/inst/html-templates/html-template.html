@@ -1,53 +1,117 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<!DOCTYPE html">
 <html>
   <head>
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>TEMPLATE</title>
 
-    <!-- JavaScript -->
+    <!-- SVG-related JavaScript -->
     <script type="text/javascript" src="PATH-TO-JS"></script>
 
-    <!-- CSS -->
+    <!-- SVG-related CSS -->
     <link rel="stylesheet" href="PATH-TO-CSS">
+
   </head>
 
   <body>
-    <h1>Template HTML/CSS/JavaScript for SVG</h1>
-    <p>This is just an example!</p>
+    <div id="svg_controls">
 
-    <p>
-			<button onclick='adh_svg.set_plot_size(w="100px")'>Tiny</button>
-			<button onclick='adh_svg.set_plot_size(w="300px")'>Small</button>
-			<button onclick='adh_svg.set_plot_size(w="600px")'>Standard</button>
-			<button onclick='adh_svg.set_plot_size()'>Default</button>
-			<button onclick='adh_svg.set_plot_size(w="1000px")'>Big</button>
-			<button onclick='adh_svg.set_plot_size(w="10000px")'>Huge</button>
-		</p>
+      <h1>Image controls:</h1>
 
-    <p>
-			<button onclick='x=adh_svg.get_bkg_color(); adh_svg.set_bkg_color((x != "white" && x != "rgb(255,255,255)" && x != "rgb(255, 255, 255)") ? "white" : "yellow")'>Toggle background color!</button>
+      <div style="padding: 5px; margin: 5px;">
+        <!-- Image size -->
+        <b>Image size: &nbsp;</b>
+        <span title="Restore plot to its default dimensions">
+          <button id="button_image_size_default" onclick='adh_svg.set_plot_size( isNaN(adh_svg.default_svg_width) ? adh_svg.default_svg_width : adh_svg.default_svg_width+"px", isNaN(adh_svg.default_svg_height) ?  adh_svg.default_svg_height : adh_svg.default_svg_height+"px")'>default</button>
+        </span>
+        &nbsp;
+        <span title="Increase/decrease image dimensions by 25%">
+          <button id="button_image_size_decrease" onclick='image_change_size(0.75)'>-</button><button id="button_image_size_increase" onclick='image_change_size(1.25)'>+</button>
+        </span>
+      </div>
 
-			<button onclick='adh_svg.show_alternating_bands(!adh_svg.is_visible_alternating_bands())'>Toggle alternating bands!</button>
+      <div style="padding: 5px; margin: 5px;">
+        <!-- Show/hide various components of the plot -->
+        <b>Show/hide: &nbsp;</b>
+        <!--
+        <span title="Show/hide the background color">
+          <input id="button_toggle_bkg_color" onclick='x=adh_svg.get_bkg_color(); adh_svg.set_bkg_color((x != "white" && x != "rgb(255,255,255)" && x != "rgb(255, 255, 255)") ? "white" : "none")'>Background color</input>
+        </span>
+        &nbsp;
+        -->
+        <span title="Show/hide the alternating bands">
+          <label id="label_toggle_alt_bands"><input id="button_toggle_alt_bands" type="checkbox" onclick='adh_svg.show_alternating_bands(!adh_svg.is_visible_alternating_bands())'>alternating bands</label>
+        </span>
+        &nbsp;
+        <span title="Show/hide the x-axis name">
+          <label id="label_toggle_x_axis_name"><input id="button_toggle_x_axis_name" type="checkbox" onclick='tmp=adh_svg.is_visible_axis_names(); adh_svg.show_axis_names(!tmp["x"], tmp["y"])'>x-axis name</label>
+        </span>
+        &nbsp;
+        <span title="Show/hide the x-axis labels">
+          <label id="label_toggle_x_axis_labels"><input id="button_toggle_x_axis_labels" type="checkbox" onclick='tmp=adh_svg.is_visible_axis_labels(); adh_svg.show_axis_labels(!tmp["x"], tmp["y"])'>x-axis labels</label>
+        </span>
+        &nbsp;
+        <span title="Show/hide the y-axis name">
+          <label id="label_toggle_y_axis_name"><input id="button_toggle_y_axis_name" type="checkbox" onclick='tmp=adh_svg.is_visible_axis_names(); adh_svg.show_axis_names(tmp["x"], !tmp["y"])'>y-axis name</label>
+        </span>
+        &nbsp;
+        <span title="Show/hide the y-axis labels">
+          <label id="label_toggle_y_axis_labels"><input id="button_toggle_y_axis_labels" type="checkbox" onclick='tmp=adh_svg.is_visible_axis_labels(); adh_svg.show_axis_labels(tmp["x"], !tmp["y"])'>y-axis labels</label>
+        </span>
+        &nbsp;
+        <span title="Show/hide the title">
+          <label id="label_toggle_title"><input id="button_toggle_title" type="checkbox" onclick='adh_svg.show_title(!adh_svg.is_visible_title())'>title</label>
+        </span>
+        &nbsp;
+        <span title="Show/hide the legend">
+          <label id="label_toggle_legend"><input id="button_toggle_legend" type="checkbox" onclick='adh_svg.show_legend(!adh_svg.is_visible_legend())'>legend</label>
+        </span>
+        &nbsp;
+        <span title="Show/hide the follow-up window">
+          <label id="label_toggle_fuw"><input id="button_toggle_fuw" type="checkbox" onclick='adh_svg.show_fuw(!adh_svg.is_visible_fuw())'>FUW</label>
+        </span>
+        &nbsp;
+        <span title="Show/hide the observation window">
+          <label id="label_toggle_ow"><input id="button_toggle_ow" type="checkbox" onclick='adh_svg.show_ow(!adh_svg.is_visible_ow())'>OW</label>
+        </span>
+        &nbsp;
+        <span title="Show/hide the 'real' observation window (CMA8 only)">
+          <label id="label_toggle_ow_real"><input id="button_toggle_ow_real" type="checkbox" onclick='adh_svg.show_ow_real(!adh_svg.is_visible_ow_real())'>"real" OW</label>
+        </span>
+        &nbsp;
+      </div>
 
-			<button onclick='x=adh_svg.is_visible_axis_names(); adh_svg.show_axis_names(!x["x"], !x["y"])'>Toggle axes names!</button>
+      <div style="padding: 5px; margin: 5px;">
+        <!-- Various font sizes -->
+        <b>Font size: &nbsp;</b>
+        <span title="Increase/decrease title font size">
+          title:
+          <button id="button_font_size_default_title" onclick='adh_svg.set_font_size_title(adh_svg.default_font_size_title)'>default</button>
+          <button id="button_font_size_decrease_title" onclick='x=parseInt(adh_svg.get_font_size_title(),10); if(x >= 2) adh_svg.set_font_size_title((x-1).toString(10) + "px")'>-</button>
+          <button id="button_font_size_increase_title" onclick='x=parseInt(adh_svg.get_font_size_title(),10); adh_svg.set_font_size_title((x+1).toString(10) + "px")'>+</button>
+        </span>
+        &nbsp;
+        <span title="Increase/decrease axe names' font size">
+          axis names:
+          <button id="button_font_size_default_axe_names" onclick='adh_svg.set_font_size_axis_names(adh_svg.default_font_size_axis_names["x"], adh_svg.default_font_size_axis_names["y"])'>default</button>
+          <button id="button_font_size_decrease_axe_names" onclick='x=adh_svg.get_font_size_axis_names(); x["x"]=parseInt(x["x"],10); x["y"]=parseInt(x["y"],10); if(x["x"] >= 2 && x["y"] >= 2) adh_svg.set_font_size_axis_names((x["x"]-1).toString(10) + "px", (x["y"]-1).toString(10) + "px")'>-</button>
+          <button id="button_font_size_increase_axe_names" onclick='x=adh_svg.get_font_size_axis_names(); x["x"]=parseInt(x["x"],10); x["y"]=parseInt(x["y"],10); if(x["x"] >= 2 && x["y"] >= 2) adh_svg.set_font_size_axis_names((x["x"]+1).toString(10) + "px", (x["y"]+1).toString(10) + "px")'>+</button>
+        </span>
+        &nbsp;
+        <span title="Increase/decrease axe labels' font size">
+          axis labels:
+          <button id="button_font_size_default_axe_labels" onclick='adh_svg.set_font_size_axis_labels(adh_svg.default_font_size_axis_labels["x"], adh_svg.default_font_size_axis_labels["y"])'>default</button>
+          <button id="button_font_size_decrease_axe_labels" onclick='x=adh_svg.get_font_size_axis_labels(); x["x"]=parseInt(x["x"],10); x["y"]=parseInt(x["y"],10); if(x["x"] >= 2 && x["y"] >= 2) adh_svg.set_font_size_axis_labels((x["x"]-1).toString(10) + "px", (x["y"]-1).toString(10) + "px")'>-</button>
+          <button id="button_font_size_increase_axe_labels" onclick='x=adh_svg.get_font_size_axis_labels(); x["x"]=parseInt(x["x"],10); x["y"]=parseInt(x["y"],10); if(x["x"] >= 2 && x["y"] >= 2) adh_svg.set_font_size_axis_labels((x["x"]+1).toString(10) + "px", (x["y"]+1).toString(10) + "px")'>+</button>
+        </span>
+      </div>
 
-			<button onclick='x=adh_svg.is_visible_axis_labels(); adh_svg.show_axis_labels(!x["x"], !x["y"])'>Toggle axes labels!</button>
+      <div style="padding: 5px; margin: 5px; display: none;" id="medication_classes_div">
+        <!-- Medication classes -->
+        <b>Medications: &nbsp;</b>
+        <!-- Initially this list is empty, as it will be (possibly) populated based on the classes in the SVG file -->
+      </div>
 
-			<button onclick='adh_svg.show_title(!adh_svg.is_visible_title())'>Toggle title!</button>
-			<button onclick='x=adh_svg.get_font_size_title(); adh_svg.set_font_size_title(x=="15" || x=="15px" ? "18px" : "15px")'>Toggle title font size!</button>
-		</p>
-
-    <p>
-			<button onclick='adh_svg.show_legend(!adh_svg.is_visible_legend())'>Toggle legend!</button>
-		</p>
-
-    <p>
-      <button onclick='alert(adh_svg.get_medication_classes())'>List medication classes!</button>
-			<button onclick='adh_svg.show_medication_class("medA", !adh_svg.is_visible_medication_class("medA"))'>Show medication class "medA"!</button>
-			<button onclick='adh_svg.show_fuw(!adh_svg.is_visible_fuw())'>Toggle FUW!</button>
-			<button onclick='adh_svg.show_ow(!adh_svg.is_visible_ow())'>Toggle OW!</button>
-			<button onclick='adh_svg.show_ow_real(!adh_svg.is_visible_ow_real())'>Toggle "real" OW (for CMA8 only)!</button>
-		</p>
+    </div>
 
     <!--img class="adherence_plot" src="PATH-TO-IMAGE"/-->
     <object id="adherence_plot" data="PATH-TO-IMAGE" type="image/svg+xml">Please use a modern browser!</object>
