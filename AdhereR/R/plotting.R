@@ -1617,7 +1617,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
 
     # The corrected earliest follow-up window date:
-    correct.earliest.followup.window <- min(cma$data$.DATE.as.Date - min(cmas$.FU.START.DATE,na.rm=TRUE),na.rm=TRUE);
+    correct.earliest.followup.window <- as.numeric(min(cma$data$.DATE.as.Date - min(cmas$.FU.START.DATE,na.rm=TRUE),na.rm=TRUE));
   } else
   {
     # There is no correction to the earliest follow-up window date:
@@ -1725,7 +1725,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       if( align.first.event.at.zero )
       {
         # Correctly deal with events starting before the FUW (i.e., correct.earliest.followup.window < 0):
-        xpos <- c(correct.earliest.followup.window - seq(0, as.numeric(correct.earliest.followup.window), by=period.in.days * sign(as.numeric(correct.earliest.followup.window))),
+        xpos <- c(correct.earliest.followup.window - seq(0, correct.earliest.followup.window, by=period.in.days * sign(correct.earliest.followup.window)),
                   seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
         xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
         axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
@@ -3727,10 +3727,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     {
         if( align.first.event.at.zero )
         {
-            xpos <- c(correct.earliest.followup.window - seq(0, as.numeric(correct.earliest.followup.window), by=period.in.days),
-                      seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
-            xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
-            axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
+          # Correctly deal with events starting before the FUW (i.e., correct.earliest.followup.window < 0):
+          xpos <- c(correct.earliest.followup.window - seq(0, correct.earliest.followup.window, by=period.in.days * sign(correct.earliest.followup.window)),
+                    seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
+          xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
+          axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
         } else
         {
           xpos <- seq(0, as.numeric(endperiod), by=period.in.days);
