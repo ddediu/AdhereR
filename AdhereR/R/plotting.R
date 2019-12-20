@@ -4054,9 +4054,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       {
         # The legend is an object that we can move around, scale, etc:
         l1 <- c(.SVG.comment("The legend", newpara=TRUE, newline=TRUE),
-                #'<defs>\n', # don't display it yet...
                 '<g id="legend">\n');
-        #l1 <- c(.SVG.comment("The legend", newpara=TRUE, newline=TRUE));
       }
 
       # The legend origins:
@@ -4385,11 +4383,6 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       if( do.plot )
       {
         # Close the legend:
-        # l2 <- c(l2,
-        #         '</g>\n',
-        #         '</defs>\n',
-        #         # Display it as desired:
-        #         '<use xlink:href="#legend" transform="translate(',x,' ',y,')"></use>\n');
         l2 <- c(l2,
                 '</g>\n');
       }
@@ -4776,7 +4769,7 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
         if( any(c("jpg", "png","webp") %in% export.formats) )
         {
           # For the bitmapped formats, render it once:
-          bitmap <- rsvg(file.svg); # , height = 1440
+          bitmap <- rsvg::rsvg(file.svg); # , height = 1440
 
           if( "jpg" %in% export.formats )
           {
