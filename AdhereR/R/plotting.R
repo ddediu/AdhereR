@@ -1724,7 +1724,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     {
       if( align.first.event.at.zero )
       {
-        xpos <- c(correct.earliest.followup.window - seq(0, as.numeric(correct.earliest.followup.window), by=period.in.days),
+        # Correctly deal with events starting before the FUW (i.e., correct.earliest.followup.window < 0):
+        xpos <- c(correct.earliest.followup.window - seq(0, as.numeric(correct.earliest.followup.window), by=period.in.days * sign(as.numeric(correct.earliest.followup.window))),
                   seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
         xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
         axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
