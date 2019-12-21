@@ -17,7 +17,8 @@
   "Event patterns (all patients aligned)", notaligned = "Event patterns"),
   col.cats = rainbow, unspecified.category.label = "drug",
   lty.event = "solid", lwd.event = 2, pch.start.event = 15,
-  pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
+  pch.end.event = 16, plot.events.vertically.displaced = TRUE,
+  print.dose = FALSE, cex.dose = 0.75,
   print.dose.outline.col = "white", print.dose.centered = FALSE,
   plot.dose = FALSE, lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
@@ -65,7 +66,8 @@
   "Event patterns (all patients aligned)", notaligned = "Event patterns"),
   col.cats = rainbow, unspecified.category.label = "drug",
   lty.event = "solid", lwd.event = 2, pch.start.event = 15,
-  pch.end.event = 16, print.dose = FALSE, cex.dose = 0.75,
+  pch.end.event = 16, plot.events.vertically.displaced = TRUE,
+  print.dose = FALSE, cex.dose = 0.75,
   print.dose.outline.col = "white", print.dose.centered = FALSE,
   plot.dose = FALSE, lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
@@ -165,6 +167,9 @@ unspecified (generic) medication category.}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
+
+\item{plot.events.vertically.displaced}{Should consecutive events be plotted
+on separate rows (i.e., separated vertically, the default) or on the same row?}
 
 \item{print.dose, cex.dose, print.dose.outline.col, print.dose.centered}{Print daily
 dose as a number and, if so, how (color, size, position...).}
