@@ -15,7 +15,8 @@
   "Event patterns (all patients aligned)", notaligned = "Event patterns"),
   col.cats = rainbow, unspecified.category.label = "drug",
   medication.groups = NULL, lty.event = "solid", lwd.event = 2,
-  pch.start.event = 15, pch.end.event = 16, print.dose = FALSE,
+  pch.start.event = 15, pch.end.event = 16,
+  plot.events.vertically.displaced = TRUE, print.dose = FALSE,
   cex.dose = 0.75, print.dose.outline.col = "white",
   print.dose.centered = FALSE, plot.dose = FALSE,
   lwd.event.max.dose = 8,
@@ -96,6 +97,9 @@ all are part of the same group).}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
+
+\item{plot.events.vertically.displaced}{Should consecutive events be plotted
+on separate rows (i.e., separated vertically, the default) or on the same row?}
 
 \item{print.dose}{\emph{Logical}, should the daily dose be printed as text?}
 

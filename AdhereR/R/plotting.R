@@ -1617,7 +1617,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
 
     # The corrected earliest follow-up window date:
-    correct.earliest.followup.window <- min(cma$data$.DATE.as.Date - min(cmas$.FU.START.DATE,na.rm=TRUE),na.rm=TRUE);
+    correct.earliest.followup.window <- as.numeric(min(cma$data$.DATE.as.Date - min(cmas$.FU.START.DATE,na.rm=TRUE),na.rm=TRUE));
   } else
   {
     # There is no correction to the earliest follow-up window date:
@@ -1724,7 +1724,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     {
       if( align.first.event.at.zero )
       {
-        xpos <- c(correct.earliest.followup.window - seq(0, as.numeric(correct.earliest.followup.window), by=period.in.days),
+        # Correctly deal with events starting before the FUW (i.e., correct.earliest.followup.window < 0):
+        xpos <- c(correct.earliest.followup.window - seq(0, correct.earliest.followup.window, by=period.in.days * sign(correct.earliest.followup.window)),
                   seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
         xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
         axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
@@ -3726,10 +3727,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     {
         if( align.first.event.at.zero )
         {
-            xpos <- c(correct.earliest.followup.window - seq(0, as.numeric(correct.earliest.followup.window), by=period.in.days),
-                      seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
-            xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
-            axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
+          # Correctly deal with events starting before the FUW (i.e., correct.earliest.followup.window < 0):
+          xpos <- c(correct.earliest.followup.window - seq(0, correct.earliest.followup.window, by=period.in.days * sign(correct.earliest.followup.window)),
+                    seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
+          xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
+          axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
         } else
         {
           xpos <- seq(0, as.numeric(endperiod), by=period.in.days);
@@ -4054,9 +4056,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       {
         # The legend is an object that we can move around, scale, etc:
         l1 <- c(.SVG.comment("The legend", newpara=TRUE, newline=TRUE),
-                #'<defs>\n', # don't display it yet...
                 '<g id="legend">\n');
-        #l1 <- c(.SVG.comment("The legend", newpara=TRUE, newline=TRUE));
       }
 
       # The legend origins:
@@ -4385,11 +4385,6 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       if( do.plot )
       {
         # Close the legend:
-        # l2 <- c(l2,
-        #         '</g>\n',
-        #         '</defs>\n',
-        #         # Display it as desired:
-        #         '<use xlink:href="#legend" transform="translate(',x,' ',y,')"></use>\n');
         l2 <- c(l2,
                 '</g>\n');
       }
@@ -4776,7 +4771,7 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
         if( any(c("jpg", "png","webp") %in% export.formats) )
         {
           # For the bitmapped formats, render it once:
-          bitmap <- rsvg(file.svg); # , height = 1440
+          bitmap <- rsvg::rsvg(file.svg); # , height = 1440
 
           if( "jpg" %in% export.formats )
           {

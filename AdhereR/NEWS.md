@@ -2,7 +2,13 @@
   
 ## New features
 
-  - splitting the old `AdhereR` package into two packages: `AdhereR`, which continues to implement all the computations and plotting, and `AdhereRViz`, which implements all the interactive plotting and GUI (using either RStudio's manipulate and Shiny); while `AdhereRViz` requires `AdhereR`, `AdhereR` only suggests `AdhereRViz`.
+  - this release splits the old `AdhereR` package into two packages: `AdhereR`, which continues to implement all the computations and plotting, and `AdhereRViz`, which implements all the interactive plotting and GUI (using either RStudio's manipulate and Shiny); while `AdhereRViz` requires `AdhereR`, `AdhereR` only suggests `AdhereRViz`.
+  
+  - the plotting can be done either using R plotting and/or by generating SVG images (which can be further exported to different formats, such as JPG and PNG and can be embedded in HTML/CSS/JavaScript pages with limited interactivity).
+  
+  - new subtype of plot where the events are shown on the same row (i.e., without vertical separation): useful for cases where not many events overlap in time and vertical space is at a premium.
+  
+  - other enhancements and bugfixes.
 
 
 # AdhereR 0.5

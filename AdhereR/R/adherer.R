@@ -803,6 +803,8 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' all are part of the same group).
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
+#' @param plot.events.vertically.displaced Should consecutive events be plotted
+#' on separate rows (i.e., separated vertically, the default) or on the same row?
 #' @param print.dose \emph{Logical}, should the daily dose be printed as text?
 #' @param cex.dose \emph{Numeric}, if daily dose is printed, what text size
 #' to use?
@@ -883,6 +885,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
                       medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
+                      plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                       print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                       plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
@@ -922,6 +925,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=FALSE, # not for CMA0
+             plot.events.vertically.displaced=plot.events.vertically.displaced,
              pch.start.event=pch.start.event,
              pch.end.event=pch.end.event,
              print.dose=print.dose,
@@ -950,8 +954,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
-             suppress.warnings=suppress.warnings,
-             ...);
+             suppress.warnings=suppress.warnings);
 }
 
 
@@ -2597,6 +2600,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
                            lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                            show.event.intervals=TRUE,             # show the actual prescription intervals
+                           plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                            col.na="lightgray",                    # color for mising data
                            print.CMA=TRUE, CMA.cex=0.50,           # print CMA next to the participant's ID?
                            plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
@@ -2641,6 +2645,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=show.event.intervals,
+             plot.events.vertically.displaced=plot.events.vertically.displaced,
              pch.start.event=pch.start.event,
              pch.end.event=pch.end.event,
              print.dose=print.dose,
@@ -2675,8 +2680,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
-             suppress.warnings=suppress.warnings,
-             ...);
+             suppress.warnings=suppress.warnings);
 }
 
 
@@ -6854,6 +6858,8 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' unspecified (generic) medication category.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
+#' @param plot.events.vertically.displaced Should consecutive events be plotted
+#' on separate rows (i.e., separated vertically, the default) or on the same row?
 #' @param print.dose,cex.dose,print.dose.outline.col,print.dose.centered Print daily
 #' dose as a number and, if so, how (color, size, position...).
 #' @param plot.dose,lwd.event.max.dose,plot.dose.lwd.across.medication.classes
@@ -6967,6 +6973,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                  unspecified.category.label="drug",     # the label of the unspecified category of medication
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
+                                 plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                                  print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                                  plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                                  col.na="lightgray",                    # color for mising data
@@ -7023,6 +7030,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=FALSE, # per-episode and sliding windows might have overlapping intervals, so better not to show them at all
+             plot.events.vertically.displaced=plot.events.vertically.displaced,
              pch.start.event=pch.start.event,
              pch.end.event=pch.end.event,
              print.dose=print.dose,
@@ -7069,8 +7077,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
-             suppress.warnings=suppress.warnings,
-             ...);
+             suppress.warnings=suppress.warnings);
 }
 
 
