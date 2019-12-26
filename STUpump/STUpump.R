@@ -23,6 +23,9 @@
 ##
 server_info <- "./server_credentials_STUpump.tsv"; # the file storing the database server info and credentials
 
+# Load the SQL-stuff:
+source("./SQL_queries.R", echo=FALSE);
+
 
 ##
 ## Check if the needed packages are installed and with the correct version ####
@@ -55,78 +58,89 @@ for( i in 1:nrow(.needed_packages) )
 # Load data access and description
 db_info <- read.table(server_info, header=TRUE, sep="\t", quote="", stringsAsFactors=FALSE);
 
-# Connect to the database:
-db_con <- NULL;
-
-db_type  <- tolower(db_info$Value[ tolower(db_info$Variable) == "dbtype" ]);
-db_host  <- db_info$Value[ tolower(db_info$Variable) == "host" ];
-db_dsn   <- db_info$Value[ tolower(db_info$Variable) == "dsn" ];
-db_user  <- db_info$Value[ tolower(db_info$Variable) == "user" ];
-db_psswd <- db_info$Value[ tolower(db_info$Variable) == "psswd" ];
-db_name  <- db_info$Value[ tolower(db_info$Variable) == "dbname" ];
-
-if( db_type %in% c("mariadb", "mysql") )
+# If needed, create the example database:
+if( FALSE )
 {
-  # MariaDB or MySQL:
-  library(RMariaDB);
-  db_con <- dbConnect(RMariaDB::MariaDB(), user=db_user, password=db_psswd, dbname=db_name, host=db_host);
-} else if( db_type == "sqlite" )
-{
-  # SQLite:
-  library(RSQLite);
-  db_con <- dbConnect(RSQLite::SQLite(), host=db_host);
-} else if( db_type == "mssql" )
-{
-  #  Microsoft SQL Server:
-  library(RODBC);
-  db_con <- odbcConnect(dsn=db_dsn, uid=db_user, pwd=db_psswd);
-  # Check if the database exists:
-  db_list <- sqlQuery(db_con, "SELECT name FROM master.sys.databases");
-  if( !(db_name %in% db_list$name) )
-  {
-    stop(paste0("The required database '",db_name,"' does not exist on this server!\n"));
-  }
+  # Create and use it:
+  db_type  <- tolower(db_info$Value[ tolower(db_info$Variable) == "dbtype" ]);
+  db_host  <- db_info$Value[ tolower(db_info$Variable) == "host" ];
+  db_dsn   <- db_info$Value[ tolower(db_info$Variable) == "dsn" ];
+  db_user  <- db_info$Value[ tolower(db_info$Variable) == "user" ];
+  db_psswd <- db_info$Value[ tolower(db_info$Variable) == "psswd" ];
+  db_name  <- "STUpumpTests";
+  
+  db_evtable_name <- ifelse(db_type == "mssql", "dbo.med_events", "med_events");
+  db_evtable_cols <- c("PATIENT_ID"="id",
+                       "DATE"      ="date",
+                       "PERDAY"    ="perday",
+                       "CATEGORY"  ="category",
+                       "DURATION"  ="duration");
+  
+  # CREATE IT!
+  SQL_create_test_database(db_type, db_host, db_dsn, db_user, db_psswd, db_name, 
+                           db_evtable_name, db_evtable_cols);
 } else
 {
-  db_con <- NULL;
-  stop(paste0("Don't know how to use an SQL database of type '",db_type,"': please specify a MariaDB, MySQL, SQLite or Microsoft SQL Server database!\n"));
+  # Use the database requested by the user:
+  db_type  <- tolower(db_info$Value[ tolower(db_info$Variable) == "dbtype" ]);
+  db_host  <- db_info$Value[ tolower(db_info$Variable) == "host" ];
+  db_dsn   <- db_info$Value[ tolower(db_info$Variable) == "dsn" ];
+  db_user  <- db_info$Value[ tolower(db_info$Variable) == "user" ];
+  db_psswd <- db_info$Value[ tolower(db_info$Variable) == "psswd" ];
+  db_name  <- db_info$Value[ tolower(db_info$Variable) == "dbname" ];
+  
+  db_evtable_name <- db_info$Value[ tolower(db_info$Variable) == "evtable" ];
+  db_evtable_cols <- c("PATIENT_ID"=db_info$Value[ tolower(db_info$Variable) == "evtable_patient_id" ],
+                       "DATE"      =db_info$Value[ tolower(db_info$Variable) == "evtable_date" ],
+                       "PERDAY"    =db_info$Value[ tolower(db_info$Variable) == "evtable_perday" ],
+                       "CATEGORY"  =db_info$Value[ tolower(db_info$Variable) == "evtable_category" ],
+                       "DURATION"  =db_info$Value[ tolower(db_info$Variable) == "evtable_duration" ]);
 }
-if( is.null(db_con) )
-{
-  # Something bad happened:
-  stop("Error connecting to the specified database!\n");
-}
+
+# Connect to the database:
+db_connection <- SQL_connect(db_type, db_host, db_dsn, db_user, db_psswd, db_name);
 
 
 ##
 ## Check if the tables exist and contain the expected columns and are not empty ####
 ##
 
-db_evtable_name <- db_info$Value[ tolower(db_info$Variable) == "evtable" ];
-db_evtable_cols <- c("PATIENT_ID"=db_info$Value[ tolower(db_info$Variable) == "evtable_patient_id" ],
-                     "DATE"      =db_info$Value[ tolower(db_info$Variable) == "evtable_date" ],
-                     "PERDAY"    =db_info$Value[ tolower(db_info$Variable) == "evtable_perday" ],
-                     "CATEGORY"  =db_info$Value[ tolower(db_info$Variable) == "evtable_category" ],
-                     "DURATION"  =db_info$Value[ tolower(db_info$Variable) == "evtable_duration" ]);
+db_tables <- SQL_list_tables(db_type, db_connection, db_name);
+if( !(db_evtable_name %in% db_tables) )
+{
+  stop(paste0("The required events table '",db_evtable_name,"' does not seem to exist in the database!\n"));
+}
 
-if( db_type %in% c("mariadb", "mysql", "sqlite") )
+db_evtable_info <- SQL_get_cols_info(db_type, db_connection, db_table=db_evtable_name, db_name);
+if( is.null(db_evtable_info) || nrow(db_evtable_info) == 0 )
 {
-  # MariaDB or MySQL:
-  if( !(db_evtable_name %in% dbListTables(db_con)) )
-  {
-    stop(paste0("The required events table '",db_evtable_name,"' does not seem to exist in the database!\n"));
-  }
-} else if( db_type == "mssql" )
+  stop(paste0("Cannot get the information about the events table '",db_evtable_name,"'!\n"));
+}
+if( !(db_evtable_cols["PATIENT_ID"] %in% db_evtable_info$column) )
 {
-  #  Microsoft SQL Server:
-  db_list <- sqlQuery(db_con, paste0("SELECT * FROM ",db_name,".information_schema.tables;")); # list the tables
-  if( !(db_evtable_name %in% paste0(db_list$TABLE_SCHEMA,".",db_list$TABLE_NAME)) )
-  {
-    stop(paste0("The required events table '",db_evtable_name,"' does not seem to exist in the database!\n"));
-  }
+  stop(paste0("The required column PATIENT_ID ('",db_evtable_cols["PATIENT_ID"],"') does not seem to exist in the events table '",db_evtable_name,"'!\n"));
+}
+if( !(db_evtable_cols["DATE"] %in% db_evtable_info$column) )
+{
+  stop(paste0("The required column DATE ('",db_evtable_cols["DATE"],"') does not seem to exist in the events table '",db_evtable_name,"'!\n"));
+}
+if( !(db_evtable_cols["PERDAY"] %in% db_evtable_info$column) )
+{
+  stop(paste0("The required column PERDAY ('",db_evtable_cols["PERDAY"],"') does not seem to exist in the events table '",db_evtable_name,"'!\n"));
+}
+if( db_evtable_info$nrow[1] == 0 )
+{
+  stop(paste0("The events table '",db_evtable_name,"' seems empty!\n"));
 }
 
 
+
+
+##
+## Disconnect from the database ####
+##
+
+SQL_disconnect(db_type, db_connection);
 
 
 
