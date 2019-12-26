@@ -4,3 +4,7 @@ doc
 .Rhistory
 .RData
 .Ruserdata
+
+STUpump/server_credentials_STUpump.tsv
+
+STUpump/_Create_MSSQL_test_db.R
