@@ -55,84 +55,51 @@ for( i in 1:nrow(.needed_packages) )
 ## Connect to the database ####
 ##
 
-# Load data access and description
-db_info <- read.table(server_info, header=TRUE, sep="\t", quote="", stringsAsFactors=FALSE);
+stu_db <- SQL_db(server_info);
 
 # If needed, create the example database:
 if( FALSE )
 {
-  # Create and use it:
-  db_type  <- tolower(db_info$Value[ tolower(db_info$Variable) == "dbtype" ]);
-  db_host  <- db_info$Value[ tolower(db_info$Variable) == "host" ];
-  db_dsn   <- db_info$Value[ tolower(db_info$Variable) == "dsn" ];
-  db_user  <- db_info$Value[ tolower(db_info$Variable) == "user" ];
-  db_psswd <- db_info$Value[ tolower(db_info$Variable) == "psswd" ];
-  db_name  <- "STUpumpTests";
-  
-  db_evtable_name <- ifelse(db_type == "mssql", "dbo.med_events", "med_events");
-  db_evtable_cols <- c("PATIENT_ID"="id",
-                       "DATE"      ="date",
-                       "PERDAY"    ="perday",
-                       "CATEGORY"  ="category",
-                       "DURATION"  ="duration");
-  
-  # CREATE IT!
-  SQL_create_test_database(db_type, db_host, db_dsn, db_user, db_psswd, db_name, 
-                           db_evtable_name, db_evtable_cols);
-} else
-{
-  # Use the database requested by the user:
-  db_type  <- tolower(db_info$Value[ tolower(db_info$Variable) == "dbtype" ]);
-  db_host  <- db_info$Value[ tolower(db_info$Variable) == "host" ];
-  db_dsn   <- db_info$Value[ tolower(db_info$Variable) == "dsn" ];
-  db_user  <- db_info$Value[ tolower(db_info$Variable) == "user" ];
-  db_psswd <- db_info$Value[ tolower(db_info$Variable) == "psswd" ];
-  db_name  <- db_info$Value[ tolower(db_info$Variable) == "dbname" ];
-  
-  db_evtable_name <- db_info$Value[ tolower(db_info$Variable) == "evtable" ];
-  db_evtable_cols <- c("PATIENT_ID"=db_info$Value[ tolower(db_info$Variable) == "evtable_patient_id" ],
-                       "DATE"      =db_info$Value[ tolower(db_info$Variable) == "evtable_date" ],
-                       "PERDAY"    =db_info$Value[ tolower(db_info$Variable) == "evtable_perday" ],
-                       "CATEGORY"  =db_info$Value[ tolower(db_info$Variable) == "evtable_category" ],
-                       "DURATION"  =db_info$Value[ tolower(db_info$Variable) == "evtable_duration" ]);
+  # Create the test database:
+  stu_db <- SQL_create_test_database(stu_db);
 }
-
-# Connect to the database:
-db_connection <- SQL_connect(db_type, db_host, db_dsn, db_user, db_psswd, db_name);
 
 
 ##
 ## Check if the tables exist and contain the expected columns and are not empty ####
 ##
 
-db_tables <- SQL_list_tables(db_type, db_connection, db_name);
-if( !(db_evtable_name %in% db_tables) )
+db_tables <- SQL_list_tables(stu_db);
+if( !(stu_db$db_evtable_name %in% db_tables) )
 {
-  stop(paste0("The required events table '",db_evtable_name,"' does not seem to exist in the database!\n"));
+  stop(paste0("The required events table '",stu_db$db_evtable_name,"' does not seem to exist in the database!\n"));
 }
 
-db_evtable_info <- SQL_get_cols_info(db_type, db_connection, db_table=db_evtable_name, db_name);
+db_evtable_info <- SQL_get_cols_info(stu_db, stu_db$db_evtable_name);
 if( is.null(db_evtable_info) || nrow(db_evtable_info) == 0 )
 {
-  stop(paste0("Cannot get the information about the events table '",db_evtable_name,"'!\n"));
+  stop(paste0("Cannot get the information about the events table '",stu_db$db_evtable_name,"'!\n"));
 }
-if( !(db_evtable_cols["PATIENT_ID"] %in% db_evtable_info$column) )
+if( !(stu_db$db_evtable_cols["PATIENT_ID"] %in% db_evtable_info$column) )
 {
-  stop(paste0("The required column PATIENT_ID ('",db_evtable_cols["PATIENT_ID"],"') does not seem to exist in the events table '",db_evtable_name,"'!\n"));
+  stop(paste0("The required column PATIENT_ID ('",stu_db$db_evtable_cols["PATIENT_ID"],"') does not seem to exist in the events table '",stu_db$db_evtable_name,"'!\n"));
 }
-if( !(db_evtable_cols["DATE"] %in% db_evtable_info$column) )
+if( !(stu_db$db_evtable_cols["DATE"] %in% db_evtable_info$column) )
 {
-  stop(paste0("The required column DATE ('",db_evtable_cols["DATE"],"') does not seem to exist in the events table '",db_evtable_name,"'!\n"));
+  stop(paste0("The required column DATE ('",stu_db$db_evtable_cols["DATE"],"') does not seem to exist in the events table '",stu_db$db_evtable_name,"'!\n"));
 }
-if( !(db_evtable_cols["PERDAY"] %in% db_evtable_info$column) )
+if( !(stu_db$db_evtable_cols["PERDAY"] %in% db_evtable_info$column) )
 {
-  stop(paste0("The required column PERDAY ('",db_evtable_cols["PERDAY"],"') does not seem to exist in the events table '",db_evtable_name,"'!\n"));
+  stop(paste0("The required column PERDAY ('",stu_db$db_evtable_cols["PERDAY"],"') does not seem to exist in the events table '",stu_db$db_evtable_name,"'!\n"));
 }
 if( db_evtable_info$nrow[1] == 0 )
 {
-  stop(paste0("The events table '",db_evtable_name,"' seems empty!\n"));
+  stop(paste0("The events table '",stu_db$db_evtable_name,"' seems empty!\n"));
 }
 
+
+ids <- SQL_retreive_patient_ids(stu_db, db_table=stu_db$db_evtable_name);
+SQL_retreive_patient_info(stu_db, db_table=stu_db$db_evtable_name, patient_id=ids[1]);
 
 
 
@@ -140,7 +107,7 @@ if( db_evtable_info$nrow[1] == 0 )
 ## Disconnect from the database ####
 ##
 
-SQL_disconnect(db_type, db_connection);
+SQL_disconnect(stu_db);
 
 
 

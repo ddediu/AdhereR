@@ -22,62 +22,122 @@
 ## This file implements various SQL-related tasks independently of the particular SQL database used ####
 ##
 
+# SQL_db class that ecapsulates all these things:
+SQL_db <- function(db_spec_file=NA, # the file containing the database specification (or NA for the defaults)
+                   connect_to_db=TRUE # try to connect to the database?
+                  )
+{
+  db_connection <- NULL; # the connection
+  
+  if( !is.na(db_spec_file) )
+  {
+    # Load the actual database specification:
+    db_info <- read.table(db_spec_file, header=TRUE, sep="\t", quote="", stringsAsFactors=FALSE);
+    
+    db_type  <- tolower(db_info$Value[ tolower(db_info$Variable) == "dbtype" ]);
+    db_host  <- db_info$Value[ tolower(db_info$Variable) == "host" ];
+    db_dsn   <- db_info$Value[ tolower(db_info$Variable) == "dsn" ];
+    db_user  <- db_info$Value[ tolower(db_info$Variable) == "user" ];
+    db_psswd <- db_info$Value[ tolower(db_info$Variable) == "psswd" ];
+    db_name  <- db_info$Value[ tolower(db_info$Variable) == "dbname" ];
+    
+    db_evtable_name <- db_info$Value[ tolower(db_info$Variable) == "evtable" ];
+    db_evtable_cols <- c("PATIENT_ID"=db_info$Value[ tolower(db_info$Variable) == "evtable_patient_id" ],
+                         "DATE"      =db_info$Value[ tolower(db_info$Variable) == "evtable_date" ],
+                         "PERDAY"    =db_info$Value[ tolower(db_info$Variable) == "evtable_perday" ],
+                         "CATEGORY"  =db_info$Value[ tolower(db_info$Variable) == "evtable_category" ],
+                         "DURATION"  =db_info$Value[ tolower(db_info$Variable) == "evtable_duration" ]);
+  }
+  
+  # The object:
+  ret_val <- structure(list(# the database specification file and its contents:
+                            "db_spec_file"=db_spec_file,
+                            "db_info"=db_info,
+                            # the database info:
+                            "db_type"=db_type,
+                            "db_host"=db_host,
+                            "db_dsn"=db_dsn,
+                            "db_user"=db_user,
+                            "db_psswd"=db_psswd,
+                            "db_name"=db_name,
+                            # the important tables:
+                            "db_evtable_name"=db_evtable_name,
+                            "db_evtable_cols"=db_evtable_cols,
+                            # the actual connection:
+                            "db_connection"=db_connection),
+    class="SQL_db");
+  
+  if( connect_to_db ) ret_val <- SQL_connect(ret_val);
+  
+  return (ret_val);
+}
+
 
 ##
 ## Connect/disconnect to/from database ####
 ##
 
 # Conect of a given type of database and return the connection or stop with an error:
-SQL_connect <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1], db_host="localhost", db_dsn=NA, db_user="user", db_psswd="password", db_name=NULL)
+SQL_connect <- function(x) UseMethod("SQL_connect")
+SQL_connect.SQL_db <- function(x)
 {
-  db_connection <- NULL;
-  
-  if( db_type %in% c("mariadb", "mysql") )
+  # Pre-emptively try to disconnect a pre-existing connection:
+  SQL_disconnect(x);
+
+  if( x$db_type %in% c("mariadb", "mysql") )
   {
     # MariaDB or MySQL:
     require(RMariaDB);
-    db_connection <- DBI::dbConnect(RMariaDB::MariaDB(), user=db_user, password=db_psswd, dbname=db_name, host=db_host);
-  } else if( db_type == "sqlite" )
+    x$db_connection <- DBI::dbConnect(RMariaDB::MariaDB(), user=x$db_user, password=x$db_psswd, dbname=x$db_name, host=x$db_host);
+  } else if( x$db_type == "sqlite" )
   {
     # SQLite:
     require(RSQLite);
-    db_connection <- DBI::dbConnect(RSQLite::SQLite(), host=db_host);
-  } else if( db_type == "mssql" )
+    x$db_connection <- DBI::dbConnect(RSQLite::SQLite(), host=x$db_host);
+  } else if( x$db_type == "mssql" )
   {
     #  Microsoft SQL Server:
     require(RODBC);
-    db_connection <- RODBC::odbcConnect(dsn=db_dsn, uid=db_user, pwd=db_psswd);
+    x$db_connection <- RODBC::odbcConnect(dsn=x$db_dsn, uid=x$db_user, pwd=x$db_psswd);
     # Check if the database exists:
-    db_list <- RODBC::sqlQuery(db_connection, "SELECT name FROM master.sys.databases");
-    if( !(db_name %in% db_list$name) )
+    db_list <- RODBC::sqlQuery(x$db_connection, "SELECT name FROM master.sys.databases");
+    if( !(x$db_name %in% db_list$name) )
     {
-      stop(paste0("The required database '",db_name,"' does not exist on this server!\n"));
+      stop(paste0("The required database '",x$db_name,"' does not exist on this server!\n"));
     }
   } else
   {
-    db_connection <- NULL;
-    stop(paste0("Don't know how to use an SQL database of type '",db_type,"': please specify a MariaDB, MySQL, SQLite or Microsoft SQL Server database!\n"));
+    x$db_connection <- NULL;
+    stop(paste0("Don't know how to use an SQL database of type '",x$db_type,"': please specify a MariaDB, MySQL, SQLite or Microsoft SQL Server database!\n"));
   }
-  if( is.null(db_connection) )
+  if( is.null(x$db_connection) )
   {
     # Something bad happened:
     stop("Error connecting to the specified database!\n");
   }
   
   # Return the connection:
-  return (db_connection);
+  return (invisible(x));
 }
 
 # Disconnect from database:
-SQL_disconnect <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1], db_connection)
+SQL_disconnect <- function(x) UseMethod("SQL_disconnect")
+SQL_disconnect.SQL_db <- function(x)
 {
-  if( db_type %in% c("mariadb", "mysql", "sqlite") )
+  if( !is.null(x$db_connection) )
   {
-    try(DBI::dbDisconnect(db_connection), silent=TRUE);
-  } else if( db_type == "mssql" )
-  {
-    try(RODBC::odbcClose(db_connection), silent=TRUE);
+    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+    {
+      try(DBI::dbDisconnect(x$db_connection), silent=TRUE);
+    } else if( x$db_type == "mssql" )
+    {
+      try(RODBC::odbcClose(x$db_connection), silent=TRUE);
+    }
+    
+    x$db_connection <- NULL;
   }
+  
+  return (invisible(x));
 }
 
 
@@ -86,16 +146,17 @@ SQL_disconnect <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1], 
 ##
 
 # List tables in the database:
-SQL_list_tables <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1], db_connection, db_name=NULL)
+SQL_list_tables <- function(x) UseMethod("SQL_list_tables")
+SQL_list_tables.SQL_db <- function(x)
 {
   db_tables <- NULL;
   
-  if( db_type %in% c("mariadb", "mysql", "sqlite") )
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
-    db_tables <- DBI::dbListTables(d);
-  } else if( db_type == "mssql" )
+    db_tables <- DBI::dbListTables(x$db_connection);
+  } else if( x$db_type == "mssql" )
   {
-    db_list <- RODBC::sqlQuery(db_connection, paste0("SELECT * FROM ",db_name,".information_schema.tables;")); # list the tables
+    db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",x$db_name,".information_schema.tables;")); # list the tables
     db_tables <- paste0(db_list$TABLE_SCHEMA,".",db_list$TABLE_NAME); # reconstruct the tables' names
   }
   
@@ -104,20 +165,21 @@ SQL_list_tables <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1],
 }
 
 # Get the column info for a given table:
-SQL_get_cols_info <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1], db_connection, db_table, db_name=NULL)
+SQL_get_cols_info <- function(x, db_table) UseMethod("SQL_get_cols_info")
+SQL_get_cols_info.SQL_db <- function(x, db_table)
 {
   db_cols_info <- NULL;
   
-  if( db_type %in% c("mariadb", "mysql") )
+  if( x$db_type %in% c("mariadb", "mysql") )
   {
     # Get columns:
-    x <- NULL;
-    try(x <- DBI::dbGetQuery(db_connection, paste0("SHOW COLUMNS FROM ",db_table,";")), silent=TRUE);
-    if( !is.null(x) && inherits(x, "data.frame") )
+    tmp <- NULL;
+    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SHOW COLUMNS FROM ",db_table,";")), silent=TRUE);
+    if( !is.null(tmp) && inherits(tmp, "data.frame") )
     {
       n <- NULL;
       # Get number of rows:
-      try(n <- DBI::dbGetQuery(db_connection, paste0("SELECT COUNT(*) FROM ",db_table,";")), silent=TRUE);
+      try(n <- DBI::dbGetQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",db_table,";")), silent=TRUE);
       if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
       {
         # Error retreiving the number of rows:
@@ -127,17 +189,17 @@ SQL_get_cols_info <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1
         n <- as.numeric(n[1,1]);
       }
       
-      db_cols_info <- data.frame("table"=db_table, "nrow"=n, "column"=x$Field, "type"=x$Type, "null"=x$Null, "key"=x$Key);
+      db_cols_info <- data.frame("table"=db_table, "nrow"=n, "column"=tmp$Field, "type"=tmp$Type, "null"=tmp$Null, "key"=tmp$Key);
     }
-  } else if( db_type == "sqlite" )
+  } else if( x$db_type == "sqlite" )
   {
     # Get columns:
-    x <- NULL;
-    try(x <- DBI::dbGetQuery(db_connection, paste0("PRAGMA table_info(",db_table,");")), silent=TRUE);
-    if( !is.null(x) && inherits(x, "data.frame") )
+    tmp <- NULL;
+    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("PRAGMA table_info(",db_table,");")), silent=TRUE);
+    if( !is.null(tmp) && inherits(tmp, "data.frame") )
     {
       n <- NULL;
-      try(n <- DBI::dbGetQuery(db_connection, paste0("SELECT COUNT(*) FROM ",db_table,";")), silent=TRUE);
+      try(n <- DBI::dbGetQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",db_table,";")), silent=TRUE);
       if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
       {
         # Error retreiving the number of rows:
@@ -147,12 +209,12 @@ SQL_get_cols_info <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1
         n <- as.numeric(n[1,1]);
       }
       
-      db_cols_info <- data.frame("table"=db_table, "nrow"=n, "column"=x$name, "type"=x$type, "null"=(x$notnull == 0), "key"=(x$pk != 0));
+      db_cols_info <- data.frame("table"=db_table, "nrow"=n, "column"=tmp$name, "type"=tmp$type, "null"=(tmp$notnull == 0), "key"=(tmp$pk != 0));
     }
-  } else if( db_type == "mssql" )
+  } else if( x$db_type == "mssql" )
   {
     n <- NULL;
-    try(n <- RODBC::sqlQuery(db_connection, paste0("SELECT COUNT(*) FROM ",db_name,".",db_table,";")), silent=TRUE);
+    try(n <- RODBC::sqlQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",x$db_name,".",db_table,";")), silent=TRUE);
     if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
     {
       # Error retreiving the number of rows:
@@ -161,7 +223,7 @@ SQL_get_cols_info <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1
     {
       n <- as.numeric(n[1,1]);
     }
-    db_list <- RODBC::sqlQuery(db_connection, paste0("SELECT * FROM ",db_name,".INFORMATION_SCHEMA.COLUMNS ORDER BY ORDINAL_POSITION;"));
+    db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",x$db_name,".INFORMATION_SCHEMA.COLUMNS ORDER BY ORDINAL_POSITION;"));
     if( !is.null(db_list) && nrow(db_list) > 0 )
     {
       db_list <- db_list[ paste0(db_list$TABLE_SCHEMA,".",db_list$TABLE_NAME) == db_table, ];
@@ -176,6 +238,91 @@ SQL_get_cols_info <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1
   return (db_cols_info);
 }
 
+# Get the column names for a given table:
+SQL_get_cols_names <- function(x) UseMethod("SQL_get_cols_names")
+SQL_get_cols_names.SQL_db <- function(x)
+{
+  db_cols_info <- SQL_get_cols_info(x);
+  if( !is.null(db_cols_info) && nrow(db_cols_info) > 0 )
+  {
+    return (as.character(db_cols_info$column));
+  } else
+  {
+    return (NULL);
+  }
+}
+
+
+##
+## Retreive the patient ids ####
+##
+
+SQL_retreive_patient_ids <- function(x, db_table) UseMethod("SQL_retreive_patient_ids")
+SQL_retreive_patient_ids.SQL_db <- function(x, db_table)
+{
+  patient_ids <- NULL;
+  
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    tmp <- NULL;
+    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SELECT DISTINCT ",x$db_evtable_cols["PATIENT_ID"]," FROM ",
+                                                       db_table,";")), silent=TRUE);
+    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
+  } else if( x$db_type == "mssql" )
+  {
+    tmp <- NULL;
+    try(tmp <- RODBC::sqlQuery(x$db_connection, paste0("SELECT DISTINCT ",x$db_evtable_cols["PATIENT_ID"]," FROM ",
+                                                       x$db_name,".",db_table,";")), 
+        silent=TRUE);
+    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
+  }
+  
+  # Return patient ids:
+  return (patient_ids);
+}
+
+
+##
+## Retreive the info for a given patient id ####
+##
+
+SQL_retreive_patient_info <- function(x, db_table, patient_id, cols=NA, maxrows=NA) UseMethod("SQL_retreive_patient_info")
+SQL_retreive_patient_info.SQL_db <- function(x, db_table, patient_id, cols=NA, maxrows=NA)
+{
+  db_pat_info <- NULL;
+  
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    tmp <- NULL;
+    try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                               paste0("SELECT ",
+                                      if(is.na(cols)) "*" else paste0(cols,collapse=","),
+                                      " FROM ",db_table,
+                                      " WHERE ",x$db_evtable_cols["PATIENT_ID"],
+                                      " IN (",paste0(patient_id,collapse=","),")",
+                                      if(!is.na(maxrows)) paste0("LIMIT ",maxrows),
+                                      ";")),
+        silent=TRUE);
+    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(x) > 0 ) db_pat_info <- tmp;
+  } else if( x$db_type == "mssql" )
+  {
+    tmp <- NULL;
+    try(tmp <- RODBC::sqlQuery(x$db_connection, 
+                               paste0("SELECT ",
+                                      if(is.na(cols)) "*" else paste0(cols,collapse=","),
+                                      " FROM ",x$db_name,".",db_table,
+                                      " WHERE ",x$db_evtable_cols["PATIENT_ID"],
+                                      " IN (",paste0(patient_id,collapse=","),")",
+                                      if(!is.na(maxrows)) paste0("LIMIT ",maxrows),
+                                      ";")),
+        silent=TRUE);
+    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) db_pat_info <- tmp;
+  }
+  
+  # Return the patient info:
+  return (db_pat_info);
+}
+
 
 
 
@@ -185,8 +332,26 @@ SQL_get_cols_info <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1
 ## Create the test database and table using the AdhereR::med.events datset ####
 ##
 
-SQL_create_test_database <- function(db_type=c("mariadb", "mysql", "sqlite", "mssql")[1], db_host="localhost", db_dsn=NA, db_user="user", db_psswd="password", db_name=NULL,
-                                     db_evtable_name=NULL, db_evtable_cols=NULL)
+SQL_create_test_database <- function(x) UseMethod("SQL_create_test_database")
+SQL_create_test_database.SQL_db <- function(x)
 {
+  stop("Implement me!\n");
+  
+  # Create and use it:
+  db_type  <- tolower(db_info$Value[ tolower(db_info$Variable) == "dbtype" ]);
+  db_host  <- db_info$Value[ tolower(db_info$Variable) == "host" ];
+  db_dsn   <- db_info$Value[ tolower(db_info$Variable) == "dsn" ];
+  db_user  <- db_info$Value[ tolower(db_info$Variable) == "user" ];
+  db_psswd <- db_info$Value[ tolower(db_info$Variable) == "psswd" ];
+  db_name  <- "STUpumpTests";
+  
+  db_evtable_name <- ifelse(db_type == "mssql", "dbo.med_events", "med_events");
+  db_evtable_cols <- c("PATIENT_ID"="id",
+                       "DATE"      ="date",
+                       "PERDAY"    ="perday",
+                       "CATEGORY"  ="category",
+                       "DURATION"  ="duration");
+  
+  
 }
                                     
