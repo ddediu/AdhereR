@@ -599,6 +599,9 @@ compute_event_durations <- function(disp.data = NULL,
     presc.duration.colname <- ".PRESC.DURATION"
   }
 
+  # add event ID
+  disp.data.copy[,EVENT.ID := 1]
+
   # helper function to process each patient
   process_patient <- function(pat)
   {
@@ -766,9 +769,13 @@ compute_event_durations <- function(disp.data = NULL,
           all.events <- dcast(events, ID + CUSTOM + DURATION + SPECIAL.DURATION + CARRYOVER.DURATION + .interval ~ EVENT, value.var = "DATE")
           setorderv(all.events, cols = ".interval")
 
+          # create event IDs
+          all.events[,EVENT.ID := seq(from = event_id, length.out = nrow(all.events), by = 1)]
+
           # create all events table
           all.events <- cbind(all.events[,c("ID",
                                             "CUSTOM",
+                                            "EVENT.ID",
                                             "DISP.START",
                                             "DURATION",
                                             "SPECIAL.DURATION",
@@ -854,9 +861,10 @@ compute_event_durations <- function(disp.data = NULL,
             stop <- 0;
 
             med_event <- NULL;
+            event_id <- 0
 
             for(episode in episodes)
-            {
+            {event_id <- event_id + 1
 
               presc.dose.i <- curr_med_presc[[episode,"DAILY.DOSE"]]; # prescribed daily dose
               start.episode <- curr_med_presc[episode,episode.start];
@@ -880,6 +888,7 @@ compute_event_durations <- function(disp.data = NULL,
                   if(is.null(med_event))
                   {
                     med_event <- cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
+                                       EVENT.ID = event_id,
                                        DISP.START = disp.start.date.i,
                                        DURATION = 0,
                                        DAILY.DOSE = NA,
@@ -916,6 +925,8 @@ compute_event_durations <- function(disp.data = NULL,
                 if(nrow(med_special.periods_events_i) > 0)
                 {
                   all.events <- compute.special.intervals(med_special.periods_events_i);
+
+                  event_id <- last(all.events$EVENT.ID)
 
                   sum.duration <- sum(all.events$DURATION, na.rm = TRUE)
 
@@ -988,7 +999,8 @@ compute_event_durations <- function(disp.data = NULL,
 
                 med_event <- rbind(med_event,
                                    cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
-                                         data.table(DISP.START = disp.start.date.i,
+                                         data.table(EVENT.ID = event_id,
+                                                    DISP.START = disp.start.date.i,
                                                     DURATION = as.numeric(duration.i),
                                                     episode.start = start.episode,
                                                     episode.end = end.episode,
@@ -1011,7 +1023,8 @@ compute_event_durations <- function(disp.data = NULL,
                 #create medication event
                 med_event <- rbind(med_event,
                                    cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
-                                         data.table(DISP.START = disp.start.date.i,
+                                         data.table(EVENT.ID = event_id,
+                                                    DISP.START = disp.start.date.i,
                                                     DURATION = as.numeric(duration.i),
                                                     episode.start = start.episode,
                                                     episode.end = end.episode,
@@ -1024,7 +1037,7 @@ compute_event_durations <- function(disp.data = NULL,
           }
         }
       }
-browser()
+
       if(exists("debug.mode") && debug.mode==TRUE) print(paste("Medication:", med));
 
       ## subset data to medication
@@ -1241,6 +1254,7 @@ browser()
                                         medication.class.colnames,
                                         "TOTAL.DOSE",
                                         "DISP.DATE",
+                                        "EVENT.ID",
                                         "DISP.START",
                                         "DURATION",
                                         "DAILY.DOSE",
@@ -1279,6 +1293,7 @@ browser()
                                         medication.class.colnames,
                                         "TOTAL.DOSE",
                                         "DISP.DATE",
+                                        "EVENT.ID",
                                         "DISP.START",
                                         "DURATION",
                                         "DAILY.DOSE",
@@ -1348,6 +1363,7 @@ browser()
     # subset data to patient
     pat_disp <- disp.data.copy[ID == pat, c("ID",
                                        "DISP.DATE",
+                                       "EVENT.ID",
                                        medication.class.colnames,
                                        "TOTAL.DOSE"), with = FALSE];
 
@@ -1777,7 +1793,8 @@ prune_event_durations <- function(data,
     # }
 
     # identify durations from previous events
-    disp.within.1[get(data$disp.date.colname) < DATE.OUT & get(data$disp.date.colname) < DISP.START, .from.carryover := 1]
+    #disp.within.1[get(data$disp.date.colname) < DATE.OUT & get(data$disp.date.colname) < DISP.START, .from.carryover := 1]
+    disp.within.1[EVENT.ID != 1, .from.carryover := 1]
 
     # identify new events
     disp.within.1[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, medication.class.colnames, "DATE.OUT")]
@@ -1788,6 +1805,13 @@ prune_event_durations <- function(data,
     disp.remove.1 <- disp.remove.1[.prune.event == 1]
 
   }
+
+  # create new variable for join date
+  event_durations[!is.na(DURATION), join_date := DISP.START+DURATION]
+
+  # key by ID, medication class, and join date
+  setkeyv(event_durations, cols = c(data$ID.colname, medication.class.colnames, "join_date"))
+
 
   disp.remove.2 <- NULL
   if(!is.na(days.within.out.date.2)) {
@@ -1808,7 +1832,8 @@ prune_event_durations <- function(data,
     # }
 
     # identify durations from previous events
-    disp.within.2[get(data$disp.date.colname) < DATE.OUT & get(data$disp.date.colname) < DISP.START, .from.carryover := 1]
+    #disp.within.2[get(data$disp.date.colname) < DATE.OUT & get(data$disp.date.colname) < DISP.START, .from.carryover := 1]
+    disp.within.2[EVENT.ID != 1, .from.carryover := 1]
 
     # identify new events
     disp.within.2[, .new.events :=  .N - sum(.from.carryover, na.rm = TRUE), by = c(data$ID.colname, medication.class.colnames, "DATE.OUT")]
