@@ -849,6 +849,22 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' @param suppress.warnings \emph{Logical}: show or hide the warnings?
 #' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
 #' to plot.
+#' @param export.formats What formats should the plot be exported to? It can be
+#' any subset of "svg" (an SVG file), "html" (a self-contained HTML document
+#' including an embedded SVG image, CSS and the needed JavaScript for some limited
+#' user interactions, plus an external placeholder JPEG image for those browsers
+#' not supporting SVGs), "jpg", "png", "webp", "ps" and "pdf". Default to NULL
+#' (i.e., no plot is exported).
+#' @param export.formats.fileprefix The file name prefix for the exported
+#' formats (defaults to "AdhereR-plot").
+#' @param export.formats.height,export.formats.width The desired dimensions
+#' of the exported figure (defaults to sane values).
+#' @param export.formats.save.svg.placeholder \emph{Logical}: if TRUE (the
+#' default), save a JPG placeholder for the SVG image.
+#' @param export.formats.directory If exporting the plot, which directory to
+#' export to (if not given, uses a temporary directory).
+#' @param generate.R.plot \emph{Logical}: should it generate a standard
+#' (base R) plot for plotting within R?
 #' @param ... other possible parameters
 #' @examples
 #' cma0 <- CMA0(data=med.events,
@@ -895,8 +911,14 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
-                      suppress.warnings=FALSE,         # suppress warnings?
-                      max.patients.to.plot=100               # maximum number of patients to plot
+                      suppress.warnings=FALSE,               # suppress warnings?
+                      max.patients.to.plot=100,              # maximum number of patients to plot
+                      export.formats=NULL,                               # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
+                      export.formats.fileprefix="AdhereR-plot",          # the file name prefix for the exported formats
+                      export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
+                      export.formats.save.svg.placeholder=TRUE,          # if TRUE, save a JPG placeholder for the SVG image
+                      export.formats.directory=NA,                       # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                      generate.R.plot=TRUE                               # generate standard (base R) plot for plotting within R?
 )
 {
   .plot.CMAs(x,
@@ -954,7 +976,13 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
-             suppress.warnings=suppress.warnings);
+             suppress.warnings=suppress.warnings,
+             export.formats=export.formats,
+             export.formats.fileprefix=export.formats.fileprefix,
+             export.formats.height=export.formats.height, export.formats.width=export.formats.width,
+             export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
+             export.formats.directory=export.formats.directory,
+             generate.R.plot=generate.R.plot);
 }
 
 
@@ -2616,6 +2644,12 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                            max.patients.to.plot=100,        # maximum number of patients to plot
                            suppress.warnings=TRUE,
+                           export.formats=NULL,                               # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
+                           export.formats.fileprefix="AdhereR-plot",          # the file name prefix for the exported formats
+                           export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
+                           export.formats.save.svg.placeholder=TRUE,          # if TRUE, save a JPG placeholder for the SVG image
+                           export.formats.directory=NA,                       # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                           generate.R.plot=TRUE,                              # generate standard (base R) plot for plotting within R?
                            ...
 )
 {
@@ -2680,7 +2714,13 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
-             suppress.warnings=suppress.warnings);
+             suppress.warnings=suppress.warnings,
+             export.formats=export.formats,
+             export.formats.fileprefix=export.formats.fileprefix,
+             export.formats.height=export.formats.height, export.formats.width=export.formats.width,
+             export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
+             export.formats.directory=export.formats.directory,
+             generate.R.plot=generate.R.plot);
 }
 
 
@@ -3190,6 +3230,22 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' referes to a single event.
 #' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
 #' to plot.
+#' @param export.formats What formats should the plot be exported to? It can be
+#' any subset of "svg" (an SVG file), "html" (a self-contained HTML document
+#' including an embedded SVG image, CSS and the needed JavaScript for some limited
+#' user interactions, plus an external placeholder JPEG image for those browsers
+#' not supporting SVGs), "jpg", "png", "webp", "ps" and "pdf". Default to NULL
+#' (i.e., no plot is exported).
+#' @param export.formats.fileprefix The file name prefix for the exported
+#' formats (defaults to "AdhereR-plot").
+#' @param export.formats.height,export.formats.width The desired dimensions
+#' of the exported figure (defaults to sane values).
+#' @param export.formats.save.svg.placeholder \emph{Logical}: if TRUE (the
+#' default), save a JPG placeholder for the SVG image.
+#' @param export.formats.directory If exporting the plot, which directory to
+#' export to (if not given, uses a temporary directory).
+#' @param generate.R.plot \emph{Logical}: should it generate a standard
+#' (base R) plot for plotting within R?
 #' @param ... other possible parameters
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -3230,7 +3286,13 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
-                      max.patients.to.plot=100               # maximum number of patients to plot
+                      max.patients.to.plot=100,              # maximum number of patients to plot
+                      export.formats=NULL,                               # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
+                      export.formats.fileprefix="AdhereR-plot",          # the file name prefix for the exported formats
+                      export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
+                      export.formats.save.svg.placeholder=TRUE,          # if TRUE, save a JPG placeholder for the SVG image
+                      export.formats.directory=NA,                       # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                      generate.R.plot=TRUE                               # generate standard (base R) plot for plotting within R?
 )
 {
   .plot.CMA1plus(cma=x,
@@ -3287,6 +3349,12 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
                  min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
                  max.patients.to.plot=max.patients.to.plot,
+                 export.formats=export.formats,
+                 export.formats.fileprefix=export.formats.fileprefix,
+                 export.formats.height=export.formats.height, export.formats.width=export.formats.width,
+                 export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
+                 export.formats.directory=export.formats.directory,
+                 generate.R.plot=generate.R.plot,
                  ...)
 }
 
@@ -6911,6 +6979,22 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' to plot.
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param export.formats What formats should the plot be exported to? It can be
+#' any subset of "svg" (an SVG file), "html" (a self-contained HTML document
+#' including an embedded SVG image, CSS and the needed JavaScript for some limited
+#' user interactions, plus an external placeholder JPEG image for those browsers
+#' not supporting SVGs), "jpg", "png", "webp", "ps" and "pdf". Default to NULL
+#' (i.e., no plot is exported).
+#' @param export.formats.fileprefix The file name prefix for the exported
+#' formats (defaults to "AdhereR-plot").
+#' @param export.formats.height,export.formats.width The desired dimensions
+#' of the exported figure (defaults to sane values).
+#' @param export.formats.save.svg.placeholder \emph{Logical}: if TRUE (the
+#' default), save a JPG placeholder for the SVG image.
+#' @param export.formats.directory If exporting the plot, which directory to
+#' export to (if not given, uses a temporary directory).
+#' @param generate.R.plot \emph{Logical}: should it generate a standard
+#' (base R) plot for plotting within R?
 #' @param ... other parameters (to be passed to the estimation and plotting of
 #' the simple CMA)
 #'
@@ -7001,6 +7085,12 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.25, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                                  max.patients.to.plot=100,        # maximum number of patients to plot
                                  suppress.warnings=FALSE,         # suppress warnings?
+                                 export.formats=NULL,                               # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
+                                 export.formats.fileprefix="AdhereR-plot",          # the file name prefix for the exported formats
+                                 export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
+                                 export.formats.save.svg.placeholder=TRUE,          # if TRUE, save a JPG placeholder for the SVG image
+                                 export.formats.directory=NA,                       # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                                 generate.R.plot=TRUE,                              # generate standard (base R) plot for plotting within R?
                                  ...
 )
 {
@@ -7077,7 +7167,13 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
-             suppress.warnings=suppress.warnings);
+             suppress.warnings=suppress.warnings,
+             export.formats=export.formats,
+             export.formats.fileprefix=export.formats.fileprefix,
+             export.formats.height=export.formats.height, export.formats.width=export.formats.width,
+             export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
+             export.formats.directory=export.formats.directory,
+             generate.R.plot=generate.R.plot);
 }
 
 
