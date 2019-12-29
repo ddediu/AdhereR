@@ -69,37 +69,85 @@ if( FALSE )
 ## Check if the tables exist and contain the expected columns and are not empty ####
 ##
 
-db_tables <- SQL_list_tables(stu_db);
-if( !(stu_db$db_evtable_name %in% db_tables) )
+if( !check_evtable(stu_db) )
 {
-  stop(paste0("The required events table '",stu_db$db_evtable_name,"' does not seem to exist in the database!\n"));
-}
-
-db_evtable_info <- SQL_get_cols_info(stu_db, stu_db$db_evtable_name);
-if( is.null(db_evtable_info) || nrow(db_evtable_info) == 0 )
-{
-  stop(paste0("Cannot get the information about the events table '",stu_db$db_evtable_name,"'!\n"));
-}
-if( !(stu_db$db_evtable_cols["PATIENT_ID"] %in% db_evtable_info$column) )
-{
-  stop(paste0("The required column PATIENT_ID ('",stu_db$db_evtable_cols["PATIENT_ID"],"') does not seem to exist in the events table '",stu_db$db_evtable_name,"'!\n"));
-}
-if( !(stu_db$db_evtable_cols["DATE"] %in% db_evtable_info$column) )
-{
-  stop(paste0("The required column DATE ('",stu_db$db_evtable_cols["DATE"],"') does not seem to exist in the events table '",stu_db$db_evtable_name,"'!\n"));
-}
-if( !(stu_db$db_evtable_cols["PERDAY"] %in% db_evtable_info$column) )
-{
-  stop(paste0("The required column PERDAY ('",stu_db$db_evtable_cols["PERDAY"],"') does not seem to exist in the events table '",stu_db$db_evtable_name,"'!\n"));
-}
-if( db_evtable_info$nrow[1] == 0 )
-{
-  stop(paste0("The events table '",stu_db$db_evtable_name,"' seems empty!\n"));
+  stop(paste0("The events table '",get_evtable(stu_db),"' failed the safety checks!\n"));
 }
 
 
-ids <- SQL_retreive_patient_ids(stu_db, db_table=stu_db$db_evtable_name);
-SQL_retreive_patient_info(stu_db, db_table=stu_db$db_evtable_name, patient_id=ids[1]);
+##
+## Process the patients one by one ####
+##
+
+# Get the list of all patients:
+patient_ids <- list_evtable_patients(stu_db);
+
+# Process them individually:
+for( i in seq_along(patient_ids) )
+{
+  # The patient ID:
+  pat_id <- patient_ids[i];
+  
+  # The possible message(s) related to processing this patient:
+  pat_msgs <- "";
+  
+  # The values to return for this patient:
+  pat_retval <- list("id"=pat_id);
+  
+  # Get the patient's info:
+  pat_info <- get_evtable_patients_info(stu_db, pat_id);
+  if( is.null(pat_info) || !inherits(pat_info, "data.frame") || nrow(pat_info) < 1 )
+  {
+    # Empty patient:
+    pat_msgs <- paste0(pat_msgs, "W: this patient has no data!");
+  } else
+  {
+    # Compute the requested CMA(s):
+    cma1 <- AdhereR::CMA1(data=pat_info,
+                          ID.colname=get_evtable_id_col(stu_db),
+                          event.date.colname=get_evtable_date_col(stu_db),
+                          event.duration.colname=get_evtable_duration_col(stu_db));
+    if( is.null(cma1) )
+    {
+      # Issues computing this CMA:
+      pat_msgs <- paste0(pat_msgs, "W: error computing CMA1!");
+      pat_retval$CMA1 <- NA;
+    } else
+    {
+      pat_retval$CMA1 <- getCMA(cma1)$CMA[1];
+    }
+    
+    # Do the requested plot(s):
+    plot_file_names <- plot(cma1, export.formats=c("html"), generate.R.plot=FALSE); # plot_file_names contains the path to the generated plots
+    if( is.null(plot_file_names) || length(plot_file_names) < 2 )
+    {
+      # Issues generating the plots:
+      pat_msgs <- paste0(pat_msgs, "W: error plotting CMA1!");
+      pat_retval$CMA1_plot <- NULL;
+    } else
+    {
+      # Save the plots:
+      
+      # Create the ZIP holding the HTML document and JPG placeholder:
+      zip_file_name <- paste0(plot_file_names["html"],".zip");
+      if( utils::zip(zipfile=zip_file_name, files=plot_file_names, flags="-9Xj") != 0 )
+      {
+        # Errors zipping:
+        pat_msgs <- paste0(pat_msgs, "W: error creating the zip containing the HTML document and the JPG placeholder!");
+        zip_file_name <- NULL;
+      }
+      
+      # Store these files:
+      pat_retval$CMA1_plot <- list("jpg"=plot_file_names["jpg-placeholder"], 
+                                   "html"=zip_file_name);
+    }
+    
+    # Upload them in the database:
+  }
+  
+  # Store the messages:
+  pat_retval$msgs <- pat_msgs;
+}
 
 
 
@@ -107,7 +155,7 @@ SQL_retreive_patient_info(stu_db, db_table=stu_db$db_evtable_name, patient_id=id
 ## Disconnect from the database ####
 ##
 
-SQL_disconnect(stu_db);
+disconnect(stu_db);
 
 
 

@@ -1,6 +1,8 @@
 ###############################################################################################
 #
 #    STUpump: using AdhereR for offline scripted processing.
+#    This file implements various SQL-related tasks independently of the 
+#    particular SQL database used.
 #    Copyright (C) 2019-2020  Dan Dediu
 #
 #    This program is free software: you can redistribute it and/or modify
@@ -19,10 +21,9 @@
 ###############################################################################################
 
 ##
-## This file implements various SQL-related tasks independently of the particular SQL database used ####
+## The SQL_db class that ecapsulates all SQL-related things ####
 ##
 
-# SQL_db class that ecapsulates all these things:
 SQL_db <- function(db_spec_file=NA, # the file containing the database specification (or NA for the defaults)
                    connect_to_db=TRUE # try to connect to the database?
                   )
@@ -60,6 +61,12 @@ SQL_db <- function(db_spec_file=NA, # the file containing the database specifica
                             "db_user"=db_user,
                             "db_psswd"=db_psswd,
                             "db_name"=db_name,
+                            "db_quote_characters"=switch(db_type, 
+                                                        "mariadb"=, 
+                                                        "mysql"=,
+                                                        "sqlite"=c("`","`"),
+                                                        "mssql"=c("[","]"),
+                                                        c("`","`")),
                             # the important tables:
                             "db_evtable_name"=db_evtable_name,
                             "db_evtable_cols"=db_evtable_cols,
@@ -67,7 +74,7 @@ SQL_db <- function(db_spec_file=NA, # the file containing the database specifica
                             "db_connection"=db_connection),
     class="SQL_db");
   
-  if( connect_to_db ) ret_val <- SQL_connect(ret_val);
+  if( connect_to_db ) ret_val <- connect(ret_val);
   
   return (ret_val);
 }
@@ -78,11 +85,11 @@ SQL_db <- function(db_spec_file=NA, # the file containing the database specifica
 ##
 
 # Conect of a given type of database and return the connection or stop with an error:
-SQL_connect <- function(x) UseMethod("SQL_connect")
-SQL_connect.SQL_db <- function(x)
+connect <- function(x) UseMethod("connect")
+connect.SQL_db <- function(x)
 {
   # Pre-emptively try to disconnect a pre-existing connection:
-  SQL_disconnect(x);
+  disconnect(x);
 
   if( x$db_type %in% c("mariadb", "mysql") )
   {
@@ -121,8 +128,8 @@ SQL_connect.SQL_db <- function(x)
 }
 
 # Disconnect from database:
-SQL_disconnect <- function(x) UseMethod("SQL_disconnect")
-SQL_disconnect.SQL_db <- function(x)
+disconnect <- function(x) UseMethod("disconnect")
+disconnect.SQL_db <- function(x)
 {
   if( !is.null(x$db_connection) )
   {
@@ -146,8 +153,8 @@ SQL_disconnect.SQL_db <- function(x)
 ##
 
 # List tables in the database:
-SQL_list_tables <- function(x) UseMethod("SQL_list_tables")
-SQL_list_tables.SQL_db <- function(x)
+list_tables <- function(x) UseMethod("list_tables")
+list_tables.SQL_db <- function(x)
 {
   db_tables <- NULL;
   
@@ -156,7 +163,7 @@ SQL_list_tables.SQL_db <- function(x)
     db_tables <- DBI::dbListTables(x$db_connection);
   } else if( x$db_type == "mssql" )
   {
-    db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",x$db_name,".information_schema.tables;")); # list the tables
+    db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",qs(x,x$db_name),".information_schema.tables;")); # list the tables
     db_tables <- paste0(db_list$TABLE_SCHEMA,".",db_list$TABLE_NAME); # reconstruct the tables' names
   }
   
@@ -165,8 +172,8 @@ SQL_list_tables.SQL_db <- function(x)
 }
 
 # Get the column info for a given table:
-SQL_get_cols_info <- function(x, db_table) UseMethod("SQL_get_cols_info")
-SQL_get_cols_info.SQL_db <- function(x, db_table)
+get_cols_info <- function(x, db_table) UseMethod("get_cols_info")
+get_cols_info.SQL_db <- function(x, db_table)
 {
   db_cols_info <- NULL;
   
@@ -174,12 +181,12 @@ SQL_get_cols_info.SQL_db <- function(x, db_table)
   {
     # Get columns:
     tmp <- NULL;
-    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SHOW COLUMNS FROM ",db_table,";")), silent=TRUE);
+    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SHOW COLUMNS FROM ",qs(x,db_table),";")), silent=TRUE);
     if( !is.null(tmp) && inherits(tmp, "data.frame") )
     {
       n <- NULL;
       # Get number of rows:
-      try(n <- DBI::dbGetQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",db_table,";")), silent=TRUE);
+      try(n <- DBI::dbGetQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",qs(x,db_table),";")), silent=TRUE);
       if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
       {
         # Error retreiving the number of rows:
@@ -195,11 +202,11 @@ SQL_get_cols_info.SQL_db <- function(x, db_table)
   {
     # Get columns:
     tmp <- NULL;
-    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("PRAGMA table_info(",db_table,");")), silent=TRUE);
+    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("PRAGMA table_info(",qs(x,db_table),");")), silent=TRUE);
     if( !is.null(tmp) && inherits(tmp, "data.frame") )
     {
       n <- NULL;
-      try(n <- DBI::dbGetQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",db_table,";")), silent=TRUE);
+      try(n <- DBI::dbGetQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",qs(x,db_table),";")), silent=TRUE);
       if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
       {
         # Error retreiving the number of rows:
@@ -214,7 +221,7 @@ SQL_get_cols_info.SQL_db <- function(x, db_table)
   } else if( x$db_type == "mssql" )
   {
     n <- NULL;
-    try(n <- RODBC::sqlQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",x$db_name,".",db_table,";")), silent=TRUE);
+    try(n <- RODBC::sqlQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",qs(x,get_name(x)),".",qs(x,db_table),";")), silent=TRUE);
     if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
     {
       # Error retreiving the number of rows:
@@ -223,7 +230,7 @@ SQL_get_cols_info.SQL_db <- function(x, db_table)
     {
       n <- as.numeric(n[1,1]);
     }
-    db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",x$db_name,".INFORMATION_SCHEMA.COLUMNS ORDER BY ORDINAL_POSITION;"));
+    db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",qs(x,get_name(x)),".INFORMATION_SCHEMA.COLUMNS ORDER BY ORDINAL_POSITION;"));
     if( !is.null(db_list) && nrow(db_list) > 0 )
     {
       db_list <- db_list[ paste0(db_list$TABLE_SCHEMA,".",db_list$TABLE_NAME) == db_table, ];
@@ -239,10 +246,10 @@ SQL_get_cols_info.SQL_db <- function(x, db_table)
 }
 
 # Get the column names for a given table:
-SQL_get_cols_names <- function(x) UseMethod("SQL_get_cols_names")
-SQL_get_cols_names.SQL_db <- function(x)
+get_col_names <- function(x) UseMethod("get_col_names")
+get_col_names.SQL_db <- function(x)
 {
-  db_cols_info <- SQL_get_cols_info(x);
+  db_cols_info <- get_cols_info(x);
   if( !is.null(db_cols_info) && nrow(db_cols_info) > 0 )
   {
     return (as.character(db_cols_info$column));
@@ -254,25 +261,143 @@ SQL_get_cols_names.SQL_db <- function(x)
 
 
 ##
-## Retreive the patient ids ####
+## Quoting strings appropriately ####
 ##
 
-SQL_retreive_patient_ids <- function(x, db_table) UseMethod("SQL_retreive_patient_ids")
-SQL_retreive_patient_ids.SQL_db <- function(x, db_table)
+lquote <- function(x) UseMethod("lquote")
+lquote.SQL_db <- function(x)
+{
+  x$db_quote_characters[1];
+}
+
+rquote <- function(x) UseMethod("rquote")
+rquote.SQL_db <- function(x)
+{
+  x$db_quote_characters[2];
+}
+
+qs <- function(x, s) UseMethod("qs") # quote string
+qs.SQL_db <- function(x, s)
+{
+  # The '.' has a special meaning --> each '.'-separated substring must be quoted separately:
+  tmp <- strsplit(s,".",fixed=TRUE)[[1]];
+  tmp <- paste0(lquote(x),tmp[tmp!=""],rquote(x));
+  if(substr(s,1,1) == ".") tmp <- c("",tmp);
+  if(substr(s,nchar(s),nchar(s)) == ".") tmp <- c(tmp,"");
+  paste0(tmp,collapse=".");
+}
+
+
+##
+## Getters ####
+##
+
+get_spec_file <- function(x) UseMethod("get_spec_file")
+get_spec_file.SQL_db <- function(x)
+{
+  return (x$db_spec_file);
+}
+
+get_info <- function(x) UseMethod("get_info")
+get_info.SQL_db <- function(x)
+{
+  return (x$db_info);
+}
+
+get_type <- function(x) UseMethod("get_type")
+get_type.SQL_db <- function(x)
+{
+  return (x$db_type);
+}
+
+get_host <- function(x) UseMethod("get_host")
+get_host.SQL_db <- function(x)
+{
+  return (x$db_host);
+}
+
+get_dsn <- function(x) UseMethod("get_dsn")
+get_dsn.SQL_db <- function(x)
+{
+  return (x$db_dsn);
+}
+
+get_user <- function(x) UseMethod("get_user")
+get_user.SQL_db <- function(x)
+{
+  return (x$db_user);
+}
+
+get_psswd <- function(x) UseMethod("get_psswd")
+get_psswd.SQL_db <- function(x)
+{
+  return (x$db_psswd);
+}
+
+get_name <- function(x) UseMethod("get_name")
+get_name.SQL_db <- function(x)
+{
+  return (x$db_name);
+}
+
+get_evtable <- function(x) UseMethod("get_evtable")
+get_evtable.SQL_db <- function(x)
+{
+  return (x$db_evtable_name);
+}
+
+get_evtable_id_col <- function(x) UseMethod("get_evtable_id_col")
+get_evtable_id_col.SQL_db <- function(x)
+{
+  return (x$db_evtable_cols["PATIENT_ID"]);
+}
+
+get_evtable_date_col <- function(x) UseMethod("get_evtable_date_col")
+get_evtable_date_col.SQL_db <- function(x)
+{
+  return (x$db_evtable_cols["DATE"]);
+}
+
+get_evtable_perday_col <- function(x) UseMethod("get_evtable_perday_col")
+get_evtable_perday_col.SQL_db <- function(x)
+{
+  return (x$db_evtable_cols["PERDAY"]);
+}
+
+get_evtable_category_col <- function(x) UseMethod("get_evtable_category_col")
+get_evtable_category_col.SQL_db <- function(x)
+{
+  return (x$db_evtable_cols["CATEGORY"]);
+}
+
+get_evtable_duration_col <- function(x) UseMethod("get_evtable_duration_col")
+get_evtable_duration_col.SQL_db <- function(x)
+{
+  return (x$db_evtable_cols["DURATION"]);
+}
+
+
+
+##
+## List the patient ids in the events table ####
+##
+
+list_evtable_patients <- function(x) UseMethod("list_evtable_patients")
+list_evtable_patients.SQL_db <- function(x)
 {
   patient_ids <- NULL;
   
   if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
     tmp <- NULL;
-    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SELECT DISTINCT ",x$db_evtable_cols["PATIENT_ID"]," FROM ",
-                                                       db_table,";")), silent=TRUE);
+    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get_evtable_id_col(x))," FROM ",
+                                                       qs(x,get_evtable(x)),";")), silent=TRUE);
     if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
   } else if( x$db_type == "mssql" )
   {
     tmp <- NULL;
-    try(tmp <- RODBC::sqlQuery(x$db_connection, paste0("SELECT DISTINCT ",x$db_evtable_cols["PATIENT_ID"]," FROM ",
-                                                       x$db_name,".",db_table,";")), 
+    try(tmp <- RODBC::sqlQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get_evtable_id_col(x))," FROM ",
+                                                       qs(x,get_name(x)),".",qs(x,get_evtable(x)),";")), 
         silent=TRUE);
     if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
   }
@@ -283,11 +408,11 @@ SQL_retreive_patient_ids.SQL_db <- function(x, db_table)
 
 
 ##
-## Retreive the info for a given patient id ####
+## Get info for a given set of patients in the events table ####
 ##
 
-SQL_retreive_patient_info <- function(x, db_table, patient_id, cols=NA, maxrows=NA) UseMethod("SQL_retreive_patient_info")
-SQL_retreive_patient_info.SQL_db <- function(x, db_table, patient_id, cols=NA, maxrows=NA)
+get_evtable_patients_info <- function(x, patient_id, cols=NA, maxrows=NA) UseMethod("get_evtable_patients_info")
+get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
 {
   db_pat_info <- NULL;
   
@@ -296,10 +421,10 @@ SQL_retreive_patient_info.SQL_db <- function(x, db_table, patient_id, cols=NA, m
     tmp <- NULL;
     try(tmp <- DBI::dbGetQuery(x$db_connection, 
                                paste0("SELECT ",
-                                      if(is.na(cols)) "*" else paste0(cols,collapse=","),
-                                      " FROM ",db_table,
-                                      " WHERE ",x$db_evtable_cols["PATIENT_ID"],
-                                      " IN (",paste0(patient_id,collapse=","),")",
+                                      if(is.na(cols)) "*" else paste0(qs(x,cols),collapse=","),
+                                      " FROM ",qs(x,get_evtable(x)),
+                                      " WHERE ",qs(x,get_evtable_id_col(x)),
+                                      " IN (",paste0("'",patient_id,"'",collapse=","),")",
                                       if(!is.na(maxrows)) paste0("LIMIT ",maxrows),
                                       ";")),
         silent=TRUE);
@@ -309,10 +434,10 @@ SQL_retreive_patient_info.SQL_db <- function(x, db_table, patient_id, cols=NA, m
     tmp <- NULL;
     try(tmp <- RODBC::sqlQuery(x$db_connection, 
                                paste0("SELECT ",
-                                      if(is.na(cols)) "*" else paste0(cols,collapse=","),
-                                      " FROM ",x$db_name,".",db_table,
-                                      " WHERE ",x$db_evtable_cols["PATIENT_ID"],
-                                      " IN (",paste0(patient_id,collapse=","),")",
+                                      if(is.na(cols)) "*" else paste0(qs(x,cols),collapse=","),
+                                      " FROM ",qs(x,get_name(x)),".",qs(x,get_evtable(x)),
+                                      " WHERE ",qs(x,get_evtable_id_col(x)),
+                                      " IN (",paste0("'",patient_id,"'",collapse=","),")",
                                       if(!is.na(maxrows)) paste0("LIMIT ",maxrows),
                                       ";")),
         silent=TRUE);
@@ -324,34 +449,78 @@ SQL_retreive_patient_info.SQL_db <- function(x, db_table, patient_id, cols=NA, m
 }
 
 
-
-
-
-
 ##
-## Create the test database and table using the AdhereR::med.events datset ####
+## Database checks ####
 ##
 
-SQL_create_test_database <- function(x) UseMethod("SQL_create_test_database")
-SQL_create_test_database.SQL_db <- function(x)
+# Check if the events table exists, contains the expected columns, and is not empty:
+check_evtable <- function(x) UseMethod("check_evtable")
+check_evtable.SQL_db <- function(x)
 {
-  stop("Implement me!\n");
+  db_tables <- list_tables(x);
+  if( !(get_evtable(x) %in% db_tables) )
+  {
+    stop(paste0("The required events table '",get_evtable(x),"' does not seem to exist in the database!\n"));
+    return (FALSE);
+  }
   
-  # Create and use it:
-  db_type  <- tolower(db_info$Value[ tolower(db_info$Variable) == "dbtype" ]);
-  db_host  <- db_info$Value[ tolower(db_info$Variable) == "host" ];
-  db_dsn   <- db_info$Value[ tolower(db_info$Variable) == "dsn" ];
-  db_user  <- db_info$Value[ tolower(db_info$Variable) == "user" ];
-  db_psswd <- db_info$Value[ tolower(db_info$Variable) == "psswd" ];
-  db_name  <- "STUpumpTests";
+  db_evtable_info <- get_cols_info(x, get_evtable(x));
+  if( is.null(db_evtable_info) || nrow(db_evtable_info) == 0 )
+  {
+    stop(paste0("Cannot get the information about the events table '",get_evtable(x),"'!\n"));
+    return (FALSE);
+  }
+  if( !(get_evtable_id_col(x) %in% db_evtable_info$column) )
+  {
+    stop(paste0("The required column PATIENT_ID ('",get_evtable_id_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
+    return (FALSE);
+  }
+  if( !(get_evtable_date_col(x) %in% db_evtable_info$column) )
+  {
+    stop(paste0("The required column DATE ('",get_evtable_date_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
+    return (FALSE);
+  }
+  if( !(get_evtable_perday_col(x) %in% db_evtable_info$column) )
+  {
+    stop(paste0("The required column PERDAY ('",get_evtable_perday_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
+    return (FALSE);
+  }
+  if( db_evtable_info$nrow[1] == 0 )
+  {
+    stop(paste0("The events table '",get_evtable(x),"' seems empty!\n"));
+    return (FALSE);
+  }
   
-  db_evtable_name <- ifelse(db_type == "mssql", "dbo.med_events", "med_events");
-  db_evtable_cols <- c("PATIENT_ID"="id",
-                       "DATE"      ="date",
-                       "PERDAY"    ="perday",
-                       "CATEGORY"  ="category",
-                       "DURATION"  ="duration");
-  
-  
+  return (TRUE);
+}
+
+
+
+
+
+##
+## Create the test database and table using the standard AdhereR::med.events dataset ####
+##
+
+create_test_database <- function(x) UseMethod("create_test_database")
+create_test_database.SQL_db <- function(x)
+{
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+  } else if( x$db_type == "mssql" )
+  {
+    # Delete and (re)create the needed tables:
+    
+    # The events table:
+    sqlQuery(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x)),";"));
+    sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," ( ",
+                                     qs(x,get_evtable_id_col(x))," INT NOT NULL, ",
+                                     qs(x,get_evtable_date_col(x))," DATE NOT NULL, ",
+                                     qs(x,get_evtable_perday_col(x))," INT NOT NULL, ",
+                                     qs(x,get_evtable_category_col(x))," VARCHAR(1024) NOT NULL, ",
+                                     qs(x,get_evtable_duration_col(x))," INT NOT NULL);"));
+    
+    
+  }
 }
                                     
