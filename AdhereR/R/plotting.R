@@ -4442,7 +4442,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         file.svg <- ifelse( is.na(export.formats.directory),
                             tempfile(export.formats.fileprefix, fileext=".svg"),
                             file.path(export.formats.directory, paste0(export.formats.fileprefix,".svg")) );
-        exported.file.names <- c(exported.file.names, file.svg);
+        exported.file.names <- c(exported.file.names, file.svg); names(exported.file.names)[length(exported.file.names)] <- "svg";
 
         # Export SVG:
         writeLines(c(svg.header, svg.str), file.svg, sep="");
@@ -4454,7 +4454,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         file.html <- ifelse( is.na(export.formats.directory),
                              tempfile(export.formats.fileprefix, fileext=".html"),
                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".html")) );
-        exported.file.names <- c(exported.file.names, file.html);
+        exported.file.names <- c(exported.file.names, file.html); names(exported.file.names)[length(exported.file.names)] <- "html";
 
         # Load the CSS and JavaScript templates:
         css.template.path <- system.file('html-templates/css-template.css', package='AdhereR');
@@ -4558,7 +4558,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           if( export.formats.save.svg.placeholder )
           {
             # The JPG placeholder:
-            exported.file.names <- c(exported.file.names, svg.placeholder.filename);
+            exported.file.names <- c(exported.file.names, svg.placeholder.filename); names(exported.file.names)[length(exported.file.names)] <- "jpg-placeholder";
             jpeg::writeJPEG(bitmap, svg.placeholder.filename, quality=0.90);
           }
 
@@ -4568,7 +4568,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             file.jpg <- ifelse( is.na(export.formats.directory),
                                 tempfile(export.formats.fileprefix, fileext=".jpg"),
                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".jpg")) );
-            exported.file.names <- c(exported.file.names, file.jpg);
+            exported.file.names <- c(exported.file.names, file.jpg); names(exported.file.names)[length(exported.file.names)] <- "jpg";
             jpeg::writeJPEG(bitmap, file.jpg, quality=0.90);
           }
 
@@ -4578,7 +4578,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             file.png <- ifelse( is.na(export.formats.directory),
                                 tempfile(export.formats.fileprefix, fileext=".png"),
                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
-            exported.file.names <- c(exported.file.names, file.png);
+            exported.file.names <- c(exported.file.names, file.png); names(exported.file.names)[length(exported.file.names)] <- "png";
             #rsvg::rsvg_png(file.svg, file=file.png);
             png::writePNG(bitmap, file.png, dpi=150);
           }
@@ -4589,7 +4589,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             file.webp <- ifelse( is.na(export.formats.directory),
                                  tempfile(export.formats.fileprefix, fileext=".webp"),
                                  file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
-            exported.file.names <- c(exported.file.names, file.webp);
+            exported.file.names <- c(exported.file.names, file.webp); names(exported.file.names)[length(exported.file.names)] <- "webp";
             #rsvg::rsvg_webp(file.svg, file=file.webp);
             webp::write_webp(bitmap, file.webp, quality=90);
           }
@@ -4601,7 +4601,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           file.ps <- ifelse( is.na(export.formats.directory),
                              tempfile(export.formats.fileprefix, fileext=".ps"),
                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".ps")) );
-          exported.file.names <- c(exported.file.names, file.ps);
+          exported.file.names <- c(exported.file.names, file.ps); names(exported.file.names)[length(exported.file.names)] <- "ps";
           rsvg::rsvg_ps(file.svg, file=file.ps);
         }
 
@@ -4611,7 +4611,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           file.pdf <- ifelse( is.na(export.formats.directory),
                               tempfile(export.formats.fileprefix, fileext=".pdf"),
                               file.path(export.formats.directory, paste0(export.formats.fileprefix,".pdf")) );
-          exported.file.names <- c(exported.file.names, file.pdf);
+          exported.file.names <- c(exported.file.names, file.pdf); names(exported.file.names)[length(exported.file.names)] <- "pdf";
           rsvg::rsvg_pdf(file.svg, file=file.pdf);
         }
       }
