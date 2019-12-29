@@ -52,7 +52,11 @@
   alternating.bands.cols = c("white", "gray95"), bw.plot = FALSE,
   min.plot.size.in.characters.horiz = 10,
   min.plot.size.in.characters.vert = 0.25, max.patients.to.plot = 100,
-  suppress.warnings = FALSE, ...)
+  suppress.warnings = FALSE, export.formats = NULL,
+  export.formats.fileprefix = "AdhereR-plot",
+  export.formats.height = NA, export.formats.width = NA,
+  export.formats.save.svg.placeholder = TRUE,
+  export.formats.directory = NA, generate.R.plot = TRUE, ...)
 
 \method{plot}{CMA_sliding_window}(x, patients.to.plot = NULL,
   duration = NA, align.all.patients = FALSE,
@@ -101,7 +105,11 @@
   alternating.bands.cols = c("white", "gray95"), bw.plot = FALSE,
   min.plot.size.in.characters.horiz = 10,
   min.plot.size.in.characters.vert = 0.25, max.patients.to.plot = 100,
-  suppress.warnings = FALSE, ...)
+  suppress.warnings = FALSE, export.formats = NULL,
+  export.formats.fileprefix = "AdhereR-plot",
+  export.formats.height = NA, export.formats.width = NA,
+  export.formats.save.svg.placeholder = TRUE,
+  export.formats.directory = NA, generate.R.plot = TRUE, ...)
 }
 \arguments{
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
@@ -238,6 +246,28 @@ to plot.}
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{export.formats}{What formats should the plot be exported to? It can be
+any subset of "svg" (an SVG file), "html" (a self-contained HTML document
+including an embedded SVG image, CSS and the needed JavaScript for some limited
+user interactions, plus an external placeholder JPEG image for those browsers
+not supporting SVGs), "jpg", "png", "webp", "ps" and "pdf". Default to NULL
+(i.e., no plot is exported).}
+
+\item{export.formats.fileprefix}{The file name prefix for the exported
+formats (defaults to "AdhereR-plot").}
+
+\item{export.formats.height, export.formats.width}{The desired dimensions
+of the exported figure (defaults to sane values).}
+
+\item{export.formats.save.svg.placeholder}{\emph{Logical}: if TRUE (the
+default), save a JPG placeholder for the SVG image.}
+
+\item{export.formats.directory}{If exporting the plot, which directory to
+export to (if not given, uses a temporary directory).}
+
+\item{generate.R.plot}{\emph{Logical}: should it generate a standard
+(base R) plot for plotting within R?}
 
 \item{...}{other parameters (to be passed to the estimation and plotting of
 the simple CMA)}
