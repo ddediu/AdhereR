@@ -21,7 +21,8 @@
 ##
 ## Global variables and settings ####
 ##
-server_info <- "./server_credentials_STUpump.tsv"; # the file storing the database server info and credentials
+#server_info <- "./server_credentials_STUpump.tsv"; # the file storing the database server info and credentials for MS SQL server
+server_info <- "./server_credentials_STUpump2.tsv"; # the file storing the database server info and credentials for MySQL server
 
 # Load the SQL-stuff:
 source("./SQL_queries.R", echo=FALSE);
@@ -61,7 +62,7 @@ stu_db <- SQL_db(server_info);
 if( FALSE )
 {
   # Create the test database:
-  stu_db <- SQL_create_test_database(stu_db);
+  create_test_database(stu_db);
 }
 
 
@@ -72,6 +73,11 @@ if( FALSE )
 if( !check_evtable(stu_db) )
 {
   stop(paste0("The events table '",get_evtable(stu_db),"' failed the safety checks!\n"));
+}
+
+if( !check_prtable(stu_db) )
+{
+  stop(paste0("The processing table '",get_prtable(stu_db),"' failed the safety checks!\n"));
 }
 
 

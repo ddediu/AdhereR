@@ -28,10 +28,11 @@ SQL_db <- function(db_spec_file=NA, # the file containing the database specifica
                    connect_to_db=TRUE # try to connect to the database?
                   )
 {
-  db_connection <- NULL; # the connection
-  
   if( !is.na(db_spec_file) )
   {
+    # The connection
+    db_connection <- NULL; 
+    
     # Load the actual database specification:
     db_info <- read.table(db_spec_file, header=TRUE, sep="\t", quote="", stringsAsFactors=FALSE);
     
@@ -48,35 +49,57 @@ SQL_db <- function(db_spec_file=NA, # the file containing the database specifica
                          "PERDAY"    =db_info$Value[ tolower(db_info$Variable) == "evtable_perday" ],
                          "CATEGORY"  =db_info$Value[ tolower(db_info$Variable) == "evtable_category" ],
                          "DURATION"  =db_info$Value[ tolower(db_info$Variable) == "evtable_duration" ]);
+    
+    db_prtable_name <- db_info$Value[ tolower(db_info$Variable) == "prtable" ];
+    db_prtable_cols <- c("PATIENT_ID"=db_info$Value[ tolower(db_info$Variable) == "prtable_patient_id" ],
+                         "CATEGORIES"=db_info$Value[ tolower(db_info$Variable) == "prtable_categories" ],
+                         "PROCESS"   =db_info$Value[ tolower(db_info$Variable) == "prtable_process" ],
+                         "PARAMS"    =db_info$Value[ tolower(db_info$Variable) == "prtable_params" ]);
+    
+    db_retable_name <- db_info$Value[ tolower(db_info$Variable) == "retable" ];
+    db_retable_cols <- c(db_prtable_cols, # reuse the columns from the prtable
+                         "ESTIMATE"=db_info$Value[ tolower(db_info$Variable) == "retable_estimate" ],
+                         "PLOT"    =db_info$Value[ tolower(db_info$Variable) == "retable_plot" ]);
+    
+    # The object:
+    ret_val <- structure(list(# the database specification file and its contents:
+                              "db_spec_file"=db_spec_file,
+                              "db_info"=db_info,
+                              # the database info:
+                              "db_type"=db_type,
+                              "db_host"=db_host,
+                              "db_dsn"=db_dsn,
+                              "db_user"=db_user,
+                              "db_psswd"=db_psswd,
+                              "db_name"=db_name,
+                              "db_quote_characters"=switch(db_type, 
+                                                           "mariadb"=, 
+                                                           "mysql"=,
+                                                           "sqlite"=c("`","`"),
+                                                           "mssql"=c("[","]"),
+                                                           c("`","`")),
+                              # the important tables:
+                              "db_evtable_name"=db_evtable_name,
+                              "db_evtable_cols"=db_evtable_cols,
+                              "db_prtable_name"=db_prtable_name,
+                              "db_prtable_cols"=db_prtable_cols,
+                              "db_retable_name"=db_retable_name,
+                              "db_retable_cols"=db_retable_cols,
+                              # the actual connection:
+                              "db_connection"=db_connection),
+      class="SQL_db");
+    
+    if( connect_to_db )
+    {
+      ret_val <- connect(ret_val);
+      reset_results(ret_val);
+    }
+    
+    return (ret_val);
+  } else
+  { 
+    return (NULL);
   }
-  
-  # The object:
-  ret_val <- structure(list(# the database specification file and its contents:
-                            "db_spec_file"=db_spec_file,
-                            "db_info"=db_info,
-                            # the database info:
-                            "db_type"=db_type,
-                            "db_host"=db_host,
-                            "db_dsn"=db_dsn,
-                            "db_user"=db_user,
-                            "db_psswd"=db_psswd,
-                            "db_name"=db_name,
-                            "db_quote_characters"=switch(db_type, 
-                                                        "mariadb"=, 
-                                                        "mysql"=,
-                                                        "sqlite"=c("`","`"),
-                                                        "mssql"=c("[","]"),
-                                                        c("`","`")),
-                            # the important tables:
-                            "db_evtable_name"=db_evtable_name,
-                            "db_evtable_cols"=db_evtable_cols,
-                            # the actual connection:
-                            "db_connection"=db_connection),
-    class="SQL_db");
-  
-  if( connect_to_db ) ret_val <- connect(ret_val);
-  
-  return (ret_val);
 }
 
 
@@ -145,6 +168,19 @@ disconnect.SQL_db <- function(x)
   }
   
   return (invisible(x));
+}
+
+# Initialise the results table:
+reset_results <- function(x) UseMethod("reset_results")
+reset_results.SQL_db <- function(x)
+{
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    if( get_retable(x) %in% list_tables(x) ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get_retable(x)," ;")), silent=TRUE);
+  } else if( x$db_type == "mssql" )
+  {
+    if( get_retable(x) %in% list_tables(x) ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get_retable(x)," ;")), silent=TRUE);
+  }
 }
 
 
@@ -376,6 +412,77 @@ get_evtable_duration_col.SQL_db <- function(x)
   return (x$db_evtable_cols["DURATION"]);
 }
 
+get_prtable <- function(x) UseMethod("get_prtable")
+get_prtable.SQL_db <- function(x)
+{
+  return (x$db_prtable_name);
+}
+
+get_prtable_id_col <- function(x) UseMethod("get_prtable_id_col")
+get_prtable_id_col.SQL_db <- function(x)
+{
+  return (x$db_prtable_cols["PATIENT_ID"]);
+}
+
+get_prtable_categories_col <- function(x) UseMethod("get_prtable_categories_col")
+get_prtable_categories_col.SQL_db <- function(x)
+{
+  return (x$db_prtable_cols["CATEGORIES"]);
+}
+
+get_prtable_process_col <- function(x) UseMethod("get_prtable_process_col")
+get_prtable_process_col.SQL_db <- function(x)
+{
+  return (x$db_prtable_cols["PROCESS"]);
+}
+
+get_prtable_params_col <- function(x) UseMethod("get_prtable_params_col")
+get_prtable_params_col.SQL_db <- function(x)
+{
+  return (x$db_prtable_cols["PARAMS"]);
+}
+
+get_retable <- function(x) UseMethod("get_retable")
+get_retable.SQL_db <- function(x)
+{
+  return (x$db_retable_name);
+}
+
+get_retable_id_col <- function(x) UseMethod("get_retable_id_col")
+get_retable_id_col.SQL_db <- function(x)
+{
+  return (get_prtable_id_col(x));
+}
+
+get_retable_categories_col <- function(x) UseMethod("get_retable_categories_col")
+get_retable_categories_col.SQL_db <- function(x)
+{
+  return (get_prtable_categories_col(x));
+}
+
+get_retable_process_col <- function(x) UseMethod("get_retable_process_col")
+get_retable_process_col.SQL_db <- function(x)
+{
+  return (get_prtable_process_col(x));
+}
+
+get_retable_params_col <- function(x) UseMethod("get_retable_params_col")
+get_retable_params_col.SQL_db <- function(x)
+{
+  return (get_prtable_params_col(x));
+}
+
+get_retable_estimate_col <- function(x) UseMethod("get_retable_estimate_col")
+get_retable_estimate_col.SQL_db <- function(x)
+{
+  return (x$db_retable_cols["ESTIMATE"]);
+}
+
+get_retable_plot_col <- function(x) UseMethod("get_retable_plot_col")
+get_retable_plot_col.SQL_db <- function(x)
+{
+  return (x$db_retable_cols["PLOT"]);
+}
 
 
 ##
@@ -428,7 +535,7 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
                                       if(!is.na(maxrows)) paste0("LIMIT ",maxrows),
                                       ";")),
         silent=TRUE);
-    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(x) > 0 ) db_pat_info <- tmp;
+    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) db_pat_info <- tmp;
   } else if( x$db_type == "mssql" )
   {
     tmp <- NULL;
@@ -494,6 +601,50 @@ check_evtable.SQL_db <- function(x)
   return (TRUE);
 }
 
+# Check if the processing table exists, and if so, if it contains the expected columns, and is not empty:
+check_prtable <- function(x) UseMethod("check_prtable")
+check_prtable.SQL_db <- function(x)
+{
+  db_tables <- list_tables(x);
+  if( !(get_prtable(x) %in% db_tables) )
+  {
+    # The processing table does not exist: using the default for everybody
+    warning("The processing table does not exist: using the defaults for all patients...\n")
+    return (TRUE);
+  }
+  
+  **HERE!!!**
+  
+  db_evtable_info <- get_cols_info(x, get_evtable(x));
+  if( is.null(db_evtable_info) || nrow(db_evtable_info) == 0 )
+  {
+    stop(paste0("Cannot get the information about the events table '",get_evtable(x),"'!\n"));
+    return (FALSE);
+  }
+  if( !(get_evtable_id_col(x) %in% db_evtable_info$column) )
+  {
+    stop(paste0("The required column PATIENT_ID ('",get_evtable_id_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
+    return (FALSE);
+  }
+  if( !(get_evtable_date_col(x) %in% db_evtable_info$column) )
+  {
+    stop(paste0("The required column DATE ('",get_evtable_date_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
+    return (FALSE);
+  }
+  if( !(get_evtable_perday_col(x) %in% db_evtable_info$column) )
+  {
+    stop(paste0("The required column PERDAY ('",get_evtable_perday_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
+    return (FALSE);
+  }
+  if( db_evtable_info$nrow[1] == 0 )
+  {
+    stop(paste0("The events table '",get_evtable(x),"' seems empty!\n"));
+    return (FALSE);
+  }
+  
+  return (TRUE);
+}
+
 
 
 
@@ -505,21 +656,78 @@ check_evtable.SQL_db <- function(x)
 create_test_database <- function(x) UseMethod("create_test_database")
 create_test_database.SQL_db <- function(x)
 {
+  # Make sure the dates are in the right format:
+  d <- AdhereR::med.events;
+  d$DATE <- as.character(as.Date(d$DATE, format="%m/%d/%Y"), format="%Y-%m-%d"); # use the expected format for SQL's DATE
+  
+  # Create the database:
   if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
+    # Delete and (re)create the needed tables:
+    db_tables <- list_tables(x);
+    
+    # The events table:
+    if( get_evtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x)),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," ( ",
+                                           qs(x,get_evtable_id_col(x)),      " INT NOT NULL, ",
+                                           qs(x,get_evtable_date_col(x)),    " DATE NOT NULL, ",
+                                           qs(x,get_evtable_perday_col(x)),  " INT NOT NULL, ",
+                                           qs(x,get_evtable_category_col(x))," VARCHAR(1024) NOT NULL, ",
+                                           qs(x,get_evtable_duration_col(x))," INT NOT NULL);"));
+    # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
+    for( i in 1:nrow(d) )
+    {
+      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," VALUES (",
+                                             paste0("'",as.character(d[i,]),"'",collapse=","),
+                                             ");"));
+    }
+    
+    # The table specifying what to do to which entries: 
+    if( get_prtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," ( ",
+                                           qs(x,get_prtable_id_col(x)),        " INT NOT NULL, ",
+                                           qs(x,get_prtable_categories_col(x))," VARCHAR(1024) NOT NULL, ",
+                                           qs(x,get_prtable_process_col(x)),   " VARCHAR(128) NOT NULL, ",
+                                           qs(x,get_prtable_params_col(x)),    " VARCHAR(10240) NOT NULL);"));
+    # Fill it in one by one:
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', 'medA', 'CMA2',      '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', 'medA', 'CMA7',      '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', 'medA', 'plot.CMA0', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', 'medA', 'plot.CMA7', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',     'CMA9',      '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',     'plot.CMA0', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',     'plot.CMA9', '');"));
+    
+    # The results table: 
+    if( get_retable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x)),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x))," ( ",
+                                           qs(x,get_retable_id_col(x)),        " INT NOT NULL, ",
+                                           qs(x,get_retable_categories_col(x))," VARCHAR(1024) NOT NULL, ",
+                                           qs(x,get_retable_process_col(x)),   " VARCHAR(128) NOT NULL, ",
+                                           qs(x,get_retable_params_col(x)),    " VARCHAR(10240) NOT NULL, ",
+                                           qs(x,get_retable_estimate_col(x)),  " VARCHAR(10240) NOT NULL, ",
+                                           qs(x,get_retable_plot_col(x)),      " BLOB NOT NULL);"));
+    
   } else if( x$db_type == "mssql" )
   {
     # Delete and (re)create the needed tables:
+    db_tables <- list_tables(x);
     
     # The events table:
-    sqlQuery(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x)),";"));
-    sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," ( ",
-                                     qs(x,get_evtable_id_col(x))," INT NOT NULL, ",
-                                     qs(x,get_evtable_date_col(x))," DATE NOT NULL, ",
-                                     qs(x,get_evtable_perday_col(x))," INT NOT NULL, ",
-                                     qs(x,get_evtable_category_col(x))," VARCHAR(1024) NOT NULL, ",
-                                     qs(x,get_evtable_duration_col(x))," INT NOT NULL);"));
-    
+    if( get_evtable(x) %in% db_tables ) RODBC::sqlQuery(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x)),";"));
+    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," ( ",
+                                            qs(x,get_evtable_id_col(x))," INT NOT NULL, ",
+                                            qs(x,get_evtable_date_col(x))," DATE NOT NULL, ",
+                                            qs(x,get_evtable_perday_col(x))," INT NOT NULL, ",
+                                            qs(x,get_evtable_category_col(x))," VARCHAR(1024) NOT NULL, ",
+                                            qs(x,get_evtable_duration_col(x))," INT NOT NULL);"));
+    # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
+    for( i in 1:nrow(d) )
+    {
+      RODBC::sqlQuery(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," VALUES (",
+                                              paste0("'",as.character(d[i,]),"'",collapse=","),
+                                              ");"));
+    }
     
   }
 }
