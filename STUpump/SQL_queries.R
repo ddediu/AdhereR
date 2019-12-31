@@ -24,8 +24,9 @@
 ## The SQL_db class that ecapsulates all SQL-related things ####
 ##
 
-SQL_db <- function(db_spec_file=NA, # the file containing the database specification (or NA for the defaults)
-                   connect_to_db=TRUE # try to connect to the database?
+SQL_db <- function(db_spec_file=NA,       # the file containing the database specification (or NA for the defaults)
+                   connect_to_db=TRUE,    # try to connect to the database?
+                   check_db=connect_to_db # check the consistency of the database?
                   )
 {
   if( !is.na(db_spec_file) )
@@ -61,6 +62,42 @@ SQL_db <- function(db_spec_file=NA, # the file containing the database specifica
                          "ESTIMATE"=db_info$Value[ tolower(db_info$Variable) == "retable_estimate" ],
                          "PLOT"    =db_info$Value[ tolower(db_info$Variable) == "retable_plot" ]);
     
+    # Parse the default processing into a data.frame wth format "cats", "type", "proc" and "params":
+    tmp <- trimws(strsplit(db_info$Value[ tolower(db_info$Variable) == "default_processing_and_plotting" ], ";", fixed=TRUE)[[1]]);
+    if( length(tmp) < 1 )
+    {
+      # No defaults define, gall-bak to the built-in defaults:
+      db_default_proc <- data.frame("cats"=c(NA), "type"=c("plot"), "proc"=c("CMA0"), "params"=c(NA));
+    } else
+    {
+      # Parse it:
+      db_default_proc <- do.call(rbind, lapply(tmp, function(s)
+        {
+          # Return value:
+          ret_val = c("cats"=NA, "type"=NA, "proc"=NA, "params"=NA);
+          
+          # Split the params:
+          tmp2 <- trimws(strsplit(s, "(", fixed=TRUE)[[1]]);
+          
+          # Type of processing and name:
+          if( substr(tmp2,1,nchar("plot.")) == "plot." )
+          {
+            ret_val["type"] <- "plot"; ret_val["proc"] <- substr(tmp2,nchar("plot.")+1,nchar(tmp2));
+          } else
+          {
+            ret_val["type"] <- "CMA"; ret_val["proc"] <- tmp2;
+          }
+          
+          # The params:
+          if( length(tmp2) > 1 )
+          {
+            ret_val["params"] <- tmp2[2];
+          }
+          
+          return (ret_val);
+        }));
+    }
+
     # The object:
     ret_val <- structure(list(# the database specification file and its contents:
                               "db_spec_file"=db_spec_file,
@@ -85,13 +122,39 @@ SQL_db <- function(db_spec_file=NA, # the file containing the database specifica
                               "db_prtable_cols"=db_prtable_cols,
                               "db_retable_name"=db_retable_name,
                               "db_retable_cols"=db_retable_cols,
+                              # defaults:
+                              "db_default_proc"=db_default_proc,
+                              "use_default_proc_for_all"=FALSE, # should the default processing be used for all patients?
                               # the actual connection:
                               "db_connection"=db_connection),
       class="SQL_db");
     
+    # Connect to the database?
     if( connect_to_db )
     {
+      # Attempt connection:
       ret_val <- connect(ret_val);
+      
+      if( check_db )
+      {
+        tmp <- ret_val;
+        ## Check if the tables exist and contain the expected columns and are not empty:
+        if( is.null(tmp <- check_evtable(ret_val)) )
+        {
+          stop(paste0("The events table '",get_evtable(ret_val),"' failed the safety checks!\n"));
+          return (NULL);
+        }
+        
+        if( is.null(tmp <- check_prtable(ret_val)) )
+        {
+          stop(paste0("The processing table '",get_prtable(ret_val),"' failed the safety checks!\n"));
+          return (NULL);
+        }
+        
+        ret_val <- tmp; # make sure we keep the various check results
+      }
+      
+      # Reset the results table:
       reset_results(ret_val);
     }
     
@@ -484,6 +547,12 @@ get_retable_plot_col.SQL_db <- function(x)
   return (x$db_retable_cols["PLOT"]);
 }
 
+get_default_processing <- function(x) UseMethod("get_default_processing")
+get_default_processing.SQL_db <- function(x)
+{
+  return (x$db_default_proc);
+}
+
 
 ##
 ## List the patient ids in the events table ####
@@ -557,6 +626,86 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
 
 
 ##
+## Get the list of possible processing for a list patient ids ####
+##
+
+get_processings_for_patient <- function(x, patient_id) UseMethod("get_processings_for_patient")
+get_processings_for_patient.SQL_db <- function(x, patient_id)
+{
+  # Are we using the defaults for everybody?
+  if( x$use_default_proc_for_all )
+  {
+    return (x$db_default_proc);
+  }
+
+  db_procs <- NULL;
+  
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    tmp <- NULL;
+    try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                               paste0("SELECT *",
+                                      " FROM ",qs(x,get_prtable(x)),
+                                      " WHERE ",qs(x,get_prtable_id_col(x)),
+                                      " IN (",paste0("'",patient_id,"'",collapse=","),")",
+                                      ";")),
+        silent=TRUE);
+    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) db_procs <- tmp;
+  } else if( x$db_type == "mssql" )
+  {
+    tmp <- NULL;
+    try(tmp <- RODBC::sqlQuery(x$db_connection, 
+                               paste0("SELECT *",
+                                      " FROM ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                      " WHERE ",qs(x,get_prtable_id_col(x)),
+                                      " IN (",paste0("'",patient_id,"'",collapse=","),")",
+                                      ";")),
+        silent=TRUE);
+    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) db_procs <- tmp;
+  }
+  
+  if( is.null(db_procs) || nrow(db_procs) < 1 )
+  {
+    # Use the defaults for this patient:
+    return (x$db_default_proc);
+  } else
+  {
+    # Re-arrange in the "cats", "type", "proc", "params" format:
+    col_cats <- which(get_prtable_categories_col(x) == names(db_procs)); if( length(col_cats) != 1 ) stop(paste0("Error retreiving the processing!\n")); 
+    col_proc <- which(get_prtable_process_col(x)    == names(db_procs)); if( length(col_proc) != 1 ) stop(paste0("Error retreiving the processing!\n")); 
+    col_parm <- which(get_prtable_params_col(x)     == names(db_procs)); if( length(col_parm) != 1 ) stop(paste0("Error retreiving the processing!\n"));
+    db_procs <- db_procs[,c(col_cats, col_proc, col_parm)];
+    names(db_procs) <- c("cats", "proc", "params");
+    
+    tmp <- do.call(rbind, lapply(1:nrow(db_procs), function(i)
+      {
+        # Return value:
+        ret_val = c("cats"=as.character(db_procs$cats[i]), "type"=NA, "proc"=NA, "params"=NA);
+        
+        tmp2 <- trimws(as.character(db_procs$proc[i]));
+        
+        # Type of processing and name:
+        if( substr(tmp2,1,nchar("plot.")) == "plot." )
+        {
+          ret_val["type"] <- "plot"; ret_val["proc"] <- substr(tmp2,nchar("plot.")+1,nchar(tmp2));
+        } else
+        {
+          ret_val["type"] <- "CMA"; ret_val["proc"] <- tmp2;
+        }
+        
+        # The params:
+        ret_val["params"] <- as.character(db_procs$params[i]);
+
+        return (ret_val);
+      }));
+    tmp[tmp==""] <- NA;
+      
+    return (tmp);
+  }
+}
+
+
+##
 ## Database checks ####
 ##
 
@@ -568,37 +717,37 @@ check_evtable.SQL_db <- function(x)
   if( !(get_evtable(x) %in% db_tables) )
   {
     stop(paste0("The required events table '",get_evtable(x),"' does not seem to exist in the database!\n"));
-    return (FALSE);
+    return (NULL);
   }
   
   db_evtable_info <- get_cols_info(x, get_evtable(x));
   if( is.null(db_evtable_info) || nrow(db_evtable_info) == 0 )
   {
     stop(paste0("Cannot get the information about the events table '",get_evtable(x),"'!\n"));
-    return (FALSE);
+    return (NULL);
   }
   if( !(get_evtable_id_col(x) %in% db_evtable_info$column) )
   {
     stop(paste0("The required column PATIENT_ID ('",get_evtable_id_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
-    return (FALSE);
+    return (NULL);
   }
   if( !(get_evtable_date_col(x) %in% db_evtable_info$column) )
   {
     stop(paste0("The required column DATE ('",get_evtable_date_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
-    return (FALSE);
+    return (NULL);
   }
   if( !(get_evtable_perday_col(x) %in% db_evtable_info$column) )
   {
     stop(paste0("The required column PERDAY ('",get_evtable_perday_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
-    return (FALSE);
+    return (NULL);
   }
   if( db_evtable_info$nrow[1] == 0 )
   {
     stop(paste0("The events table '",get_evtable(x),"' seems empty!\n"));
-    return (FALSE);
+    return (NULL);
   }
   
-  return (TRUE);
+  return (x);
 }
 
 # Check if the processing table exists, and if so, if it contains the expected columns, and is not empty:
@@ -609,44 +758,45 @@ check_prtable.SQL_db <- function(x)
   if( !(get_prtable(x) %in% db_tables) )
   {
     # The processing table does not exist: using the default for everybody
-    warning("The processing table does not exist: using the defaults for all patients...\n")
-    return (TRUE);
+    warning(paste0("The processing table '",get_evtable(x),"' does not exist: using the defaults for all patients...\n"));
+    x$use_default_proc_for_all <- TRUE;
+    return (x);
   }
   
-  **HERE!!!**
-  
-  db_evtable_info <- get_cols_info(x, get_evtable(x));
-  if( is.null(db_evtable_info) || nrow(db_evtable_info) == 0 )
+  db_prtable_info <- get_cols_info(x, get_prtable(x));
+  if( db_prtable_info$nrow[1] == 0 )
   {
-    stop(paste0("Cannot get the information about the events table '",get_evtable(x),"'!\n"));
-    return (FALSE);
-  }
-  if( !(get_evtable_id_col(x) %in% db_evtable_info$column) )
-  {
-    stop(paste0("The required column PATIENT_ID ('",get_evtable_id_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
-    return (FALSE);
-  }
-  if( !(get_evtable_date_col(x) %in% db_evtable_info$column) )
-  {
-    stop(paste0("The required column DATE ('",get_evtable_date_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
-    return (FALSE);
-  }
-  if( !(get_evtable_perday_col(x) %in% db_evtable_info$column) )
-  {
-    stop(paste0("The required column PERDAY ('",get_evtable_perday_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
-    return (FALSE);
-  }
-  if( db_evtable_info$nrow[1] == 0 )
-  {
-    stop(paste0("The events table '",get_evtable(x),"' seems empty!\n"));
-    return (FALSE);
+    # The processing table is empty: using the default for everybody
+    warning(paste0("The processing table '",get_evtable(x),"' is empty: using the defaults for all patients...\n"));
+    x$use_default_proc_for_all <- TRUE;
+    return (x);
   }
   
-  return (TRUE);
+  if( is.null(db_prtable_info) || nrow(db_prtable_info) == 0 )
+  {
+    stop(paste0("Cannot get the information about the processing table '",get_prtable(x),"'!\n"));
+    return (NULL);
+  }
+  if( !(get_prtable_id_col(x) %in% db_prtable_info$column) )
+  {
+    stop(paste0("The required column PATIENT_ID ('",get_prtable_id_col(x),"') does not seem to exist in the processing table '",get_prtable(x),"'!\n"));
+    return (NULL);
+  }
+  if( !(get_prtable_categories_col(x) %in% db_prtable_info$column) )
+  {
+    stop(paste0("The required column CATEGORIES ('",get_prtable_categories_col(x),"') does not seem to exist in the processing table '",get_prtable(x),"'!\n"));
+    return (NULL);
+  }
+  if( !(get_prtable_params_col(x) %in% db_prtable_info$column) )
+  {
+    stop(paste0("The required column PARAMS ('",get_prtable_params_col(x),"') does not seem to exist in the processing table '",get_evtable(x),"'!\n"));
+    return (NULL);
+  }
+  
+  # Return the updated SQL_db object:
+  x$use_default_proc_for_all <- FALSE;
+  return (x);
 }
-
-
-
 
 
 ##

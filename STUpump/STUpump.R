@@ -67,21 +67,6 @@ if( FALSE )
 
 
 ##
-## Check if the tables exist and contain the expected columns and are not empty ####
-##
-
-if( !check_evtable(stu_db) )
-{
-  stop(paste0("The events table '",get_evtable(stu_db),"' failed the safety checks!\n"));
-}
-
-if( !check_prtable(stu_db) )
-{
-  stop(paste0("The processing table '",get_prtable(stu_db),"' failed the safety checks!\n"));
-}
-
-
-##
 ## Process the patients one by one ####
 ##
 
@@ -108,6 +93,11 @@ for( i in seq_along(patient_ids) )
     pat_msgs <- paste0(pat_msgs, "W: this patient has no data!");
   } else
   {
+    # Get the processing(s) and plotting(s) for this patient:
+    pat_procs <- get_processings_for_patient(stu_db, pat_id);
+    
+    stop("*** IMPLEMENT THE PROCESSING!!! ***");
+    
     # Compute the requested CMA(s):
     cma1 <- AdhereR::CMA1(data=pat_info,
                           ID.colname=get_evtable_id_col(stu_db),
