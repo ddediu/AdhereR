@@ -96,53 +96,31 @@ for( i in seq_along(patient_ids) )
     # Get the processing(s) and plotting(s) for this patient:
     pat_procs <- get_processings_for_patient(stu_db, pat_id);
     
-    stop("*** IMPLEMENT THE PROCESSING!!! ***");
-    
-    # Compute the requested CMA(s):
-    cma1 <- AdhereR::CMA1(data=pat_info,
-                          ID.colname=get_evtable_id_col(stu_db),
-                          event.date.colname=get_evtable_date_col(stu_db),
-                          event.duration.colname=get_evtable_duration_col(stu_db));
-    if( is.null(cma1) )
+    pat_procs_classes <- as.character(unique(pat_procs$cats)); # the classes of medication
+    for( procs_class in pat_procs_classes )
     {
-      # Issues computing this CMA:
-      pat_msgs <- paste0(pat_msgs, "W: error computing CMA1!");
-      pat_retval$CMA1 <- NA;
-    } else
-    {
-      pat_retval$CMA1 <- getCMA(cma1)$CMA[1];
-    }
-    
-    # Do the requested plot(s):
-    plot_file_names <- plot(cma1, export.formats=c("html"), generate.R.plot=FALSE); # plot_file_names contains the path to the generated plots
-    if( is.null(plot_file_names) || length(plot_file_names) < 2 )
-    {
-      # Issues generating the plots:
-      pat_msgs <- paste0(pat_msgs, "W: error plotting CMA1!");
-      pat_retval$CMA1_plot <- NULL;
-    } else
-    {
-      # Save the plots:
+      # Select the events corresponding to this class:
+      s <- select_events_for_procs_class(stu_db, pat_info, procs_class);
       
-      # Create the ZIP holding the HTML document and JPG placeholder:
-      zip_file_name <- paste0(plot_file_names["html"],".zip");
-      if( utils::zip(zipfile=zip_file_name, files=plot_file_names, flags="-9Xj") != 0 )
+      if( !(is.na(s) || is.null(s) || length(s) < 1 || !is.logical(s)) )
       {
-        # Errors zipping:
-        pat_msgs <- paste0(pat_msgs, "W: error creating the zip containing the HTML document and the JPG placeholder!");
-        zip_file_name <- NULL;
+        # Apply the specified processing(s) to this selection:
+        pat_procs_actions <- unique(pat_procs[ pat_procs$cats == procs_class, ]); # the actions
+        if( !is.null(pat_procs_actions) && nrow(pat_procs_actions) > 0 )
+        {
+          # Ok, there's actions to apply:
+          for( j in 1:nrow(pat_procs_actions) )
+          {
+            # Apply the action:
+            pat_procs_results <- apply_procs_action_for_class(stu_db, pat_info[s,], pat_procs[j,]);
+            
+            # Upload the results:
+            upload_procs_results(stu_db, pat_procs_results);
+          }
+        }
       }
-      
-      # Store these files:
-      pat_retval$CMA1_plot <- list("jpg"=plot_file_names["jpg-placeholder"], 
-                                   "html"=zip_file_name);
     }
     
-    # Upload them in the database:
-  }
-  
-  # Store the messages:
-  pat_retval$msgs <- pat_msgs;
 }
 
 

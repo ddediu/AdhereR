@@ -60,7 +60,8 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
     db_retable_name <- db_info$Value[ tolower(db_info$Variable) == "retable" ];
     db_retable_cols <- c(db_prtable_cols, # reuse the columns from the prtable
                          "ESTIMATE"=db_info$Value[ tolower(db_info$Variable) == "retable_estimate" ],
-                         "PLOT"    =db_info$Value[ tolower(db_info$Variable) == "retable_plot" ]);
+                         "PLOT_JPG"=db_info$Value[ tolower(db_info$Variable) == "retable_plot_jpg" ],
+                         "PLOT_HTML"=db_info$Value[ tolower(db_info$Variable) == "retable_plot_html" ]);
     
     # Parse the default processing into a data.frame wth format "cats", "type", "proc" and "params":
     tmp <- trimws(strsplit(db_info$Value[ tolower(db_info$Variable) == "default_processing_and_plotting" ], ";", fixed=TRUE)[[1]]);
@@ -541,16 +542,34 @@ get_retable_estimate_col.SQL_db <- function(x)
   return (x$db_retable_cols["ESTIMATE"]);
 }
 
-get_retable_plot_col <- function(x) UseMethod("get_retable_plot_col")
-get_retable_plot_col.SQL_db <- function(x)
+get_retable_plot_jpg_col <- function(x) UseMethod("get_retable_plot_jpg_col")
+get_retable_plot_jpg_col.SQL_db <- function(x)
 {
-  return (x$db_retable_cols["PLOT"]);
+  return (x$db_retable_cols["PLOT_JPG"]);
+}
+
+get_retable_plot_html_col <- function(x) UseMethod("get_retable_plot_html_col")
+get_retable_plot_html_col.SQL_db <- function(x)
+{
+  return (x$db_retable_cols["PLOT_HTML"]);
 }
 
 get_default_processing <- function(x) UseMethod("get_default_processing")
 get_default_processing.SQL_db <- function(x)
 {
   return (x$db_default_proc);
+}
+
+
+##
+## Writers ####
+##
+
+write_retable_entry <- function(x, id, type=NA, categories=NA, proc=NA, params=NA, estimate=NA, plot_jpg=NA, plot_html=NA) UseMethod("write_retable_entry")
+write_retable_entry.SQL_db <- function(x, id, type=NA, categories=NA, proc=NA, params=NA, estimate=NA, plot_jpg=NA, plot_html=NA)
+{
+  # Write all these info into the retable:
+  return (TRUE);
 }
 
 
@@ -626,9 +645,10 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
 
 
 ##
-## Get the list of possible processing for a list patient ids ####
+## Processings ####
 ##
 
+# Get the list of possible processing for a list patient ids:
 get_processings_for_patient <- function(x, patient_id) UseMethod("get_processings_for_patient")
 get_processings_for_patient.SQL_db <- function(x, patient_id)
 {
@@ -700,8 +720,166 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
       }));
     tmp[tmp==""] <- NA;
       
-    return (tmp);
+    return (as.data.frame(tmp));
   }
+}
+
+# Apply the required selection to this patient:
+select_events_for_procs_class <- function(x, patient_info, procs_classs) UseMethod("select_events_for_procs_class")
+select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class)
+{
+  if( is.null(patient_info) || nrow(patient_info) == 0 || 
+      is.null(procs_class) || length(procs_class) != 1 )
+  {
+    # Empty patient info or processing class: nothing to do
+    return (NULL);
+  }
+  
+  if( procs_class == "" || is.na(procs_class) )
+  {
+    # Select all!
+    return (rep(TRUE, nrow(patient_info)));
+  } else
+  {
+    # Specific selection may be needed:
+    
+    # Get the medication classes for this patient:
+    if( is.na(get_evtable_category_col(x)) )
+    {
+      # No medication classes:
+      return (NULL);
+    }
+    pat_classes <- patient_info[ , get_evtable_category_col(x) ]; 
+    if( is.null(pat_classes) )
+    {
+      # No medication classes:
+      return (NULL);
+    }
+    
+    # Transform the procs_class specification into a lofical expression to be evaluated on pat_classes:
+    procs_class_expr <- NULL;
+    try(procs_class_expr <- parse(text=gsub("]", "')", 
+                                            gsub("[", "(pat_classes == '",
+                                                 procs_class, fixed=TRUE), fixed=TRUE)), silent=TRUE);
+    if( is.null(procs_class_expr) )
+    {
+      stop(paste0("Error parsing the medication class definition '",procs_class,"'!\n"));
+      return (NULL);
+    }
+    
+    # Evaluate the expression:
+    s <- eval(procs_class_expr);
+    if( (!is.na(s) || !is.null(s)) && !is.logical(s) )
+    {
+      stop(paste0("Error applying the medication class definition '",procs_class,"' to the data: the result should be logical!\n"));
+      return (NULL);
+    }
+    
+    # Return it:
+    return (s);
+  }
+}
+
+# Apply the required processing to this selection:
+apply_procs_action_for_class <- function(x, patient_info, procs_action) UseMethod("apply_procs_action_for_class")
+apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
+{
+  if( is.null(patient_info) || nrow(patient_info) == 0 || 
+      is.null(procs_action) || nrow(procs_action) != 1 )
+  {
+    # Empty patient info or processing actions: nothing to do
+    return (NULL);
+  }
+  
+  # Transform the action procs_action into an expression to be evaluated on patient_info
+  # simply create a function call to the CMA (and possibly, the plotting) using the fact that the irelevant params will be ignored:
+  procs_action_expr <- NULL;
+  procs_action_call <- paste0(procs_action$proc[1], 
+                              "(",
+                              "data=patient_info, ",
+                              "ID.colname='",get_evtable_id_col(x),"', ",
+                              "event.date.colname='",get_evtable_date_col(x),"', ",
+                              "event.duration.colname='",get_evtable_duration_col(x),"', ",
+                              ifelse(!is.na(get_evtable_perday_col(x)), paste0("event.daily.dose.colname='",get_evtable_perday_col(x),"', "), ""),
+                              ifelse(!is.na(get_evtable_category_col(x)), paste0("medication.class.colname='",get_evtable_category_col(x),"' "), ""),
+                              ifelse(!is.na(procs_action$params[1]), paste0(", ",procs_action$params[1]),""), 
+                              ")");
+  try(procs_action_expr <- parse(text=procs_action_call), silent=TRUE);
+  if( is.null(procs_action_expr) )
+  {
+    stop(paste0("Error parsing the action '",procs_action_call,"'!\n"));
+    return (NULL);
+  }
+  
+  # Evaluate the expression:
+  cma <- eval(procs_action_expr);
+  if( (!is.na(cma) || !is.null(cma)) && !inherits(cma, "CMA0") )
+  {
+    stop(paste0("Error applying the action definition '",procs_action_call,"' to the data: the result should be a CMA object!\n"));
+    return (NULL);
+  }
+  
+  # Should we plot it?
+  cma_plots <- NULL;
+  if( procs_action$type[1] == "plot" )
+  {
+    procs_action_expr <- NULL;
+    procs_action_call <- paste0("plot(cma, export.formats=c('html'), generate.R.plot=FALSE",
+                                ifelse(!is.na(procs_action$params[1]), paste0(", ",procs_action$params[1]),""), 
+                                ")");
+    try(procs_action_expr <- parse(text=procs_action_call), silent=TRUE);
+    if( is.null(procs_action_expr) )
+    {
+      stop(paste0("Error parsing the action '",procs_action_call,"'!\n"));
+      return (NULL);
+    }
+    
+    # Evaluate the expression:
+    plot_file_names <- eval(procs_action_expr);
+    if( is.null(plot_file_names) || length(plot_file_names) < 2 )
+    {
+      # Issues generating the plots:
+      warning(paste0("Error applying the action definition '",procs_action_call,"' to the data: the result should be a valid plot!\n"));
+      return (NULL);
+    } else
+    {
+      # Save the plots:
+      # Create the ZIP holding the HTML document and JPG placeholder:
+      zip_file_name <- paste0(plot_file_names["html"],".zip");
+      if( utils::zip(zipfile=zip_file_name, files=plot_file_names, flags="-9Xj") != 0 )
+      {
+        # Errors zipping:
+        warning(paste0(pat_msgs, "Error creating the zip containing the HTML document and the JPG placeholder!"));
+        return (NULL);
+      }
+      
+      # Store these files:
+      cma_plots <- list("jpg"=plot_file_names["jpg-placeholder"], "html"=zip_file_name);
+    }
+  }
+  
+  # Return the results:
+  return (list("id"=patient_info[ get_evtable_id_col(x), 1 ],
+               categories=procs_action$cats[1], type=procs_action$type[1], proc=procs_action$proc[1], params=procs_action$params[1], 
+               "cma"=cma, "plots"=cma_plots));
+}
+
+# Apply the required processing to this selection:
+upload_procs_results <- function(x, procs_results) UseMethod("upload_procs_results")
+upload_procs_results.SQL_db <- function(x, procs_results)
+{
+  if( is.null(procs_results) || length(procs_results) != 7 )
+  {
+    # Nothing to do:
+    return (FALSE);
+  }
+  
+  # Write the results info:
+  return (write_retable_entry(x, 
+                              id=procs_results$id, type=procs_results$type, categories=procs_results$categories, proc=procs_results$process, params=procs_results$params,
+                              estimate =procs_results$cma,
+                              plot_jpg =if(!is.null(procs_results$plots)) procs_results$plots$jpg else NA,
+                              plot_html=if(!is.null(procs_results$plots)) procs_results$plots$html else NA));
 }
 
 
@@ -840,13 +1018,13 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get_prtable_process_col(x)),   " VARCHAR(128) NOT NULL, ",
                                            qs(x,get_prtable_params_col(x)),    " VARCHAR(10240) NOT NULL);"));
     # Fill it in one by one:
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', 'medA', 'CMA2',      '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', 'medA', 'CMA7',      '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', 'medA', 'plot.CMA0', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', 'medA', 'plot.CMA7', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',     'CMA9',      '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',     'plot.CMA0', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',     'plot.CMA9', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA]',          'CMA2',      '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA] & [medB]', 'CMA7',      '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA]',          'plot.CMA0', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA] & [medB]', 'plot.CMA7', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',                'CMA9',      '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',                'plot.CMA0', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',                'plot.CMA9', '');"));
     
     # The results table: 
     if( get_retable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x)),";"));
@@ -856,7 +1034,8 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get_retable_process_col(x)),   " VARCHAR(128) NOT NULL, ",
                                            qs(x,get_retable_params_col(x)),    " VARCHAR(10240) NOT NULL, ",
                                            qs(x,get_retable_estimate_col(x)),  " VARCHAR(10240) NOT NULL, ",
-                                           qs(x,get_retable_plot_col(x)),      " BLOB NOT NULL);"));
+                                           qs(x,get_retable_plot_jpg_col(x)),  " BLOB NOT NULL, ",
+                                           qs(x,get_retable_plot_html_col(x)), " BLOB NOT NULL);"));
     
   } else if( x$db_type == "mssql" )
   {
