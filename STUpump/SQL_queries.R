@@ -778,11 +778,18 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class)
       return (NULL);
     }
     
-    # Transform the procs_class specification into a lofical expression to be evaluated on pat_classes:
+    # Transform the procs_class specification into a logical expression to be evaluated on pat_classes:
     procs_class_expr <- NULL;
-    try(procs_class_expr <- parse(text=gsub("]", "')", 
+    try(procs_class_expr <- parse(text=gsub("]", "')", # replace "[ XX ]" by the actual R test "(pat_classes == 'XX')"
                                             gsub("[", "(pat_classes == '",
-                                                 procs_class, fixed=TRUE), fixed=TRUE)), silent=TRUE);
+                                                 gsub("|", "||", # replace the logical connectors "|" ans "&" by their actual R vectorized counterparts "||" and "&&"
+                                                      gsub("&", "&&", 
+                                                           procs_class, 
+                                                           fixed=TRUE), 
+                                                      fixed=TRUE),
+                                                 fixed=TRUE), 
+                                            fixed=TRUE)), 
+        silent=TRUE);
     if( is.null(procs_class_expr) )
     {
       stop(paste0("Error parsing the medication class definition '",procs_class,"'!\n"));
@@ -868,7 +875,8 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
       # Save the plots:
       # Create the ZIP holding the HTML document and JPG placeholder:
       zip_file_name <- paste0(plot_file_names["html"],".zip");
-      if( utils::zip(zipfile=zip_file_name, files=plot_file_names, flags="-9Xj") != 0 )
+      if( utils::zip(zipfile=zip_file_name, files=plot_file_names, flags="-9Xjq") # max compression, don't store the path, suppress messages
+          != 0 ) # the return code for OK should be 0
       {
         # Errors zipping:
         warning(paste0(pat_msgs, "Error creating the zip containing the HTML document and the JPG placeholder!"));
@@ -897,15 +905,24 @@ upload_procs_results.SQL_db <- function(x, procs_results)
   }
   
   # Write the results info:
-  return (write_retable_entry(x, 
-                              id        =ifelse(is.na(procs_results$id),         "", as.character(procs_results$id)), 
-                              categories=ifelse(is.na(procs_results$categories), "", as.character(procs_results$categories)), 
-                              type      =ifelse(is.na(procs_results$type),       "", as.character(procs_results$type)), 
-                              proc      =ifelse(is.na(procs_results$proc),       "", as.character(procs_results$proc)), 
-                              params    =ifelse(is.na(procs_results$params),     "", as.character(procs_results$params)),
-                              estimate  =ifelse(is.null(procs_results$cma) || is.null(getCMA(procs_results$cma)), "", round(getCMA(procs_results$cma)$CMA[1],4)),
-                              plot_jpg  =if(!is.null(procs_results$plots)) procs_results$plots$jpg  else NA,
-                              plot_html =if(!is.null(procs_results$plots)) procs_results$plots$html else NA));
+  ret_val <- return (write_retable_entry(x, 
+                                         id        =ifelse(is.na(procs_results$id),         "", as.character(procs_results$id)), 
+                                         categories=ifelse(is.na(procs_results$categories), "", as.character(procs_results$categories)), 
+                                         type      =ifelse(is.na(procs_results$type),       "", as.character(procs_results$type)), 
+                                         proc      =ifelse(is.na(procs_results$proc),       "", as.character(procs_results$proc)), 
+                                         params    =ifelse(is.na(procs_results$params),     "", as.character(procs_results$params)),
+                                         estimate  =ifelse(is.null(procs_results$cma) || is.null(getCMA(procs_results$cma)), "", round(getCMA(procs_results$cma)$CMA[1],4)),
+                                         plot_jpg  =if(!is.null(procs_results$plots)) procs_results$plots$jpg  else NA,
+                                         plot_html =if(!is.null(procs_results$plots)) procs_results$plots$html else NA));
+  
+  # Clean the temporary files (if the case):
+  if( !is.null(pat_procs_results$plots) )
+  {
+    if( !!is.null(procs_results$plots) && !is.null(pat_procs_results$plots$jpg)  && file.exists(pat_procs_results$plots$jpg) )  file.remove(pat_procs_results$plots$jpg);
+    if( !!is.null(procs_results$plots) && !is.null(pat_procs_results$plots$html) && file.exists(pat_procs_results$plots$html) ) file.remove(pat_procs_results$plots$html);
+  }
+  
+  return (ret_val);
 }
 
 
@@ -1045,10 +1062,8 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get_prtable_params_col(x)),    " VARCHAR(10240) NULL DEFAULT NULL);"));
     # Fill it in one by one:
     DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA]',          'CMA2',      '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA] & [medB]', 'CMA7',      '');"));
     DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA]',          'plot.CMA0', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA] & [medB]', 'plot.CMA7', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',                'CMA9',      '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA] | [medB]', 'plot.CMA7', '');"));
     DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',                'plot.CMA0', '');"));
     DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',                'plot.CMA9', '');"));
     

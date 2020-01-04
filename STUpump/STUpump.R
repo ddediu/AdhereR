@@ -56,14 +56,18 @@ for( i in 1:nrow(.needed_packages) )
 ## Connect to the database ####
 ##
 
-stu_db <- SQL_db(server_info);
-
 # If needed, create the example database:
 if( FALSE )
 {
   # Create the test database:
+  stu_db <- SQL_db(server_info);
   create_test_database(stu_db);
+  disconnect(stu_db);
 }
+
+# Connect to the pre-existing database:
+stu_db <- SQL_db(server_info);
+
 
 
 ##
@@ -123,14 +127,7 @@ for( i in seq_along(patient_ids) )
             pat_procs_results <- apply_procs_action_for_class(stu_db, pat_info[s,], pat_procs_actions[j,]);
             
             # Upload the results:
-            pat_res <- upload_procs_results(stu_db, pat_procs_results);
-            # Clean the temporary files (if any):
-            if( !is.null(pat_procs_results$plots) )
-            {
-              if( !is.null(pat_procs_results$plots$jpg)  && file.exists(pat_procs_results$plots$jpg) )  file.remove(pat_procs_results$plots$jpg);
-              if( !is.null(pat_procs_results$plots$html) && file.exists(pat_procs_results$plots$html) ) file.remove(pat_procs_results$plots$html);
-            }
-            if( !pat_res )
+            if( !upload_procs_results(stu_db, pat_procs_results) )
             {
               # Oops: error writing these results to the database
               stop("Error writing results to the database!\n");
