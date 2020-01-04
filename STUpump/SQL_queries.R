@@ -842,9 +842,10 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   
   # Evaluate the expression:
   cma <- eval(procs_action_expr);
-  if( (!is.na(cma) || !is.null(cma)) && !inherits(cma, "CMA0") )
+  if( is.null(cma) || is.na(cma) || !(inherits(cma, "CMA0") || inherits(cma, "CMA_sliding_window") || inherits(cma, "CMA_per_episode")) )
   {
-    stop(paste0("Error applying the action definition '",procs_action_call,"' to the data: the result should be a CMA object!\n"));
+    # Serious error:
+    stop(paste0("Error applying the action definition '",procs_action_call,"' to the data!\n"));
     return (NULL);
   }
   
@@ -890,8 +891,9 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   
   # Return the results:
   return (list("id"=patient_info[ 1, get_evtable_id_col(x) ],
-               categories=procs_action$cats[1], type=procs_action$type[1], proc=procs_action$proc[1], params=procs_action$params[1], 
-               "cma"=cma, "plots"=cma_plots));
+               "categories"=procs_action$cats[1], "type"=procs_action$type[1], "proc"=procs_action$proc[1], "params"=procs_action$params[1], 
+               "cma"=cma, 
+               "plots"=cma_plots));
 }
 
 # Apply the required processing to this selection:
@@ -1061,11 +1063,28 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get_prtable_process_col(x)),   " VARCHAR(128) NULL DEFAULT NULL, ",
                                            qs(x,get_prtable_params_col(x)),    " VARCHAR(10240) NULL DEFAULT NULL);"));
     # Fill it in one by one:
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA]',          'CMA2',      '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA]',          'plot.CMA0', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA] | [medB]', 'plot.CMA7', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',                'plot.CMA0', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('2', '',                'plot.CMA9', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('1', '[medA]',          'CMA2',      '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('1', '[medA]',          'plot.CMA0', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('1', '[medA] | [medB]', 'plot.CMA7', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('2', '',                'plot.CMA0', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('2', '',                'plot.CMA9', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('3', '',                'plot.CMA0', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('3', '',                'CMA1',      '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('3', '',                'plot.CMA_sliding_window', 'CMA.to.apply=\"CMA1\", sliding.window.duration=90, sliding.window.no.steps=5');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('4', '',                'plot.CMA0', '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('4', '',                'CMA1',      '');"));
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                           " VALUES ('4', '',                'plot.CMA_per_episode', 'CMA.to.apply=\"CMA1\", maximum.permissible.gap=90');"));
     
     # The results table: 
     if( get_retable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x)),";"));
