@@ -99,28 +99,47 @@ for( i in seq_along(patient_ids) )
     pat_procs_classes <- as.character(unique(pat_procs$cats)); # the classes of medication
     for( procs_class in pat_procs_classes )
     {
+      # The actions for this class:
+      if( is.na(procs_class) )
+      {
+        pat_procs_actions <- unique(pat_procs[ is.na(pat_procs$cats), ]);
+      } else
+      {
+        pat_procs_actions <- unique(pat_procs[ pat_procs$cats == procs_class, ]);
+      }
+      
       # Select the events corresponding to this class:
       s <- select_events_for_procs_class(stu_db, pat_info, procs_class);
       
-      if( !(is.na(s) || is.null(s) || length(s) < 1 || !is.logical(s)) )
+      if( !is.na(s) && !is.null(s) && length(s) > 0 && is.logical(s) && any(s) )
       {
         # Apply the specified processing(s) to this selection:
-        pat_procs_actions <- unique(pat_procs[ pat_procs$cats == procs_class, ]); # the actions
         if( !is.null(pat_procs_actions) && nrow(pat_procs_actions) > 0 )
         {
           # Ok, there's actions to apply:
           for( j in 1:nrow(pat_procs_actions) )
           {
             # Apply the action:
-            pat_procs_results <- apply_procs_action_for_class(stu_db, pat_info[s,], pat_procs[j,]);
+            pat_procs_results <- apply_procs_action_for_class(stu_db, pat_info[s,], pat_procs_actions[j,]);
             
             # Upload the results:
-            upload_procs_results(stu_db, pat_procs_results);
+            pat_res <- upload_procs_results(stu_db, pat_procs_results);
+            # Clean the temporary files (if any):
+            if( !is.null(pat_procs_results$plots) )
+            {
+              if( !is.null(pat_procs_results$plots$jpg)  && file.exists(pat_procs_results$plots$jpg) )  file.remove(pat_procs_results$plots$jpg);
+              if( !is.null(pat_procs_results$plots$html) && file.exists(pat_procs_results$plots$html) ) file.remove(pat_procs_results$plots$html);
+            }
+            if( !pat_res )
+            {
+              # Oops: error writing these results to the database
+              stop("Error writing results to the database!\n");
+            }
           }
         }
       }
     }
-    
+  }   
 }
 
 

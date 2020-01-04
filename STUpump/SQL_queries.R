@@ -72,7 +72,7 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
     } else
     {
       # Parse it:
-      db_default_proc <- do.call(rbind, lapply(tmp, function(s)
+      db_default_proc <- as.data.frame(do.call(rbind, lapply(tmp, function(s)
         {
           # Return value:
           ret_val = c("cats"=NA, "type"=NA, "proc"=NA, "params"=NA);
@@ -96,7 +96,7 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
           }
           
           return (ret_val);
-        }));
+        })));
     }
 
     # The object:
@@ -565,10 +565,32 @@ get_default_processing.SQL_db <- function(x)
 ## Writers ####
 ##
 
-write_retable_entry <- function(x, id, type=NA, categories=NA, proc=NA, params=NA, estimate=NA, plot_jpg=NA, plot_html=NA) UseMethod("write_retable_entry")
-write_retable_entry.SQL_db <- function(x, id, type=NA, categories=NA, proc=NA, params=NA, estimate=NA, plot_jpg=NA, plot_html=NA)
+write_retable_entry <- function(x, id, categories="", type="", proc="", params="", estimate="", plot_jpg="", plot_html="") UseMethod("write_retable_entry")
+write_retable_entry.SQL_db <- function(x, id, categories="", type="", proc="", params="", estimate="", plot_jpg="", plot_html="")
 {
   # Write all these info into the retable:
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    result <- DBI::dbExecute(x$db_connection, 
+                             paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_retable(x)),
+                                    " VALUES (",
+                                    "'",id,"', ", # id
+                                    "'",categories,"', ", # categories
+                                    "'",ifelse(tolower(type) == "plot",paste0(type,"."),""),proc,"', ", # type & proc 
+                                    "'",params,"', ", # params
+                                    "'",estimate,"', ", # params
+                                    ifelse(is.na(plot_jpg)  || !file.exists(plot_jpg),  
+                                           "''", 
+                                           paste0("X'",paste0(readBin(plot_jpg,  n=file.size(plot_jpg) +1024, what="raw"),collapse=""),"'")),", ", # the JPEG file as a blob
+                                    ifelse(is.na(plot_html) || !file.exists(plot_html), 
+                                           "''", 
+                                           paste0("X'",paste0(readBin(plot_html, n=file.size(plot_html)+1024, what="raw"),collapse=""),"'")), # the HTML+SVG file as a blob
+                                    ");"));
+    return (result == 1); # should've written exactly one line
+  } else if( x$db_type == "mssql" )
+  {
+  }
+  
   return (TRUE);
 }
 
@@ -859,7 +881,7 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   }
   
   # Return the results:
-  return (list("id"=patient_info[ get_evtable_id_col(x), 1 ],
+  return (list("id"=patient_info[ 1, get_evtable_id_col(x) ],
                categories=procs_action$cats[1], type=procs_action$type[1], proc=procs_action$proc[1], params=procs_action$params[1], 
                "cma"=cma, "plots"=cma_plots));
 }
@@ -876,10 +898,14 @@ upload_procs_results.SQL_db <- function(x, procs_results)
   
   # Write the results info:
   return (write_retable_entry(x, 
-                              id=procs_results$id, type=procs_results$type, categories=procs_results$categories, proc=procs_results$process, params=procs_results$params,
-                              estimate =procs_results$cma,
-                              plot_jpg =if(!is.null(procs_results$plots)) procs_results$plots$jpg else NA,
-                              plot_html=if(!is.null(procs_results$plots)) procs_results$plots$html else NA));
+                              id        =ifelse(is.na(procs_results$id),         "", as.character(procs_results$id)), 
+                              categories=ifelse(is.na(procs_results$categories), "", as.character(procs_results$categories)), 
+                              type      =ifelse(is.na(procs_results$type),       "", as.character(procs_results$type)), 
+                              proc      =ifelse(is.na(procs_results$proc),       "", as.character(procs_results$proc)), 
+                              params    =ifelse(is.na(procs_results$params),     "", as.character(procs_results$params)),
+                              estimate  =ifelse(is.null(procs_results$estimate) || is.null(getCMA(procs_results$cma)), "", getCMA(procs_results$cma)),
+                              plot_jpg  =if(!is.null(procs_results$plots)) procs_results$plots$jpg  else NA,
+                              plot_html =if(!is.null(procs_results$plots)) procs_results$plots$html else NA));
 }
 
 
@@ -997,7 +1023,7 @@ create_test_database.SQL_db <- function(x)
     # The events table:
     if( get_evtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x)),";"));
     DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," ( ",
-                                           qs(x,get_evtable_id_col(x)),      " INT NOT NULL, ",
+                                           qs(x,get_evtable_id_col(x)),      " VARCHAR(256) NOT NULL, ",
                                            qs(x,get_evtable_date_col(x)),    " DATE NOT NULL, ",
                                            qs(x,get_evtable_perday_col(x)),  " INT NOT NULL, ",
                                            qs(x,get_evtable_category_col(x))," VARCHAR(1024) NOT NULL, ",
@@ -1013,7 +1039,7 @@ create_test_database.SQL_db <- function(x)
     # The table specifying what to do to which entries: 
     if( get_prtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),";"));
     DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," ( ",
-                                           qs(x,get_prtable_id_col(x)),        " INT NOT NULL, ",
+                                           qs(x,get_prtable_id_col(x)),        " VARCHAR(256) NOT NULL, ",
                                            qs(x,get_prtable_categories_col(x))," VARCHAR(1024) NOT NULL, ",
                                            qs(x,get_prtable_process_col(x)),   " VARCHAR(128) NOT NULL, ",
                                            qs(x,get_prtable_params_col(x)),    " VARCHAR(10240) NOT NULL);"));
@@ -1029,13 +1055,13 @@ create_test_database.SQL_db <- function(x)
     # The results table: 
     if( get_retable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x)),";"));
     DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x))," ( ",
-                                           qs(x,get_retable_id_col(x)),        " INT NOT NULL, ",
+                                           qs(x,get_retable_id_col(x)),        " VARCHAR(256) NOT NULL, ",
                                            qs(x,get_retable_categories_col(x))," VARCHAR(1024) NOT NULL, ",
                                            qs(x,get_retable_process_col(x)),   " VARCHAR(128) NOT NULL, ",
                                            qs(x,get_retable_params_col(x)),    " VARCHAR(10240) NOT NULL, ",
                                            qs(x,get_retable_estimate_col(x)),  " VARCHAR(10240) NOT NULL, ",
-                                           qs(x,get_retable_plot_jpg_col(x)),  " BLOB NOT NULL, ",
-                                           qs(x,get_retable_plot_html_col(x)), " BLOB NOT NULL);"));
+                                           qs(x,get_retable_plot_jpg_col(x)),  " LONGBLOB NOT NULL, ",
+                                           qs(x,get_retable_plot_html_col(x)), " LONGBLOB NOT NULL);"));
     
   } else if( x$db_type == "mssql" )
   {
@@ -1045,7 +1071,7 @@ create_test_database.SQL_db <- function(x)
     # The events table:
     if( get_evtable(x) %in% db_tables ) RODBC::sqlQuery(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x)),";"));
     RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," ( ",
-                                            qs(x,get_evtable_id_col(x))," INT NOT NULL, ",
+                                            qs(x,get_evtable_id_col(x))," VARCHAR(256) NOT NULL, ",
                                             qs(x,get_evtable_date_col(x))," DATE NOT NULL, ",
                                             qs(x,get_evtable_perday_col(x))," INT NOT NULL, ",
                                             qs(x,get_evtable_category_col(x))," VARCHAR(1024) NOT NULL, ",
