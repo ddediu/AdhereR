@@ -580,10 +580,10 @@ write_retable_entry.SQL_db <- function(x, id, categories="", type="", proc="", p
                                     "'",params,"', ", # params
                                     "'",estimate,"', ", # params
                                     ifelse(is.na(plot_jpg)  || !file.exists(plot_jpg),  
-                                           "''", 
+                                           "NULL", 
                                            paste0("X'",paste0(readBin(plot_jpg,  n=file.size(plot_jpg) +1024, what="raw"),collapse=""),"'")),", ", # the JPEG file as a blob
                                     ifelse(is.na(plot_html) || !file.exists(plot_html), 
-                                           "''", 
+                                           "NULL", 
                                            paste0("X'",paste0(readBin(plot_html, n=file.size(plot_html)+1024, what="raw"),collapse=""),"'")), # the HTML+SVG file as a blob
                                     ");"));
     return (result == 1); # should've written exactly one line
@@ -903,7 +903,7 @@ upload_procs_results.SQL_db <- function(x, procs_results)
                               type      =ifelse(is.na(procs_results$type),       "", as.character(procs_results$type)), 
                               proc      =ifelse(is.na(procs_results$proc),       "", as.character(procs_results$proc)), 
                               params    =ifelse(is.na(procs_results$params),     "", as.character(procs_results$params)),
-                              estimate  =ifelse(is.null(procs_results$estimate) || is.null(getCMA(procs_results$cma)), "", getCMA(procs_results$cma)),
+                              estimate  =ifelse(is.null(procs_results$cma) || is.null(getCMA(procs_results$cma)), "", round(getCMA(procs_results$cma)$CMA[1],4)),
                               plot_jpg  =if(!is.null(procs_results$plots)) procs_results$plots$jpg  else NA,
                               plot_html =if(!is.null(procs_results$plots)) procs_results$plots$html else NA));
 }
@@ -1026,8 +1026,8 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get_evtable_id_col(x)),      " VARCHAR(256) NOT NULL, ",
                                            qs(x,get_evtable_date_col(x)),    " DATE NOT NULL, ",
                                            qs(x,get_evtable_perday_col(x)),  " INT NOT NULL, ",
-                                           qs(x,get_evtable_category_col(x))," VARCHAR(1024) NOT NULL, ",
-                                           qs(x,get_evtable_duration_col(x))," INT NOT NULL);"));
+                                           qs(x,get_evtable_category_col(x))," VARCHAR(1024) NULL DEFAULT NULL, ",
+                                           qs(x,get_evtable_duration_col(x))," INT NULL DEFAULT NULL);"));
     # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
     for( i in 1:nrow(d) )
     {
@@ -1040,9 +1040,9 @@ create_test_database.SQL_db <- function(x)
     if( get_prtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),";"));
     DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," ( ",
                                            qs(x,get_prtable_id_col(x)),        " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get_prtable_categories_col(x))," VARCHAR(1024) NOT NULL, ",
-                                           qs(x,get_prtable_process_col(x)),   " VARCHAR(128) NOT NULL, ",
-                                           qs(x,get_prtable_params_col(x)),    " VARCHAR(10240) NOT NULL);"));
+                                           qs(x,get_prtable_categories_col(x))," VARCHAR(1024) NULL DEFAULT NULL, ",
+                                           qs(x,get_prtable_process_col(x)),   " VARCHAR(128) NULL DEFAULT NULL, ",
+                                           qs(x,get_prtable_params_col(x)),    " VARCHAR(10240) NULL DEFAULT NULL);"));
     # Fill it in one by one:
     DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA]',          'CMA2',      '');"));
     DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," VALUES ('1', '[medA] & [medB]', 'CMA7',      '');"));
@@ -1056,12 +1056,12 @@ create_test_database.SQL_db <- function(x)
     if( get_retable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x)),";"));
     DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x))," ( ",
                                            qs(x,get_retable_id_col(x)),        " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get_retable_categories_col(x))," VARCHAR(1024) NOT NULL, ",
-                                           qs(x,get_retable_process_col(x)),   " VARCHAR(128) NOT NULL, ",
-                                           qs(x,get_retable_params_col(x)),    " VARCHAR(10240) NOT NULL, ",
-                                           qs(x,get_retable_estimate_col(x)),  " VARCHAR(10240) NOT NULL, ",
-                                           qs(x,get_retable_plot_jpg_col(x)),  " LONGBLOB NOT NULL, ",
-                                           qs(x,get_retable_plot_html_col(x)), " LONGBLOB NOT NULL);"));
+                                           qs(x,get_retable_categories_col(x))," VARCHAR(1024) NULL DEFAULT NULL, ",
+                                           qs(x,get_retable_process_col(x)),   " VARCHAR(128) NULL DEFAULT NULL, ",
+                                           qs(x,get_retable_params_col(x)),    " VARCHAR(10240) NULL DEFAULT NULL, ",
+                                           qs(x,get_retable_estimate_col(x)),  " VARCHAR(10240) NULL DEFAULT NULL, ",
+                                           qs(x,get_retable_plot_jpg_col(x)),  " LONGBLOB NULL DEFAULT NULL, ",
+                                           qs(x,get_retable_plot_html_col(x)), " LONGBLOB NULL DEFAULT NULL);"));
     
   } else if( x$db_type == "mssql" )
   {
