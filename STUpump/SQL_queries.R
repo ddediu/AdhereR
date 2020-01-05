@@ -44,38 +44,53 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
     db_psswd <- db_info$Value[ tolower(db_info$Variable) == "psswd" ];
     db_name  <- db_info$Value[ tolower(db_info$Variable) == "dbname" ];
     
+    # The events table:
     db_evtable_name <- db_info$Value[ tolower(db_info$Variable) == "evtable" ];
-    db_evtable_cols <- c("PATIENT_ID"=db_info$Value[ tolower(db_info$Variable) == "evtable_patient_id" ],
-                         "DATE"      =db_info$Value[ tolower(db_info$Variable) == "evtable_date" ],
-                         "PERDAY"    =db_info$Value[ tolower(db_info$Variable) == "evtable_perday" ],
-                         "CATEGORY"  =db_info$Value[ tolower(db_info$Variable) == "evtable_category" ],
-                         "DURATION"  =db_info$Value[ tolower(db_info$Variable) == "evtable_duration" ]);
+    db_evtable_cols <- c("PATIENT_ID"     =db_info$Value[ tolower(db_info$Variable) == "evtable_patient_id" ],
+                         "DATE"           =db_info$Value[ tolower(db_info$Variable) == "evtable_date" ],
+                         "PERDAY"         =db_info$Value[ tolower(db_info$Variable) == "evtable_perday" ],
+                         "CATEGORY"       =db_info$Value[ tolower(db_info$Variable) == "evtable_category" ],
+                         "DURATION"       =db_info$Value[ tolower(db_info$Variable) == "evtable_duration" ]);
     
+    # The processing to be done table:
     db_prtable_name <- db_info$Value[ tolower(db_info$Variable) == "prtable" ];
-    db_prtable_cols <- c("PATIENT_ID"=db_info$Value[ tolower(db_info$Variable) == "prtable_patient_id" ],
-                         "CATEGORIES"=db_info$Value[ tolower(db_info$Variable) == "prtable_categories" ],
-                         "PROCESS"   =db_info$Value[ tolower(db_info$Variable) == "prtable_process" ],
-                         "PARAMS"    =db_info$Value[ tolower(db_info$Variable) == "prtable_params" ]);
+    db_prtable_cols <- c("KEY"            =db_info$Value[ tolower(db_info$Variable) == "prtable_key" ],
+                         "PATIENT_ID"     =db_info$Value[ tolower(db_info$Variable) == "prtable_patient_id" ],
+                         "CATEGORIES"     =db_info$Value[ tolower(db_info$Variable) == "prtable_categories" ],
+                         "PROCESS"        =db_info$Value[ tolower(db_info$Variable) == "prtable_process" ],
+                         "PARAMS"         =db_info$Value[ tolower(db_info$Variable) == "prtable_params" ]);
     
+    # The main results table:
     db_retable_name <- db_info$Value[ tolower(db_info$Variable) == "retable" ];
-    db_retable_cols <- c(db_prtable_cols, # reuse the columns from the prtable
-                         "ESTIMATE"=db_info$Value[ tolower(db_info$Variable) == "retable_estimate" ],
-                         "PLOT_JPG"=db_info$Value[ tolower(db_info$Variable) == "retable_plot_jpg" ],
-                         "PLOT_HTML"=db_info$Value[ tolower(db_info$Variable) == "retable_plot_html" ]);
+    db_retable_cols <- c("KEY"            =db_info$Value[ tolower(db_info$Variable) == "retable_key" ],
+                         "PROC_KEY_REF"   =db_info$Value[ tolower(db_info$Variable) == "retable_proc_key_ref" ],
+                         "ESTIMATE"       =db_info$Value[ tolower(db_info$Variable) == "retable_estimate" ],
+                         "ESTIMATE_TYPE"  =db_info$Value[ tolower(db_info$Variable) == "retable_estimate_type" ],
+                         "PLOT_JPG"       =db_info$Value[ tolower(db_info$Variable) == "retable_plot_jpg" ],
+                         "PLOT_HTML"      =db_info$Value[ tolower(db_info$Variable) == "retable_plot_html" ]);
+    
+    # The sliding windows results table:
+    db_swtable_name <- db_info$Value[ tolower(db_info$Variable) == "swtable" ];
+    db_swtable_cols <- c("RES_KEY_REF"    =db_info$Value[ tolower(db_info$Variable) == "swtable_res_key_ref" ],
+                         "PATIENT_ID"     =db_info$Value[ tolower(db_info$Variable) == "swtable_patient_id" ],
+                         "WINDOW_ID"      =db_info$Value[ tolower(db_info$Variable) == "swtable_window_id" ],
+                         "WINDOW_START"   =db_info$Value[ tolower(db_info$Variable) == "swtable_window_start" ],
+                         "WINDOW_END"     =db_info$Value[ tolower(db_info$Variable) == "swtable_window_end" ],
+                         "WINDOW_ESTIMATE"=db_info$Value[ tolower(db_info$Variable) == "swtable_window_estimate" ]);
     
     # Parse the default processing into a data.frame wth format "cats", "type", "proc" and "params":
     tmp <- trimws(strsplit(db_info$Value[ tolower(db_info$Variable) == "default_processing_and_plotting" ], ";", fixed=TRUE)[[1]]);
     if( length(tmp) < 1 )
     {
-      # No defaults define, gall-bak to the built-in defaults:
-      db_default_proc <- data.frame("cats"=c(NA), "type"=c("plot"), "proc"=c("CMA0"), "params"=c(NA));
+      # No defaults define, fall-bak to the built-in defaults:
+      db_default_proc <- data.frame("key"=-1, "cats"=c(NA), "type"=c("plot"), "proc"=c("CMA0"), "params"=c(NA));
     } else
     {
       # Parse it:
       db_default_proc <- as.data.frame(do.call(rbind, lapply(tmp, function(s)
         {
           # Return value:
-          ret_val = c("cats"=NA, "type"=NA, "proc"=NA, "params"=NA);
+          ret_val = c("key"=-1, "cats"=NA, "type"=NA, "proc"=NA, "params"=NA);
           
           # Split the params:
           tmp2 <- trimws(strsplit(s, "(", fixed=TRUE)[[1]]);
@@ -123,6 +138,8 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
                               "db_prtable_cols"=db_prtable_cols,
                               "db_retable_name"=db_retable_name,
                               "db_retable_cols"=db_retable_cols,
+                              "db_swtable_name"=db_swtable_name,
+                              "db_swtable_cols"=db_swtable_cols,
                               # defaults:
                               "db_default_proc"=db_default_proc,
                               "use_default_proc_for_all"=FALSE, # should the default processing be used for all patients?
@@ -234,16 +251,18 @@ disconnect.SQL_db <- function(x)
   return (invisible(x));
 }
 
-# Initialise the results table:
+# Initialise the results tables:
 reset_results <- function(x) UseMethod("reset_results")
 reset_results.SQL_db <- function(x)
 {
   if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
     if( get_retable(x) %in% list_tables(x) ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get_retable(x)," ;")), silent=TRUE);
+    if( get_swtable(x) %in% list_tables(x) ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get_swtable(x)," ;")), silent=TRUE);
   } else if( x$db_type == "mssql" )
   {
     if( get_retable(x) %in% list_tables(x) ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get_retable(x)," ;")), silent=TRUE);
+    if( get_swtable(x) %in% list_tables(x) ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get_swtable(x)," ;")), silent=TRUE);
   }
 }
 
@@ -482,6 +501,12 @@ get_prtable.SQL_db <- function(x)
   return (x$db_prtable_name);
 }
 
+get_prtable_key_col <- function(x) UseMethod("get_prtable_key_col")
+get_prtable_key_col.SQL_db <- function(x)
+{
+  return (x$db_prtable_cols["KEY"]);
+}
+
 get_prtable_id_col <- function(x) UseMethod("get_prtable_id_col")
 get_prtable_id_col.SQL_db <- function(x)
 {
@@ -506,40 +531,58 @@ get_prtable_params_col.SQL_db <- function(x)
   return (x$db_prtable_cols["PARAMS"]);
 }
 
+get_retable_key_col <- function(x) UseMethod("get_retable_key_col")
+get_retable_key_col.SQL_db <- function(x)
+{
+  return (x$db_retable_cols["KEY"]);
+}
+
 get_retable <- function(x) UseMethod("get_retable")
 get_retable.SQL_db <- function(x)
 {
   return (x$db_retable_name);
 }
 
+get_retable_proc_key_ref_col <- function(x) UseMethod("get_retable_proc_key_ref_col")
+get_retable_proc_key_ref_col.SQL_db <- function(x)
+{
+  return (x$db_retable_cols["PROC_KEY_REF"]);
+}
+
 get_retable_id_col <- function(x) UseMethod("get_retable_id_col")
 get_retable_id_col.SQL_db <- function(x)
 {
-  return (get_prtable_id_col(x));
+  return (get_evtable_id_col(x));
 }
 
-get_retable_categories_col <- function(x) UseMethod("get_retable_categories_col")
-get_retable_categories_col.SQL_db <- function(x)
-{
-  return (get_prtable_categories_col(x));
-}
-
-get_retable_process_col <- function(x) UseMethod("get_retable_process_col")
-get_retable_process_col.SQL_db <- function(x)
-{
-  return (get_prtable_process_col(x));
-}
-
-get_retable_params_col <- function(x) UseMethod("get_retable_params_col")
-get_retable_params_col.SQL_db <- function(x)
-{
-  return (get_prtable_params_col(x));
-}
+# get_retable_categories_col <- function(x) UseMethod("get_retable_categories_col")
+# get_retable_categories_col.SQL_db <- function(x)
+# {
+#   return (get_prtable_categories_col(x));
+# }
+# 
+# get_retable_process_col <- function(x) UseMethod("get_retable_process_col")
+# get_retable_process_col.SQL_db <- function(x)
+# {
+#   return (get_prtable_process_col(x));
+# }
+# 
+# get_retable_params_col <- function(x) UseMethod("get_retable_params_col")
+# get_retable_params_col.SQL_db <- function(x)
+# {
+#   return (get_prtable_params_col(x));
+# }
 
 get_retable_estimate_col <- function(x) UseMethod("get_retable_estimate_col")
 get_retable_estimate_col.SQL_db <- function(x)
 {
   return (x$db_retable_cols["ESTIMATE"]);
+}
+
+get_retable_estimate_type_col <- function(x) UseMethod("get_retable_estimate_type_col")
+get_retable_estimate_type_col.SQL_db <- function(x)
+{
+  return (x$db_retable_cols["ESTIMATE_TYPE"]);
 }
 
 get_retable_plot_jpg_col <- function(x) UseMethod("get_retable_plot_jpg_col")
@@ -554,6 +597,48 @@ get_retable_plot_html_col.SQL_db <- function(x)
   return (x$db_retable_cols["PLOT_HTML"]);
 }
 
+get_swtable <- function(x) UseMethod("get_swtable")
+get_swtable.SQL_db <- function(x)
+{
+  return (x$db_swtable_name);
+}
+
+get_swtable_res_key_ref_col <- function(x) UseMethod("get_swtable_res_key_ref_col")
+get_swtable_res_key_ref_col.SQL_db <- function(x)
+{
+  return (x$db_swtable_cols["RES_KEY_REF"]);
+}
+
+get_swtable_patient_id_col <- function(x) UseMethod("get_swtable_patient_id_col")
+get_swtable_patient_id_col.SQL_db <- function(x)
+{
+  return (x$db_swtable_cols["PATIENT_ID"]);
+}
+
+get_swtable_window_id_col <- function(x) UseMethod("get_swtable_window_id_col")
+get_swtable_window_id_col.SQL_db <- function(x)
+{
+  return (x$db_swtable_cols["WINDOW_ID"]);
+}
+
+get_swtable_window_start_col <- function(x) UseMethod("get_swtable_window_start_col")
+get_swtable_window_start_col.SQL_db <- function(x)
+{
+  return (x$db_swtable_cols["WINDOW_START"]);
+}
+
+get_swtable_window_end_col <- function(x) UseMethod("get_swtable_window_end_col")
+get_swtable_window_end_col.SQL_db <- function(x)
+{
+  return (x$db_swtable_cols["WINDOW_END"]);
+}
+
+get_swtable_window_estimate_col <- function(x) UseMethod("get_swtable_window_estimate_col")
+get_swtable_window_estimate_col.SQL_db <- function(x)
+{
+  return (x$db_swtable_cols["WINDOW_ESTIMATE"]);
+}
+
 get_default_processing <- function(x) UseMethod("get_default_processing")
 get_default_processing.SQL_db <- function(x)
 {
@@ -565,20 +650,30 @@ get_default_processing.SQL_db <- function(x)
 ## Writers ####
 ##
 
-write_retable_entry <- function(x, id, categories="", type="", proc="", params="", estimate="", plot_jpg="", plot_html="") UseMethod("write_retable_entry")
-write_retable_entry.SQL_db <- function(x, id, categories="", type="", proc="", params="", estimate="", plot_jpg="", plot_html="")
+write_retable_entry <- function(x, id, key_proc, categories="", type="", proc="", params="", estimate=NA, estimate_type=NA, plot_jpg="", plot_html="") UseMethod("write_retable_entry")
+write_retable_entry.SQL_db <- function(x, id, key_proc, categories="", type="", proc="", params="", estimate=NA, estimate_type=NA, plot_jpg="", plot_html="")
 {
   # Write all these info into the retable:
   if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
     result <- DBI::dbExecute(x$db_connection, 
                              paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_retable(x)),
+                                    "(",
+                                    qs(x,get_evtable_id_col(x)),", ",
+                                    qs(x,get_retable_proc_key_ref_col(x)),", ",
+                                    qs(x,get_retable_estimate_col(x)),", ",
+                                    qs(x,get_retable_estimate_type_col(x)),", ",
+                                    qs(x,get_retable_plot_jpg_col(x)),", ",
+                                    qs(x,get_retable_plot_html_col(x)),
+                                    ")",
                                     " VALUES (",
                                     "'",id,"', ", # id
-                                    "'",categories,"', ", # categories
-                                    "'",ifelse(tolower(type) == "plot",paste0(type,"."),""),proc,"', ", # type & proc 
-                                    "'",params,"', ", # params
-                                    "'",estimate,"', ", # params
+                                    "'",key_proc,"', ", # reference to the processing key
+                                    #"'",categories,"', ", # categories
+                                    #"'",ifelse(tolower(type) == "plot",paste0(type,"."),""),proc,"', ", # type & proc 
+                                    #"'",params,"', ", # params
+                                    ifelse(is.na(estimate),"NULL",paste0("'",estimate,"'")),", ", # estimate
+                                    ifelse(is.na(estimate_type),"NULL",paste0("'",estimate_type,"'")),", ", # estimate type
                                     ifelse(is.na(plot_jpg)  || !file.exists(plot_jpg),  
                                            "NULL", 
                                            paste0("X'",paste0(readBin(plot_jpg,  n=file.size(plot_jpg) +1024, what="raw"),collapse=""),"'")),", ", # the JPEG file as a blob
@@ -587,6 +682,53 @@ write_retable_entry.SQL_db <- function(x, id, categories="", type="", proc="", p
                                            paste0("X'",paste0(readBin(plot_html, n=file.size(plot_html)+1024, what="raw"),collapse=""),"'")), # the HTML+SVG file as a blob
                                     ");"));
     return (result == 1); # should've written exactly one line
+  } else if( x$db_type == "mssql" )
+  {
+  }
+  
+  return (TRUE);
+}
+
+write_swtable_entry <- function(x, res_key_ref=-1, cma=NULL) UseMethod("write_swtable_entry")
+write_swtable_entry.SQL_db <- function(x, res_key_ref=-1, cma=NULL)
+{
+  if( is.null(cma) || nrow(cma) == 0 )
+  {
+    return (FALSE);
+  }
+  # Convert the dates to the expected format for SQL's DATE:
+  cma$window.start <- as.character(as.Date(cma$window.start, format="%m/%d/%Y"), format="%Y-%m-%d");
+  cma$window.end   <- as.character(as.Date(cma$window.end,   format="%m/%d/%Y"), format="%Y-%m-%d");
+
+  # Write all these info into the swtable:
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    # Write at once as usually there's few sliding windows:
+    result <- DBI::dbExecute(x$db_connection, 
+                             paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_swtable(x)),
+                                    " (",
+                                    qs(x,get_swtable_res_key_ref_col(x)),", ",
+                                    qs(x,get_swtable_patient_id_col(x)),", ",
+                                    qs(x,get_swtable_window_id_col(x)),", ",
+                                    qs(x,get_swtable_window_start_col(x)),", ",
+                                    qs(x,get_swtable_window_end_col(x)),", ",
+                                    qs(x,get_swtable_window_estimate_col(x)),
+                                    ")",
+                                    " VALUES ",
+                                    paste0("(",
+                                           vapply(1:nrow(cma), 
+                                                  function(i) 
+                                                    paste0("'", res_key_ref, "', ",
+                                                           "'", cma[i,get_evtable_id_col(x)], "', ",
+                                                           "'", cma$window.ID[i], "', ",
+                                                           "'", cma$window.start[i], "', ",
+                                                           "'", cma$window.end[i], "', ",
+                                                           ifelse(!is.na(cma$CMA[i]), round(cma$CMA[i],4), "NULL")), 
+                                                  character(1)),
+                                           ")",
+                                           collapse=", "),
+                                    ";"));
+    return (result == nrow(cma)); # should've written exactly as many lines as in the data.frame
   } else if( x$db_type == "mssql" )
   {
   }
@@ -712,17 +854,18 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
     return (x$db_default_proc);
   } else
   {
-    # Re-arrange in the "cats", "type", "proc", "params" format:
+    # Re-arrange in the "key", "cats", "type", "proc", "params" format:
+    col_key  <- which(get_prtable_key_col(x) == names(db_procs));        if( length(col_key)  != 1 ) stop(paste0("Error retreiving the processing!\n"));
     col_cats <- which(get_prtable_categories_col(x) == names(db_procs)); if( length(col_cats) != 1 ) stop(paste0("Error retreiving the processing!\n")); 
     col_proc <- which(get_prtable_process_col(x)    == names(db_procs)); if( length(col_proc) != 1 ) stop(paste0("Error retreiving the processing!\n")); 
     col_parm <- which(get_prtable_params_col(x)     == names(db_procs)); if( length(col_parm) != 1 ) stop(paste0("Error retreiving the processing!\n"));
-    db_procs <- db_procs[,c(col_cats, col_proc, col_parm)];
-    names(db_procs) <- c("cats", "proc", "params");
+    db_procs <- db_procs[,c(col_key, col_cats, col_proc, col_parm)];
+    names(db_procs) <- c(      "key",   "cats",   "proc", "params");
     
     tmp <- do.call(rbind, lapply(1:nrow(db_procs), function(i)
       {
         # Return value:
-        ret_val = c("cats"=as.character(db_procs$cats[i]), "type"=NA, "proc"=NA, "params"=NA);
+        ret_val = c("key"=as.character(db_procs$key[i]), "cats"=as.character(db_procs$cats[i]), "type"=NA, "proc"=NA, "params"=NA);
         
         tmp2 <- trimws(as.character(db_procs$proc[i]));
         
@@ -851,7 +994,7 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   
   # Should we plot it?
   cma_plots <- NULL;
-  if( procs_action$type[1] == "plot" )
+  if( tolower(procs_action$type[1]) == "plot" )
   {
     procs_action_expr <- NULL;
     procs_action_call <- paste0("plot(cma, export.formats=c('html'), generate.R.plot=FALSE",
@@ -891,7 +1034,7 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   
   # Return the results:
   return (list("id"=patient_info[ 1, get_evtable_id_col(x) ],
-               "categories"=procs_action$cats[1], "type"=procs_action$type[1], "proc"=procs_action$proc[1], "params"=procs_action$params[1], 
+               "key"=procs_action$key[1], "categories"=procs_action$cats[1], "type"=procs_action$type[1], "proc"=procs_action$proc[1], "params"=procs_action$params[1], 
                "cma"=cma, 
                "plots"=cma_plots));
 }
@@ -900,31 +1043,80 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
 upload_procs_results <- function(x, procs_results) UseMethod("upload_procs_results")
 upload_procs_results.SQL_db <- function(x, procs_results)
 {
-  if( is.null(procs_results) || length(procs_results) != 7 )
+  if( is.null(procs_results) || length(procs_results) != 8 )
   {
     # Nothing to do:
     return (FALSE);
   }
   
   # Write the results info:
-  ret_val <- return (write_retable_entry(x, 
-                                         id        =ifelse(is.na(procs_results$id),         "", as.character(procs_results$id)), 
-                                         categories=ifelse(is.na(procs_results$categories), "", as.character(procs_results$categories)), 
-                                         type      =ifelse(is.na(procs_results$type),       "", as.character(procs_results$type)), 
-                                         proc      =ifelse(is.na(procs_results$proc),       "", as.character(procs_results$proc)), 
-                                         params    =ifelse(is.na(procs_results$params),     "", as.character(procs_results$params)),
-                                         estimate  =ifelse(is.null(procs_results$cma) || is.null(getCMA(procs_results$cma)), "", round(getCMA(procs_results$cma)$CMA[1],4)),
-                                         plot_jpg  =if(!is.null(procs_results$plots)) procs_results$plots$jpg  else NA,
-                                         plot_html =if(!is.null(procs_results$plots)) procs_results$plots$html else NA));
-  
+  id  <- ifelse(is.na(procs_results$id), "", as.character(procs_results$id));
+  key <- procs_results$key; # the key must be defined! 
+  estimate_type <- ifelse(is.null(procs_results$cma) || is.null(getCMA(procs_results$cma)), 
+                          NA,
+                          ifelse(inherits(procs_results$cma, "CMA0"), 
+                                 "simple", 
+                                 ifelse(inherits(procs_results$cma, "CMA_sliding_window"), 
+                                        "sliding window", 
+                                        ifelse(inherits(procs_results$cma, "CMA_per_episode"),
+                                               "per episode",
+                                               "unknown")
+                                 )
+                          ));
+  ret_val <- write_retable_entry(x, 
+                                 id        =id, 
+                                 key       =key,
+                                 categories=ifelse(is.na(procs_results$categories), "", as.character(procs_results$categories)), 
+                                 type      =ifelse(is.na(procs_results$type),       "", as.character(procs_results$type)), 
+                                 proc      =ifelse(is.na(procs_results$proc),       "", as.character(procs_results$proc)), 
+                                 params    =ifelse(is.na(procs_results$params),     "", as.character(procs_results$params)),
+                                 estimate  =ifelse(is.null(procs_results$cma) || is.null(getCMA(procs_results$cma)) || !inherits(procs_results$cma, "CMA0"), 
+                                                   NA, # not estimated or not a simple CMA -> mark it as NULL
+                                                   round(getCMA(procs_results$cma)$CMA[1],4) # simple CMA -> use the first numeric value
+                                                   ),
+                                 estimate_type=estimate_type,
+                                 plot_jpg  =if(!is.null(procs_results$plots)) procs_results$plots$jpg  else NA,
+                                 plot_html =if(!is.null(procs_results$plots)) procs_results$plots$html else NA);
   # Clean the temporary files (if the case):
   if( !is.null(pat_procs_results$plots) )
   {
     if( !!is.null(procs_results$plots) && !is.null(pat_procs_results$plots$jpg)  && file.exists(pat_procs_results$plots$jpg) )  file.remove(pat_procs_results$plots$jpg);
     if( !!is.null(procs_results$plots) && !is.null(pat_procs_results$plots$html) && file.exists(pat_procs_results$plots$html) ) file.remove(pat_procs_results$plots$html);
   }
+  if( !ret_val ) return (FALSE); # some error occured so return
   
-  return (ret_val);
+  # Is this is a "complex" CMA?
+  if( !is.null(procs_results$cma) && !is.null(getCMA(procs_results$cma)) )
+  {
+    if( inherits(procs_results$cma, "CMA_sliding_window") )
+    {
+      # A sliding windows CMA!
+      # Get the res_key of the previous insertion in the retable:
+      res_key_ref <- DBI::dbGetQuery(x$db_connection, 
+                                     paste0("SELECT ", qs(x,get_retable_key_col(x)),
+                                            " FROM ", qs(x,get_name(x)),".",qs(x,get_retable(x)), 
+                                            " WHERE ", qs(x,get_retable_id_col(x)), " = '", id, "'", 
+                                            " AND ", qs(x,get_retable_proc_key_ref_col(x)), " = '", key, "'",
+                                            " AND ", qs(x,get_retable_estimate_type_col(x)), " = '", estimate_type, "'",
+                                            ";"));
+      if( is.null(res_key_ref) || nrow(res_key_ref) != 1 )
+      {
+        # Error identifying the last inserted row!
+        return (FALSE);
+      }
+      
+      # Write it into the swtable:
+      ret_val <- write_swtable_entry(x, 
+                                     res_key_ref = res_key_ref[1,1],
+                                     cma=getCMA(procs_results$cma));
+      if( !ret_val ) return (FALSE); # some error occured so return
+    } else if( inherits(procs_results$cma, "CMA_per_episode") )
+    {
+      # A per episodes CMA!
+    }
+  }
+  
+  return (TRUE);
 }
 
 
@@ -1046,7 +1238,7 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get_evtable_date_col(x)),    " DATE NOT NULL, ",
                                            qs(x,get_evtable_perday_col(x)),  " INT NOT NULL, ",
                                            qs(x,get_evtable_category_col(x))," VARCHAR(1024) NULL DEFAULT NULL, ",
-                                           qs(x,get_evtable_duration_col(x))," INT NULL DEFAULT NULL);"));
+                                           qs(x,get_evtable_duration_col(x))," INT NULL DEFAULT NULL );"));
     # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
     for( i in 1:nrow(d) )
     {
@@ -1058,44 +1250,54 @@ create_test_database.SQL_db <- function(x)
     # The table specifying what to do to which entries: 
     if( get_prtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),";"));
     DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," ( ",
+                                           qs(x,get_prtable_key_col(x)),       " INT NOT NULL AUTO_INCREMENT, ",
                                            qs(x,get_prtable_id_col(x)),        " VARCHAR(256) NOT NULL, ",
                                            qs(x,get_prtable_categories_col(x))," VARCHAR(1024) NULL DEFAULT NULL, ",
                                            qs(x,get_prtable_process_col(x)),   " VARCHAR(128) NULL DEFAULT NULL, ",
-                                           qs(x,get_prtable_params_col(x)),    " VARCHAR(10240) NULL DEFAULT NULL);"));
+                                           qs(x,get_prtable_params_col(x)),    " VARCHAR(10240) NULL DEFAULT NULL, ", 
+                                           "PRIMARY KEY (", get_prtable_key_col(x), ") );"));
     # Fill it in one by one:
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('1', '[medA]',          'CMA2',      '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('1', '[medA]',          'plot.CMA0', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('1', '[medA] | [medB]', 'plot.CMA7', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('2', '',                'plot.CMA0', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('2', '',                'plot.CMA9', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('3', '',                'plot.CMA0', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('3', '',                'CMA1',      '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('3', '',                'plot.CMA_sliding_window', 'CMA.to.apply=\"CMA1\", sliding.window.duration=90, sliding.window.no.steps=5');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('4', '',                'plot.CMA0', '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('4', '',                'CMA1',      '');"));
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                           " VALUES ('4', '',                'plot.CMA_per_episode', 'CMA.to.apply=\"CMA1\", maximum.permissible.gap=90');"));
-    
+    tmp <- matrix(c('1', '[medA]',          'CMA2',      '',
+                    '1', '[medA]',          'plot.CMA0', '',
+                    '1', '[medA] | [medB]', 'plot.CMA7', '',
+                    '2', '',                'plot.CMA0', '',
+                    '2', '',                'plot.CMA9', '',
+                    '3', '',                'plot.CMA0', '',
+                    '3', '',                'CMA1',      '',
+                    '3', '',                'plot.CMA_sliding_window', 'CMA.to.apply=\"CMA1\", sliding.window.duration=90, sliding.window.no.steps=5',
+                    '4', '',                'plot.CMA0', '',
+                    '4', '',                'CMA1',      '',
+                    '4', '',                'plot.CMA_per_episode', 'CMA.to.apply=\"CMA1\", maximum.permissible.gap=90'), 
+                  ncol=4, byrow=TRUE);
+    colnames(tmp) <- c(qs(x,get_prtable_id_col(x)), qs(x,get_prtable_categories_col(x)), qs(x,get_prtable_process_col(x)), qs(x,get_prtable_params_col(x)));
+    for( i in 1:nrow(tmp) )
+    {
+      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+                                             "(",paste0(colnames(tmp),collapse=","),")",
+                                             " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
+    }
+
     # The results table: 
     if( get_retable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x)),";"));
     DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x))," ( ",
-                                           qs(x,get_retable_id_col(x)),        " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get_retable_categories_col(x))," VARCHAR(1024) NULL DEFAULT NULL, ",
-                                           qs(x,get_retable_process_col(x)),   " VARCHAR(128) NULL DEFAULT NULL, ",
-                                           qs(x,get_retable_params_col(x)),    " VARCHAR(10240) NULL DEFAULT NULL, ",
-                                           qs(x,get_retable_estimate_col(x)),  " VARCHAR(10240) NULL DEFAULT NULL, ",
-                                           qs(x,get_retable_plot_jpg_col(x)),  " LONGBLOB NULL DEFAULT NULL, ",
-                                           qs(x,get_retable_plot_html_col(x)), " LONGBLOB NULL DEFAULT NULL);"));
+                                           qs(x,get_retable_key_col(x)),          " INT NOT NULL AUTO_INCREMENT, ",
+                                           qs(x,get_evtable_id_col(x)),           " VARCHAR(256) NOT NULL, ",
+                                           qs(x,get_retable_proc_key_ref_col(x)), " INT NULL DEFAULT -1, ",
+                                           qs(x,get_retable_estimate_col(x)),     " FLOAT NULL DEFAULT NULL, ",
+                                           qs(x,get_retable_estimate_type_col(x))," VARCHAR(256) NULL DEFAULT NULL, ",
+                                           qs(x,get_retable_plot_jpg_col(x)),     " LONGBLOB NULL DEFAULT NULL, ",
+                                           qs(x,get_retable_plot_html_col(x)),    " LONGBLOB NULL DEFAULT NULL, ", 
+                                           "PRIMARY KEY (", get_retable_key_col(x), ") );"));
+    
+    # The slding windows results table: 
+    if( get_swtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_swtable(x)),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_swtable(x))," ( ",
+                                           qs(x,get_swtable_res_key_ref_col(x)),    " INT NULL DEFAULT NULL, ",
+                                           qs(x,get_swtable_patient_id_col(x)),     " VARCHAR(256) NOT NULL, ",
+                                           qs(x,get_swtable_window_id_col(x)),      " INT NOT NULL, ",
+                                           qs(x,get_swtable_window_start_col(x)),   " DATE NOT NULL, ",
+                                           qs(x,get_swtable_window_end_col(x)),     " DATE NOT NULL, ",
+                                           qs(x,get_swtable_window_estimate_col(x))," FLOAT NULL DEFAULT NULL );"));
     
   } else if( x$db_type == "mssql" )
   {
