@@ -78,6 +78,17 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
                          "WINDOW_END"     =db_info$Value[ tolower(db_info$Variable) == "swtable_window_end" ],
                          "WINDOW_ESTIMATE"=db_info$Value[ tolower(db_info$Variable) == "swtable_window_estimate" ]);
     
+    # The per episode results table:
+    db_petable_name <- db_info$Value[ tolower(db_info$Variable) == "petable" ];
+    db_petable_cols <- c("RES_KEY_REF"      =db_info$Value[ tolower(db_info$Variable) == "petable_res_key_ref" ],
+                         "PATIENT_ID"       =db_info$Value[ tolower(db_info$Variable) == "petable_patient_id" ],
+                         "EPISODE_ID"       =db_info$Value[ tolower(db_info$Variable) == "petable_episode_id" ],
+                         "EPISODE_START"    =db_info$Value[ tolower(db_info$Variable) == "petable_episode_start" ],
+                         "GAP_DAYS"         =db_info$Value[ tolower(db_info$Variable) == "petable_gap_days" ],
+                         "ESPISODE_DURATION"=db_info$Value[ tolower(db_info$Variable) == "petable_episode_duration" ],
+                         "EPISODE_END"      =db_info$Value[ tolower(db_info$Variable) == "petable_episode_end" ],
+                         "EPISODE_ESTIMATE" =db_info$Value[ tolower(db_info$Variable) == "petable_episode_estimate" ]);
+    
     # Parse the default processing into a data.frame wth format "cats", "type", "proc" and "params":
     tmp <- trimws(strsplit(db_info$Value[ tolower(db_info$Variable) == "default_processing_and_plotting" ], ";", fixed=TRUE)[[1]]);
     if( length(tmp) < 1 )
@@ -140,6 +151,8 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
                               "db_retable_cols"=db_retable_cols,
                               "db_swtable_name"=db_swtable_name,
                               "db_swtable_cols"=db_swtable_cols,
+                              "db_petable_name"=db_petable_name,
+                              "db_petable_cols"=db_petable_cols,
                               # defaults:
                               "db_default_proc"=db_default_proc,
                               "use_default_proc_for_all"=FALSE, # should the default processing be used for all patients?
@@ -639,6 +652,60 @@ get_swtable_window_estimate_col.SQL_db <- function(x)
   return (x$db_swtable_cols["WINDOW_ESTIMATE"]);
 }
 
+get_petable <- function(x) UseMethod("get_petable")
+get_petable.SQL_db <- function(x)
+{
+  return (x$db_petable_name);
+}
+
+get_petable_res_key_ref_col <- function(x) UseMethod("get_petable_res_key_ref_col")
+get_petable_res_key_ref_col.SQL_db <- function(x)
+{
+  return (x$db_petable_cols["RES_KEY_REF"]);
+}
+
+get_petable_patient_id_col <- function(x) UseMethod("get_petable_patient_id_col")
+get_petable_patient_id_col.SQL_db <- function(x)
+{
+  return (x$db_petable_cols["PATIENT_ID"]);
+}
+
+get_petable_episode_id_col <- function(x) UseMethod("get_petable_episode_id_col")
+get_petable_episode_id_col.SQL_db <- function(x)
+{
+  return (x$db_petable_cols["EPISODE_ID"]);
+}
+
+get_petable_episode_start_col <- function(x) UseMethod("get_petable_episode_start_col")
+get_petable_episode_start_col.SQL_db <- function(x)
+{
+  return (x$db_petable_cols["EPISODE_START"]);
+}
+
+get_petable_gap_days_col <- function(x) UseMethod("get_petable_gap_days_col")
+get_petable_gap_days_col.SQL_db <- function(x)
+{
+  return (x$db_petable_cols["GAP_DAYS"]);
+}
+
+get_petable_episode_duration_col <- function(x) UseMethod("get_petable_episode_duration_col")
+get_petable_episode_duration_col.SQL_db <- function(x)
+{
+  return (x$db_petable_cols["ESPISODE_DURATION"]);
+}
+
+get_petable_episode_end_col <- function(x) UseMethod("get_petable_episode_end_col")
+get_petable_episode_end_col.SQL_db <- function(x)
+{
+  return (x$db_petable_cols["EPISODE_END"]);
+}
+
+get_petable_episode_estimate_col <- function(x) UseMethod("get_petable_episode_estimate_col")
+get_petable_episode_estimate_col.SQL_db <- function(x)
+{
+  return (x$db_petable_cols["EPISODE_ESTIMATE"]);
+}
+
 get_default_processing <- function(x) UseMethod("get_default_processing")
 get_default_processing.SQL_db <- function(x)
 {
@@ -647,7 +714,7 @@ get_default_processing.SQL_db <- function(x)
 
 
 ##
-## Writers ####
+## Results tables ####
 ##
 
 write_retable_entry <- function(x, id, key_proc, categories="", type="", proc="", params="", estimate=NA, estimate_type=NA, plot_jpg="", plot_html="") UseMethod("write_retable_entry")
@@ -689,6 +756,35 @@ write_retable_entry.SQL_db <- function(x, id, key_proc, categories="", type="", 
   return (TRUE);
 }
 
+get_retable_key_for_results <- function(x, id, key, estimate_type) UseMethod("get_retable_key_for_results")
+get_retable_key_for_results.SQL_db <- function(x, id, key, estimate_type)
+{
+  # Get the matching info:
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    # Get the res_key of the previous insertion in the retable:
+    res_key_ref <- DBI::dbGetQuery(x$db_connection, 
+                                   paste0("SELECT ", qs(x,get_retable_key_col(x)),
+                                          " FROM ", qs(x,get_name(x)),".",qs(x,get_retable(x)), 
+                                          " WHERE ", qs(x,get_retable_id_col(x)), " = '", id, "'", 
+                                          " AND ", qs(x,get_retable_proc_key_ref_col(x)), " = '", key, "'",
+                                          " AND ", qs(x,get_retable_estimate_type_col(x)), " = '", estimate_type, "'",
+                                          ";"));
+    if( is.null(res_key_ref) || nrow(res_key_ref) != 1 )
+    {
+      # Error identifying the last inserted row!
+      return (NULL);
+    } else
+    {
+      return (res_key_ref[1,1]);
+    }
+  } else if( x$db_type == "mssql" )
+  {s
+  }
+  
+  return (NULL);
+}
+
 write_swtable_entry <- function(x, res_key_ref=-1, cma=NULL) UseMethod("write_swtable_entry")
 write_swtable_entry.SQL_db <- function(x, res_key_ref=-1, cma=NULL)
 {
@@ -723,6 +819,57 @@ write_swtable_entry.SQL_db <- function(x, res_key_ref=-1, cma=NULL)
                                                            "'", cma$window.ID[i], "', ",
                                                            "'", cma$window.start[i], "', ",
                                                            "'", cma$window.end[i], "', ",
+                                                           ifelse(!is.na(cma$CMA[i]), round(cma$CMA[i],4), "NULL")), 
+                                                  character(1)),
+                                           ")",
+                                           collapse=", "),
+                                    ";"));
+    return (result == nrow(cma)); # should've written exactly as many lines as in the data.frame
+  } else if( x$db_type == "mssql" )
+  {
+  }
+  
+  return (TRUE);
+}
+
+write_petable_entry <- function(x, res_key_ref=-1, cma=NULL) UseMethod("write_petable_entry")
+write_petable_entry.SQL_db <- function(x, res_key_ref=-1, cma=NULL)
+{
+  if( is.null(cma) || nrow(cma) == 0 )
+  {
+    return (FALSE);
+  }
+  # Convert the dates to the expected format for SQL's DATE:
+  cma$episode.start <- as.character(as.Date(cma$episode.start, format="%m/%d/%Y"), format="%Y-%m-%d");
+  cma$episode.end   <- as.character(as.Date(cma$episode.end,   format="%m/%d/%Y"), format="%Y-%m-%d");
+  
+  # Write all these info into the swtable:
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    # Write at once as usually there's few sliding windows:
+    result <- DBI::dbExecute(x$db_connection, 
+                             paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_petable(x)),
+                                    " (",
+                                    qs(x,get_petable_res_key_ref_col(x)),", ",
+                                    qs(x,get_petable_patient_id_col(x)),", ",
+                                    qs(x,get_petable_episode_id_col(x)),", ",
+                                    qs(x,get_petable_episode_start_col(x)),", ",
+                                    qs(x,get_petable_gap_days_col(x)),", ",
+                                    qs(x,get_petable_episode_duration_col(x)),", ",
+                                    qs(x,get_petable_episode_end_col(x)),", ",
+                                    qs(x,get_petable_episode_estimate_col(x)),
+                                    ")",
+                                    " VALUES ",
+                                    paste0("(",
+                                           vapply(1:nrow(cma), 
+                                                  function(i) 
+                                                    paste0("'", res_key_ref, "', ",
+                                                           "'", cma[i,get_evtable_id_col(x)], "', ",
+                                                           "'", cma$episode.ID[i], "', ",
+                                                           "'", cma$episode.start[i], "', ",
+                                                           "'", cma$end.episode.gap.days[i], "', ",
+                                                           "'", cma$episode.duration[i], "', ",
+                                                           "'", cma$episode.end[i], "', ",
                                                            ifelse(!is.na(cma$CMA[i]), round(cma$CMA[i],4), "NULL")), 
                                                   character(1)),
                                            ")",
@@ -1086,33 +1233,27 @@ upload_procs_results.SQL_db <- function(x, procs_results)
   if( !ret_val ) return (FALSE); # some error occured so return
   
   # Is this is a "complex" CMA?
-  if( !is.null(procs_results$cma) && !is.null(getCMA(procs_results$cma)) )
+  if( !is.null(procs_results$cma) && !is.null(getCMA(procs_results$cma)) && 
+      (inherits(procs_results$cma, "CMA_sliding_window") || inherits(procs_results$cma, "CMA_per_episode")) )
   {
+    # Get the res_key of the previous insertion in the retable:
+    res_key_ref <- get_retable_key_for_results(x, id, key, estimate_type);
+    if( is.null(res_key_ref) )
+    {
+      # Error identifying the last inserted row!
+      return (FALSE);
+    }
+    
     if( inherits(procs_results$cma, "CMA_sliding_window") )
     {
-      # A sliding windows CMA!
-      # Get the res_key of the previous insertion in the retable:
-      res_key_ref <- DBI::dbGetQuery(x$db_connection, 
-                                     paste0("SELECT ", qs(x,get_retable_key_col(x)),
-                                            " FROM ", qs(x,get_name(x)),".",qs(x,get_retable(x)), 
-                                            " WHERE ", qs(x,get_retable_id_col(x)), " = '", id, "'", 
-                                            " AND ", qs(x,get_retable_proc_key_ref_col(x)), " = '", key, "'",
-                                            " AND ", qs(x,get_retable_estimate_type_col(x)), " = '", estimate_type, "'",
-                                            ";"));
-      if( is.null(res_key_ref) || nrow(res_key_ref) != 1 )
-      {
-        # Error identifying the last inserted row!
-        return (FALSE);
-      }
-      
-      # Write it into the swtable:
-      ret_val <- write_swtable_entry(x, 
-                                     res_key_ref = res_key_ref[1,1],
-                                     cma=getCMA(procs_results$cma));
+      # A sliding windows CMA: write it into the swtable:
+      ret_val <- write_swtable_entry(x, res_key_ref, getCMA(procs_results$cma));
       if( !ret_val ) return (FALSE); # some error occured so return
     } else if( inherits(procs_results$cma, "CMA_per_episode") )
     {
       # A per episodes CMA!
+      ret_val <- write_petable_entry(x, res_key_ref, getCMA(procs_results$cma));
+      if( !ret_val ) return (FALSE); # some error occured so return
     }
   }
   
@@ -1289,7 +1430,7 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get_retable_plot_html_col(x)),    " LONGBLOB NULL DEFAULT NULL, ", 
                                            "PRIMARY KEY (", get_retable_key_col(x), ") );"));
     
-    # The slding windows results table: 
+    # The sliding windows results table: 
     if( get_swtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_swtable(x)),";"));
     DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_swtable(x))," ( ",
                                            qs(x,get_swtable_res_key_ref_col(x)),    " INT NULL DEFAULT NULL, ",
@@ -1298,6 +1439,18 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get_swtable_window_start_col(x)),   " DATE NOT NULL, ",
                                            qs(x,get_swtable_window_end_col(x)),     " DATE NOT NULL, ",
                                            qs(x,get_swtable_window_estimate_col(x))," FLOAT NULL DEFAULT NULL );"));
+    
+    # The per episode results table: 
+    if( get_petable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_petable(x)),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_petable(x))," ( ",
+                                           qs(x,get_petable_res_key_ref_col(x)),     " INT NULL DEFAULT NULL, ",
+                                           qs(x,get_petable_patient_id_col(x)),      " VARCHAR(256) NOT NULL, ",
+                                           qs(x,get_petable_episode_id_col(x)),      " INT NOT NULL, ",
+                                           qs(x,get_petable_episode_start_col(x)),   " DATE NOT NULL, ",
+                                           qs(x,get_petable_gap_days_col(x)),        " INT NULL DEFAULT NULL, ",
+                                           qs(x,get_petable_episode_duration_col(x))," INT NULL DEFAULT NULL, ",
+                                           qs(x,get_petable_episode_end_col(x)),     " DATE NOT NULL, ",
+                                           qs(x,get_petable_episode_estimate_col(x))," FLOAT NULL DEFAULT NULL );"));
     
   } else if( x$db_type == "mssql" )
   {
