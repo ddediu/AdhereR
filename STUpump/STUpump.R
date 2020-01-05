@@ -60,7 +60,7 @@ for( i in 1:nrow(.needed_packages) )
 if( FALSE )
 {
   # Create the test database:
-  stu_db <- SQL_db(server_info);
+  stu_db <- SQL_db(server_info, check_db=FALSE);
   create_test_database(stu_db);
   disconnect(stu_db);
 }
