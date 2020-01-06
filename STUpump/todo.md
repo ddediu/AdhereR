@@ -17,6 +17,8 @@
   - use "*" to mean "all" for both ids and classes
   
   - allow the specific call of the default rule for those formulas that have a more sepcific rule (by default, the default rule does not apply in these cases)
+  
+  - split this into two tables: one defining the processings and one their application
 
 
 ## Config file
