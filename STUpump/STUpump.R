@@ -19,20 +19,10 @@
 ###############################################################################################
 
 ##
-## Global variables and settings ####
-##
-#server_info <- "./server_credentials_STUpump.tsv"; # the file storing the database server info and credentials for MS SQL server
-server_info <- "./server_credentials_STUpump2.tsv"; # the file storing the database server info and credentials for MySQL server
-
-# Load the SQL-stuff:
-source("./SQL_queries.R", echo=FALSE);
-
-
-##
 ## Check if the needed packages are installed and with the correct version ####
 ##
-.needed_packages <- data.frame(names  =c("AdhereR"),
-                               version=c(    "0.5"), # use NA if version doesn't matter
+.needed_packages <- data.frame(names  =c("AdhereR", "configr"),
+                               version=c(    "0.5",     "0.3"), # use NA if version doesn't matter
                                stringsAsFactors=FALSE); 
 for( i in 1:nrow(.needed_packages) )
 {
@@ -53,6 +43,17 @@ for( i in 1:nrow(.needed_packages) )
 
 
 ##
+## Global variables and settings ####
+##
+
+#server_info <- "./server_credentials_STUpump.tsv"; # the file storing the database server info and credentials for MS SQL server
+server_info <- "./STUpump-MySQL.yml"; # the file storing the database server info and credentials for MySQL server
+
+# Load the SQL-stuff:
+source("./SQL_queries.R", echo=FALSE);
+
+
+##
 ## Connect to the database ####
 ##
 
@@ -66,7 +67,7 @@ if( FALSE )
 }
 
 # Connect to the pre-existing database:
-stu_db <- SQL_db(server_info);
+stu_db <- SQL_db(server_info, check_db=FALSE, truncate_results=TRUE);
 
 
 
@@ -75,7 +76,7 @@ stu_db <- SQL_db(server_info);
 ##
 
 # Get the list of all patients:
-patient_ids <- list_evtable_patients(stu_db);
+patient_ids <- list_patients(stu_db);
 
 # Process them individually:
 for( i in seq_along(patient_ids) )
@@ -83,35 +84,22 @@ for( i in seq_along(patient_ids) )
   # The patient ID:
   pat_id <- patient_ids[i];
   
-  # The possible message(s) related to processing this patient:
-  pat_msgs <- "";
-  
-  # The values to return for this patient:
-  pat_retval <- list("id"=pat_id);
-  
   # Get the patient's info:
   pat_info <- get_evtable_patients_info(stu_db, pat_id);
   if( is.null(pat_info) || !inherits(pat_info, "data.frame") || nrow(pat_info) < 1 )
   {
     # Empty patient:
-    pat_msgs <- paste0(pat_msgs, "W: this patient has no data!");
   } else
   {
     # Get the processing(s) and plotting(s) for this patient:
     pat_procs <- get_processings_for_patient(stu_db, pat_id);
     
-    pat_procs_classes <- as.character(unique(pat_procs$cats)); # the classes of medication
+    pat_procs_classes <- as.character(unique(pat_procs$class)); # the classes of medication
     for( procs_class in pat_procs_classes )
     {
       # The actions for this class:
-      if( is.na(procs_class) )
-      {
-        pat_procs_actions <- unique(pat_procs[ is.na(pat_procs$cats), ]);
-      } else
-      {
-        pat_procs_actions <- unique(pat_procs[ pat_procs$cats == procs_class, ]);
-      }
-      
+      pat_procs_actions <- unique(pat_procs[ pat_procs$class == procs_class, ]);
+
       # Select the events corresponding to this class:
       s <- select_events_for_procs_class(stu_db, pat_info, procs_class);
       
