@@ -35,7 +35,7 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
     db_connection <- NULL; 
     
     # Load the actual database specification:
-    db_info <- read.table(db_spec_file, header=TRUE, sep="\t", quote="", stringsAsFactors=FALSE);
+    db_info <- read.table(db_spec_file, header=TRUE, sep="\t", quote="", fill=TRUE, strip.white=TRUE, blank.lines.skip=TRUE, stringsAsFactors=FALSE);
     
     db_type  <- tolower(db_info$Value[ tolower(db_info$Variable) == "dbtype" ]);
     db_host  <- db_info$Value[ tolower(db_info$Variable) == "host" ];
@@ -51,6 +51,17 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
                          "PERDAY"         =db_info$Value[ tolower(db_info$Variable) == "evtable_perday" ],
                          "CATEGORY"       =db_info$Value[ tolower(db_info$Variable) == "evtable_category" ],
                          "DURATION"       =db_info$Value[ tolower(db_info$Variable) == "evtable_duration" ]);
+    
+    # The actions table:
+    db_actable_name <- db_info$Value[ tolower(db_info$Variable) == "actable" ];
+    db_actable_cols <- c("ID"            =db_info$Value[ tolower(db_info$Variable) == "actable_id" ],
+                         "ACTION"        =db_info$Value[ tolower(db_info$Variable) == "actable_action" ],
+                         "PARAMS"        =db_info$Value[ tolower(db_info$Variable) == "actable_params" ]);
+    
+    # The medication classes table:
+    db_mctable_name <- db_info$Value[ tolower(db_info$Variable) == "mctable" ];
+    db_mctable_cols <- c("ID"            =db_info$Value[ tolower(db_info$Variable) == "mctable_id" ],
+                         "CLASS"         =db_info$Value[ tolower(db_info$Variable) == "mctable_class" ]);
     
     # The processing to be done table:
     db_prtable_name <- db_info$Value[ tolower(db_info$Variable) == "prtable" ];
@@ -128,14 +139,14 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
     # The object:
     ret_val <- structure(list(# the database specification file and its contents:
                               "db_spec_file"=db_spec_file,
-                              "db_info"=db_info,
+                              "db_info"     =db_info,
                               # the database info:
-                              "db_type"=db_type,
-                              "db_host"=db_host,
-                              "db_dsn"=db_dsn,
-                              "db_user"=db_user,
-                              "db_psswd"=db_psswd,
-                              "db_name"=db_name,
+                              "db_type"     =db_type,
+                              "db_host"     =db_host,
+                              "db_dsn"      =db_dsn,
+                              "db_user"     =db_user,
+                              "db_psswd"    =db_psswd,
+                              "db_name"     =db_name,
                               "db_quote_characters"=switch(db_type, 
                                                            "mariadb"=, 
                                                            "mysql"=,
@@ -145,6 +156,10 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
                               # the important tables:
                               "db_evtable_name"=db_evtable_name,
                               "db_evtable_cols"=db_evtable_cols,
+                              "db_actable_name"=db_actable_name,
+                              "db_actable_cols"=db_actable_cols,
+                              "db_mctable_name"=db_mctable_name,
+                              "db_mctable_cols"=db_mctable_cols,
                               "db_prtable_name"=db_prtable_name,
                               "db_prtable_cols"=db_prtable_cols,
                               "db_retable_name"=db_retable_name,
@@ -157,7 +172,7 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
                               "db_default_proc"=db_default_proc,
                               "use_default_proc_for_all"=FALSE, # should the default processing be used for all patients?
                               # the actual connection:
-                              "db_connection"=db_connection),
+                              "db_connection"  =db_connection),
       class="SQL_db");
     
     # Connect to the database?
@@ -270,12 +285,12 @@ reset_results.SQL_db <- function(x)
 {
   if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
-    if( get_retable(x) %in% list_tables(x) ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get_retable(x)," ;")), silent=TRUE);
-    if( get_swtable(x) %in% list_tables(x) ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get_swtable(x)," ;")), silent=TRUE);
+    if( get(x, 'name', 're') %in% list_tables(x) ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 're')," ;")), silent=TRUE);
+    if( get(x, 'name', 'sw') %in% list_tables(x) ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'sw')," ;")), silent=TRUE);
   } else if( x$db_type == "mssql" )
   {
-    if( get_retable(x) %in% list_tables(x) ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get_retable(x)," ;")), silent=TRUE);
-    if( get_swtable(x) %in% list_tables(x) ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get_swtable(x)," ;")), silent=TRUE);
+    if( get(x, 'name', 're') %in% list_tables(x) ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 're')," ;")), silent=TRUE);
+    if( get(x, 'name', 'sw') %in% list_tables(x) ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'sw')," ;")), silent=TRUE);
   }
 }
 
@@ -353,7 +368,7 @@ get_cols_info.SQL_db <- function(x, db_table)
   } else if( x$db_type == "mssql" )
   {
     n <- NULL;
-    try(n <- RODBC::sqlQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",qs(x,get_name(x)),".",qs(x,db_table),";")), silent=TRUE);
+    try(n <- RODBC::sqlQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",qs(x,get(x, 'name')),".",qs(x,db_table),";")), silent=TRUE);
     if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
     {
       # Error retreiving the number of rows:
@@ -362,7 +377,7 @@ get_cols_info.SQL_db <- function(x, db_table)
     {
       n <- as.numeric(n[1,1]);
     }
-    db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",qs(x,get_name(x)),".INFORMATION_SCHEMA.COLUMNS ORDER BY ORDINAL_POSITION;"));
+    db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",qs(x,get(x, 'name')),".INFORMATION_SCHEMA.COLUMNS ORDER BY ORDINAL_POSITION;"));
     if( !is.null(db_list) && nrow(db_list) > 0 )
     {
       db_list <- db_list[ paste0(db_list$TABLE_SCHEMA,".",db_list$TABLE_NAME) == db_table, ];
@@ -424,288 +439,161 @@ qs.SQL_db <- function(x, s)
 ## Getters ####
 ##
 
-get_spec_file <- function(x) UseMethod("get_spec_file")
-get_spec_file.SQL_db <- function(x)
+# Get various attributes either for the whole database (table=NULL) or for a specific table:
+get <- function(x, variable, table=NULL) UseMethod("get")
+get.SQL_db <- function(x, variable, table=NULL)
 {
-  return (x$db_spec_file);
+  if( is.null(table) )
+  {
+    # Globals:
+    return (switch(tolower(variable),
+                   "file"     =,
+                   "spec_file"=x$db_spec_file,
+                   "info"     =x$db_info,
+                   "type"     =x$db_type,
+                   "host"     =x$db_host,
+                   "dsn"      =x$db_dsn,
+                   "user"     =x$db_user,
+                   "psswd"    =x$db_psswd,
+                   "name"     =x$db_name,
+                   stop(paste0("Undefined global attribute '",variable,"'."))));
+  } else
+  {
+    # A specific table was requested:
+    return (switch(tolower(table),
+                   # Events:
+                   "events"=,
+                   "ev"=switch(tolower(variable),
+                               "name"      =x$db_evtable_name,
+                               "patient_id"=,
+                               "patid"     =,
+                               "id"        =x$db_evtable_cols["PATIENT_ID"],
+                               "date"      =x$db_evtable_cols["DATE"],
+                               "perday"    =x$db_evtable_cols["PERDAY"],
+                               "cat"       =,
+                               "category"  =x$db_evtable_cols["CATEGORY"],
+                               "duration"  =x$db_evtable_cols["DURATION"],
+                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                   
+                   # Actions:
+                   "actions"=,
+                   "ac"=switch(tolower(variable),
+                               "name"     =x$db_actable_name,
+                               "action_id"=,
+                               "actid"    =,
+                               "id"       =x$db_actable_cols["ID"],
+                               "action"   =x$db_actable_cols["ACTION"],
+                               "params"   =x$db_actable_cols["PARAMS"],
+                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                   
+                   # Medication classes:
+                   "medication classes"=,
+                   "medclass"          =,
+                   "classes"           =,
+                   "medications"       =,
+                   "mc"=switch(tolower(variable),
+                               "name"        =x$db_mctable_name,
+                               "med_class_id"=,
+                               "mcid"        =,
+                               "id"          =x$db_mctable_cols["ID"],
+                               "class"       =x$db_mctable_cols["CLASS"],
+                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                   
+                   # Processings:
+                   "processings"=,
+                   "procs"      =,
+                   "pr"=switch(tolower(variable),
+                               "name"      =x$db_prtable_name,
+                               "key"       =x$db_prtable_cols["KEY"],
+                               "patient_id"=,
+                               "patid"     =,
+                               "id"        =x$db_prtable_cols["PATIENT_ID"],
+                               "cats"      =,
+                               "categories"=x$db_prtable_cols["CATEGORIES"],
+                               "process"   =x$db_prtable_cols["PROCESS"],
+                               "params"    =x$db_prtable_cols["PARAMS"],
+                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                   
+                   # Main results:
+                   "main results"=,
+                   "results"     =,
+                   "re"=switch(tolower(variable),
+                               "name"         =x$db_retable_name,
+                               "key"          =x$db_retable_cols["KEY"],
+                               "prkey"        =,
+                               "proc_ref_key" =x$db_retable_cols["PROC_KEY_REF"],
+                               "patient_id"   =,
+                               "patid"        =,
+                               "id"           =get(x, "patid", "ev"),
+                               "estim"        =,
+                               "estimate"     =x$db_retable_cols["ESTIMATE"],
+                               "estim_type"   =,
+                               "estimate_type"=x$db_retable_cols["ESTIMATE_TYPE"],
+                               "jpg"          =,
+                               "plot_jpg"     =x$db_retable_cols["PLOT_JPG"],
+                               "html"         =,
+                               "plot_html"    =x$db_retable_cols["PLOT_HTML"],
+                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                   
+                   # Sliding window results:
+                   "sliding windows results"=,
+                   "sliding windows"        =,
+                   "sw"=switch(tolower(variable),
+                               "name"           =x$db_swtable_name,
+                               "reskey"         =,
+                               "res_key_ref"    =x$db_swtable_cols["RES_KEY_REF"],
+                               "patid"          =,
+                               "id"             =,
+                               "patient_id"     =x$db_swtable_cols["PATIENT_ID"],
+                               "wndid"          =,
+                               "window_id"      =x$db_swtable_cols["WINDOW_ID"],
+                               "wndstart"       =,
+                               "start"          =,
+                               "window_start"   =x$db_swtable_cols["WINDOW_START"],
+                               "wndend"         =,
+                               "end"            =,
+                               "window_end"     =x$db_swtable_cols["WINDOW_END"],
+                               "wndestim"       =,
+                               "estimate"       =,
+                               "estim"          =,
+                               "window_estimate"=x$db_swtable_cols["WINDOW_ESTIMATE"],
+                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                   
+                   # Per episode results:
+                   "per peisode results"=,
+                   "per peisode"        =,
+                   "pe"=switch(tolower(variable),
+                               "name"            =x$db_petable_name,
+                               "reskey"          =,
+                               "res_key_ref"     =x$db_petable_cols["RES_KEY_REF"],
+                               "patid"           =,
+                               "id"              =,
+                               "patient_id"      =x$db_petable_cols["PATIENT_ID"],
+                               "epid"            =,
+                               "episode_id"      =x$db_petable_cols["EPISODE_ID"],
+                               "epstart"         =,
+                               "start"           =,
+                               "episode_start"   =x$db_petable_cols["EPISODE_START"],
+                               "gap"             =,
+                               "gap_days"        =x$db_petable_cols["GAP_DAYS"],
+                               "epduration"      =,
+                               "duration"        =,
+                               "episode_duration"=x$db_petable_cols["ESPISODE_DURATION"],
+                               "epend"           =,
+                               "end"             =,
+                               "episode_end"     =x$db_petable_cols["EPISODE_END"],
+                               "epestim"         =,
+                               "estimate"        =,
+                               "estim"           =,
+                               "episode_estimate"=x$db_petable_cols["EPISODE_ESTIMATE"],
+                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                   
+                   stop(paste0("Undefined table '",table,"'."))));
+  }
 }
 
-get_info <- function(x) UseMethod("get_info")
-get_info.SQL_db <- function(x)
-{
-  return (x$db_info);
-}
 
-get_type <- function(x) UseMethod("get_type")
-get_type.SQL_db <- function(x)
-{
-  return (x$db_type);
-}
-
-get_host <- function(x) UseMethod("get_host")
-get_host.SQL_db <- function(x)
-{
-  return (x$db_host);
-}
-
-get_dsn <- function(x) UseMethod("get_dsn")
-get_dsn.SQL_db <- function(x)
-{
-  return (x$db_dsn);
-}
-
-get_user <- function(x) UseMethod("get_user")
-get_user.SQL_db <- function(x)
-{
-  return (x$db_user);
-}
-
-get_psswd <- function(x) UseMethod("get_psswd")
-get_psswd.SQL_db <- function(x)
-{
-  return (x$db_psswd);
-}
-
-get_name <- function(x) UseMethod("get_name")
-get_name.SQL_db <- function(x)
-{
-  return (x$db_name);
-}
-
-get_evtable <- function(x) UseMethod("get_evtable")
-get_evtable.SQL_db <- function(x)
-{
-  return (x$db_evtable_name);
-}
-
-get_evtable_id_col <- function(x) UseMethod("get_evtable_id_col")
-get_evtable_id_col.SQL_db <- function(x)
-{
-  return (x$db_evtable_cols["PATIENT_ID"]);
-}
-
-get_evtable_date_col <- function(x) UseMethod("get_evtable_date_col")
-get_evtable_date_col.SQL_db <- function(x)
-{
-  return (x$db_evtable_cols["DATE"]);
-}
-
-get_evtable_perday_col <- function(x) UseMethod("get_evtable_perday_col")
-get_evtable_perday_col.SQL_db <- function(x)
-{
-  return (x$db_evtable_cols["PERDAY"]);
-}
-
-get_evtable_category_col <- function(x) UseMethod("get_evtable_category_col")
-get_evtable_category_col.SQL_db <- function(x)
-{
-  return (x$db_evtable_cols["CATEGORY"]);
-}
-
-get_evtable_duration_col <- function(x) UseMethod("get_evtable_duration_col")
-get_evtable_duration_col.SQL_db <- function(x)
-{
-  return (x$db_evtable_cols["DURATION"]);
-}
-
-get_prtable <- function(x) UseMethod("get_prtable")
-get_prtable.SQL_db <- function(x)
-{
-  return (x$db_prtable_name);
-}
-
-get_prtable_key_col <- function(x) UseMethod("get_prtable_key_col")
-get_prtable_key_col.SQL_db <- function(x)
-{
-  return (x$db_prtable_cols["KEY"]);
-}
-
-get_prtable_id_col <- function(x) UseMethod("get_prtable_id_col")
-get_prtable_id_col.SQL_db <- function(x)
-{
-  return (x$db_prtable_cols["PATIENT_ID"]);
-}
-
-get_prtable_categories_col <- function(x) UseMethod("get_prtable_categories_col")
-get_prtable_categories_col.SQL_db <- function(x)
-{
-  return (x$db_prtable_cols["CATEGORIES"]);
-}
-
-get_prtable_process_col <- function(x) UseMethod("get_prtable_process_col")
-get_prtable_process_col.SQL_db <- function(x)
-{
-  return (x$db_prtable_cols["PROCESS"]);
-}
-
-get_prtable_params_col <- function(x) UseMethod("get_prtable_params_col")
-get_prtable_params_col.SQL_db <- function(x)
-{
-  return (x$db_prtable_cols["PARAMS"]);
-}
-
-get_retable_key_col <- function(x) UseMethod("get_retable_key_col")
-get_retable_key_col.SQL_db <- function(x)
-{
-  return (x$db_retable_cols["KEY"]);
-}
-
-get_retable <- function(x) UseMethod("get_retable")
-get_retable.SQL_db <- function(x)
-{
-  return (x$db_retable_name);
-}
-
-get_retable_proc_key_ref_col <- function(x) UseMethod("get_retable_proc_key_ref_col")
-get_retable_proc_key_ref_col.SQL_db <- function(x)
-{
-  return (x$db_retable_cols["PROC_KEY_REF"]);
-}
-
-get_retable_id_col <- function(x) UseMethod("get_retable_id_col")
-get_retable_id_col.SQL_db <- function(x)
-{
-  return (get_evtable_id_col(x));
-}
-
-# get_retable_categories_col <- function(x) UseMethod("get_retable_categories_col")
-# get_retable_categories_col.SQL_db <- function(x)
-# {
-#   return (get_prtable_categories_col(x));
-# }
-# 
-# get_retable_process_col <- function(x) UseMethod("get_retable_process_col")
-# get_retable_process_col.SQL_db <- function(x)
-# {
-#   return (get_prtable_process_col(x));
-# }
-# 
-# get_retable_params_col <- function(x) UseMethod("get_retable_params_col")
-# get_retable_params_col.SQL_db <- function(x)
-# {
-#   return (get_prtable_params_col(x));
-# }
-
-get_retable_estimate_col <- function(x) UseMethod("get_retable_estimate_col")
-get_retable_estimate_col.SQL_db <- function(x)
-{
-  return (x$db_retable_cols["ESTIMATE"]);
-}
-
-get_retable_estimate_type_col <- function(x) UseMethod("get_retable_estimate_type_col")
-get_retable_estimate_type_col.SQL_db <- function(x)
-{
-  return (x$db_retable_cols["ESTIMATE_TYPE"]);
-}
-
-get_retable_plot_jpg_col <- function(x) UseMethod("get_retable_plot_jpg_col")
-get_retable_plot_jpg_col.SQL_db <- function(x)
-{
-  return (x$db_retable_cols["PLOT_JPG"]);
-}
-
-get_retable_plot_html_col <- function(x) UseMethod("get_retable_plot_html_col")
-get_retable_plot_html_col.SQL_db <- function(x)
-{
-  return (x$db_retable_cols["PLOT_HTML"]);
-}
-
-get_swtable <- function(x) UseMethod("get_swtable")
-get_swtable.SQL_db <- function(x)
-{
-  return (x$db_swtable_name);
-}
-
-get_swtable_res_key_ref_col <- function(x) UseMethod("get_swtable_res_key_ref_col")
-get_swtable_res_key_ref_col.SQL_db <- function(x)
-{
-  return (x$db_swtable_cols["RES_KEY_REF"]);
-}
-
-get_swtable_patient_id_col <- function(x) UseMethod("get_swtable_patient_id_col")
-get_swtable_patient_id_col.SQL_db <- function(x)
-{
-  return (x$db_swtable_cols["PATIENT_ID"]);
-}
-
-get_swtable_window_id_col <- function(x) UseMethod("get_swtable_window_id_col")
-get_swtable_window_id_col.SQL_db <- function(x)
-{
-  return (x$db_swtable_cols["WINDOW_ID"]);
-}
-
-get_swtable_window_start_col <- function(x) UseMethod("get_swtable_window_start_col")
-get_swtable_window_start_col.SQL_db <- function(x)
-{
-  return (x$db_swtable_cols["WINDOW_START"]);
-}
-
-get_swtable_window_end_col <- function(x) UseMethod("get_swtable_window_end_col")
-get_swtable_window_end_col.SQL_db <- function(x)
-{
-  return (x$db_swtable_cols["WINDOW_END"]);
-}
-
-get_swtable_window_estimate_col <- function(x) UseMethod("get_swtable_window_estimate_col")
-get_swtable_window_estimate_col.SQL_db <- function(x)
-{
-  return (x$db_swtable_cols["WINDOW_ESTIMATE"]);
-}
-
-get_petable <- function(x) UseMethod("get_petable")
-get_petable.SQL_db <- function(x)
-{
-  return (x$db_petable_name);
-}
-
-get_petable_res_key_ref_col <- function(x) UseMethod("get_petable_res_key_ref_col")
-get_petable_res_key_ref_col.SQL_db <- function(x)
-{
-  return (x$db_petable_cols["RES_KEY_REF"]);
-}
-
-get_petable_patient_id_col <- function(x) UseMethod("get_petable_patient_id_col")
-get_petable_patient_id_col.SQL_db <- function(x)
-{
-  return (x$db_petable_cols["PATIENT_ID"]);
-}
-
-get_petable_episode_id_col <- function(x) UseMethod("get_petable_episode_id_col")
-get_petable_episode_id_col.SQL_db <- function(x)
-{
-  return (x$db_petable_cols["EPISODE_ID"]);
-}
-
-get_petable_episode_start_col <- function(x) UseMethod("get_petable_episode_start_col")
-get_petable_episode_start_col.SQL_db <- function(x)
-{
-  return (x$db_petable_cols["EPISODE_START"]);
-}
-
-get_petable_gap_days_col <- function(x) UseMethod("get_petable_gap_days_col")
-get_petable_gap_days_col.SQL_db <- function(x)
-{
-  return (x$db_petable_cols["GAP_DAYS"]);
-}
-
-get_petable_episode_duration_col <- function(x) UseMethod("get_petable_episode_duration_col")
-get_petable_episode_duration_col.SQL_db <- function(x)
-{
-  return (x$db_petable_cols["ESPISODE_DURATION"]);
-}
-
-get_petable_episode_end_col <- function(x) UseMethod("get_petable_episode_end_col")
-get_petable_episode_end_col.SQL_db <- function(x)
-{
-  return (x$db_petable_cols["EPISODE_END"]);
-}
-
-get_petable_episode_estimate_col <- function(x) UseMethod("get_petable_episode_estimate_col")
-get_petable_episode_estimate_col.SQL_db <- function(x)
-{
-  return (x$db_petable_cols["EPISODE_ESTIMATE"]);
-}
-
+# The defaults:
 get_default_processing <- function(x) UseMethod("get_default_processing")
 get_default_processing.SQL_db <- function(x)
 {
@@ -724,14 +612,14 @@ write_retable_entry.SQL_db <- function(x, id, key_proc, categories="", type="", 
   if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
     result <- DBI::dbExecute(x$db_connection, 
-                             paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_retable(x)),
+                             paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')),
                                     "(",
-                                    qs(x,get_evtable_id_col(x)),", ",
-                                    qs(x,get_retable_proc_key_ref_col(x)),", ",
-                                    qs(x,get_retable_estimate_col(x)),", ",
-                                    qs(x,get_retable_estimate_type_col(x)),", ",
-                                    qs(x,get_retable_plot_jpg_col(x)),", ",
-                                    qs(x,get_retable_plot_html_col(x)),
+                                    qs(x,get(x, 'patid', 'ev')),", ",
+                                    qs(x,get(x, 'prkey', 're')),", ",
+                                    qs(x,get(x, 'estimate', 're')),", ",
+                                    qs(x,get(x, 'estim_type', 're')),", ",
+                                    qs(x,get(x, 'jpg', 're')),", ",
+                                    qs(x,get(x, 'html', 're')),
                                     ")",
                                     " VALUES (",
                                     "'",id,"', ", # id
@@ -764,11 +652,11 @@ get_retable_key_for_results.SQL_db <- function(x, id, key, estimate_type)
   {
     # Get the res_key of the previous insertion in the retable:
     res_key_ref <- DBI::dbGetQuery(x$db_connection, 
-                                   paste0("SELECT ", qs(x,get_retable_key_col(x)),
-                                          " FROM ", qs(x,get_name(x)),".",qs(x,get_retable(x)), 
-                                          " WHERE ", qs(x,get_retable_id_col(x)), " = '", id, "'", 
-                                          " AND ", qs(x,get_retable_proc_key_ref_col(x)), " = '", key, "'",
-                                          " AND ", qs(x,get_retable_estimate_type_col(x)), " = '", estimate_type, "'",
+                                   paste0("SELECT ", qs(x,get(x, 'key', 're')),
+                                          " FROM ", qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')), 
+                                          " WHERE ", qs(x,get(x, 'patid', 're')), " = '", id, "'", 
+                                          " AND ", qs(x,get(x, 'prkey', 're')), " = '", key, "'",
+                                          " AND ", qs(x,get(x, 'estim_type', 're')), " = '", estimate_type, "'",
                                           ";"));
     if( is.null(res_key_ref) || nrow(res_key_ref) != 1 )
     {
@@ -801,21 +689,21 @@ write_swtable_entry.SQL_db <- function(x, res_key_ref=-1, cma=NULL)
   {
     # Write at once as usually there's few sliding windows:
     result <- DBI::dbExecute(x$db_connection, 
-                             paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_swtable(x)),
+                             paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw')),
                                     " (",
-                                    qs(x,get_swtable_res_key_ref_col(x)),", ",
-                                    qs(x,get_swtable_patient_id_col(x)),", ",
-                                    qs(x,get_swtable_window_id_col(x)),", ",
-                                    qs(x,get_swtable_window_start_col(x)),", ",
-                                    qs(x,get_swtable_window_end_col(x)),", ",
-                                    qs(x,get_swtable_window_estimate_col(x)),
+                                    qs(x,get(x, 'reskey', 'sw')),", ",
+                                    qs(x,get(x, 'patid', 'sw')),", ",
+                                    qs(x,get(x, 'wndid', 'sw')),", ",
+                                    qs(x,get(x, 'start', 'sw')),", ",
+                                    qs(x,get(x, 'end', 'sw')),", ",
+                                    qs(x,get(x, 'estim', 'sw')),
                                     ")",
                                     " VALUES ",
                                     paste0("(",
                                            vapply(1:nrow(cma), 
                                                   function(i) 
                                                     paste0("'", res_key_ref, "', ",
-                                                           "'", cma[i,get_evtable_id_col(x)], "', ",
+                                                           "'", cma[i,get(x, 'patid', 'ev')], "', ",
                                                            "'", cma$window.ID[i], "', ",
                                                            "'", cma$window.start[i], "', ",
                                                            "'", cma$window.end[i], "', ",
@@ -848,23 +736,23 @@ write_petable_entry.SQL_db <- function(x, res_key_ref=-1, cma=NULL)
   {
     # Write at once as usually there's few sliding windows:
     result <- DBI::dbExecute(x$db_connection, 
-                             paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_petable(x)),
+                             paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe')),
                                     " (",
-                                    qs(x,get_petable_res_key_ref_col(x)),", ",
-                                    qs(x,get_petable_patient_id_col(x)),", ",
-                                    qs(x,get_petable_episode_id_col(x)),", ",
-                                    qs(x,get_petable_episode_start_col(x)),", ",
-                                    qs(x,get_petable_gap_days_col(x)),", ",
-                                    qs(x,get_petable_episode_duration_col(x)),", ",
-                                    qs(x,get_petable_episode_end_col(x)),", ",
-                                    qs(x,get_petable_episode_estimate_col(x)),
+                                    qs(x,get(x, 'reskey', 'pe')),", ",
+                                    qs(x,get(x, 'patid', 'pe')),", ",
+                                    qs(x,get(x, 'epid', 'pe')),", ",
+                                    qs(x,get(x, 'start', 'pe')),", ",
+                                    qs(x,get(x, 'gap', 'pe')),", ",
+                                    qs(x,get(x, 'duration', 'pe')),", ",
+                                    qs(x,get(x, 'end', 'pe')),", ",
+                                    qs(x,get(x, 'estim', 'pe')),
                                     ")",
                                     " VALUES ",
                                     paste0("(",
                                            vapply(1:nrow(cma), 
                                                   function(i) 
                                                     paste0("'", res_key_ref, "', ",
-                                                           "'", cma[i,get_evtable_id_col(x)], "', ",
+                                                           "'", cma[i,get(x, 'patid', 'ev')], "', ",
                                                            "'", cma$episode.ID[i], "', ",
                                                            "'", cma$episode.start[i], "', ",
                                                            "'", cma$end.episode.gap.days[i], "', ",
@@ -896,14 +784,14 @@ list_evtable_patients.SQL_db <- function(x)
   if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
     tmp <- NULL;
-    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get_evtable_id_col(x))," FROM ",
-                                                       qs(x,get_evtable(x)),";")), silent=TRUE);
+    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get(x, 'patid', 'ev'))," FROM ",
+                                                       qs(x,get(x, 'name', 'ev')),";")), silent=TRUE);
     if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
   } else if( x$db_type == "mssql" )
   {
     tmp <- NULL;
-    try(tmp <- RODBC::sqlQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get_evtable_id_col(x))," FROM ",
-                                                       qs(x,get_name(x)),".",qs(x,get_evtable(x)),";")), 
+    try(tmp <- RODBC::sqlQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get(x, 'patid', 'ev'))," FROM ",
+                                                       qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),";")), 
         silent=TRUE);
     if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
   }
@@ -928,8 +816,8 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
     try(tmp <- DBI::dbGetQuery(x$db_connection, 
                                paste0("SELECT ",
                                       if(is.na(cols)) "*" else paste0(qs(x,cols),collapse=","),
-                                      " FROM ",qs(x,get_evtable(x)),
-                                      " WHERE ",qs(x,get_evtable_id_col(x)),
+                                      " FROM ",qs(x,get(x, 'name', 'ev')),
+                                      " WHERE ",qs(x,get(x, 'patid', 'ev')),
                                       " IN (",paste0("'",patient_id,"'",collapse=","),")",
                                       if(!is.na(maxrows)) paste0("LIMIT ",maxrows),
                                       ";")),
@@ -941,8 +829,8 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
     try(tmp <- RODBC::sqlQuery(x$db_connection, 
                                paste0("SELECT ",
                                       if(is.na(cols)) "*" else paste0(qs(x,cols),collapse=","),
-                                      " FROM ",qs(x,get_name(x)),".",qs(x,get_evtable(x)),
-                                      " WHERE ",qs(x,get_evtable_id_col(x)),
+                                      " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),
+                                      " WHERE ",qs(x,get(x, 'patid', 'ev')),
                                       " IN (",paste0("'",patient_id,"'",collapse=","),")",
                                       if(!is.na(maxrows)) paste0("LIMIT ",maxrows),
                                       ";")),
@@ -976,8 +864,8 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
     tmp <- NULL;
     try(tmp <- DBI::dbGetQuery(x$db_connection, 
                                paste0("SELECT *",
-                                      " FROM ",qs(x,get_prtable(x)),
-                                      " WHERE ",qs(x,get_prtable_id_col(x)),
+                                      " FROM ",qs(x,get(x, 'name', 'pr')),
+                                      " WHERE ",qs(x,get(x, 'patid', 'pr')),
                                       " IN (",paste0("'",patient_id,"'",collapse=","),")",
                                       ";")),
         silent=TRUE);
@@ -987,8 +875,8 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
     tmp <- NULL;
     try(tmp <- RODBC::sqlQuery(x$db_connection, 
                                paste0("SELECT *",
-                                      " FROM ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
-                                      " WHERE ",qs(x,get_prtable_id_col(x)),
+                                      " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
+                                      " WHERE ",qs(x,get(x, 'patid', 'pr')),
                                       " IN (",paste0("'",patient_id,"'",collapse=","),")",
                                       ";")),
         silent=TRUE);
@@ -1002,10 +890,10 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
   } else
   {
     # Re-arrange in the "key", "cats", "type", "proc", "params" format:
-    col_key  <- which(get_prtable_key_col(x) == names(db_procs));        if( length(col_key)  != 1 ) stop(paste0("Error retreiving the processing!\n"));
-    col_cats <- which(get_prtable_categories_col(x) == names(db_procs)); if( length(col_cats) != 1 ) stop(paste0("Error retreiving the processing!\n")); 
-    col_proc <- which(get_prtable_process_col(x)    == names(db_procs)); if( length(col_proc) != 1 ) stop(paste0("Error retreiving the processing!\n")); 
-    col_parm <- which(get_prtable_params_col(x)     == names(db_procs)); if( length(col_parm) != 1 ) stop(paste0("Error retreiving the processing!\n"));
+    col_key  <- which(get(x, 'key', 'pr') == names(db_procs));        if( length(col_key)  != 1 ) stop(paste0("Error retreiving the processing!\n"));
+    col_cats <- which(get(x, 'categories', 'pr') == names(db_procs)); if( length(col_cats) != 1 ) stop(paste0("Error retreiving the processing!\n")); 
+    col_proc <- which(get(x, 'process', 'pr')    == names(db_procs)); if( length(col_proc) != 1 ) stop(paste0("Error retreiving the processing!\n")); 
+    col_parm <- which(get(x, 'params', 'pr')     == names(db_procs)); if( length(col_parm) != 1 ) stop(paste0("Error retreiving the processing!\n"));
     db_procs <- db_procs[,c(col_key, col_cats, col_proc, col_parm)];
     names(db_procs) <- c(      "key",   "cats",   "proc", "params");
     
@@ -1056,12 +944,12 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class)
     # Specific selection may be needed:
     
     # Get the medication classes for this patient:
-    if( is.na(get_evtable_category_col(x)) )
+    if( is.na(get(x, 'category', 'ev')) )
     {
       # No medication classes:
       return (NULL);
     }
-    pat_classes <- patient_info[ , get_evtable_category_col(x) ]; 
+    pat_classes <- patient_info[ , get(x, 'category', 'ev') ]; 
     if( is.null(pat_classes) )
     {
       # No medication classes:
@@ -1116,11 +1004,11 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   procs_action_call <- paste0(procs_action$proc[1], 
                               "(",
                               "data=patient_info, ",
-                              "ID.colname='",get_evtable_id_col(x),"', ",
-                              "event.date.colname='",get_evtable_date_col(x),"', ",
-                              "event.duration.colname='",get_evtable_duration_col(x),"', ",
-                              ifelse(!is.na(get_evtable_perday_col(x)), paste0("event.daily.dose.colname='",get_evtable_perday_col(x),"', "), ""),
-                              ifelse(!is.na(get_evtable_category_col(x)), paste0("medication.class.colname='",get_evtable_category_col(x),"' "), ""),
+                              "ID.colname='",get(x, 'patid', 'ev'),"', ",
+                              "event.date.colname='",get(x, 'date', 'ev'),"', ",
+                              "event.duration.colname='",get(x, 'duration', 'ev'),"', ",
+                              ifelse(!is.na(get(x, 'perday', 'ev')), paste0("event.daily.dose.colname='",get(x, 'perday', 'ev'),"', "), ""),
+                              ifelse(!is.na(get(x, 'category', 'ev')), paste0("medication.class.colname='",get(x, 'category', 'ev'),"' "), ""),
                               ifelse(!is.na(procs_action$params[1]), paste0(", ",procs_action$params[1]),""), 
                               ")");
   try(procs_action_expr <- parse(text=procs_action_call), silent=TRUE);
@@ -1180,7 +1068,7 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   }
   
   # Return the results:
-  return (list("id"=patient_info[ 1, get_evtable_id_col(x) ],
+  return (list("id"=patient_info[ 1, get(x, 'patid', 'ev') ],
                "key"=procs_action$key[1], "categories"=procs_action$cats[1], "type"=procs_action$type[1], "proc"=procs_action$proc[1], "params"=procs_action$params[1], 
                "cma"=cma, 
                "plots"=cma_plots));
@@ -1270,36 +1158,36 @@ check_evtable <- function(x) UseMethod("check_evtable")
 check_evtable.SQL_db <- function(x)
 {
   db_tables <- list_tables(x);
-  if( !(get_evtable(x) %in% db_tables) )
+  if( !(get(x, 'name', 'ev') %in% db_tables) )
   {
-    stop(paste0("The required events table '",get_evtable(x),"' does not seem to exist in the database!\n"));
+    stop(paste0("The required events table '",get(x, 'name', 'ev'),"' does not seem to exist in the database!\n"));
     return (NULL);
   }
   
-  db_evtable_info <- get_cols_info(x, get_evtable(x));
+  db_evtable_info <- get_cols_info(x, get(x, 'name', 'ev'));
   if( is.null(db_evtable_info) || nrow(db_evtable_info) == 0 )
   {
-    stop(paste0("Cannot get the information about the events table '",get_evtable(x),"'!\n"));
+    stop(paste0("Cannot get the information about the events table '",get(x, 'name', 'ev'),"'!\n"));
     return (NULL);
   }
-  if( !(get_evtable_id_col(x) %in% db_evtable_info$column) )
+  if( !(get(x, 'patid', 'ev') %in% db_evtable_info$column) )
   {
-    stop(paste0("The required column PATIENT_ID ('",get_evtable_id_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
+    stop(paste0("The required column PATIENT_ID ('",get(x, 'patid', 'ev'),"') does not seem to exist in the events table '",get(x, 'name', 'ev'),"'!\n"));
     return (NULL);
   }
-  if( !(get_evtable_date_col(x) %in% db_evtable_info$column) )
+  if( !(get(x, 'date', 'ev') %in% db_evtable_info$column) )
   {
-    stop(paste0("The required column DATE ('",get_evtable_date_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
+    stop(paste0("The required column DATE ('",get(x, 'date', 'ev'),"') does not seem to exist in the events table '",get(x, 'name', 'ev'),"'!\n"));
     return (NULL);
   }
-  if( !(get_evtable_perday_col(x) %in% db_evtable_info$column) )
+  if( !(get(x, 'perday', 'ev') %in% db_evtable_info$column) )
   {
-    stop(paste0("The required column PERDAY ('",get_evtable_perday_col(x),"') does not seem to exist in the events table '",get_evtable(x),"'!\n"));
+    stop(paste0("The required column PERDAY ('",get(x, 'perday', 'ev'),"') does not seem to exist in the events table '",get(x, 'name', 'ev'),"'!\n"));
     return (NULL);
   }
   if( db_evtable_info$nrow[1] == 0 )
   {
-    stop(paste0("The events table '",get_evtable(x),"' seems empty!\n"));
+    stop(paste0("The events table '",get(x, 'name', 'ev'),"' seems empty!\n"));
     return (NULL);
   }
   
@@ -1311,41 +1199,41 @@ check_prtable <- function(x) UseMethod("check_prtable")
 check_prtable.SQL_db <- function(x)
 {
   db_tables <- list_tables(x);
-  if( !(get_prtable(x) %in% db_tables) )
+  if( !(get(x, 'name', 'pr') %in% db_tables) )
   {
     # The processing table does not exist: using the default for everybody
-    warning(paste0("The processing table '",get_evtable(x),"' does not exist: using the defaults for all patients...\n"));
+    warning(paste0("The processing table '",get(x, 'name', 'ev'),"' does not exist: using the defaults for all patients...\n"));
     x$use_default_proc_for_all <- TRUE;
     return (x);
   }
   
-  db_prtable_info <- get_cols_info(x, get_prtable(x));
+  db_prtable_info <- get_cols_info(x, get(x, 'name', 'pr'));
   if( db_prtable_info$nrow[1] == 0 )
   {
     # The processing table is empty: using the default for everybody
-    warning(paste0("The processing table '",get_evtable(x),"' is empty: using the defaults for all patients...\n"));
+    warning(paste0("The processing table '",get(x, 'name', 'ev'),"' is empty: using the defaults for all patients...\n"));
     x$use_default_proc_for_all <- TRUE;
     return (x);
   }
   
   if( is.null(db_prtable_info) || nrow(db_prtable_info) == 0 )
   {
-    stop(paste0("Cannot get the information about the processing table '",get_prtable(x),"'!\n"));
+    stop(paste0("Cannot get the information about the processing table '",get(x, 'name', 'pr'),"'!\n"));
     return (NULL);
   }
-  if( !(get_prtable_id_col(x) %in% db_prtable_info$column) )
+  if( !(get(x, 'patid', 'pr') %in% db_prtable_info$column) )
   {
-    stop(paste0("The required column PATIENT_ID ('",get_prtable_id_col(x),"') does not seem to exist in the processing table '",get_prtable(x),"'!\n"));
+    stop(paste0("The required column PATIENT_ID ('",get(x, 'patid', 'pr'),"') does not seem to exist in the processing table '",get(x, 'name', 'pr'),"'!\n"));
     return (NULL);
   }
-  if( !(get_prtable_categories_col(x) %in% db_prtable_info$column) )
+  if( !(get(x, 'categories', 'pr') %in% db_prtable_info$column) )
   {
-    stop(paste0("The required column CATEGORIES ('",get_prtable_categories_col(x),"') does not seem to exist in the processing table '",get_prtable(x),"'!\n"));
+    stop(paste0("The required column CATEGORIES ('",get(x, 'categories', 'pr'),"') does not seem to exist in the processing table '",get(x, 'name', 'pr'),"'!\n"));
     return (NULL);
   }
-  if( !(get_prtable_params_col(x) %in% db_prtable_info$column) )
+  if( !(get(x, 'params', 'pr') %in% db_prtable_info$column) )
   {
-    stop(paste0("The required column PARAMS ('",get_prtable_params_col(x),"') does not seem to exist in the processing table '",get_evtable(x),"'!\n"));
+    stop(paste0("The required column PARAMS ('",get(x, 'params', 'pr'),"') does not seem to exist in the processing table '",get(x, 'name', 'ev'),"'!\n"));
     return (NULL);
   }
   
@@ -1373,30 +1261,30 @@ create_test_database.SQL_db <- function(x)
     db_tables <- list_tables(x);
     
     # The events table:
-    if( get_evtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x)),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," ( ",
-                                           qs(x,get_evtable_id_col(x)),      " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get_evtable_date_col(x)),    " DATE NOT NULL, ",
-                                           qs(x,get_evtable_perday_col(x)),  " INT NOT NULL, ",
-                                           qs(x,get_evtable_category_col(x))," VARCHAR(1024) NULL DEFAULT NULL, ",
-                                           qs(x,get_evtable_duration_col(x))," INT NULL DEFAULT NULL );"));
+    if( get(x, 'name', 'ev') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," ( ",
+                                           qs(x,get(x, 'patid', 'ev')),      " VARCHAR(256) NOT NULL, ",
+                                           qs(x,get(x, 'date', 'ev')),    " DATE NOT NULL, ",
+                                           qs(x,get(x, 'perday', 'ev')),  " INT NOT NULL, ",
+                                           qs(x,get(x, 'category', 'ev'))," VARCHAR(1024) NULL DEFAULT NULL, ",
+                                           qs(x,get(x, 'duration', 'ev'))," INT NULL DEFAULT NULL );"));
     # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
     for( i in 1:nrow(d) )
     {
-      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," VALUES (",
+      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," VALUES (",
                                              paste0("'",as.character(d[i,]),"'",collapse=","),
                                              ");"));
     }
     
     # The table specifying what to do to which entries: 
-    if( get_prtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_prtable(x))," ( ",
-                                           qs(x,get_prtable_key_col(x)),       " INT NOT NULL AUTO_INCREMENT, ",
-                                           qs(x,get_prtable_id_col(x)),        " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get_prtable_categories_col(x))," VARCHAR(1024) NULL DEFAULT NULL, ",
-                                           qs(x,get_prtable_process_col(x)),   " VARCHAR(128) NULL DEFAULT NULL, ",
-                                           qs(x,get_prtable_params_col(x)),    " VARCHAR(10240) NULL DEFAULT NULL, ", 
-                                           "PRIMARY KEY (", get_prtable_key_col(x), ") );"));
+    if( get(x, 'name', 'pr') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr'))," ( ",
+                                           qs(x,get(x, 'key', 'pr')),       " INT NOT NULL AUTO_INCREMENT, ",
+                                           qs(x,get(x, 'patid', 'pr')),        " VARCHAR(256) NOT NULL, ",
+                                           qs(x,get(x, 'categories', 'pr'))," VARCHAR(1024) NULL DEFAULT NULL, ",
+                                           qs(x,get(x, 'process', 'pr')),   " VARCHAR(128) NULL DEFAULT NULL, ",
+                                           qs(x,get(x, 'params', 'pr')),    " VARCHAR(10240) NULL DEFAULT NULL, ", 
+                                           "PRIMARY KEY (", get(x, 'key', 'pr'), ") );"));
     # Fill it in one by one:
     tmp <- matrix(c('1', '[medA]',          'CMA2',      '',
                     '1', '[medA]',          'plot.CMA0', '',
@@ -1410,47 +1298,47 @@ create_test_database.SQL_db <- function(x)
                     '4', '',                'CMA1',      '',
                     '4', '',                'plot.CMA_per_episode', 'CMA.to.apply=\"CMA1\", maximum.permissible.gap=90'), 
                   ncol=4, byrow=TRUE);
-    colnames(tmp) <- c(qs(x,get_prtable_id_col(x)), qs(x,get_prtable_categories_col(x)), qs(x,get_prtable_process_col(x)), qs(x,get_prtable_params_col(x)));
+    colnames(tmp) <- c(qs(x,get(x, 'patid', 'pr')), qs(x,get(x, 'categories', 'pr')), qs(x,get(x, 'process', 'pr')), qs(x,get(x, 'params', 'pr')));
     for( i in 1:nrow(tmp) )
     {
-      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_prtable(x)),
+      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
                                              "(",paste0(colnames(tmp),collapse=","),")",
                                              " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
     }
 
     # The results table: 
-    if( get_retable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x)),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_retable(x))," ( ",
-                                           qs(x,get_retable_key_col(x)),          " INT NOT NULL AUTO_INCREMENT, ",
-                                           qs(x,get_evtable_id_col(x)),           " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get_retable_proc_key_ref_col(x)), " INT NULL DEFAULT -1, ",
-                                           qs(x,get_retable_estimate_col(x)),     " FLOAT NULL DEFAULT NULL, ",
-                                           qs(x,get_retable_estimate_type_col(x))," VARCHAR(256) NULL DEFAULT NULL, ",
-                                           qs(x,get_retable_plot_jpg_col(x)),     " LONGBLOB NULL DEFAULT NULL, ",
-                                           qs(x,get_retable_plot_html_col(x)),    " LONGBLOB NULL DEFAULT NULL, ", 
-                                           "PRIMARY KEY (", get_retable_key_col(x), ") );"));
+    if( get(x, 'name', 're') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're'))," ( ",
+                                           qs(x,get(x, 'key', 're')),          " INT NOT NULL AUTO_INCREMENT, ",
+                                           qs(x,get(x, 'patid', 'ev')),           " VARCHAR(256) NOT NULL, ",
+                                           qs(x,get(x, 'prkey', 're')), " INT NULL DEFAULT -1, ",
+                                           qs(x,get(x, 'estimate', 're')),     " FLOAT NULL DEFAULT NULL, ",
+                                           qs(x,get(x, 'estim_type', 're'))," VARCHAR(256) NULL DEFAULT NULL, ",
+                                           qs(x,get(x, 'jpg', 're')),     " LONGBLOB NULL DEFAULT NULL, ",
+                                           qs(x,get(x, 'html', 're')),    " LONGBLOB NULL DEFAULT NULL, ", 
+                                           "PRIMARY KEY (", get(x, 'key', 're'), ") );"));
     
     # The sliding windows results table: 
-    if( get_swtable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_swtable(x)),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_swtable(x))," ( ",
-                                           qs(x,get_swtable_res_key_ref_col(x)),    " INT NULL DEFAULT NULL, ",
-                                           qs(x,get_swtable_patient_id_col(x)),     " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get_swtable_window_id_col(x)),      " INT NOT NULL, ",
-                                           qs(x,get_swtable_window_start_col(x)),   " DATE NOT NULL, ",
-                                           qs(x,get_swtable_window_end_col(x)),     " DATE NOT NULL, ",
-                                           qs(x,get_swtable_window_estimate_col(x))," FLOAT NULL DEFAULT NULL );"));
+    if( get(x, 'name', 'sw') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw')),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw'))," ( ",
+                                           qs(x,get(x, 'reskey', 'sw')),    " INT NULL DEFAULT NULL, ",
+                                           qs(x,get(x, 'patid', 'sw')),     " VARCHAR(256) NOT NULL, ",
+                                           qs(x,get(x, 'wndid', 'sw')),      " INT NOT NULL, ",
+                                           qs(x,get(x, 'start', 'sw')),   " DATE NOT NULL, ",
+                                           qs(x,get(x, 'end', 'sw')),     " DATE NOT NULL, ",
+                                           qs(x,get(x, 'estim', 'sw'))," FLOAT NULL DEFAULT NULL );"));
     
     # The per episode results table: 
-    if( get_petable(x) %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_petable(x)),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_petable(x))," ( ",
-                                           qs(x,get_petable_res_key_ref_col(x)),     " INT NULL DEFAULT NULL, ",
-                                           qs(x,get_petable_patient_id_col(x)),      " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get_petable_episode_id_col(x)),      " INT NOT NULL, ",
-                                           qs(x,get_petable_episode_start_col(x)),   " DATE NOT NULL, ",
-                                           qs(x,get_petable_gap_days_col(x)),        " INT NULL DEFAULT NULL, ",
-                                           qs(x,get_petable_episode_duration_col(x))," INT NULL DEFAULT NULL, ",
-                                           qs(x,get_petable_episode_end_col(x)),     " DATE NOT NULL, ",
-                                           qs(x,get_petable_episode_estimate_col(x))," FLOAT NULL DEFAULT NULL );"));
+    if( get(x, 'name', 'pe') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe')),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe'))," ( ",
+                                           qs(x,get(x, 'reskey', 'pe')),     " INT NULL DEFAULT NULL, ",
+                                           qs(x,get(x, 'patid', 'pe')),      " VARCHAR(256) NOT NULL, ",
+                                           qs(x,get(x, 'epid', 'pe')),      " INT NOT NULL, ",
+                                           qs(x,get(x, 'start', 'pe')),   " DATE NOT NULL, ",
+                                           qs(x,get(x, 'gap', 'pe')),        " INT NULL DEFAULT NULL, ",
+                                           qs(x,get(x, 'duration', 'pe'))," INT NULL DEFAULT NULL, ",
+                                           qs(x,get(x, 'end', 'pe')),     " DATE NOT NULL, ",
+                                           qs(x,get(x, 'estim', 'pe'))," FLOAT NULL DEFAULT NULL );"));
     
   } else if( x$db_type == "mssql" )
   {
@@ -1458,17 +1346,17 @@ create_test_database.SQL_db <- function(x)
     db_tables <- list_tables(x);
     
     # The events table:
-    if( get_evtable(x) %in% db_tables ) RODBC::sqlQuery(x$db_connection, paste0("DROP TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x)),";"));
-    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," ( ",
-                                            qs(x,get_evtable_id_col(x))," VARCHAR(256) NOT NULL, ",
-                                            qs(x,get_evtable_date_col(x))," DATE NOT NULL, ",
-                                            qs(x,get_evtable_perday_col(x))," INT NOT NULL, ",
-                                            qs(x,get_evtable_category_col(x))," VARCHAR(1024) NOT NULL, ",
-                                            qs(x,get_evtable_duration_col(x))," INT NOT NULL);"));
+    if( get(x, 'name', 'ev') %in% db_tables ) RODBC::sqlQuery(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),";"));
+    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," ( ",
+                                            qs(x,get(x, 'patid', 'ev'))," VARCHAR(256) NOT NULL, ",
+                                            qs(x,get(x, 'date', 'ev'))," DATE NOT NULL, ",
+                                            qs(x,get(x, 'perday', 'ev'))," INT NOT NULL, ",
+                                            qs(x,get(x, 'category', 'ev'))," VARCHAR(1024) NOT NULL, ",
+                                            qs(x,get(x, 'duration', 'ev'))," INT NOT NULL);"));
     # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
     for( i in 1:nrow(d) )
     {
-      RODBC::sqlQuery(x$db_connection, paste0("INSERT INTO ",qs(x,get_name(x)),".",qs(x,get_evtable(x))," VALUES (",
+      RODBC::sqlQuery(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," VALUES (",
                                               paste0("'",as.character(d[i,]),"'",collapse=","),
                                               ");"));
     }
