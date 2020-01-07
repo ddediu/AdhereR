@@ -103,6 +103,10 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
                          "EPISODE_END"      =db_info$tables$per_episode_results$episode_end,
                          "EPISODE_ESTIMATE" =db_info$tables$per_episode_results$estimate);
     
+    # The updated info table:
+    db_uptable_name <- db_info$tables$updated_info$name;
+    db_uptable_cols <- c();
+    
     # The object:
     ret_val <- structure(list(# the database specification file and its contents:
                               "db_spec_file"=db_spec_file,
@@ -135,6 +139,8 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
                               "db_swtable_cols"=db_swtable_cols,
                               "db_petable_name"=db_petable_name,
                               "db_petable_cols"=db_petable_cols,
+                              "db_uptable_name"=db_uptable_name,
+                              "db_uptable_cols"=db_uptable_cols,
                               # the actual connection:
                               "db_connection"  =db_connection),
       class="SQL_db");
@@ -541,6 +547,16 @@ get.SQL_db <- function(x, variable, table=NULL)
                                "episode_estimate"=x$db_petable_cols["EPISODE_ESTIMATE"],
                                stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
                    
+                   # Updated info:
+                   "updated info"=,
+                   "updated"     =,
+                   "up"=switch(tolower(variable),
+                               "name"            =x$db_uptable_name,
+                               "patid"           =,
+                               "id"              =,
+                               "patient_id"      =get(x, "patid", "ev"),
+                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                   
                    stop(paste0("Undefined table '",table,"'."))));
   }
 }
@@ -729,17 +745,35 @@ write_petable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
 ## List the patient ids in the events table ####
 ##
 
-list_patients <- function(x) UseMethod("list_patients")
-list_patients.SQL_db <- function(x)
+list_patients <- function(x, with_updated_info_only=TRUE) UseMethod("list_patients")
+list_patients.SQL_db <- function(x, with_updated_info_only=TRUE)
 {
   patient_ids <- NULL;
   
   if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
     tmp <- NULL;
-    try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get(x, 'patid', 'ev'))," FROM ",
-                                                       qs(x,get(x, 'name', 'ev')),";")), silent=TRUE);
-    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
+    if( !with_updated_info_only || # specifically requested to use all patients, or
+        is.null(up_info <- get_cols_info(x, get(x, 'name', 'up'))) || up_info$nrow == 0 ) # the updated_info table is not defined or empty
+    {
+      # List all patients in the events table:
+      try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get(x, 'patid', 'ev')),
+                                                         " FROM ",qs(x,get(x, 'name', 'ev')),";
+                                                         ")), 
+          silent=TRUE);
+      if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
+    } else
+    {
+      # List only those in the events table that are also mentioned in the updated_info table:
+      try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get(x, 'name', 'ev')),".",qs(x,get(x, 'patid', 'ev')),
+                                                         " FROM ",qs(x,get(x, 'name', 'ev')),
+                                                         " INNER JOIN ",qs(x,get(x, 'name', 'up')),
+                                                         " ON ",qs(x,get(x, 'name', 'ev')),".",qs(x,get(x, 'patid', 'ev')),
+                                                         " = ",qs(x,get(x, 'name', 'up')),".",qs(x,get(x, 'patid', 'up')),
+                                                         ";")), 
+          silent=TRUE);
+      if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
+    }
   } else if( x$db_type == "mssql" )
   {
     tmp <- NULL;
@@ -1101,29 +1135,34 @@ check_tables.SQL_db <- function(x)
   # Get the list of tables:
   db_tables <- list_tables(x);
   
-  check_table <- function(x, tbname="events", tbcolumns=c("name", "patient_id", "date", "perday", "category", "duration"), check_empty=FALSE)
+  check_table <- function(x, tbname="events", tbcolumns=c("name", "patient_id", "date", "perday", "category", "duration"), 
+                          check_empty=FALSE, stop_on_error=TRUE)
   {
     if( !(get(x, 'name', tbname) %in% db_tables) )
     {
-      stop(paste0("The required table '",get(x, 'name', tbname),"' does not seem to exist in the database!\n"));
+      msg <- paste0("The required table '",get(x, 'name', tbname),"' does not seem to exist in the database!\n");
+      if( stop_on_error ) stop(msg) else warning(msg);
       return (FALSE);
     }
     table_info <- get_cols_info(x, get(x, 'name', tbname));
     if( is.null(table_info) || nrow(table_info) == 0 )
     {
-      stop(paste0("Cannot get the information about the table '",get(x, 'name', tbname),"'!\n"));
+      msg <- paste0("Cannot get the information about the table '",get(x, 'name', tbname),"'!\n");
+      if( stop_on_error ) stop(msg) else warning(msg);
       return (FALSE);
     }
     if( check_empty && table_info$nrow[1] == 0 )
     {
-      stop(paste0("The events table '",get(x, 'name', 'ev'),"' seems empty!\n"));
+      msg <- paste0("The events table '",get(x, 'name', 'ev'),"' seems empty!\n");
+      if( stop_on_error ) stop(msg) else warning(msg);
       return (FALSE);
     }
     for( tbcol in tbcolumns )
     {
       if( !(get(x, tbcol, tbname) %in% table_info$column) )
       {
-        stop(paste0("The required column '",get(x, tbcol, tbname),"' does not seem to exist in the table '",get(x, 'name', tbname),"'!\n"));
+        msg <- paste0("The required column '",get(x, tbcol, tbname),"' does not seem to exist in the table '",get(x, 'name', tbname),"'!\n");
+        if( stop_on_error ) stop(msg) else warning(msg);
         return (FALSE);
       }
     }
@@ -1189,6 +1228,12 @@ check_tables.SQL_db <- function(x)
   
   # Per episode results:
   if( !check_table(x, tbname="per episode results", tbcolumns=c("name", "result_id", "patient_id", "episode_id", "episode_start", "gap_days", "episode_duration", "episode_end", "estimate"), check_empty=FALSE) )
+  {
+    return (FALSE);
+  }
+  
+  # Udated info:
+  if( !check_table(x, tbname="updated info", tbcolumns=c("name", "patient_id"), check_empty=FALSE, stop_on_error=FALSE) )
   {
     return (FALSE);
   }
@@ -1338,6 +1383,15 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get(x, 'duration', 'pe')), " INT NULL DEFAULT NULL, ",
                                            qs(x,get(x, 'end', 'pe')),      " DATE NOT NULL, ",
                                            qs(x,get(x, 'estim', 'pe')),    " FLOAT NULL DEFAULT NULL );"));
+    
+    # The updated info table: 
+    if( get(x, 'name', 'up') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),";"));
+    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up'))," ( ",
+                                           qs(x,get(x, 'patid', 'up')), " VARCHAR(256) NOT NULL );"));
+    # Fill it in:
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),
+                                           " (",qs(x,get(x, 'patid', 'up')),") ",
+                                           " VALUES ",paste0("('",1:20,"')",collapse=", ")," ;")); # just the first 20 patients have updated info
     
   } else if( x$db_type == "mssql" )
   {

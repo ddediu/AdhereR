@@ -76,7 +76,7 @@ stu_db <- SQL_db(server_info, check_db=FALSE, truncate_results=TRUE);
 ##
 
 # Get the list of all patients:
-patient_ids <- list_patients(stu_db);
+patient_ids <- list_patients(stu_db, with_updated_info_only=TRUE);
 
 # Process them individually:
 for( i in seq_along(patient_ids) )
