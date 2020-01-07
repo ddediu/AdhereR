@@ -1,4 +1,9 @@
 # TODO
+  
+  
+## Error handling
+
+  - better error and messages handling and reporting
 
 
 ## Processing table
@@ -15,11 +20,6 @@
   - read & process several patients at once (in "chunks")?
   
   - parallelise several such chunks? (does it work with all database servers?)
-  
-  
-## Error handling
-
-  - better error handling and reporting
 
 
 ## Check it on MySQL/MariaDB, SQLite and MS SQL

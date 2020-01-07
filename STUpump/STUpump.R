@@ -49,6 +49,8 @@ for( i in 1:nrow(.needed_packages) )
 #server_info <- "./server_credentials_STUpump.tsv"; # the file storing the database server info and credentials for MS SQL server
 server_info <- "./STUpump-MySQL.yml"; # the file storing the database server info and credentials for MySQL server
 
+STUpump_version <- "0.1";
+
 # Load the SQL-stuff:
 source("./SQL_queries.R", echo=FALSE);
 

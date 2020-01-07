@@ -1,0 +1,11 @@
+################################################### 
+# 
+# STUpump v.0.1 log file 
+# generated on 2020-01-07 19:28:25
+# using config file './STUpump-MySQL.yml' 
+# 
+################################################### 
+
+
+Config: read 'database:type' = 'mysql'.
+Config: read 'database:hoste' = 'localhost'.

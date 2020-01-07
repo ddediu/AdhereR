@@ -30,27 +30,54 @@ library(configr); # read YAML config files
 ## The SQL_db class that ecapsulates all SQL-related things ####
 ##
 
-SQL_db <- function(db_spec_file=NA,       # the file containing the database specification (or NA for the defaults)
-                   connect_to_db=TRUE,    # try to connect to the database?
-                   truncate_results=TRUE, # remove any pre-existing rows from the results tables?
-                   check_db=connect_to_db # check the consistency of the database?
+SQL_db <- function(spec_file=NA,                                                 # the file containing the database specification (or NA for the defaults)
+                   connect_to_db=TRUE,                                           # try to connect to the database?
+                   truncate_results=TRUE,                                        # remove any pre-existing rows from the results tables?
+                   check_db=connect_to_db,                                       # check the consistency of the database?
+                   log_file="./log.txt", log_file_append=FALSE,                  # the logfile
+                   stop_on_database_errors=TRUE, stop_on_processing_errors=FALSE # what type(s) of errors to stop on
                   )
 {
-  if( !is.na(db_spec_file) )
+  # Init the log:
+  if( !log_file_append )
+  {
+    try(file.remove(log_file), silent=TRUE);
+  }
+  try(cat(paste0("################################################### \n",
+                 "# \n",
+                 "# STUpump ",ifelse(exists("STUpump_version"),paste0("v.",STUpump_version," "),""),"log file \n",
+                 "# generated on ",Sys.time(),"\n",
+                 "# using config file '",spec_file,"' \n",
+                 "# \n",
+                 "################################################### \n",
+                 "\n\n"), 
+          file=log_file), silent=TRUE);
+  
+  if( !is.na(spec_file) )
   {
     # The connection
     db_connection <- NULL; 
     
     # Load the actual database specification:
-    #db_info <- read.table(db_spec_file, header=TRUE, sep="\t", quote="", fill=TRUE, strip.white=TRUE, blank.lines.skip=TRUE, stringsAsFactors=FALSE);
-    db_info <- configr::read.config(db_spec_file);
-    if( is.null(db_info) )
-    {
-      stop(paste0("Error reading the config file '",db_spec_file,"'!\n"));
-    }
+    #db_info <- read.table(spec_file, header=TRUE, sep="\t", quote="", fill=TRUE, strip.white=TRUE, blank.lines.skip=TRUE, stringsAsFactors=FALSE);
+    db_info <- configr::read.config(spec_file);
+    if( is.null(db_info) ) .msg(paste0("Error reading the config file '",spec_file,"'!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+
+    if( is.null(db_info$database) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'database' section is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     
+    if( is.null(db_info$database$type) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'database:type' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    if( !(tolower(db_info$database$type) %in% c("mariadb", "mysql", "sqlite", "mssql")) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'database:type' entry has an unknown value!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_type  <- tolower(db_info$database$type);
+    .msg(paste0("Config: read 'database:type' = '",db_type,"'.\n"), log_file, "m");
+    
+    if( is.null(db_info$database$host) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'database:host' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_host  <- db_info$database$host;
+    .msg(paste0("Config: read 'database:host' = '",db_host,"'.\n"), log_file, "m");
+    
     db_dsn   <- db_info$database$DSN;
     db_user  <- db_info$database$user;
     db_psswd <- db_info$database$psswd;
@@ -109,8 +136,9 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
     
     # The object:
     ret_val <- structure(list(# the database specification file and its contents:
-                              "db_spec_file"=db_spec_file,
+                              "db_spec_file"=spec_file,
                               "db_info"     =db_info,
+                              
                               # the database info:
                               "db_type"     =db_type,
                               "db_host"     =db_host,
@@ -124,6 +152,7 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
                                                            "sqlite"=c("`","`"),
                                                            "mssql"=c("[","]"),
                                                            c("`","`")),
+                              
                               # the important tables:
                               "db_evtable_name"=db_evtable_name,
                               "db_evtable_cols"=db_evtable_cols,
@@ -141,8 +170,15 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
                               "db_petable_cols"=db_petable_cols,
                               "db_uptable_name"=db_uptable_name,
                               "db_uptable_cols"=db_uptable_cols,
+                              
                               # the actual connection:
-                              "db_connection"  =db_connection),
+                              "db_connection"  =db_connection,
+                              
+                              # other info:
+                              "log_file"                 =log_file,
+                              "stop_on_database_errors"  =stop_on_database_errors,
+                              "stop_on_processing_errors"=stop_on_processing_errors
+                            ),
       class="SQL_db");
     
     # Connect to the database?
@@ -163,6 +199,20 @@ SQL_db <- function(db_spec_file=NA,       # the file containing the database spe
   { 
     return (NULL);
   }
+}
+
+##
+## Error/warning/message reporting ####
+##
+
+.msg <- function(msg, log_file, type=c("m","w","e")[1]) 
+{
+  try(cat(msg, file=log_file, append=TRUE), silent=TRUE);
+  switch(type,
+         "m"=cat(msg),
+         "w"=warning(msg),
+         "s"=,
+         stop(msg));
 }
 
 
