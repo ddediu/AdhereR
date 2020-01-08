@@ -3,7 +3,7 @@
   
 ## Error handling
 
-  - better error and messages handling and reporting
+  - better error and messages handling and reporting [OK]
 
 
 ## Processing table
@@ -11,6 +11,8 @@
   - the default processings must be defined in the processing table
   
   - use "*" to mean "all" for both ids and classes (it is required to include "*" in the actions)
+  
+  - use "*" as a class to mean "all other non-matched classes"
   
 
 ## Optimisations

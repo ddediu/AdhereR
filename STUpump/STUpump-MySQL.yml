@@ -76,7 +76,7 @@ tables:
     episode_end:      episode_end      # the name of the column containing the episode's duration
     estimate:         estimate         # the name of the column containing the episode's estimated CMA
 
-  # The table specifying which patients have updated info (i.e., which patients to process):
+  # The table specifying which patients have updated info (i.e., which patients to process) -- can be missing if all the patients have to be processed:
   updated_info:
     name:       in_updated # table name
 

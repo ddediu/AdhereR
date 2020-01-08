@@ -46,8 +46,8 @@ for( i in 1:nrow(.needed_packages) )
 ## Global variables and settings ####
 ##
 
-#server_info <- "./server_credentials_STUpump.tsv"; # the file storing the database server info and credentials for MS SQL server
-server_info <- "./STUpump-MySQL.yml"; # the file storing the database server info and credentials for MySQL server
+#spec_file <- "./server_credentials_STUpump.tsv"; # the file storing the database server info and credentials for MS SQL server
+spec_file <- "./STUpump-MySQL.yml"; # the file storing the database server info and credentials for MySQL server
 
 STUpump_version <- "0.1";
 
@@ -63,13 +63,13 @@ source("./SQL_queries.R", echo=FALSE);
 if( FALSE )
 {
   # Create the test database:
-  stu_db <- SQL_db(server_info, check_db=FALSE);
+  stu_db <- SQL_db(spec_file, check_db=FALSE);
   create_test_database(stu_db);
   disconnect(stu_db);
 }
 
 # Connect to the pre-existing database:
-stu_db <- SQL_db(server_info, check_db=FALSE, truncate_results=TRUE);
+stu_db <- SQL_db(spec_file, check_db=FALSE, truncate_results=TRUE);
 
 
 

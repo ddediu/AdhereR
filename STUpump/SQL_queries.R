@@ -26,6 +26,8 @@
 
 library(configr); # read YAML config files
 
+options(warn=1); # show warning as they occur (and allow their capture with capture.output)
+
 ##
 ## The SQL_db class that ecapsulates all SQL-related things ####
 ##
@@ -58,81 +60,300 @@ SQL_db <- function(spec_file=NA,                                                
     # The connection
     db_connection <- NULL; 
     
+    .msg(paste0("## Reading and parsing the config file '",spec_file,"' ##\n\n"), log_file, "m");
+    
     # Load the actual database specification:
     #db_info <- read.table(spec_file, header=TRUE, sep="\t", quote="", fill=TRUE, strip.white=TRUE, blank.lines.skip=TRUE, stringsAsFactors=FALSE);
     db_info <- configr::read.config(spec_file);
     if( is.null(db_info) ) .msg(paste0("Error reading the config file '",spec_file,"'!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
 
-    if( is.null(db_info$database) ) 
+    
+    if( !("database" %in% names(db_info)) ) 
       .msg(paste0("Error in the config file '",spec_file,"': 'database' section is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     
-    if( is.null(db_info$database$type) ) 
+    if( !("type" %in% names(db_info$database)) ) 
       .msg(paste0("Error in the config file '",spec_file,"': 'database:type' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     if( !(tolower(db_info$database$type) %in% c("mariadb", "mysql", "sqlite", "mssql")) ) 
       .msg(paste0("Error in the config file '",spec_file,"': 'database:type' entry has an unknown value!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_type  <- tolower(db_info$database$type);
     .msg(paste0("Config: read 'database:type' = '",db_type,"'.\n"), log_file, "m");
     
-    if( is.null(db_info$database$host) ) 
+    if( !("host" %in% names(db_info$database)) ) 
       .msg(paste0("Error in the config file '",spec_file,"': 'database:host' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_host  <- db_info$database$host;
     .msg(paste0("Config: read 'database:host' = '",db_host,"'.\n"), log_file, "m");
     
+    if( !("DSN" %in% names(db_info$database)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'database:DSN' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_dsn   <- db_info$database$DSN;
-    db_user  <- db_info$database$user;
-    db_psswd <- db_info$database$psswd;
-    db_name  <- db_info$database$name;
+    .msg(paste0("Config: read 'database:DSN' = '",db_dsn,"'.\n"), log_file, "m");
     
+    if( !("user" %in% names(db_info$database)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'database:user' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_user  <- db_info$database$user;
+    .msg(paste0("Config: read 'database:user' = '",db_user,"'.\n"), log_file, "m");
+    
+    if( !("psswd" %in% names(db_info$database)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'database:psswd' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_psswd <- db_info$database$psswd;
+    .msg(paste0("Config: read 'database:psswd' = '",paste0(rep("*",nchar(db_psswd)),collapse=""),"'.\n"), log_file, "m");
+    
+    if( !("name" %in% names(db_info$database)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'database:name' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_name  <- db_info$database$name;
+    .msg(paste0("Config: read 'database:name' = '",db_name,"'.\n"), log_file, "m");
+    
+    .msg("\n", log_file, "m"); # aesthetic newline in the log file
+    
+    
+    # The tables:
+    if( !("tables" %in% names(db_info)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'tables' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+
+        
     # The events table:
+    if( !("events" %in% names(db_info$tables)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'events' table is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    
+    if( !("name" %in% names(db_info$tables$events)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:events:name' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_evtable_name <- db_info$tables$events$name;
-    db_evtable_cols <- c("ID"              =db_info$tables$events$patient_id,
-                         "DATE"            =db_info$tables$events$date,
-                         "PERDAY"          =db_info$tables$events$perday,
-                         "CATEGORY"        =db_info$tables$events$category,
-                         "DURATION"        =db_info$tables$events$duration);
+    .msg(paste0("Config: read 'table:events:name' = '",db_evtable_name,"'.\n"), log_file, "m");
+    
+    db_evtable_cols <- c();
+    
+    if( !("patient_id" %in% names(db_info$tables$events)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:events:patient_id' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_evtable_cols <- c(db_evtable_cols, "ID"=db_info$tables$events$patient_id);
+    .msg(paste0("Config: read 'table:events:patient_id' = '",db_evtable_cols["ID"],"'.\n"), log_file, "m");
+    
+    if( !("date" %in% names(db_info$tables$events)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:events:date' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_evtable_cols <- c(db_evtable_cols, "DATE"=db_info$tables$events$date);
+    .msg(paste0("Config: read 'table:events:date' = '",db_evtable_cols["DATE"],"'.\n"), log_file, "m");
+    
+    if( !("perday" %in% names(db_info$tables$events)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:events:perday' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_evtable_cols <- c(db_evtable_cols, "PERDAY"=db_info$tables$events$perday);
+    .msg(paste0("Config: read 'table:events:perday' = '",db_evtable_cols["PERDAY"],"'.\n"), log_file, "m");
+    
+    if( !("category" %in% names(db_info$tables$events)) ) 
+      .msg(paste0("Warning in the config file '",spec_file,"': 'table:events:category' entry is not defined, assuming it is not present in the events database...\n"), log_file, "w");
+    db_evtable_cols <- c(db_evtable_cols, "CATEGORY"=db_info$tables$events$category);
+    .msg(paste0("Config: read 'table:events:category' = '",db_evtable_cols["CATEGORY"],"'.\n"), log_file, "m");
+    
+    if( !("duration" %in% names(db_info$tables$events)) ) 
+      .msg(paste0("Warning in the config file '",spec_file,"': 'table:events:duration' entry is not defined, assuming it is not present in the events database...\n"), log_file, "w");
+    db_evtable_cols <- c(db_evtable_cols, "DURATION"=db_info$tables$events$duration);
+    .msg(paste0("Config: read 'table:events:duration' = '",db_evtable_cols["DURATION"],"'.\n"), log_file, "m");
+    
+    .msg("\n", log_file, "m"); # aesthetic newline in the log file
+    
     
     # The actions table:
+    if( !("actions" %in% names(db_info$tables)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'actions' table is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    
+    if( !("name" %in% names(db_info$tables$actions)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:actions:name' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_actable_name <- db_info$tables$actions$name;
-    db_actable_cols <- c("ID"             =db_info$tables$actions$action_id,
-                         "ACTION"         =db_info$tables$actions$action,
-                         "PARAMS"         =db_info$tables$actions$params);
+    .msg(paste0("Config: read 'table:actions:name' = '",db_actable_name,"'.\n"), log_file, "m");
+    
+    db_actable_cols <- c();
+    
+    if( !("action_id" %in% names(db_info$tables$actions)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:actions:action_id' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_actable_cols <- c(db_actable_cols, "ID"=db_info$tables$actions$action_id);
+    .msg(paste0("Config: read 'table:actions:action_id' = '",db_actable_cols["ID"],"'.\n"), log_file, "m");
+    
+    if( !("action" %in% names(db_info$tables$actions)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:actions:action' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_actable_cols <- c(db_actable_cols, "ACTION"=db_info$tables$actions$action);
+    .msg(paste0("Config: read 'table:actions:action' = '",db_actable_cols["ACTION"],"'.\n"), log_file, "m");
+    
+    if( !("params" %in% names(db_info$tables$actions)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:actions:params' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_actable_cols <- c(db_actable_cols, "PARAMS"=db_info$tables$actions$params);
+    .msg(paste0("Config: read 'table:actions:params' = '",db_actable_cols["PARAMS"],"'.\n"), log_file, "m");
+    
+    .msg("\n", log_file, "m"); # aesthetic newline in the log file
+    
     
     # The medication classes table:
+    if( !("med_classes" %in% names(db_info$tables)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'med_classes' table is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    
+    if( !("name" %in% names(db_info$tables$med_classes)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:med_classes:name' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_mctable_name <- db_info$tables$med_classes$name;
-    db_mctable_cols <- c("ID"             =db_info$tables$med_classes$medclass_id,
-                         "CLASS"          =db_info$tables$med_classes$class);
+    .msg(paste0("Config: read 'table:med_classes:name' = '",db_mctable_name,"'.\n"), log_file, "m");
+    
+    db_mctable_cols <- c();
+    
+    if( !("medclass_id" %in% names(db_info$tables$med_classes)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:med_classes:medclass_id' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_mctable_cols <- c(db_mctable_cols, "ID"=db_info$tables$med_classes$medclass_id);
+    .msg(paste0("Config: read 'table:med_classes:medclass_id' = '",db_mctable_cols["ID"],"'.\n"), log_file, "m");
+    
+    if( !("class" %in% names(db_info$tables$med_classes)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:med_classes:class' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_mctable_cols <- c(db_mctable_cols, "CLASS"=db_info$tables$med_classes$class);
+    .msg(paste0("Config: read 'table:med_classes:class' = '",db_mctable_cols["CLASS"],"'.\n"), log_file, "m");
+    
+    .msg("\n", log_file, "m"); # aesthetic newline in the log file
     
     # The processing to be done table:
+    if( !("processes" %in% names(db_info$tables)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'processes' table is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    
+    if( !("name" %in% names(db_info$tables$processes)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:processes:name' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_prtable_name <- db_info$tables$processes$name;
-    db_prtable_cols <- c("ID"             =db_info$tables$processes$procid);
+    .msg(paste0("Config: read 'table:processes:name' = '",db_mctable_name,"'.\n"), log_file, "m");
+    
+    db_prtable_cols <- c();
+    
+    if( !("procid" %in% names(db_info$tables$processes)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:processes:procid' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_prtable_cols <- c(db_prtable_cols, "ID"=db_info$tables$processes$procid);
+    .msg(paste0("Config: read 'table:processes:procid' = '",db_prtable_cols["ID"],"'.\n"), log_file, "m");
+    
+    .msg("\n", log_file, "m"); # aesthetic newline in the log file
+
     
     # The main results table:
+    if( !("results" %in% names(db_info$tables)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'results' table is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    
+    if( !("name" %in% names(db_info$tables$results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:results:name' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_retable_name <- db_info$tables$results$name;
-    db_retable_cols <- c("ID"             =db_info$tables$results$result_id,
-                         "ESTIMATE"       =db_info$tables$results$estimate,
-                         "ESTIMATE_TYPE"  =db_info$tables$results$estimate_type,
-                         "PLOT_JPG"       =db_info$tables$results$plot_jpg,
-                         "PLOT_HTML"      =db_info$tables$results$plot_html);
+    .msg(paste0("Config: read 'table:results:name' = '",db_retable_name,"'.\n"), log_file, "m");
+    
+    db_retable_cols <- c();
+    
+    if( !("result_id" %in% names(db_info$tables$results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:results:result_id' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_retable_cols <- c(db_retable_cols, "ID"=db_info$tables$results$result_id);
+    .msg(paste0("Config: read 'table:results:result_id' = '",db_retable_cols["ID"],"'.\n"), log_file, "m");
+    
+    if( !("estimate" %in% names(db_info$tables$results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:results:estimate' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_retable_cols <- c(db_retable_cols, "ESTIMATE"=db_info$tables$results$estimate);
+    .msg(paste0("Config: read 'table:results:estimate' = '",db_retable_cols["ESTIMATE"],"'.\n"), log_file, "m");
+    
+    if( !("estimate_type" %in% names(db_info$tables$results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:results:estimate_type' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_retable_cols <- c(db_retable_cols, "ESTIMATE_TYPE"=db_info$tables$results$estimate_type);
+    .msg(paste0("Config: read 'table:results:estimate_type' = '",db_retable_cols["ESTIMATE_TYPE"],"'.\n"), log_file, "m");
+    
+    if( !("plot_jpg" %in% names(db_info$tables$results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:results:plot_jpg' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_retable_cols <- c(db_retable_cols, "PLOT_JPG"=db_info$tables$results$plot_jpg);
+    .msg(paste0("Config: read 'table:results:plot_jpg' = '",db_retable_cols["PLOT_JPG"],"'.\n"), log_file, "m");
+    
+    if( !("plot_html" %in% names(db_info$tables$results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:results:plot_html' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_retable_cols <- c(db_retable_cols, "PLOT_HTML"=db_info$tables$results$plot_html);
+    .msg(paste0("Config: read 'table:results:plot_html' = '",db_retable_cols["PLOT_HTML"],"'.\n"), log_file, "m");
+    
+    .msg("\n", log_file, "m"); # aesthetic newline in the log file
+    
     
     # The sliding windows results table:
-    db_swtable_name <- db_info$tables$sliding_windows_results$name;
-    db_swtable_cols <- c("WINDOW_ID"      =db_info$tables$sliding_windows_results$window_id,
-                         "WINDOW_START"   =db_info$tables$sliding_windows_results$window_start,
-                         "WINDOW_END"     =db_info$tables$sliding_windows_results$window_end,
-                         "WINDOW_ESTIMATE"=db_info$tables$sliding_windows_results$estimate);
+    if( !("sliding_windows_results" %in% names(db_info$tables)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'sliding_windows_results' table is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     
+    if( !("name" %in% names(db_info$tables$sliding_windows_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:sliding_windows_results:name' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_swtable_name <- db_info$tables$sliding_windows_results$name;
+    .msg(paste0("Config: read 'table:sliding_windows_results:name' = '",db_swtable_name,"'.\n"), log_file, "m");
+    
+    db_swtable_cols <- c();
+    
+    if( !("window_id" %in% names(db_info$tables$sliding_windows_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:sliding_windows_results:window_id' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_swtable_cols <- c(db_swtable_cols, "WINDOW_ID"=db_info$tables$sliding_windows_results$window_id);
+    .msg(paste0("Config: read 'table:sliding_windows_results:window_id' = '",db_swtable_cols["WINDOW_ID"],"'.\n"), log_file, "m");
+    
+    if( !("window_start" %in% names(db_info$tables$sliding_windows_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:sliding_windows_results:window_start' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_swtable_cols <- c(db_swtable_cols, "WINDOW_START"=db_info$tables$sliding_windows_results$window_start);
+    .msg(paste0("Config: read 'table:sliding_windows_results:window_start' = '",db_swtable_cols["WINDOW_START"],"'.\n"), log_file, "m");
+    
+    if( !("window_end" %in% names(db_info$tables$sliding_windows_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:sliding_windows_results:window_end' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_swtable_cols <- c(db_swtable_cols, "WINDOW_END"=db_info$tables$sliding_windows_results$window_end);
+    .msg(paste0("Config: read 'table:sliding_windows_results:window_end' = '",db_swtable_cols["WINDOW_END"],"'.\n"), log_file, "m");
+    
+    if( !("estimate" %in% names(db_info$tables$sliding_windows_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:sliding_windows_results:estimate' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_swtable_cols <- c(db_swtable_cols, "WINDOW_ESTIMATE"=db_info$tables$sliding_windows_results$estimate);
+    .msg(paste0("Config: read 'table:sliding_windows_results:estimate' = '",db_swtable_cols["WINDOW_ESTIMATE"],"'.\n"), log_file, "m");
+    
+    .msg("\n", log_file, "m"); # aesthetic newline in the log file
+    
+        
     # The per episode results table:
+    if( !("per_episode_results" %in% names(db_info$tables)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'per_episode_results' table is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    
+    if( !("name" %in% names(db_info$tables$per_episode_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:per_episode_results:name' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_petable_name <- db_info$tables$per_episode_results$name;
-    db_petable_cols <- c("EPISODE_ID"       =db_info$tables$per_episode_results$episode_id,
-                         "EPISODE_START"    =db_info$tables$per_episode_results$episode_start,
-                         "GAP_DAYS"         =db_info$tables$per_episode_results$gap_days,
-                         "ESPISODE_DURATION"=db_info$tables$per_episode_results$episode_duration,
-                         "EPISODE_END"      =db_info$tables$per_episode_results$episode_end,
-                         "EPISODE_ESTIMATE" =db_info$tables$per_episode_results$estimate);
+    .msg(paste0("Config: read 'table:per_episode_results:name' = '",db_petable_name,"'.\n"), log_file, "m");
+    
+    db_petable_cols <- c();
+    
+    if( !("episode_id" %in% names(db_info$tables$per_episode_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:per_episode_results:episode_id' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_petable_cols <- c(db_petable_cols, "EPISODE_ID"=db_info$tables$per_episode_results$episode_id);
+    .msg(paste0("Config: read 'table:per_episode_results:episode_id' = '",db_petable_cols["EPISODE_ID"],"'.\n"), log_file, "m");
+    
+    if( !("episode_start" %in% names(db_info$tables$per_episode_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:per_episode_results:episode_start' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_petable_cols <- c(db_petable_cols, "EPISODE_START"=db_info$tables$per_episode_results$episode_start);
+    .msg(paste0("Config: read 'table:per_episode_results:episode_start' = '",db_petable_cols["EPISODE_START"],"'.\n"), log_file, "m");
+    
+    if( !("gap_days" %in% names(db_info$tables$per_episode_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:per_episode_results:gap_days' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_petable_cols <- c(db_petable_cols, "GAP_DAYS"=db_info$tables$per_episode_results$gap_days);
+    .msg(paste0("Config: read 'table:per_episode_results:gap_days' = '",db_petable_cols["GAP_DAYS"],"'.\n"), log_file, "m");
+    
+    if( !("episode_duration" %in% names(db_info$tables$per_episode_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:per_episode_results:episode_duration' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_petable_cols <- c(db_petable_cols, "ESPISODE_DURATION"=db_info$tables$per_episode_results$episode_duration);
+    .msg(paste0("Config: read 'table:per_episode_results:episode_duration' = '",db_petable_cols["ESPISODE_DURATION"],"'.\n"), log_file, "m");
+    
+    if( !("episode_end" %in% names(db_info$tables$per_episode_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:per_episode_results:episode_end' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_petable_cols <- c(db_petable_cols, "EPISODE_END"=db_info$tables$per_episode_results$episode_end);
+    .msg(paste0("Config: read 'table:per_episode_results:episode_end' = '",db_petable_cols["EPISODE_END"],"'.\n"), log_file, "m");
+    
+    if( !("estimate" %in% names(db_info$tables$per_episode_results)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:per_episode_results:estimate' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+    db_petable_cols <- c(db_petable_cols, "EPISODE_ESTIMATE"=db_info$tables$per_episode_results$estimate);
+    .msg(paste0("Config: read 'table:per_episode_results:estimate' = '",db_petable_cols["EPISODE_ESTIMATE"],"'.\n"), log_file, "m");
+    
+    .msg("\n", log_file, "m"); # aesthetic newline in the log file
+    
     
     # The updated info table:
+    if( !("updated_info" %in% names(db_info$tables)) ) 
+      .msg(paste0("Warning in the config file '",spec_file,"': 'updated_info' table is not defined: assuming all patients are to be estimated...\n"), log_file, "w");
+    
+    if( !("name" %in% names(db_info$tables$updated_info)) ) 
+      .msg(paste0("Error in the config file '",spec_file,"': 'table:updated_info:name' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_uptable_name <- db_info$tables$updated_info$name;
+    .msg(paste0("Config: read 'table:updated_info:name' = '",db_uptable_name,"'.\n"), log_file, "m");
+
     db_uptable_cols <- c();
+    
+    .msg("\n", log_file, "m"); # aesthetic newline in the log file
+    
+    .msg(paste0("## Finished parsing the config file ## \n\n"), log_file, "m");
+    
+    
     
     # The object:
     ret_val <- structure(list(# the database specification file and its contents:
@@ -246,17 +467,22 @@ connect.SQL_db <- function(x)
     db_list <- RODBC::sqlQuery(x$db_connection, "SELECT name FROM master.sys.databases");
     if( !(x$db_name %in% db_list$name) )
     {
-      stop(paste0("The required database '",x$db_name,"' does not exist on this server!\n"));
+      x$db_connection <- NULL;
+      .msg(paste0("Connect: the required database '",x$db_name,"' does not exist on this server!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
     }
   } else
   {
     x$db_connection <- NULL;
-    stop(paste0("Don't know how to use an SQL database of type '",x$db_type,"': please specify a MariaDB, MySQL, SQLite or Microsoft SQL Server database!\n"));
+    .msg(paste0("Connect: don't know how to use an SQL database of type '",x$db_type,"': please specify a MariaDB, MySQL, SQLite or Microsoft SQL Server database!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
   }
   if( is.null(x$db_connection) )
   {
     # Something bad happened:
-    stop("Error connecting to the specified database!\n");
+    .msg("Connect: error connecting to the specified database!\n", x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+  } else
+  {
+    # All seems fine:
+    .msg("Connect: successful connection to the database...\n", x$log_file, "m");
   }
   
   # Return the connection:
@@ -278,6 +504,10 @@ disconnect.SQL_db <- function(x)
     }
     
     x$db_connection <- NULL;
+    .msg("Disconnect: connection stopped...\n", x$log_file, "m");
+  } else
+  {
+    .msg("Disconnect: database connection already stopped or never made...\n", x$log_file, "m");
   }
   
   return (invisible(x));
@@ -287,17 +517,20 @@ disconnect.SQL_db <- function(x)
 reset_results <- function(x) UseMethod("reset_results")
 reset_results.SQL_db <- function(x)
 {
+  db_tables <- list_tables(x);
   if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
-    if( get(x, 'name', 're') %in% list_tables(x) ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 're')," ;")), silent=TRUE);
-    if( get(x, 'name', 'sw') %in% list_tables(x) ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'sw')," ;")), silent=TRUE);
-    if( get(x, 'name', 'pe') %in% list_tables(x) ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'pe')," ;")), silent=TRUE);
+    if( get(x, 'name', 're') %in% db_tables ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 're')," ;")), silent=TRUE);
+    if( get(x, 'name', 'sw') %in% db_tables ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'sw')," ;")), silent=TRUE);
+    if( get(x, 'name', 'pe') %in% db_tables ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'pe')," ;")), silent=TRUE);
   } else if( x$db_type == "mssql" )
   {
-    if( get(x, 'name', 're') %in% list_tables(x) ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 're')," ;")), silent=TRUE);
-    if( get(x, 'name', 'sw') %in% list_tables(x) ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'sw')," ;")), silent=TRUE);
-    if( get(x, 'name', 'pe') %in% list_tables(x) ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'pe')," ;")), silent=TRUE);
+    if( get(x, 'name', 're') %in% db_tables ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 're')," ;")), silent=TRUE);
+    if( get(x, 'name', 'sw') %in% db_tables ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'sw')," ;")), silent=TRUE);
+    if( get(x, 'name', 'pe') %in% db_tables ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'pe')," ;")), silent=TRUE);
   }
+  
+  .msg("Reset: database results tables truncated...\n", x$log_file, "m");
   
   return (TRUE);
 }
@@ -321,6 +554,8 @@ list_tables.SQL_db <- function(x)
     db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",qs(x,x$db_name),".information_schema.tables;")); # list the tables
     db_tables <- paste0(db_list$TABLE_SCHEMA,".",db_list$TABLE_NAME); # reconstruct the tables' names
   }
+  
+  .msg(paste0("List tables: database contains the following tables: ",paste0("'",db_tables,"''",collapse=", "),"...\n"), x$log_file, "m");
   
   # Return the list tables' names:
   return (db_tables);
@@ -346,6 +581,7 @@ get_cols_info.SQL_db <- function(x, db_table)
       {
         # Error retreiving the number of rows:
         n <- NA;
+        .msg(paste0("Error getting the number of rows for table '",db_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
       } else
       {
         n <- as.numeric(n[1,1]);
@@ -366,6 +602,7 @@ get_cols_info.SQL_db <- function(x, db_table)
       {
         # Error retreiving the number of rows:
         n <- NA;
+        .msg(paste0("Error getting the number of rows for table '",db_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
       } else
       {
         n <- as.numeric(n[1,1]);
@@ -381,6 +618,7 @@ get_cols_info.SQL_db <- function(x, db_table)
     {
       # Error retreiving the number of rows:
       n <- NA;
+      .msg(paste0("Error getting the number of rows for table '",db_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
     } else
     {
       n <- as.numeric(n[1,1]);
@@ -395,6 +633,8 @@ get_cols_info.SQL_db <- function(x, db_table)
       }
     }
   }
+  
+  if( is.null(db_cols_info) ) .msg(paste0("Error getting the columns info for table '",db_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
   
   # Return the column info:
   return (db_cols_info);
@@ -411,6 +651,7 @@ get_col_names.SQL_db <- function(x)
   } else
   {
     return (NULL);
+    .msg(paste0("Error getting the column names!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
   }
 }
 
@@ -464,7 +705,8 @@ get.SQL_db <- function(x, variable, table=NULL)
                    "user"     =x$db_user,
                    "psswd"    =x$db_psswd,
                    "name"     =x$db_name,
-                   stop(paste0("Undefined global attribute '",variable,"'."))));
+                   .msg(paste0("Undefined global attribute '",variable,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                   ));
   } else
   {
     # A specific table was requested:
@@ -481,7 +723,8 @@ get.SQL_db <- function(x, variable, table=NULL)
                                "cat"       =,
                                "category"  =x$db_evtable_cols["CATEGORY"],
                                "duration"  =x$db_evtable_cols["DURATION"],
-                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                               ),
                    
                    # Actions:
                    "actions"=,
@@ -492,7 +735,8 @@ get.SQL_db <- function(x, variable, table=NULL)
                                "id"       =x$db_actable_cols["ID"],
                                "action"   =x$db_actable_cols["ACTION"],
                                "params"   =x$db_actable_cols["PARAMS"],
-                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                               ),
                    
                    # Medication classes:
                    "medication classes"=,
@@ -505,7 +749,8 @@ get.SQL_db <- function(x, variable, table=NULL)
                                "mcid"        =,
                                "id"          =x$db_mctable_cols["ID"],
                                "class"       =x$db_mctable_cols["CLASS"],
-                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                               ),
                    
                    # Processings:
                    "processings"=,
@@ -520,7 +765,8 @@ get.SQL_db <- function(x, variable, table=NULL)
                                "cat"          =,
                                "category"     =get(x, "mcid", "mc"),
                                "action"       =get(x, "actid", "ac"),
-                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                               ),
                    
                    # Main results:
                    "main results"=,
@@ -542,7 +788,8 @@ get.SQL_db <- function(x, variable, table=NULL)
                                "plot_jpg"     =x$db_retable_cols["PLOT_JPG"],
                                "html"         =,
                                "plot_html"    =x$db_retable_cols["PLOT_HTML"],
-                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                               ),
                    
                    # Sliding window results:
                    "sliding windows results"=,
@@ -566,7 +813,8 @@ get.SQL_db <- function(x, variable, table=NULL)
                                "estimate"       =,
                                "estim"          =,
                                "window_estimate"=x$db_swtable_cols["WINDOW_ESTIMATE"],
-                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                               ),
                    
                    # Per episode results:
                    "per episode results"=,
@@ -595,7 +843,8 @@ get.SQL_db <- function(x, variable, table=NULL)
                                "estimate"        =,
                                "estim"           =,
                                "episode_estimate"=x$db_petable_cols["EPISODE_ESTIMATE"],
-                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                               ),
                    
                    # Updated info:
                    "updated info"=,
@@ -605,18 +854,12 @@ get.SQL_db <- function(x, variable, table=NULL)
                                "patid"           =,
                                "id"              =,
                                "patient_id"      =get(x, "patid", "ev"),
-                               stop(paste0("Undefined attribute '",variable,"' for table '",table,"'."))),
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                               ),
                    
-                   stop(paste0("Undefined table '",table,"'."))));
+                   .msg(paste0("Undefined table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w")))
+            );
   }
-}
-
-
-# The defaults:
-get_default_processing <- function(x) UseMethod("get_default_processing")
-get_default_processing.SQL_db <- function(x)
-{
-  return (x$db_default_proc);
 }
 
 
@@ -655,7 +898,14 @@ write_retable_entry.SQL_db <- function(x, id, procid, class="", type="", proc=""
                                            "NULL", 
                                            paste0("X'",paste0(readBin(plot_html, n=file.size(plot_html)+1024, what="raw"),collapse=""),"'")), # the HTML+SVG file as a blob
                                     ");"));
-    return (result == 1); # should've written exactly one line
+    if( result != 1 ) # should've written exactly one line
+    {
+      .msg(paste0("Error writing row to the results table '",get(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+      return (FALSE);
+    } else
+    {
+      return (TRUE);
+    }
   } else if( x$db_type == "mssql" )
   {
   }
@@ -680,13 +930,14 @@ get_retable_resid_for_results.SQL_db <- function(x, id, procid, estimate_type)
     if( is.null(resid_ref) || nrow(resid_ref) != 1 )
     {
       # Error identifying the last inserted row!
+      .msg(paste0("Error identifying the last row written to the results table '",get(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
       return (NULL);
     } else
     {
       return (resid_ref[1,1]);
     }
   } else if( x$db_type == "mssql" )
-  {s
+  {
   }
   
   return (NULL);
@@ -731,7 +982,14 @@ write_swtable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
                                            ")",
                                            collapse=", "),
                                     ";"));
-    return (result == nrow(cma)); # should've written exactly as many lines as in the data.frame
+    if( result != nrow(cma) ) # should've written exactly as many lines as in the data.frame
+    {
+      .msg(paste0("Error writing row to the sliding windows results table '",get(x, 'name', 'sw'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+      return (FALSE);
+    } else
+    {
+      return (TRUE);
+    }
   } else if( x$db_type == "mssql" )
   {
   }
@@ -782,7 +1040,14 @@ write_petable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
                                            ")",
                                            collapse=", "),
                                     ";"));
-    return (result == nrow(cma)); # should've written exactly as many lines as in the data.frame
+    if( result != nrow(cma) ) # should've written exactly as many lines as in the data.frame
+    {
+      .msg(paste0("Error writing row to the per episode results table '",get(x, 'name', 'pe'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+      return (FALSE);
+    } else
+    {
+      return (TRUE);
+    }
   } else if( x$db_type == "mssql" )
   {
   }
@@ -833,6 +1098,8 @@ list_patients.SQL_db <- function(x, with_updated_info_only=TRUE)
     if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
   }
   
+  if( is.null(patient_ids) ) .msg(paste0("Error retrieving the list of patients to processes!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+  
   # Return patient ids:
   return (patient_ids);
 }
@@ -875,6 +1142,8 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
     if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) db_pat_info <- tmp;
   }
   
+  if( is.null(db_pat_info) ) .msg(paste0("Error retreiving info for patient(s) ",paste0("'",patient_id,"'",collapse=", "),"!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+  
   # Return the patient info:
   return (db_pat_info);
 }
@@ -907,6 +1176,7 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
     if( is.null(tmp) || nrow(tmp) == 0 )
     {
       # We can't get even the defaults: error!
+      .msg(paste0("Error retreiving the default processings for patient(s) ",paste0("'",patient_id,"'",collapse=", "),"!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
       return (NULL);
     } else
     {
@@ -974,13 +1244,15 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class)
     if( is.na(get(x, 'category', 'ev')) )
     {
       # No medication classes:
-      return (NULL);
+      .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
+      return (rep(TRUE, nrow(patient_info))); # select all
     }
     pat_classes <- patient_info[ , get(x, 'category', 'ev') ]; 
     if( is.null(pat_classes) )
     {
       # No medication classes:
-      return (NULL);
+      .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
+      return (rep(TRUE, nrow(patient_info))); # select all
     }
     
     # Transform the procs_class specification into a logical expression to be evaluated on pat_classes:
@@ -995,7 +1267,7 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class)
         silent=TRUE);
     if( is.null(procs_class_expr) )
     {
-      stop(paste0("Error parsing the medication class definition '",procs_class,"'!\n"));
+      .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
       return (NULL);
     }
     
@@ -1003,7 +1275,7 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class)
     s <- eval(procs_class_expr);
     if( (!is.na(s) || !is.null(s)) && !is.logical(s) )
     {
-      stop(paste0("Error applying the medication class definition '",procs_class,"' to the data: the result should be logical!\n"));
+      .msg(paste0("Error applying the medication class definition '",procs_class,"' to the data: the result should be logical!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
       return (NULL);
     }
     
@@ -1039,17 +1311,23 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   try(procs_action_expr <- parse(text=procs_action_call), silent=TRUE);
   if( is.null(procs_action_expr) )
   {
-    stop(paste0("Error parsing the action '",procs_action_call,"'!\n"));
+    .msg(paste0("Error parsing the action '",procs_action_call,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
     return (NULL);
   }
   
   # Evaluate the expression:
-  cma <- eval(procs_action_expr);
+  cma <- NULL; msg <- NULL;
+  try(msg <- capture.output(cma <- eval(procs_action_expr), type="message"), silent=TRUE);
   if( is.null(cma) || is.na(cma) || !(inherits(cma, "CMA0") || inherits(cma, "CMA_sliding_window") || inherits(cma, "CMA_per_episode")) )
   {
     # Serious error:
-    stop(paste0("Error applying the action definition '",procs_action_call,"' to the data!\n"));
+    .msg(paste0("Error applying the action definition '",procs_action_call,"' to the data!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
     return (NULL);
+  }
+  if( !is.null(msg) && length(msg) > 0 )
+  {
+    # Potential warnings generated by CMA:
+    .msg(paste0("Warning(s) generated by the computation of the CMA:\n",paste0("  >>  ",msg,collapse="\n"),"\n"), x$log_file, "m");
   }
   
   # Should we plot it?
@@ -1063,16 +1341,17 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
     try(procs_action_expr <- parse(text=procs_action_call), silent=TRUE);
     if( is.null(procs_action_expr) )
     {
-      stop(paste0("Error parsing the action '",procs_action_call,"'!\n"));
+      .msg(paste0("Error parsing the action '",procs_action_call,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
       return (NULL);
     }
     
     # Evaluate the expression:
-    plot_file_names <- eval(procs_action_expr);
+    plot_file_names <- NULL; msg <- NULL;
+    try(msg <- capture.output(plot_file_names <- eval(procs_action_expr), type="message"), silent=TRUE);
     if( is.null(plot_file_names) || length(plot_file_names) < 2 )
     {
       # Issues generating the plots:
-      warning(paste0("Error applying the action definition '",procs_action_call,"' to the data: the result should be a valid plot!\n"));
+      .msg(paste0("Error applying the action definition '",procs_action_call,"' to the data: the result should be a valid plot!\n"), x$log_file, "w");
       return (NULL);
     } else
     {
@@ -1083,12 +1362,17 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
           != 0 ) # the return code for OK should be 0
       {
         # Errors zipping:
-        warning(paste0(pat_msgs, "Error creating the zip containing the HTML document and the JPG placeholder!"));
+        .msg(paste0("Error creating the zip containing the HTML document and the JPG placeholder!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
         return (NULL);
       }
       
       # Store these files:
       cma_plots <- list("jpg"=plot_file_names["jpg-placeholder"], "html"=zip_file_name);
+    }
+    if( !is.null(msg) && length(msg) > 0 )
+    {
+      # Potential warnings generated by plotting:
+      .msg(paste0("Warning(s) generated by the plotting of the CMA:\n",paste0("  >>  ",msg,collapse="\n"),"\n"), x$log_file, "m");
     }
   }
   
@@ -1191,20 +1475,20 @@ check_tables.SQL_db <- function(x)
     if( !(get(x, 'name', tbname) %in% db_tables) )
     {
       msg <- paste0("The required table '",get(x, 'name', tbname),"' does not seem to exist in the database!\n");
-      if( stop_on_error ) stop(msg) else warning(msg);
+      .msg(msg, x$log_file, ifelse(stop_on_error,"e","w"));
       return (FALSE);
     }
     table_info <- get_cols_info(x, get(x, 'name', tbname));
     if( is.null(table_info) || nrow(table_info) == 0 )
     {
       msg <- paste0("Cannot get the information about the table '",get(x, 'name', tbname),"'!\n");
-      if( stop_on_error ) stop(msg) else warning(msg);
+      .msg(msg, x$log_file, ifelse(stop_on_error,"e","w"));
       return (FALSE);
     }
     if( check_empty && table_info$nrow[1] == 0 )
     {
       msg <- paste0("The events table '",get(x, 'name', 'ev'),"' seems empty!\n");
-      if( stop_on_error ) stop(msg) else warning(msg);
+      .msg(msg, x$log_file, ifelse(stop_on_error,"e","w"));
       return (FALSE);
     }
     for( tbcol in tbcolumns )
@@ -1212,7 +1496,7 @@ check_tables.SQL_db <- function(x)
       if( !(get(x, tbcol, tbname) %in% table_info$column) )
       {
         msg <- paste0("The required column '",get(x, tbcol, tbname),"' does not seem to exist in the table '",get(x, 'name', tbname),"'!\n");
-        if( stop_on_error ) stop(msg) else warning(msg);
+        .msg(msg, x$log_file, ifelse(stop_on_error,"e","w"));
         return (FALSE);
       }
     }
