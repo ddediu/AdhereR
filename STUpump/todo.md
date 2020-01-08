@@ -8,9 +8,9 @@
 
 ## Processing table
 
-  - the default processings must be defined in the processing table
+  - the default processings must be defined in the processing table [OK]
   
-  - use "*" to mean "all" for both ids and classes (it is required to include "*" in the actions)
+  - use "*" to mean "all" for both ids and classes (it is required to include "*" in the actions) [OK]
   
   - use "*" as a class to mean "all other non-matched classes"
   

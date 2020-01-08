@@ -103,7 +103,7 @@ for( i in seq_along(patient_ids) )
       pat_procs_actions <- unique(pat_procs[ pat_procs$class == procs_class, ]);
 
       # Select the events corresponding to this class:
-      s <- select_events_for_procs_class(stu_db, pat_info, procs_class);
+      s <- select_events_for_procs_class(stu_db, pat_info, procs_class, pat_procs);
       
       if( !is.na(s) && !is.null(s) && length(s) > 0 && is.logical(s) && any(s) )
       {

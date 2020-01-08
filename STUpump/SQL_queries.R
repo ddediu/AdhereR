@@ -1150,6 +1150,83 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
 
 
 ##
+## Database pre-processing ####
+##
+
+preprocess <- function(x, patient_id) UseMethod("preprocess")
+preprocess.SQL_db <- function(x)
+{
+  # The processings table
+  # Solve the "*" action (meaning the default ones, defined as the ones with * for both patid and category in the same table
+  
+  # Do we need to do anything about this?
+  default_actions <- default_actions_defined <- FALSE;
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    tmp <- NULL;
+    try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                               paste0("SELECT COUNT(*)",
+                                      " FROM ",qs(x,get(x, 'name', 'pr')),
+                                      " WHERE ",qs(x,get(x, 'action', 'pr'))," = '*'",
+                                      " ;")),
+        silent=TRUE);
+    if( is.null(tmp) || nrow(tmp) == 0 )
+    {
+      # We can't get the count!
+      .msg(paste0("Error retreiving the number of default actions '*' from the processings table '",get(x, 'name', 'pr'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+      return (NULL);
+    } else
+    {
+      default_actions <- (tmp[1,1] > 0);
+    }
+    
+    if( default_actions )
+    {
+      # Ok, are there defaults defined?
+      tmp <- NULL;
+      try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                                 paste0("SELECT COUNT(*)",
+                                        " FROM ",qs(x,get(x, 'name', 'pr')),
+                                        " WHERE ",qs(x,get(x, 'patid', 'pr'))," = '*'",
+                                        " AND ",qs(x,get(x, 'category', 'pr'))," = '*'",
+                                        " ;")),
+          silent=TRUE);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        # We can't get the count!
+        .msg(paste0("Error retreiving the defaults for the processings table '",get(x, 'name', 'pr'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        return (NULL);
+      } else
+      {
+        default_actions_defined <- (tmp[1,1] > 0);
+      }
+      
+      if( default_actions_defined )
+      {
+        # Ok: create a new processings table and replace the default actions by the defaults:
+        tmp <- NULL;
+        try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                                   paste0("CREATE TABLE `test` SELECT * FROM ",qs(x,get(x, 'name', 'pr'))," ;")),
+            silent=TRUE);
+        
+        try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                                   paste0("SELECT * ",
+                                          " FROM ","`test`",
+                                          " INNER JOIN ",qs(x,get(x, 'name', 'pr')),
+                                          " ON ","`test`",".",qs(x,get(x, 'action', 'pr'))," = '*'",
+                                          " AND ",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'patid', 'pr'))," = '*'",
+                                          " ;")),
+            silent=TRUE);
+      }
+    }
+  } else if( x$db_type == "mssql" )
+  {
+  }
+
+}
+
+
+##
 ## Processings ####
 ##
 
@@ -1217,13 +1294,18 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
                           return (c("type"="CMA", "proc"=tmp2));
                         }
                       })));
+  
+  # Remove the trailing spaces:
+  db_procs$class  <- trimws(db_procs$class);
+  db_procs$action <- trimws(db_procs$action);
+  db_procs$params <- trimws(db_procs$params);
 
   return (db_procs);
 }
 
 # Apply the required selection to this patient:
-select_events_for_procs_class <- function(x, patient_info, procs_classs) UseMethod("select_events_for_procs_class")
-select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class)
+select_events_for_procs_class <- function(x, patient_info, procs_classs, proc_classes_for_patient) UseMethod("select_events_for_procs_class")
+select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, proc_classes_for_patient)
 {
   if( is.null(patient_info) || nrow(patient_info) == 0 || 
       is.null(procs_class) || length(procs_class) != 1 )
@@ -1232,56 +1314,71 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class)
     return (NULL);
   }
   
+  # Special case for full selection?
   if( is.na(procs_class) || procs_class %in% c("", "*") )
   {
     # Select all!
     return (rep(TRUE, nrow(patient_info)));
-  } else
-  {
-    # Specific selection may be needed:
-    
-    # Get the medication classes for this patient:
-    if( is.na(get(x, 'category', 'ev')) )
-    {
-      # No medication classes:
-      .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
-      return (rep(TRUE, nrow(patient_info))); # select all
-    }
-    pat_classes <- patient_info[ , get(x, 'category', 'ev') ]; 
-    if( is.null(pat_classes) )
-    {
-      # No medication classes:
-      .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
-      return (rep(TRUE, nrow(patient_info))); # select all
-    }
-    
-    # Transform the procs_class specification into a logical expression to be evaluated on pat_classes:
-    procs_class_expr <- NULL;
-    try(procs_class_expr <- parse(text=gsub("]", "')", # replace "[ XX ]" by the actual R test "(pat_classes == 'XX')"
-                                            gsub("[", "(pat_classes == '",
-                                                      gsub("&", "&&", 
-                                                           procs_class, 
-                                                           fixed=TRUE), 
-                                                 fixed=TRUE), 
-                                            fixed=TRUE)), 
-        silent=TRUE);
-    if( is.null(procs_class_expr) )
-    {
-      .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
-      return (NULL);
-    }
-    
-    # Evaluate the expression:
-    s <- eval(procs_class_expr);
-    if( (!is.na(s) || !is.null(s)) && !is.logical(s) )
-    {
-      .msg(paste0("Error applying the medication class definition '",procs_class,"' to the data: the result should be logical!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
-      return (NULL);
-    }
-    
-    # Return it:
-    return (s);
   }
+  
+  # Special case for "all others"?
+  if( procs_class == "@" )
+  {
+    # All medications not otherwise selected by the other class definitions for this patient (or all, if not classes defined):
+    if( all(proc_classes_for_patient$class == "@") )
+    {
+      # Select all!
+      return (rep(TRUE, nrow(patient_info)));
+    } else
+    {
+      # Put together all the other class definitions:
+      all_other_classes <- paste("(", proc_classes_for_patient$class[ !(proc_classes_for_patient$class %in% c("*", "@")) ], ")", collapse=" | ");
+      # and negate it:
+      procs_class <- paste0("!(", all_other_classes, ")");
+    }
+  }
+  
+  # Do the specific selection:
+  # Get the medication classes for this patient:
+  if( is.na(get(x, 'category', 'ev')) )
+  {
+    # No medication classes:
+    .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
+    return (rep(TRUE, nrow(patient_info))); # select all
+  }
+  pat_classes <- patient_info[ , get(x, 'category', 'ev') ]; 
+  if( is.null(pat_classes) )
+  {
+    # No medication classes:
+    .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
+    return (rep(TRUE, nrow(patient_info))); # select all
+  }
+  
+  # Transform the procs_class specification into a logical expression to be evaluated on pat_classes:
+  procs_class_expr <- NULL;
+  procs_class2 <- procs_class;
+  procs_class2 <- gsub("]", "')", # replace "[ XX ]" by the actual R test "(pat_classes == 'XX')"
+                       gsub("[", "(pat_classes == '",
+                            procs_class2, 
+                            fixed=TRUE), 
+                       fixed=TRUE);
+  try(procs_class_expr <- parse(text=procs_class2), silent=TRUE);
+  if( is.null(procs_class_expr) )
+  {
+    .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+    return (NULL);
+  }
+  
+  # Evaluate the expression:
+  s <- eval(procs_class_expr);
+  if( (!is.na(s) || !is.null(s)) && !is.logical(s) )
+  {
+    .msg(paste0("Error applying the medication class definition '",procs_class,"' to the data: the result should be logical!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+    return (NULL);
+  }
+  
+  # Return it:
+  return (s);
 }
 
 # Apply the required processing to this selection:
@@ -1511,7 +1608,15 @@ check_tables.SQL_db <- function(x)
                                paste0("SELECT COUNT(*) FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),
                                       " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '*' AND ",qs(x,get(x, 'class', 'mc'))," = '*' ",
                                       ";"));
-      return (!is.null(result) && result[1,1] > 0);
+      if( !is.null(result) && result[1,1] > 0 )
+      {
+        return (TRUE);
+      } else
+      {
+        msg <- paste0("The default class ('*','*') is not defined in the classes table '",get(x, 'name', 'mc'),"'!\n");
+        .msg(msg, x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        return (FALSE);
+      }
     } else if( x$db_type == "mssql" )
     {
     }
@@ -1641,9 +1746,12 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get(x, 'class', 'mc')), " VARCHAR(10240) NULL DEFAULT NULL, ",
                                            "PRIMARY KEY (", get(x, 'mcid', 'mc'), ") );"));
     # Fill it in one by one:
-    tmp <- matrix(c('*',     '*', # the special default * rule must be defined!
-                    'A',     '[medA]',
-                    'A | B', '[medA] | [medB]'), 
+    tmp <- matrix(c('*',      '*', # the special default * rule must be defined!
+                    'A',      '[medA]',
+                    'A | B',  '[medA] | [medB]',
+                    '!A',     '![medA]',
+                    'A & !A', '[medA] & {!A}', # use a defined class (using {}) 
+                    'else',   '@'), # @ means all other not otherwise matched medications for a given patient
                   ncol=2, byrow=TRUE);
     colnames(tmp) <- c(qs(x,get(x, 'mcid', 'mc')), qs(x,get(x, 'class', 'mc')));
     for( i in 1:nrow(tmp) )
@@ -1662,19 +1770,24 @@ create_test_database.SQL_db <- function(x)
                                            qs(x,get(x, 'action', 'pr')),   " VARCHAR(256) NOT NULL, ",
                                            "PRIMARY KEY (", get(x, 'procid', 'pr'), ") );"));
     # Fill it in one by one:
-    tmp <- matrix(c('*', '*',     'pCMA0', # the default actions
-                    '*', '*',     'CMA9',
-                    '1', 'A',     'CMA2', # specific overrides
-                    '1', 'A',     'pCMA0',
-                    '1', 'A | B', 'pCMA7',
-                    '2', '*',     'pCMA0',
-                    '2', '*',     'pCMA9',
-                    '3', '*',     'pCMA0',
-                    '3', '*',     'CMA1',
-                    '3', '*',     'pSW(CMA1,d=90,n=5)',
-                    '4', '*',     'pCMA0',
-                    '4', '*',     'CMA1',
-                    '4', '*',     'pPE(CMA1,gap=90)'), 
+    tmp <- matrix(c('*', '*',      'pCMA0', # the default actions
+                    '*', '*',      'CMA9',
+                    '1', 'A',      'CMA2', # specific overrides
+                    '1', 'A',      'pCMA0',
+                    '1', 'A | B',  'pCMA7',
+                    '2', '*',      'pCMA0',
+                    '2', '*',      'pCMA9',
+                    '3', '*',      'pCMA0',
+                    '3', '*',      'CMA1',
+                    '3', '*',      'pSW(CMA1,d=90,n=5)',
+                    '4', '*',      'pCMA0',
+                    '4', '*',      'CMA1',
+                    '4', '*',      'pPE(CMA1,gap=90)',
+                    '5', '!A',     'CMA2',
+                    '6', 'A',      'CMA9',
+                    '6', 'else',   'CMA2', # for all other medications for patient 6
+                    '7', 'A',      '*',    # * means use the default actions (i.e., those with ('*', '*'))
+                    '8', 'A & !A', 'CMA2'), 
                   ncol=3, byrow=TRUE);
     colnames(tmp) <- c(qs(x,get(x, 'patid', 'pr')), qs(x,get(x, 'category', 'pr')), qs(x,get(x, 'action', 'pr')));
     for( i in 1:nrow(tmp) )
