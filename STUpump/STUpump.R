@@ -69,7 +69,7 @@ if( FALSE )
 }
 
 # Connect to the pre-existing database:
-stu_db <- SQL_db(spec_file, check_db=FALSE, truncate_results=TRUE);
+stu_db <- SQL_db(spec_file, check_db=TRUE, truncate_results=TRUE);
 
 
 

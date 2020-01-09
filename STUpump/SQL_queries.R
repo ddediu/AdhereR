@@ -1299,6 +1299,123 @@ preprocess.SQL_db <- function(x)
   {
   }
 
+  
+  # The classes table
+  # Solve the {} referencing to another classes within a class definition
+  
+  # Do we need to do anything about this?
+  ref_classes <- NULL;
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    try(ref_classes <- DBI::dbGetQuery(x$db_connection, 
+                                       paste0("SELECT *",
+                                              " FROM ",qs(x,get(x, 'name', 'mc')),
+                                              " WHERE ",qs(x,get(x, 'class', 'mc'))," LIKE '%{%}%'",
+                                              " ;")),
+        silent=TRUE);
+    if( !is.null(ref_classes) && nrow(ref_classes) > 0 )
+    {
+      # There's at least one {} reference!
+      # Ok: create (if necessary) a new table and copy everything in it:
+      tmp_class_table <- paste0('tmp_',get(x, 'name', 'mc'));
+      
+      if( !(tmp_class_table %in% list_tables(x)) )
+      {
+        # Seems not to exist: create it:
+        tmp <- NULL;
+        try(tmp <- DBI::dbExecute(x$db_connection, 
+                                  paste0("CREATE TABLE ",qs(x,tmp_class_table)," LIKE ",qs(x,get(x, 'name', 'mc'))," ;")),
+            silent=TRUE);
+        if( is.null(tmp) )
+        {
+          .msg(paste0("Error creating the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+          return (NULL);
+        }
+      } else
+      {
+        # Seems to already exist: delete any entries it might have:
+        tmp <- NULL;
+        try(tmp <- DBI::dbExecute(x$db_connection, 
+                                  paste0("TRUNCATE TABLE ",qs(x,tmp_class_table)," ;")),
+            silent=TRUE);
+        if( is.null(tmp) )
+        {
+          .msg(paste0("Error emptying the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+          return (NULL);
+        }
+      }
+      
+      # Copy everything from the classes table:
+      tmp <- NULL;
+      try(tmp <- DBI::dbExecute(x$db_connection, 
+                                paste0("INSERT INTO ",qs(x,tmp_class_table),
+                                       "SELECT * FROM ", qs(x,get(x, 'name', 'mc')),
+                                       " ;")),
+          silent=TRUE);
+      if( is.null(tmp) )
+      {
+        .msg(paste0("Error compying the non-defaults from the classes table into the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        return (NULL);
+      }
+      
+      # Replace the references by their definitions:
+      ref_classes$solved <- ref_classes[,get(x, 'class', 'mc')];
+      for( i in 1:nrow(ref_classes) )
+      {
+        s <- as.character(ref_classes[i,get(x, 'class', 'mc')]);
+        # Find the references to classes and extract their names (if any):
+        n <- gregexpr("\\{[^\\}]+\\}", s)[[1]];
+        if( length(n) == 1 && n == (-1) )
+        {
+          # No match -- what's going on?
+          .msg(paste0("Error finding class match {} where one should have been: '",s,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        } else
+        {
+          # Extract the names:
+          class_names <- substring(s, n+1, n+attr(n,"match.length")-2);
+          # Check for recursions:
+          if( any(class_names == ref_classes[i,get(x, 'mcid', 'mc')]) )
+          {
+            # Recursion detected!
+            .msg(paste0("Medication class definitions cannot be recursive, but '",as.character(ref_classes[i,get(x, 'mcid', 'mc')]),"' seems to be!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+            break;
+          } else
+          {
+            # Replace the references by their definitions:
+            for( cn in class_names )
+            {
+              tmp <- NULL;
+              try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                                        paste0("SELECT ",qs(x,get(x, 'class', 'mc')),
+                                               " FROM ", qs(x,get(x, 'name', 'mc')),
+                                               " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",cn,"'",
+                                               " ;")),
+                  silent=TRUE);
+              if( is.null(tmp) || nrow(tmp) == 0 )
+              {
+                .msg(paste0("Cannot find the definition of medication class '",cn,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+              } else if( nrow(tmp) > 1 )
+              {
+                .msg(paste0("The definition of medication class '",cn,"' is not unique!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+              } else
+              {
+                ref_classes$solved[i] <- gsub(paste0("{",cn,"}"), paste0("(",tmp[1,1],")"), ref_classes$solved[i], fixed=TRUE);
+              }
+            }
+          }
+        }
+      }
+      
+      # Write back the resolved references to the database:
+      ref_classes[,get(x, 'class', 'mc')] ---> SQL database!!!
+      
+      #### TODO: redo the whole thing again until there's no more {} refs left....
+    }
+  } else if( x$db_type == "mssql" )
+  {
+  }
+  
+  
   # Return this (possibly modified) object:
   return (x);
 }
