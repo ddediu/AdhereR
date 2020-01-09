@@ -36,6 +36,7 @@ SQL_db <- function(spec_file=NA,                                                
                    connect_to_db=TRUE,                                           # try to connect to the database?
                    truncate_results=TRUE,                                        # remove any pre-existing rows from the results tables?
                    check_db=connect_to_db,                                       # check the consistency of the database?
+                   preprocess_db=TRUE,                                           # do the various pre-processings?
                    log_file="./log.txt", log_file_append=FALSE,                  # the logfile
                    stop_on_database_errors=TRUE, stop_on_processing_errors=FALSE # what type(s) of errors to stop on
                   )
@@ -383,6 +384,7 @@ SQL_db <- function(spec_file=NA,                                                
                               "db_mctable_cols"=db_mctable_cols,
                               "db_prtable_name"=db_prtable_name,
                               "db_prtable_cols"=db_prtable_cols,
+                              "db_prtable_use_temp_table"=NULL, # if not NULL, the name of the temporary processing table with the default actions "*" solved
                               "db_retable_name"=db_retable_name,
                               "db_retable_cols"=db_retable_cols,
                               "db_swtable_name"=db_swtable_name,
@@ -413,6 +415,12 @@ SQL_db <- function(spec_file=NA,                                                
 
       # Reset the results tables:
       if( truncate_results && !reset_results(ret_val) ) return (NULL);
+      
+      # Pre-process:
+      if( preprocess_db )
+      {
+        ret_val <- preprocess(ret_val);
+      }
     }
     
     return (ret_val);
@@ -497,9 +505,25 @@ disconnect.SQL_db <- function(x)
   {
     if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
     {
+      if( !is.null(x$db_prtable_use_temp_table) &&
+          (x$db_prtable_use_temp_table %in% list_tables(x)) )
+      {
+        # Drop this temporary table:
+        tmp <- NULL;
+        try(tmp <- dbExecute(x$db_connection,
+                             paste0("DROP TABLE ",qs(x,x$db_prtable_use_temp_table)," ;")),
+            silent=TRUE);
+        if( is.null(tmp) )
+        {
+          .msg("Error dropping the temporary processing table!\n", x$log_file, "w");
+        }
+      }
+      
+      # Disconect from it:
       try(DBI::dbDisconnect(x$db_connection), silent=TRUE);
     } else if( x$db_type == "mssql" )
     {
+      # Disconnect from it:
       try(RODBC::odbcClose(x$db_connection), silent=TRUE);
     }
     
@@ -756,7 +780,7 @@ get.SQL_db <- function(x, variable, table=NULL)
                    "processings"=,
                    "procs"      =,
                    "pr"=switch(tolower(variable),
-                               "name"         =x$db_prtable_name,  
+                               "name"         =ifelse(is.null(x$db_prtable_use_temp_table), x$db_prtable_name, x$db_prtable_use_temp_table), # use the solved default temp table?
                                "processing_id"=,
                                "procid"       =,
                                "id"           =x$db_prtable_cols["ID"],
@@ -1203,26 +1227,80 @@ preprocess.SQL_db <- function(x)
       
       if( default_actions_defined )
       {
-        # Ok: create a new processings table and replace the default actions by the defaults:
-        tmp <- NULL;
-        try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                                   paste0("CREATE TABLE `test` SELECT * FROM ",qs(x,get(x, 'name', 'pr'))," ;")),
-            silent=TRUE);
+        # Ok: create (if necessary) a new processings table and replace the default actions by the defaults:
+        tmp_procs_table <- paste0('tmp_',get(x, 'name', 'pr'));
         
-        try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                                   paste0("SELECT * ",
-                                          " FROM ","`test`",
-                                          " INNER JOIN ",qs(x,get(x, 'name', 'pr')),
-                                          " ON ","`test`",".",qs(x,get(x, 'action', 'pr'))," = '*'",
-                                          " AND ",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'patid', 'pr'))," = '*'",
+        if( !(tmp_procs_table %in% list_tables(x)) )
+        {
+          # Seems not to exist: create it:
+          tmp <- NULL;
+          try(tmp <- DBI::dbExecute(x$db_connection, 
+                                     paste0("CREATE TABLE ",qs(x,tmp_procs_table)," LIKE ",qs(x,get(x, 'name', 'pr'))," ;")),
+              silent=TRUE);
+          if( is.null(tmp) )
+          {
+            .msg(paste0("Error creating the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+            return (NULL);
+          }
+        } else
+        {
+          # Seems to already exist: delete any entries it might have:
+          tmp <- NULL;
+          try(tmp <- DBI::dbExecute(x$db_connection, 
+                                     paste0("TRUNCATE TABLE ",qs(x,tmp_procs_table)," ;")),
+              silent=TRUE);
+          if( is.null(tmp) )
+          {
+            .msg(paste0("Error emptying the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+            return (NULL);
+          }
+        }
+        
+        # Copy the non-"*" entries from the processing table:
+        tmp <- NULL;
+        try(tmp <- DBI::dbExecute(x$db_connection, 
+                                   paste0("INSERT INTO ",qs(x,tmp_procs_table),
+                                          "SELECT * FROM ", qs(x,get(x, 'name', 'pr')),
+                                          " WHERE ",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'action', 'pr'))," <> '*'",
                                           " ;")),
             silent=TRUE);
+        if( is.null(tmp) )
+        {
+          .msg(paste0("Error compying the non-defaults from the processings into the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+          return (NULL);
+        }
+        
+        # Insert the defaults corresponsind to the "*" entries from the processing table:
+        tmp <- NULL;
+        try(tmp <- DBI::dbExecute(x$db_connection, 
+                                   paste0("INSERT INTO ",qs(x,tmp_procs_table),
+                                          " (",qs(x,get(x, 'patid', 'pr')),", ",qs(x,get(x, 'category', 'pr')),", ",qs(x,get(x, 'action', 'pr')),")",
+                                          " SELECT ",
+                                          "`a`.",qs(x,get(x, 'patid', 'pr')),",",
+                                          "`a`.",qs(x,get(x, 'category', 'pr')),",",
+                                          "`b`.",qs(x,get(x, 'action', 'pr')),
+                                          " FROM ",qs(x,get(x, 'name', 'pr'))," `a`, ",qs(x,get(x, 'name', 'pr'))," `b`",
+                                          " WHERE ","`a`.",qs(x,get(x, 'action', 'pr'))," = '*'",
+                                          " AND ","`b`.",qs(x,get(x, 'patid', 'pr'))," = '*'",
+                                          " AND ","`b`.",qs(x,get(x, 'category', 'pr'))," = '*'",
+                                          " ;")),
+            silent=TRUE);
+        if( is.null(tmp) )
+        {
+          .msg(paste0("Error solving the default actions in the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+          return (NULL);
+        }
+        
+        # All good: use this temporary table as the processing table:
+        x$db_prtable_use_temp_table <- tmp_procs_table;
       }
     }
   } else if( x$db_type == "mssql" )
   {
   }
 
+  # Return this (possibly modified) object:
+  return (x);
 }
 
 
@@ -1787,7 +1865,8 @@ create_test_database.SQL_db <- function(x)
                     '6', 'A',      'CMA9',
                     '6', 'else',   'CMA2', # for all other medications for patient 6
                     '7', 'A',      '*',    # * means use the default actions (i.e., those with ('*', '*'))
-                    '8', 'A & !A', 'CMA2'), 
+                    '8', 'A & !A', 'CMA2',
+                    '9', '*',      'CMA9'), 
                   ncol=3, byrow=TRUE);
     colnames(tmp) <- c(qs(x,get(x, 'patid', 'pr')), qs(x,get(x, 'category', 'pr')), qs(x,get(x, 'action', 'pr')));
     for( i in 1:nrow(tmp) )
