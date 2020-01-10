@@ -35,7 +35,7 @@ tables:
   actions:
     name:      in_actions # table name
     action_id: action_id  # name of the column containing the unique id of the action
-    action:    action     # name of the column containing the actions to be done ("CMA7" or "plot.CMA0"); "plot." automatically estimates the CMA (except for CMA0)
+    action:    action!now     # name of the column containing the actions to be done ("CMA7" or "plot.CMA0"); "plot." automatically estimates the CMA (except for CMA0)
     params:    params     # name of the column containing the parameters (e.g., the start of the observation window, hiding the legend...)
 
   # The table specifying the groups of medications (the classes):

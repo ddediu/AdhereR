@@ -3,9 +3,9 @@
   
 ## General
 
-  - make sure get(...) has a version for data.table (i.e., sometimes the attribute's SQL value might not work as an attribute for data.frame!)
+  - [*NOT NECESSARY*] make sure get(...) has a version for data.table (i.e., sometimes the attribute's SQL value might not work as an attribute for data.frame!)
   
-  - refactor so that the database-specific stuff is better insulated from the algortihms
+  - [*IN PROGRESS*] refactor so that the database-specific stuff is better insulated from the algortihms
 
   
 ## Error handling

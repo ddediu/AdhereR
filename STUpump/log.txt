@@ -1,7 +1,7 @@
 ################################################### 
 # 
 # STUpump v.0.1 log file 
-# generated on 2020-01-10 10:00:25
+# generated on 2020-01-10 17:21:58
 # using config file './STUpump-MySQL.yml' 
 # 
 ################################################### 
@@ -25,7 +25,7 @@ Config: read 'table:events:duration' = 'duration'.
 
 Config: read 'table:actions:name' = 'in_actions'.
 Config: read 'table:actions:action_id' = 'action_id'.
-Config: read 'table:actions:action' = 'action'.
+Config: read 'table:actions:action' = 'action!now'.
 Config: read 'table:actions:params' = 'params'.
 
 Config: read 'table:med_classes:name' = 'in_classes'.

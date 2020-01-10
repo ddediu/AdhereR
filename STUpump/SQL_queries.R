@@ -447,6 +447,214 @@ SQL_db <- function(spec_file=NA,                                                
 
 
 ##
+## Get configurable attributes ####
+##
+
+# Get various attributes either for the whole database (table=NULL) or for a specific table:
+get <- function(x, variable, table=NULL, df.compat=FALSE) UseMethod("get")
+get.SQL_db <- function(x, variable, table=NULL, 
+                       df.compat=FALSE) # ensure these are valid data.frame names?
+{
+  if( is.null(table) )
+  {
+    # Globals:
+    return (switch(tolower(variable),
+                   "file"     =,
+                   "spec_file"=x$db_spec_file,
+                   "info"     =x$db_info,
+                   "type"     =x$db_type,
+                   "host"     =x$db_host,
+                   "dsn"      =x$db_dsn,
+                   "user"     =x$db_user,
+                   "psswd"    =x$db_psswd,
+                   "name"     =x$db_name,
+                   .msg(paste0("Undefined global attribute '",variable,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+    ));
+  } else
+  {
+    # A specific table was requested:
+    return (switch(tolower(table),
+                   # Events:
+                   "events"=,
+                   "ev"=switch(tolower(variable),
+                               "name"      =x$db_evtable_name,
+                               "patient_id"=,
+                               "patid"     =,
+                               "id"        =x$db_evtable_cols["ID"],
+                               "date"      =x$db_evtable_cols["DATE"],
+                               "perday"    =x$db_evtable_cols["PERDAY"],
+                               "cat"       =,
+                               "category"  =x$db_evtable_cols["CATEGORY"],
+                               "duration"  =x$db_evtable_cols["DURATION"],
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                   ),
+                   
+                   # Actions:
+                   "actions"=,
+                   "ac"=switch(tolower(variable),
+                               "name"     =x$db_actable_name,
+                               "action_id"=,
+                               "actid"    =,
+                               "id"       =x$db_actable_cols["ID"],
+                               "action"   =x$db_actable_cols["ACTION"],
+                               "params"   =x$db_actable_cols["PARAMS"],
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                   ),
+                   
+                   # Medication classes:
+                   "medication classes"=,
+                   "medclass"          =,
+                   "classes"           =,
+                   "medications"       =,
+                   "mc"=switch(tolower(variable),
+                               "name"        =ifelse(is.null(x$db_mctable_use_temp_table), x$db_mctable_name, x$db_mctable_use_temp_table), # use the solved default temp table?,
+                               "med_class_id"=,
+                               "mcid"        =,
+                               "id"          =x$db_mctable_cols["ID"],
+                               "class"       =x$db_mctable_cols["CLASS"],
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                   ),
+                   
+                   # Processings:
+                   "processings"=,
+                   "procs"      =,
+                   "pr"=switch(tolower(variable),
+                               "name"         =ifelse(is.null(x$db_prtable_use_temp_table), x$db_prtable_name, x$db_prtable_use_temp_table), # use the solved default temp table?
+                               "processing_id"=,
+                               "procid"       =,
+                               "id"           =x$db_prtable_cols["ID"],
+                               "patient_id"   =,
+                               "patid"        =get(x, "patid", "ev"),
+                               "cat"          =,
+                               "category"     =get(x, "mcid", "mc"),
+                               "action"       =get(x, "actid", "ac"),
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                   ),
+                   
+                   # Main results:
+                   "main results"=,
+                   "results"     =,
+                   "re"=switch(tolower(variable),
+                               "name"         =x$db_retable_name,
+                               "result_id"    =,
+                               "resid"        =,
+                               "id"           =x$db_retable_cols["ID"],
+                               "processing_id"=,
+                               "procid"       =get(x, "procid", "pr"),
+                               "patient_id"   =,
+                               "patid"        =get(x, "patid", "ev"),
+                               "estim"        =,
+                               "estimate"     =x$db_retable_cols["ESTIMATE"],
+                               "estim_type"   =,
+                               "estimate_type"=x$db_retable_cols["ESTIMATE_TYPE"],
+                               "jpg"          =,
+                               "plot_jpg"     =x$db_retable_cols["PLOT_JPG"],
+                               "html"         =,
+                               "plot_html"    =x$db_retable_cols["PLOT_HTML"],
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                   ),
+                   
+                   # Sliding window results:
+                   "sliding windows results"=,
+                   "sliding windows"        =,
+                   "sw"=switch(tolower(variable),
+                               "name"           =x$db_swtable_name,
+                               "result_id"      =,
+                               "resid"          =get(x, "resid", "re"),
+                               "patid"          =,
+                               "id"             =,
+                               "patient_id"     =get(x, "patid", "ev"),
+                               "wndid"          =,
+                               "window_id"      =x$db_swtable_cols["WINDOW_ID"],
+                               "wndstart"       =,
+                               "start"          =,
+                               "window_start"   =x$db_swtable_cols["WINDOW_START"],
+                               "wndend"         =,
+                               "end"            =,
+                               "window_end"     =x$db_swtable_cols["WINDOW_END"],
+                               "wndestim"       =,
+                               "estimate"       =,
+                               "estim"          =,
+                               "window_estimate"=x$db_swtable_cols["WINDOW_ESTIMATE"],
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                   ),
+                   
+                   # Per episode results:
+                   "per episode results"=,
+                   "per episode"        =,
+                   "pe"=switch(tolower(variable),
+                               "name"            =x$db_petable_name,
+                               "result_id"       =,
+                               "resid"           =get(x, "resid", "re"),
+                               "patid"           =,
+                               "id"              =,
+                               "patient_id"      =get(x, "patid", "ev"),
+                               "epid"            =,
+                               "episode_id"      =x$db_petable_cols["EPISODE_ID"],
+                               "epstart"         =,
+                               "start"           =,
+                               "episode_start"   =x$db_petable_cols["EPISODE_START"],
+                               "gap"             =,
+                               "gap_days"        =x$db_petable_cols["GAP_DAYS"],
+                               "epduration"      =,
+                               "duration"        =,
+                               "episode_duration"=x$db_petable_cols["ESPISODE_DURATION"],
+                               "epend"           =,
+                               "end"             =,
+                               "episode_end"     =x$db_petable_cols["EPISODE_END"],
+                               "epestim"         =,
+                               "estimate"        =,
+                               "estim"           =,
+                               "episode_estimate"=x$db_petable_cols["EPISODE_ESTIMATE"],
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                   ),
+                   
+                   # Updated info:
+                   "updated info"=,
+                   "updated"     =,
+                   "up"=switch(tolower(variable),
+                               "name"            =x$db_uptable_name,
+                               "patid"           =,
+                               "id"              =,
+                               "patient_id"      =get(x, "patid", "ev"),
+                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
+                   ),
+                   
+                   .msg(paste0("Undefined table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w")))
+    );
+  }
+}
+
+
+##
+## Quoting strings appropriately ####
+##
+
+lquote <- function(x) UseMethod("lquote")
+lquote.SQL_db <- function(x)
+{
+  x$db_quote_characters[1];
+}
+
+rquote <- function(x) UseMethod("rquote")
+rquote.SQL_db <- function(x)
+{
+  x$db_quote_characters[2];
+}
+
+qs <- function(x, s) UseMethod("qs") # quote string
+qs.SQL_db <- function(x, s)
+{
+  # The '.' has a special meaning --> each '.'-separated substring must be quoted separately:
+  tmp <- strsplit(s,".",fixed=TRUE)[[1]];
+  tmp <- paste0(lquote(x),tmp[tmp!=""],rquote(x));
+  if(substr(s,1,1) == ".") tmp <- c("",tmp);
+  if(substr(s,nchar(s),nchar(s)) == ".") tmp <- c(tmp,"");
+  paste0(tmp,collapse=".");
+}
+
+
+##
 ## Connect/disconnect to/from database ####
 ##
 
@@ -576,8 +784,387 @@ reset_results.SQL_db <- function(x)
 
 
 ##
-## Retreive various database info ####
+## Database pre-processing ####
 ##
+
+preprocess <- function(x, patient_id) UseMethod("preprocess")
+preprocess.SQL_db <- function(x)
+{
+  # The processings table
+  # Solve the "*" action (meaning the default ones, defined as the ones with * for both patid and category in the same table
+  
+  # Do we need to do anything about this?
+  default_actions <- default_actions_defined <- FALSE;
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    tmp <- NULL;
+    try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                               paste0("SELECT COUNT(*)",
+                                      " FROM ",qs(x,get(x, 'name', 'pr')),
+                                      " WHERE ",qs(x,get(x, 'action', 'pr'))," = '*'",
+                                      " ;")),
+        silent=TRUE);
+    if( is.null(tmp) || nrow(tmp) == 0 )
+    {
+      # We can't get the count!
+      .msg(paste0("Error retreiving the number of default actions '*' from the processings table '",get(x, 'name', 'pr'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+      return (NULL);
+    } else
+    {
+      default_actions <- (tmp[1,1] > 0);
+    }
+    
+    if( default_actions )
+    {
+      # Ok, are there defaults defined?
+      tmp <- NULL;
+      try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                                 paste0("SELECT COUNT(*)",
+                                        " FROM ",qs(x,get(x, 'name', 'pr')),
+                                        " WHERE ",qs(x,get(x, 'patid', 'pr'))," = '*'",
+                                        " AND ",qs(x,get(x, 'category', 'pr'))," = '*'",
+                                        " ;")),
+          silent=TRUE);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        # We can't get the count!
+        .msg(paste0("Error retreiving the defaults for the processings table '",get(x, 'name', 'pr'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        return (NULL);
+      } else
+      {
+        default_actions_defined <- (tmp[1,1] > 0);
+      }
+      
+      if( default_actions_defined )
+      {
+        # Ok: create (if necessary) a new processings table and replace the default actions by the defaults:
+        tmp_procs_table <- paste0('tmp_',get(x, 'name', 'pr'));
+        
+        if( !(tmp_procs_table %in% list_tables(x)) )
+        {
+          # Seems not to exist: create it:
+          if( !table_create(x, tmp_procs_table, duplicate_from=get(x, 'name', 'pr'), clear_if_exists=TRUE) ) return (NULL);
+        } else
+        {
+          # Seems to already exist: delete any entries it might have:
+          if( !table_clear(x, tmp_procs_table) ) return (NULL);
+        }
+        
+        # Copy the non-"*" entries from the processing table:
+        tmp <- NULL;
+        try(tmp <- DBI::dbExecute(x$db_connection, 
+                                  paste0("INSERT INTO ",qs(x,tmp_procs_table),
+                                         "SELECT * FROM ", qs(x,get(x, 'name', 'pr')),
+                                         " WHERE ",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'action', 'pr'))," <> '*'",
+                                         " ;")),
+            silent=TRUE);
+        if( is.null(tmp) )
+        {
+          .msg(paste0("Error compying the non-defaults from the processings into the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+          return (NULL);
+        }
+        
+        # Insert the defaults corresponsind to the "*" entries from the processing table:
+        tmp <- NULL;
+        try(tmp <- DBI::dbExecute(x$db_connection, 
+                                  paste0("INSERT INTO ",qs(x,tmp_procs_table),
+                                         " (",qs(x,get(x, 'patid', 'pr')),", ",qs(x,get(x, 'category', 'pr')),", ",qs(x,get(x, 'action', 'pr')),")",
+                                         " SELECT ",
+                                         "`a`.",qs(x,get(x, 'patid', 'pr')),",",
+                                         "`a`.",qs(x,get(x, 'category', 'pr')),",",
+                                         "`b`.",qs(x,get(x, 'action', 'pr')),
+                                         " FROM ",qs(x,get(x, 'name', 'pr'))," `a`, ",qs(x,get(x, 'name', 'pr'))," `b`",
+                                         " WHERE ","`a`.",qs(x,get(x, 'action', 'pr'))," = '*'",
+                                         " AND ","`b`.",qs(x,get(x, 'patid', 'pr'))," = '*'",
+                                         " AND ","`b`.",qs(x,get(x, 'category', 'pr'))," = '*'",
+                                         " ;")),
+            silent=TRUE);
+        if( is.null(tmp) )
+        {
+          .msg(paste0("Error solving the default actions in the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+          return (NULL);
+        }
+        
+        # All good: use this temporary table as the processing table:
+        x$db_prtable_use_temp_table <- tmp_procs_table;
+      }
+    }
+  } else if( x$db_type == "mssql" )
+  {
+  }
+  
+  
+  # The classes table
+  # Solve the {} referencing to another classes within a class definition
+  
+  # Do we need to do anything about this?
+  ref_classes <- NULL;
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    try(ref_classes <- DBI::dbGetQuery(x$db_connection, 
+                                       paste0("SELECT *",
+                                              " FROM ",qs(x,get(x, 'name', 'mc')),
+                                              " WHERE ",qs(x,get(x, 'class', 'mc'))," LIKE '%{%}%'",
+                                              " ;")),
+        silent=TRUE);
+    if( !is.null(ref_classes) && nrow(ref_classes) > 0 )
+    {
+      # There's at least one {} reference!
+      # Ok: create (if necessary) a new table and copy everything in it:
+      tmp_class_table <- paste0('tmp_',get(x, 'name', 'mc'));
+      
+      if( !(tmp_class_table %in% list_tables(x)) )
+      {
+        # Seems not to exist: create it:
+        if( !table_create(x, tmp_class_table, duplicate_from=get(x, 'name', 'mc'), clear_if_exists=TRUE) ) return (NULL);
+      } else
+      {
+        # Seems to already exist: delete any entries it might have:
+        if( !table_clear(x, tmp_class_table) ) return (NULL);
+      }
+      
+      # Copy everything from the classes table:
+      tmp <- NULL;
+      try(tmp <- DBI::dbExecute(x$db_connection, 
+                                paste0("INSERT INTO ",qs(x,tmp_class_table),
+                                       "SELECT * FROM ", qs(x,get(x, 'name', 'mc')),
+                                       " ;")),
+          silent=TRUE);
+      if( is.null(tmp) )
+      {
+        .msg(paste0("Error compying the non-defaults from the classes table into the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        return (NULL);
+      }
+      
+      # Replace the references by their definitions:
+      max_iterations <- 256; # the maximum depth of references to be solved
+      while( !is.null(ref_classes) && nrow(ref_classes) > 0 && max_iterations > 0 )
+      {
+        ref_classes$solved <- ref_classes[,get(x, 'class', 'mc')];
+        for( i in 1:nrow(ref_classes) )
+        {
+          updated_class <- FALSE;
+          
+          s <- as.character(ref_classes[i,get(x, 'class', 'mc')]);
+          
+          # Find the references to classes and extract their names (if any):
+          n <- gregexpr("\\{[^\\}]+\\}", s)[[1]];
+          if( length(n) == 1 && n == (-1) )
+          {
+            # No match -- what's going on?
+            .msg(paste0("Error finding class match {} where one should have been: '",s,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+          } else
+          {
+            # Extract the names:
+            class_names <- substring(s, n+1, n+attr(n,"match.length")-2);
+            # Check for recursions:
+            if( any(class_names == ref_classes[i,get(x, 'mcid', 'mc')]) )
+            {
+              # Recursion detected!
+              .msg(paste0("Medication class definitions cannot be recursive, but '",as.character(ref_classes[i,get(x, 'mcid', 'mc')]),"' seems to be!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+              return (NULL);
+            } else
+            {
+              # Replace the references by their definitions:
+              for( cn in class_names )
+              {
+                tmp <- NULL;
+                try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                                           paste0("SELECT ",qs(x,get(x, 'class', 'mc')),
+                                                  " FROM ", qs(x,tmp_class_table),
+                                                  " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",cn,"'",
+                                                  " ;")),
+                    silent=TRUE);
+                if( is.null(tmp) || nrow(tmp) == 0 )
+                {
+                  .msg(paste0("Cannot find the definition of medication class '",cn,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+                } else if( nrow(tmp) > 1 )
+                {
+                  .msg(paste0("The definition of medication class '",cn,"' is not unique!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+                } else
+                {
+                  ref_classes$solved[i] <- gsub(paste0("{",cn,"}"), paste0("(",tmp[1,1],")"), ref_classes$solved[i], fixed=TRUE);
+                  updated_class <- TRUE;
+                }
+              }
+            }
+          }
+          
+          # If updated, write it back to the SQL database:
+          if( updated_class )
+          {
+            tmp <- NULL;
+            try(tmp <- DBI::dbExecute(x$db_connection, 
+                                      paste0("UPDATE ",qs(x,tmp_class_table),
+                                             " SET ",qs(x,get(x, 'class', 'mc'))," = '",ref_classes$solved[i],"'",
+                                             " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",ref_classes[i,get(x, 'mcid', 'mc')],"'",
+                                             " AND ",qs(x,get(x, 'class', 'mc'))," = '",ref_classes[i,get(x, 'class', 'mc')],"'",
+                                             " ;")),
+                silent=TRUE);
+            if( is.null(tmp) )
+            {
+              .msg(paste0("Error updating the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+              return (NULL);
+            }
+          }
+        }
+        
+        # Redo the whole thing again until there's no more {} refs left:
+        ref_classes <- NULL;
+        try(ref_classes <- DBI::dbGetQuery(x$db_connection, 
+                                           paste0("SELECT *",
+                                                  " FROM ",qs(x,tmp_class_table),
+                                                  " WHERE ",qs(x,get(x, 'class', 'mc'))," LIKE '%{%}%'",
+                                                  " ;")),
+            silent=TRUE);
+        
+        max_iterations <- (max_iterations - 1);
+      }
+      if( max_iterations == 0 )
+      {
+        .msg(paste0("Too deep medication class references {}: not all have been solved, please reduce this referencing depth!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        return (NULL);
+      }
+      
+      # All good: use this temporary table as the medication classes table:
+      x$db_mctable_use_temp_table <- tmp_class_table;
+      
+    }
+  } else if( x$db_type == "mssql" )
+  {
+  }
+  
+  
+  # Return this (possibly modified) object:
+  return (x);
+}
+
+
+##
+## Table manipulation ####
+##
+
+# Check if table exists in the database:
+table_exists <- function(x, tbname) UseMethod("table_exists")
+table_exists.SQL_db <- function(x, tbname)
+{
+  return (tbname %in% list_tables(x));
+}
+
+
+# Create table (if not already there):
+table_create <- function(x, tbname, duplicate_from=NA, clear_if_exists=TRUE) UseMethod("table_create")
+table_create.SQL_db <- function(x, tbname, duplicate_from=NA, clear_if_exists=TRUE)
+{
+  if( !table_exists(x, tbname) )
+  {
+    # Does not exist yet: create it de novo:
+    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+    {
+      tmp <- NULL;
+      if( is.na(duplicate_from) )
+      {
+        # Create anew table:
+        try(tmp <- DBI::dbExecute(x$db_connection, 
+                                  paste0("CREATE TABLE ",qs(x,tbname)," ;")),
+            silent=TRUE);
+        if( is.null(tmp) )
+        {
+          .msg(paste0("Error creating the table '",tbname,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+          return (FALSE);
+        }
+      } else
+      {
+        # Duplicate a table:
+        if( !table_exists(x, duplicate_from) )
+        {
+          .msg(paste0("Error creating the table '",tbname,"': the table that should be duplicated '",duplicate_from,"' does not seem to exist!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+          return (FALSE);
+        } else
+        {
+          try(tmp <- DBI::dbExecute(x$db_connection, 
+                                    paste0("CREATE TABLE ",qs(x,tbname)," LIKE ",qs(x,duplicate_from)," ;")),
+              silent=TRUE);
+          if( is.null(tmp) )
+          {
+            .msg(paste0("Error duplicating table '",tbname,"' from table '",duplicate_from,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+            return (NULL);
+          }
+        }
+      }
+    } else if( x$db_type == "mssql" )
+    {
+    }
+  }
+  
+  # Clear it:
+  if( clear_if_exists ) return (table_clear(x,tbname));
+
+  return (TRUE); # all seems fine...
+}
+
+
+# Clear table:
+table_clear <- function(x, tbname) UseMethod("table_clear")
+table_clear.SQL_db <- function(x, tbname)
+{
+  if( table_exists(x, tbname) )
+  {
+    # It does exist:
+    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+    {
+      tmp <- NULL;
+      try(tmp <- DBI::dbExecute(x$db_connection, 
+                                paste0("TRUNCATE TABLE ",qs(x,tbname)," ;")),
+          silent=TRUE);
+      if( is.null(tmp) )
+      {
+        .msg(paste0("Error clearing the table '",tbname,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        return (FALSE);
+      }
+      return (TRUE); # all seems fine...
+    } else if( x$db_type == "mssql" )
+    {
+    }
+  } else
+  {
+    # It does not exist:
+    .msg(paste0("Can't clear the non-existing table '",tbname,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    return (FALSE);
+  }
+}
+
+
+# Remove (drop) table:
+table_drop <- function(x, tbname) UseMethod("table_drop")
+table_drop.SQL_db <- function(x, tbname)
+{
+  if( table_exists(x, tbname) )
+  {
+    # It does exist:
+    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+    {
+      tmp <- NULL;
+      try(tmp <- DBI::dbExecute(x$db_connection, 
+                                paste0("DROP TABLE ",qs(x,tbname)," ;")),
+          silent=TRUE);
+      if( is.null(tmp) )
+      {
+        .msg(paste0("Error removing the table '",tbname,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        return (FALSE);
+      }
+      return (TRUE); # all seems fine...
+    } else if( x$db_type == "mssql" )
+    {
+    }
+  } else
+  {
+    # It does not exist:
+    .msg(paste0("Can't remove the non-existing table '",tbname,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    return (FALSE);
+  }
+}
+
 
 # List tables in the database:
 list_tables <- function(x) UseMethod("list_tables")
@@ -691,214 +1278,6 @@ get_col_names.SQL_db <- function(x)
   {
     return (NULL);
     .msg(paste0("Error getting the column names!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-  }
-}
-
-
-##
-## Quoting strings appropriately ####
-##
-
-lquote <- function(x) UseMethod("lquote")
-lquote.SQL_db <- function(x)
-{
-  x$db_quote_characters[1];
-}
-
-rquote <- function(x) UseMethod("rquote")
-rquote.SQL_db <- function(x)
-{
-  x$db_quote_characters[2];
-}
-
-qs <- function(x, s) UseMethod("qs") # quote string
-qs.SQL_db <- function(x, s)
-{
-  # The '.' has a special meaning --> each '.'-separated substring must be quoted separately:
-  tmp <- strsplit(s,".",fixed=TRUE)[[1]];
-  tmp <- paste0(lquote(x),tmp[tmp!=""],rquote(x));
-  if(substr(s,1,1) == ".") tmp <- c("",tmp);
-  if(substr(s,nchar(s),nchar(s)) == ".") tmp <- c(tmp,"");
-  paste0(tmp,collapse=".");
-}
-
-
-##
-## Getters ####
-##
-
-# Get various attributes either for the whole database (table=NULL) or for a specific table:
-get <- function(x, variable, table=NULL, df.compat=FALSE) UseMethod("get")
-get.SQL_db <- function(x, variable, table=NULL, 
-                       df.compat=FALSE) # ensure these are valid data.frame names?
-{
-  if( is.null(table) )
-  {
-    # Globals:
-    return (switch(tolower(variable),
-                   "file"     =,
-                   "spec_file"=x$db_spec_file,
-                   "info"     =x$db_info,
-                   "type"     =x$db_type,
-                   "host"     =x$db_host,
-                   "dsn"      =x$db_dsn,
-                   "user"     =x$db_user,
-                   "psswd"    =x$db_psswd,
-                   "name"     =x$db_name,
-                   .msg(paste0("Undefined global attribute '",variable,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
-                   ));
-  } else
-  {
-    # A specific table was requested:
-    return (switch(tolower(table),
-                   # Events:
-                   "events"=,
-                   "ev"=switch(tolower(variable),
-                               "name"      =x$db_evtable_name,
-                               "patient_id"=,
-                               "patid"     =,
-                               "id"        =x$db_evtable_cols["ID"],
-                               "date"      =x$db_evtable_cols["DATE"],
-                               "perday"    =x$db_evtable_cols["PERDAY"],
-                               "cat"       =,
-                               "category"  =x$db_evtable_cols["CATEGORY"],
-                               "duration"  =x$db_evtable_cols["DURATION"],
-                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
-                               ),
-                   
-                   # Actions:
-                   "actions"=,
-                   "ac"=switch(tolower(variable),
-                               "name"     =x$db_actable_name,
-                               "action_id"=,
-                               "actid"    =,
-                               "id"       =x$db_actable_cols["ID"],
-                               "action"   =x$db_actable_cols["ACTION"],
-                               "params"   =x$db_actable_cols["PARAMS"],
-                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
-                               ),
-                   
-                   # Medication classes:
-                   "medication classes"=,
-                   "medclass"          =,
-                   "classes"           =,
-                   "medications"       =,
-                   "mc"=switch(tolower(variable),
-                               "name"        =ifelse(is.null(x$db_mctable_use_temp_table), x$db_mctable_name, x$db_mctable_use_temp_table), # use the solved default temp table?,
-                               "med_class_id"=,
-                               "mcid"        =,
-                               "id"          =x$db_mctable_cols["ID"],
-                               "class"       =x$db_mctable_cols["CLASS"],
-                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
-                               ),
-                   
-                   # Processings:
-                   "processings"=,
-                   "procs"      =,
-                   "pr"=switch(tolower(variable),
-                               "name"         =ifelse(is.null(x$db_prtable_use_temp_table), x$db_prtable_name, x$db_prtable_use_temp_table), # use the solved default temp table?
-                               "processing_id"=,
-                               "procid"       =,
-                               "id"           =x$db_prtable_cols["ID"],
-                               "patient_id"   =,
-                               "patid"        =get(x, "patid", "ev"),
-                               "cat"          =,
-                               "category"     =get(x, "mcid", "mc"),
-                               "action"       =get(x, "actid", "ac"),
-                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
-                               ),
-                   
-                   # Main results:
-                   "main results"=,
-                   "results"     =,
-                   "re"=switch(tolower(variable),
-                               "name"         =x$db_retable_name,
-                               "result_id"    =,
-                               "resid"        =,
-                               "id"           =x$db_retable_cols["ID"],
-                               "processing_id"=,
-                               "procid"       =get(x, "procid", "pr"),
-                               "patient_id"   =,
-                               "patid"        =get(x, "patid", "ev"),
-                               "estim"        =,
-                               "estimate"     =x$db_retable_cols["ESTIMATE"],
-                               "estim_type"   =,
-                               "estimate_type"=x$db_retable_cols["ESTIMATE_TYPE"],
-                               "jpg"          =,
-                               "plot_jpg"     =x$db_retable_cols["PLOT_JPG"],
-                               "html"         =,
-                               "plot_html"    =x$db_retable_cols["PLOT_HTML"],
-                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
-                               ),
-                   
-                   # Sliding window results:
-                   "sliding windows results"=,
-                   "sliding windows"        =,
-                   "sw"=switch(tolower(variable),
-                               "name"           =x$db_swtable_name,
-                               "result_id"      =,
-                               "resid"          =get(x, "resid", "re"),
-                               "patid"          =,
-                               "id"             =,
-                               "patient_id"     =get(x, "patid", "ev"),
-                               "wndid"          =,
-                               "window_id"      =x$db_swtable_cols["WINDOW_ID"],
-                               "wndstart"       =,
-                               "start"          =,
-                               "window_start"   =x$db_swtable_cols["WINDOW_START"],
-                               "wndend"         =,
-                               "end"            =,
-                               "window_end"     =x$db_swtable_cols["WINDOW_END"],
-                               "wndestim"       =,
-                               "estimate"       =,
-                               "estim"          =,
-                               "window_estimate"=x$db_swtable_cols["WINDOW_ESTIMATE"],
-                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
-                               ),
-                   
-                   # Per episode results:
-                   "per episode results"=,
-                   "per episode"        =,
-                   "pe"=switch(tolower(variable),
-                               "name"            =x$db_petable_name,
-                               "result_id"       =,
-                               "resid"           =get(x, "resid", "re"),
-                               "patid"           =,
-                               "id"              =,
-                               "patient_id"      =get(x, "patid", "ev"),
-                               "epid"            =,
-                               "episode_id"      =x$db_petable_cols["EPISODE_ID"],
-                               "epstart"         =,
-                               "start"           =,
-                               "episode_start"   =x$db_petable_cols["EPISODE_START"],
-                               "gap"             =,
-                               "gap_days"        =x$db_petable_cols["GAP_DAYS"],
-                               "epduration"      =,
-                               "duration"        =,
-                               "episode_duration"=x$db_petable_cols["ESPISODE_DURATION"],
-                               "epend"           =,
-                               "end"             =,
-                               "episode_end"     =x$db_petable_cols["EPISODE_END"],
-                               "epestim"         =,
-                               "estimate"        =,
-                               "estim"           =,
-                               "episode_estimate"=x$db_petable_cols["EPISODE_ESTIMATE"],
-                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
-                               ),
-                   
-                   # Updated info:
-                   "updated info"=,
-                   "updated"     =,
-                   "up"=switch(tolower(variable),
-                               "name"            =x$db_uptable_name,
-                               "patid"           =,
-                               "id"              =,
-                               "patient_id"      =get(x, "patid", "ev"),
-                               .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
-                               ),
-                   
-                   .msg(paste0("Undefined table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w")))
-            );
   }
 }
 
@@ -1097,7 +1476,7 @@ write_petable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
 
 
 ##
-## List the patient ids in the events table ####
+## List and get patients from events table ####
 ##
 
 list_patients <- function(x, with_updated_info_only=TRUE) UseMethod("list_patients")
@@ -1145,10 +1524,6 @@ list_patients.SQL_db <- function(x, with_updated_info_only=TRUE)
 }
 
 
-##
-## Get info for a given set of patients in the events table ####
-##
-
 get_evtable_patients_info <- function(x, patient_id, cols=NA, maxrows=NA) UseMethod("get_evtable_patients_info")
 get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
 {
@@ -1186,295 +1561,6 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
   
   # Return the patient info:
   return (db_pat_info);
-}
-
-
-##
-## Database pre-processing ####
-##
-
-preprocess <- function(x, patient_id) UseMethod("preprocess")
-preprocess.SQL_db <- function(x)
-{
-  # The processings table
-  # Solve the "*" action (meaning the default ones, defined as the ones with * for both patid and category in the same table
-  
-  # Do we need to do anything about this?
-  default_actions <- default_actions_defined <- FALSE;
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    tmp <- NULL;
-    try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                               paste0("SELECT COUNT(*)",
-                                      " FROM ",qs(x,get(x, 'name', 'pr')),
-                                      " WHERE ",qs(x,get(x, 'action', 'pr'))," = '*'",
-                                      " ;")),
-        silent=TRUE);
-    if( is.null(tmp) || nrow(tmp) == 0 )
-    {
-      # We can't get the count!
-      .msg(paste0("Error retreiving the number of default actions '*' from the processings table '",get(x, 'name', 'pr'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-      return (NULL);
-    } else
-    {
-      default_actions <- (tmp[1,1] > 0);
-    }
-    
-    if( default_actions )
-    {
-      # Ok, are there defaults defined?
-      tmp <- NULL;
-      try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                                 paste0("SELECT COUNT(*)",
-                                        " FROM ",qs(x,get(x, 'name', 'pr')),
-                                        " WHERE ",qs(x,get(x, 'patid', 'pr'))," = '*'",
-                                        " AND ",qs(x,get(x, 'category', 'pr'))," = '*'",
-                                        " ;")),
-          silent=TRUE);
-      if( is.null(tmp) || nrow(tmp) == 0 )
-      {
-        # We can't get the count!
-        .msg(paste0("Error retreiving the defaults for the processings table '",get(x, 'name', 'pr'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-        return (NULL);
-      } else
-      {
-        default_actions_defined <- (tmp[1,1] > 0);
-      }
-      
-      if( default_actions_defined )
-      {
-        # Ok: create (if necessary) a new processings table and replace the default actions by the defaults:
-        tmp_procs_table <- paste0('tmp_',get(x, 'name', 'pr'));
-        
-        if( !(tmp_procs_table %in% list_tables(x)) )
-        {
-          # Seems not to exist: create it:
-          tmp <- NULL;
-          try(tmp <- DBI::dbExecute(x$db_connection, 
-                                     paste0("CREATE TABLE ",qs(x,tmp_procs_table)," LIKE ",qs(x,get(x, 'name', 'pr'))," ;")),
-              silent=TRUE);
-          if( is.null(tmp) )
-          {
-            .msg(paste0("Error creating the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-            return (NULL);
-          }
-        } else
-        {
-          # Seems to already exist: delete any entries it might have:
-          tmp <- NULL;
-          try(tmp <- DBI::dbExecute(x$db_connection, 
-                                     paste0("TRUNCATE TABLE ",qs(x,tmp_procs_table)," ;")),
-              silent=TRUE);
-          if( is.null(tmp) )
-          {
-            .msg(paste0("Error emptying the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-            return (NULL);
-          }
-        }
-        
-        # Copy the non-"*" entries from the processing table:
-        tmp <- NULL;
-        try(tmp <- DBI::dbExecute(x$db_connection, 
-                                   paste0("INSERT INTO ",qs(x,tmp_procs_table),
-                                          "SELECT * FROM ", qs(x,get(x, 'name', 'pr')),
-                                          " WHERE ",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'action', 'pr'))," <> '*'",
-                                          " ;")),
-            silent=TRUE);
-        if( is.null(tmp) )
-        {
-          .msg(paste0("Error compying the non-defaults from the processings into the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-          return (NULL);
-        }
-        
-        # Insert the defaults corresponsind to the "*" entries from the processing table:
-        tmp <- NULL;
-        try(tmp <- DBI::dbExecute(x$db_connection, 
-                                   paste0("INSERT INTO ",qs(x,tmp_procs_table),
-                                          " (",qs(x,get(x, 'patid', 'pr')),", ",qs(x,get(x, 'category', 'pr')),", ",qs(x,get(x, 'action', 'pr')),")",
-                                          " SELECT ",
-                                          "`a`.",qs(x,get(x, 'patid', 'pr')),",",
-                                          "`a`.",qs(x,get(x, 'category', 'pr')),",",
-                                          "`b`.",qs(x,get(x, 'action', 'pr')),
-                                          " FROM ",qs(x,get(x, 'name', 'pr'))," `a`, ",qs(x,get(x, 'name', 'pr'))," `b`",
-                                          " WHERE ","`a`.",qs(x,get(x, 'action', 'pr'))," = '*'",
-                                          " AND ","`b`.",qs(x,get(x, 'patid', 'pr'))," = '*'",
-                                          " AND ","`b`.",qs(x,get(x, 'category', 'pr'))," = '*'",
-                                          " ;")),
-            silent=TRUE);
-        if( is.null(tmp) )
-        {
-          .msg(paste0("Error solving the default actions in the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-          return (NULL);
-        }
-        
-        # All good: use this temporary table as the processing table:
-        x$db_prtable_use_temp_table <- tmp_procs_table;
-      }
-    }
-  } else if( x$db_type == "mssql" )
-  {
-  }
-
-  
-  # The classes table
-  # Solve the {} referencing to another classes within a class definition
-  
-  # Do we need to do anything about this?
-  ref_classes <- NULL;
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    try(ref_classes <- DBI::dbGetQuery(x$db_connection, 
-                                       paste0("SELECT *",
-                                              " FROM ",qs(x,get(x, 'name', 'mc')),
-                                              " WHERE ",qs(x,get(x, 'class', 'mc'))," LIKE '%{%}%'",
-                                              " ;")),
-        silent=TRUE);
-    if( !is.null(ref_classes) && nrow(ref_classes) > 0 )
-    {
-      # There's at least one {} reference!
-      # Ok: create (if necessary) a new table and copy everything in it:
-      tmp_class_table <- paste0('tmp_',get(x, 'name', 'mc'));
-      
-      if( !(tmp_class_table %in% list_tables(x)) )
-      {
-        # Seems not to exist: create it:
-        tmp <- NULL;
-        try(tmp <- DBI::dbExecute(x$db_connection, 
-                                  paste0("CREATE TABLE ",qs(x,tmp_class_table)," LIKE ",qs(x,get(x, 'name', 'mc'))," ;")),
-            silent=TRUE);
-        if( is.null(tmp) )
-        {
-          .msg(paste0("Error creating the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-          return (NULL);
-        }
-      } else
-      {
-        # Seems to already exist: delete any entries it might have:
-        tmp <- NULL;
-        try(tmp <- DBI::dbExecute(x$db_connection, 
-                                  paste0("TRUNCATE TABLE ",qs(x,tmp_class_table)," ;")),
-            silent=TRUE);
-        if( is.null(tmp) )
-        {
-          .msg(paste0("Error emptying the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-          return (NULL);
-        }
-      }
-      
-      # Copy everything from the classes table:
-      tmp <- NULL;
-      try(tmp <- DBI::dbExecute(x$db_connection, 
-                                paste0("INSERT INTO ",qs(x,tmp_class_table),
-                                       "SELECT * FROM ", qs(x,get(x, 'name', 'mc')),
-                                       " ;")),
-          silent=TRUE);
-      if( is.null(tmp) )
-      {
-        .msg(paste0("Error compying the non-defaults from the classes table into the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-        return (NULL);
-      }
-      
-      # Replace the references by their definitions:
-      max_iterations <- 256; # the maximum depth of references to be solved
-      while( !is.null(ref_classes) && nrow(ref_classes) > 0 && max_iterations > 0 )
-      {
-        ref_classes$solved <- ref_classes[,get(x, 'class', 'mc')];
-        for( i in 1:nrow(ref_classes) )
-        {
-          updated_class <- FALSE;
-          
-          s <- as.character(ref_classes[i,get(x, 'class', 'mc')]);
-          
-          # Find the references to classes and extract their names (if any):
-          n <- gregexpr("\\{[^\\}]+\\}", s)[[1]];
-          if( length(n) == 1 && n == (-1) )
-          {
-            # No match -- what's going on?
-            .msg(paste0("Error finding class match {} where one should have been: '",s,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-          } else
-          {
-            # Extract the names:
-            class_names <- substring(s, n+1, n+attr(n,"match.length")-2);
-            # Check for recursions:
-            if( any(class_names == ref_classes[i,get(x, 'mcid', 'mc')]) )
-            {
-              # Recursion detected!
-              .msg(paste0("Medication class definitions cannot be recursive, but '",as.character(ref_classes[i,get(x, 'mcid', 'mc')]),"' seems to be!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-              return (NULL);
-            } else
-            {
-              # Replace the references by their definitions:
-              for( cn in class_names )
-              {
-                tmp <- NULL;
-                try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                                           paste0("SELECT ",qs(x,get(x, 'class', 'mc')),
-                                                  " FROM ", qs(x,tmp_class_table),
-                                                  " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",cn,"'",
-                                                  " ;")),
-                    silent=TRUE);
-                if( is.null(tmp) || nrow(tmp) == 0 )
-                {
-                  .msg(paste0("Cannot find the definition of medication class '",cn,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-                } else if( nrow(tmp) > 1 )
-                {
-                  .msg(paste0("The definition of medication class '",cn,"' is not unique!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-                } else
-                {
-                  ref_classes$solved[i] <- gsub(paste0("{",cn,"}"), paste0("(",tmp[1,1],")"), ref_classes$solved[i], fixed=TRUE);
-                  updated_class <- TRUE;
-                }
-              }
-            }
-          }
-          
-          # If updated, write it back to the SQL database:
-          if( updated_class )
-          {
-            tmp <- NULL;
-            try(tmp <- DBI::dbExecute(x$db_connection, 
-                                      paste0("UPDATE ",qs(x,tmp_class_table),
-                                             " SET ",qs(x,get(x, 'class', 'mc'))," = '",ref_classes$solved[i],"'",
-                                             " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",ref_classes[i,get(x, 'mcid', 'mc')],"'",
-                                             " AND ",qs(x,get(x, 'class', 'mc'))," = '",ref_classes[i,get(x, 'class', 'mc')],"'",
-                                             " ;")),
-                silent=TRUE);
-            if( is.null(tmp) )
-            {
-              .msg(paste0("Error updating the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-              return (NULL);
-            }
-          }
-        }
-        
-        # Redo the whole thing again until there's no more {} refs left:
-        ref_classes <- NULL;
-        try(ref_classes <- DBI::dbGetQuery(x$db_connection, 
-                                           paste0("SELECT *",
-                                                  " FROM ",qs(x,tmp_class_table),
-                                                  " WHERE ",qs(x,get(x, 'class', 'mc'))," LIKE '%{%}%'",
-                                                  " ;")),
-            silent=TRUE);
-        
-        max_iterations <- (max_iterations - 1);
-      }
-      if( max_iterations == 0 )
-      {
-        .msg(paste0("Too deep medication class references {}: not all have been solved, please reduce this referencing depth!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-        return (NULL);
-      }
-      
-      # All good: use this temporary table as the medication classes table:
-      x$db_mctable_use_temp_table <- tmp_class_table;
-      
-    }
-  } else if( x$db_type == "mssql" )
-  {
-  }
-  
-  
-  # Return this (possibly modified) object:
-  return (x);
 }
 
 
