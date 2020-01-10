@@ -63,13 +63,13 @@ source("./SQL_queries.R", echo=FALSE);
 if( FALSE )
 {
   # Create the test database:
-  stu_db <- SQL_db(spec_file, check_db=FALSE);
+  stu_db <- SQL_db(spec_file, check_db=FALSE, preprocess_db=FALSE);
   create_test_database(stu_db);
   disconnect(stu_db);
 }
 
 # Connect to the pre-existing database:
-stu_db <- SQL_db(spec_file, check_db=TRUE, truncate_results=TRUE);
+stu_db <- SQL_db(spec_file);
 
 
 

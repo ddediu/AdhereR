@@ -382,6 +382,7 @@ SQL_db <- function(spec_file=NA,                                                
                               "db_actable_cols"=db_actable_cols,
                               "db_mctable_name"=db_mctable_name,
                               "db_mctable_cols"=db_mctable_cols,
+                              "db_mctable_use_temp_table"=NULL, # if not NULL, the name of the temporary medication class table with the {} references solved
                               "db_prtable_name"=db_prtable_name,
                               "db_prtable_cols"=db_prtable_cols,
                               "db_prtable_use_temp_table"=NULL, # if not NULL, the name of the temporary processing table with the default actions "*" solved
@@ -519,6 +520,20 @@ disconnect.SQL_db <- function(x)
         }
       }
       
+      if( !is.null(x$db_mctable_use_temp_table) &&
+          (x$db_mctable_use_temp_table %in% list_tables(x)) )
+      {
+        # Drop this temporary table:
+        tmp <- NULL;
+        try(tmp <- dbExecute(x$db_connection,
+                             paste0("DROP TABLE ",qs(x,x$db_mctable_use_temp_table)," ;")),
+            silent=TRUE);
+        if( is.null(tmp) )
+        {
+          .msg("Error dropping the temporary medication classes table!\n", x$log_file, "w");
+        }
+      }
+      
       # Disconect from it:
       try(DBI::dbDisconnect(x$db_connection), silent=TRUE);
     } else if( x$db_type == "mssql" )
@@ -579,7 +594,7 @@ list_tables.SQL_db <- function(x)
     db_tables <- paste0(db_list$TABLE_SCHEMA,".",db_list$TABLE_NAME); # reconstruct the tables' names
   }
   
-  .msg(paste0("List tables: database contains the following tables: ",paste0("'",db_tables,"''",collapse=", "),"...\n"), x$log_file, "m");
+  #.msg(paste0("List tables: database contains the following tables: ",paste0("'",db_tables,"''",collapse=", "),"...\n"), x$log_file, "m");
   
   # Return the list tables' names:
   return (db_tables);
@@ -713,8 +728,9 @@ qs.SQL_db <- function(x, s)
 ##
 
 # Get various attributes either for the whole database (table=NULL) or for a specific table:
-get <- function(x, variable, table=NULL) UseMethod("get")
-get.SQL_db <- function(x, variable, table=NULL)
+get <- function(x, variable, table=NULL, df.compat=FALSE) UseMethod("get")
+get.SQL_db <- function(x, variable, table=NULL, 
+                       df.compat=FALSE) # ensure these are valid data.frame names?
 {
   if( is.null(table) )
   {
@@ -768,7 +784,7 @@ get.SQL_db <- function(x, variable, table=NULL)
                    "classes"           =,
                    "medications"       =,
                    "mc"=switch(tolower(variable),
-                               "name"        =x$db_mctable_name,
+                               "name"        =ifelse(is.null(x$db_mctable_use_temp_table), x$db_mctable_name, x$db_mctable_use_temp_table), # use the solved default temp table?,
                                "med_class_id"=,
                                "mcid"        =,
                                "id"          =x$db_mctable_cols["ID"],
@@ -1359,57 +1375,98 @@ preprocess.SQL_db <- function(x)
       }
       
       # Replace the references by their definitions:
-      ref_classes$solved <- ref_classes[,get(x, 'class', 'mc')];
-      for( i in 1:nrow(ref_classes) )
+      max_iterations <- 256; # the maximum depth of references to be solved
+      while( !is.null(ref_classes) && nrow(ref_classes) > 0 && max_iterations > 0 )
       {
-        s <- as.character(ref_classes[i,get(x, 'class', 'mc')]);
-        # Find the references to classes and extract their names (if any):
-        n <- gregexpr("\\{[^\\}]+\\}", s)[[1]];
-        if( length(n) == 1 && n == (-1) )
+        ref_classes$solved <- ref_classes[,get(x, 'class', 'mc')];
+        for( i in 1:nrow(ref_classes) )
         {
-          # No match -- what's going on?
-          .msg(paste0("Error finding class match {} where one should have been: '",s,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-        } else
-        {
-          # Extract the names:
-          class_names <- substring(s, n+1, n+attr(n,"match.length")-2);
-          # Check for recursions:
-          if( any(class_names == ref_classes[i,get(x, 'mcid', 'mc')]) )
+          updated_class <- FALSE;
+          
+          s <- as.character(ref_classes[i,get(x, 'class', 'mc')]);
+          
+          # Find the references to classes and extract their names (if any):
+          n <- gregexpr("\\{[^\\}]+\\}", s)[[1]];
+          if( length(n) == 1 && n == (-1) )
           {
-            # Recursion detected!
-            .msg(paste0("Medication class definitions cannot be recursive, but '",as.character(ref_classes[i,get(x, 'mcid', 'mc')]),"' seems to be!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-            break;
+            # No match -- what's going on?
+            .msg(paste0("Error finding class match {} where one should have been: '",s,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
           } else
           {
-            # Replace the references by their definitions:
-            for( cn in class_names )
+            # Extract the names:
+            class_names <- substring(s, n+1, n+attr(n,"match.length")-2);
+            # Check for recursions:
+            if( any(class_names == ref_classes[i,get(x, 'mcid', 'mc')]) )
             {
-              tmp <- NULL;
-              try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                                        paste0("SELECT ",qs(x,get(x, 'class', 'mc')),
-                                               " FROM ", qs(x,get(x, 'name', 'mc')),
-                                               " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",cn,"'",
-                                               " ;")),
-                  silent=TRUE);
-              if( is.null(tmp) || nrow(tmp) == 0 )
+              # Recursion detected!
+              .msg(paste0("Medication class definitions cannot be recursive, but '",as.character(ref_classes[i,get(x, 'mcid', 'mc')]),"' seems to be!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+              return (NULL);
+            } else
+            {
+              # Replace the references by their definitions:
+              for( cn in class_names )
               {
-                .msg(paste0("Cannot find the definition of medication class '",cn,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-              } else if( nrow(tmp) > 1 )
-              {
-                .msg(paste0("The definition of medication class '",cn,"' is not unique!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-              } else
-              {
-                ref_classes$solved[i] <- gsub(paste0("{",cn,"}"), paste0("(",tmp[1,1],")"), ref_classes$solved[i], fixed=TRUE);
+                tmp <- NULL;
+                try(tmp <- DBI::dbGetQuery(x$db_connection, 
+                                           paste0("SELECT ",qs(x,get(x, 'class', 'mc')),
+                                                  " FROM ", qs(x,tmp_class_table),
+                                                  " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",cn,"'",
+                                                  " ;")),
+                    silent=TRUE);
+                if( is.null(tmp) || nrow(tmp) == 0 )
+                {
+                  .msg(paste0("Cannot find the definition of medication class '",cn,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+                } else if( nrow(tmp) > 1 )
+                {
+                  .msg(paste0("The definition of medication class '",cn,"' is not unique!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+                } else
+                {
+                  ref_classes$solved[i] <- gsub(paste0("{",cn,"}"), paste0("(",tmp[1,1],")"), ref_classes$solved[i], fixed=TRUE);
+                  updated_class <- TRUE;
+                }
               }
             }
           }
+          
+          # If updated, write it back to the SQL database:
+          if( updated_class )
+          {
+            tmp <- NULL;
+            try(tmp <- DBI::dbExecute(x$db_connection, 
+                                      paste0("UPDATE ",qs(x,tmp_class_table),
+                                             " SET ",qs(x,get(x, 'class', 'mc'))," = '",ref_classes$solved[i],"'",
+                                             " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",ref_classes[i,get(x, 'mcid', 'mc')],"'",
+                                             " AND ",qs(x,get(x, 'class', 'mc'))," = '",ref_classes[i,get(x, 'class', 'mc')],"'",
+                                             " ;")),
+                silent=TRUE);
+            if( is.null(tmp) )
+            {
+              .msg(paste0("Error updating the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+              return (NULL);
+            }
+          }
         }
+        
+        # Redo the whole thing again until there's no more {} refs left:
+        ref_classes <- NULL;
+        try(ref_classes <- DBI::dbGetQuery(x$db_connection, 
+                                           paste0("SELECT *",
+                                                  " FROM ",qs(x,tmp_class_table),
+                                                  " WHERE ",qs(x,get(x, 'class', 'mc'))," LIKE '%{%}%'",
+                                                  " ;")),
+            silent=TRUE);
+        
+        max_iterations <- (max_iterations - 1);
+      }
+      if( max_iterations == 0 )
+      {
+        .msg(paste0("Too deep medication class references {}: not all have been solved, please reduce this referencing depth!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        return (NULL);
       }
       
-      # Write back the resolved references to the database:
-      ref_classes[,get(x, 'class', 'mc')] ---> SQL database!!!
+      # All good: use this temporary table as the medication classes table:
+      x$db_mctable_use_temp_table <- tmp_class_table;
       
-      #### TODO: redo the whole thing again until there's no more {} refs left....
     }
   } else if( x$db_type == "mssql" )
   {
@@ -1779,11 +1836,11 @@ check_tables.SQL_db <- function(x)
     }
     if( check_empty && table_info$nrow[1] == 0 )
     {
-      msg <- paste0("The events table '",get(x, 'name', 'ev'),"' seems empty!\n");
+      msg <- paste0("The table '",get(x, 'name', tbname),"' seems empty!\n");
       .msg(msg, x$log_file, ifelse(stop_on_error,"e","w"));
       return (FALSE);
     }
-    for( tbcol in tbcolumns )
+    for( tbcol in setdiff(tbcolumns, "name") ) # "name" is not a column
     {
       if( !(get(x, tbcol, tbname) %in% table_info$column) )
       {
@@ -1945,7 +2002,7 @@ create_test_database.SQL_db <- function(x)
                     'A',      '[medA]',
                     'A | B',  '[medA] | [medB]',
                     '!A',     '![medA]',
-                    'A & !A', '[medA] & {!A}', # use a defined class (using {}) 
+                    'A & !A', '[medA] & {!A}', # refer to another class using {})
                     'else',   '@'), # @ means all other not otherwise matched medications for a given patient
                   ncol=2, byrow=TRUE);
     colnames(tmp) <- c(qs(x,get(x, 'mcid', 'mc')), qs(x,get(x, 'class', 'mc')));

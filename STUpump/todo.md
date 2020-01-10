@@ -1,18 +1,25 @@
 # TODO
   
   
+## General
+
+  - make sure get(...) has a version for data.table (i.e., sometimes the attribute's SQL value might not work as an attribute for data.frame!)
+  
+  - refactor so that the database-specific stuff is better insulated from the algortihms
+
+  
 ## Error handling
 
-  - better error and messages handling and reporting [OK]
+  - [*DONE*] better error and messages handling and reporting
 
 
 ## Processing table
 
-  - the default processings must be defined in the processing table [OK]
+  - [*DONE*] the default processings must be defined in the processing table
   
-  - use "*" to mean "all" for both ids and classes (it is required to include "*" in the actions) [OK]
+  - [*DONE*] use "*" to mean "all" for both ids and classes (it is required to include this in the actions)
   
-  - use "*" as a class to mean "all other non-matched classes"
+  - [*DONE*] use "*" as a class to mean "all other non-matched classes"
   
 
 ## Optimisations
