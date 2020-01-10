@@ -111,6 +111,17 @@ SQL_db <- function(spec_file=NA,                                                
     if( !("tables" %in% names(db_info)) ) 
       .msg(paste0("Error in the config file '",spec_file,"': 'tables' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
 
+    # The table prefix:
+    if( !("table_prefix" %in% names(db_info$tables)) ) 
+    {
+      .msg(paste0("Warning in the config file '",spec_file,"': 'table_prefix' is not defined: taking it as empty!\n"), log_file, "w");
+      db_table_prefix <- "";
+    } else
+    {
+      db_table_prefix <- db_info$tables$table_prefix;
+      .msg(paste0("Config: read 'table:table_prefix' = '",db_table_prefix,"'.\n"), log_file, "m");
+    }
+  
         
     # The events table:
     if( !("events" %in% names(db_info$tables)) ) 
@@ -374,6 +385,7 @@ SQL_db <- function(spec_file=NA,                                                
                                                            "sqlite"=c("`","`"),
                                                            "mssql"=c("[","]"),
                                                            c("`","`")),
+                              "db_table_prefix"=db_table_prefix,
                               
                               # the important tables:
                               "db_evtable_name"=db_evtable_name,
@@ -452,7 +464,8 @@ SQL_db <- function(spec_file=NA,                                                
 
 # Get various attributes either for the whole database (table=NULL) or for a specific table:
 get <- function(x, variable, table=NULL, df.compat=FALSE) UseMethod("get")
-get.SQL_db <- function(x, variable, table=NULL, 
+get.SQL_db <- function(x, variable, 
+                       table=NULL, append_prefix_to_table_name=TRUE,
                        df.compat=FALSE) # ensure these are valid data.frame names?
 {
   if( is.null(table) )
@@ -468,6 +481,9 @@ get.SQL_db <- function(x, variable, table=NULL,
                    "user"     =x$db_user,
                    "psswd"    =x$db_psswd,
                    "name"     =x$db_name,
+                   "table_prefix"=,
+                   "prefix"   =,
+                   "pre"      =ifelse(!is.na(x$db_table_prefix) && !is.null(x$db_table_prefix) && x$db_table_prefix != "", x$db_table_prefix, ""),
                    .msg(paste0("Undefined global attribute '",variable,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
     ));
   } else
@@ -477,7 +493,7 @@ get.SQL_db <- function(x, variable, table=NULL,
                    # Events:
                    "events"=,
                    "ev"=switch(tolower(variable),
-                               "name"      =x$db_evtable_name,
+                               "name"      =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_evtable_name), x$db_evtable_name),
                                "patient_id"=,
                                "patid"     =,
                                "id"        =x$db_evtable_cols["ID"],
@@ -492,7 +508,7 @@ get.SQL_db <- function(x, variable, table=NULL,
                    # Actions:
                    "actions"=,
                    "ac"=switch(tolower(variable),
-                               "name"     =x$db_actable_name,
+                               "name"     =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_actable_name), x$db_actable_name),
                                "action_id"=,
                                "actid"    =,
                                "id"       =x$db_actable_cols["ID"],
@@ -507,7 +523,9 @@ get.SQL_db <- function(x, variable, table=NULL,
                    "classes"           =,
                    "medications"       =,
                    "mc"=switch(tolower(variable),
-                               "name"        =ifelse(is.null(x$db_mctable_use_temp_table), x$db_mctable_name, x$db_mctable_use_temp_table), # use the solved default temp table?,
+                               "name"        =ifelse(is.null(x$db_mctable_use_temp_table), 
+                                                     ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_mctable_name), x$db_mctable_name),
+                                                     x$db_mctable_use_temp_table), # use the solved default temp table?,
                                "med_class_id"=,
                                "mcid"        =,
                                "id"          =x$db_mctable_cols["ID"],
@@ -519,7 +537,9 @@ get.SQL_db <- function(x, variable, table=NULL,
                    "processings"=,
                    "procs"      =,
                    "pr"=switch(tolower(variable),
-                               "name"         =ifelse(is.null(x$db_prtable_use_temp_table), x$db_prtable_name, x$db_prtable_use_temp_table), # use the solved default temp table?
+                               "name"         =ifelse(is.null(x$db_prtable_use_temp_table), 
+                                                      ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_prtable_name), x$db_prtable_name), 
+                                                      x$db_prtable_use_temp_table), # use the solved default temp table?
                                "processing_id"=,
                                "procid"       =,
                                "id"           =x$db_prtable_cols["ID"],
@@ -535,7 +555,7 @@ get.SQL_db <- function(x, variable, table=NULL,
                    "main results"=,
                    "results"     =,
                    "re"=switch(tolower(variable),
-                               "name"         =x$db_retable_name,
+                               "name"         =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_retable_name), x$db_retable_name),
                                "result_id"    =,
                                "resid"        =,
                                "id"           =x$db_retable_cols["ID"],
@@ -558,7 +578,7 @@ get.SQL_db <- function(x, variable, table=NULL,
                    "sliding windows results"=,
                    "sliding windows"        =,
                    "sw"=switch(tolower(variable),
-                               "name"           =x$db_swtable_name,
+                               "name"           =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_swtable_name), x$db_swtable_name),
                                "result_id"      =,
                                "resid"          =get(x, "resid", "re"),
                                "patid"          =,
@@ -583,7 +603,7 @@ get.SQL_db <- function(x, variable, table=NULL,
                    "per episode results"=,
                    "per episode"        =,
                    "pe"=switch(tolower(variable),
-                               "name"            =x$db_petable_name,
+                               "name"            =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_petable_name), x$db_petable_name),
                                "result_id"       =,
                                "resid"           =get(x, "resid", "re"),
                                "patid"           =,
@@ -613,7 +633,7 @@ get.SQL_db <- function(x, variable, table=NULL,
                    "updated info"=,
                    "updated"     =,
                    "up"=switch(tolower(variable),
-                               "name"            =x$db_uptable_name,
+                               "name"            =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_uptable_name), x$db_uptable_name),
                                "patid"           =,
                                "id"              =,
                                "patient_id"      =get(x, "patid", "ev"),
@@ -838,7 +858,7 @@ preprocess.SQL_db <- function(x)
       if( default_actions_defined )
       {
         # Ok: create (if necessary) a new processings table and replace the default actions by the defaults:
-        tmp_procs_table <- paste0('tmp_',get(x, 'name', 'pr'));
+        tmp_procs_table <- paste0(get(x, 'prefix'),'tmp_',get(x, 'name', 'pr', append_prefix_to_table_name=FALSE));
         
         if( !(tmp_procs_table %in% list_tables(x)) )
         {
@@ -911,7 +931,7 @@ preprocess.SQL_db <- function(x)
     {
       # There's at least one {} reference!
       # Ok: create (if necessary) a new table and copy everything in it:
-      tmp_class_table <- paste0('tmp_',get(x, 'name', 'mc'));
+      tmp_class_table <- paste0(get(x, 'prefix'),'tmp_',get(x, 'name', 'mc', append_prefix_to_table_name=FALSE));
       
       if( !(tmp_class_table %in% list_tables(x)) )
       {
@@ -2031,175 +2051,170 @@ create_test_database.SQL_db <- function(x)
   d$DATE <- as.character(as.Date(d$DATE, format="%m/%d/%Y"), format="%Y-%m-%d"); # use the expected format for SQL's DATE
   
   # Create the database:
+  # Delete and (re)create the needed tables:
+  db_tables <- list_tables(x);
+  
+  # The events table:
+  try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')))), silent=TRUE);
   if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
   {
-    # Delete and (re)create the needed tables:
-    db_tables <- list_tables(x);
-    
-    # The events table:
-    if( get(x, 'name', 'ev') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),";"));
     DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," ( ",
                                            qs(x,get(x, 'patid', 'ev')),    " VARCHAR(256) NOT NULL, ",
                                            qs(x,get(x, 'date', 'ev')),     " DATE NOT NULL, ",
                                            qs(x,get(x, 'perday', 'ev')),   " INT NOT NULL, ",
                                            qs(x,get(x, 'category', 'ev')), " VARCHAR(1024) NULL DEFAULT NULL, ",
                                            qs(x,get(x, 'duration', 'ev')), " INT NULL DEFAULT NULL );"));
-    # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
-    for( i in 1:nrow(d) )
+  } else if( x$db_type == "mssql" )
+  {
+    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," ( ",
+                                            qs(x,get(x, 'patid', 'ev')),    " VARCHAR(256) NOT NULL, ",
+                                            qs(x,get(x, 'date', 'ev')),     " DATE NOT NULL, ",
+                                            qs(x,get(x, 'perday', 'ev')),   " INT NOT NULL, ",
+                                            qs(x,get(x, 'category', 'ev')), " VARCHAR(1024) NULL DEFAULT NULL, ",
+                                            qs(x,get(x, 'duration', 'ev')), " INT NULL DEFAULT NULL );"));
+  }
+  # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
+  for( i in 1:nrow(d) )
+  {
+    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
     {
       DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," VALUES (",
                                              paste0("'",as.character(d[i,]),"'",collapse=","),
                                              ");"));
-    }
-    
-    # The actions table: 
-    if( get(x, 'name', 'ac') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac')),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac'))," ( ",
-                                           qs(x,get(x, 'actid', 'ac')),  " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get(x, 'action', 'ac')), " VARCHAR(128) NULL DEFAULT NULL, ",
-                                           qs(x,get(x, 'params', 'ac')), " VARCHAR(10240) NULL DEFAULT NULL, ", 
-                                           "PRIMARY KEY (", get(x, 'actid', 'ac'), ") );"));
-    # Fill it in one by one:
-    tmp <- matrix(c('CMA1',               'CMA1',                    '',
-                    'CMA2',               'CMA2',                    '',
-                    'CMA9',               'CMA9',                    '',
-                    'pCMA0',              'plot.CMA0',               '',
-                    'pCMA7',              'plot.CMA7',               '',
-                    'pCMA9',              'plot.CMA9',               '',
-                    'pSW(CMA1,d=90,n=5)', 'plot.CMA_sliding_window', 'CMA.to.apply=\"CMA1\", sliding.window.duration=90, sliding.window.no.steps=5',
-                    'pPE(CMA1,gap=90)',   'plot.CMA_per_episode',    'CMA.to.apply=\"CMA1\", maximum.permissible.gap=90'), 
-                  ncol=3, byrow=TRUE);
-    colnames(tmp) <- c(qs(x,get(x, 'actid', 'ac')), qs(x,get(x, 'action', 'ac')), qs(x,get(x, 'params', 'ac')));
-    for( i in 1:nrow(tmp) )
-    {
-      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac')),
-                                             "(",paste0(colnames(tmp),collapse=","),")",
-                                             " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
-    }
-    
-    # The medication classes table: 
-    if( get(x, 'name', 'mc') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc'))," ( ",
-                                           qs(x,get(x, 'mcid', 'mc')),  " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get(x, 'class', 'mc')), " VARCHAR(10240) NULL DEFAULT NULL, ",
-                                           "PRIMARY KEY (", get(x, 'mcid', 'mc'), ") );"));
-    # Fill it in one by one:
-    tmp <- matrix(c('*',      '*', # the special default * rule must be defined!
-                    'A',      '[medA]',
-                    'A | B',  '[medA] | [medB]',
-                    '!A',     '![medA]',
-                    'A & !A', '[medA] & {!A}', # refer to another class using {})
-                    'else',   '@'), # @ means all other not otherwise matched medications for a given patient
-                  ncol=2, byrow=TRUE);
-    colnames(tmp) <- c(qs(x,get(x, 'mcid', 'mc')), qs(x,get(x, 'class', 'mc')));
-    for( i in 1:nrow(tmp) )
-    {
-      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),
-                                             "(",paste0(colnames(tmp),collapse=","),")",
-                                             " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
-    }
-    
-    # The processings table specifying what to do to which entries: 
-    if( get(x, 'name', 'pr') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr'))," ( ",
-                                           qs(x,get(x, 'procid', 'pr')),   " INT NOT NULL AUTO_INCREMENT, ",
-                                           qs(x,get(x, 'patid', 'pr')),    " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get(x, 'category', 'pr')), " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get(x, 'action', 'pr')),   " VARCHAR(256) NOT NULL, ",
-                                           "PRIMARY KEY (", get(x, 'procid', 'pr'), ") );"));
-    # Fill it in one by one:
-    tmp <- matrix(c('*', '*',      'pCMA0', # the default actions
-                    '*', '*',      'CMA9',
-                    '1', 'A',      'CMA2', # specific overrides
-                    '1', 'A',      'pCMA0',
-                    '1', 'A | B',  'pCMA7',
-                    '2', '*',      'pCMA0',
-                    '2', '*',      'pCMA9',
-                    '3', '*',      'pCMA0',
-                    '3', '*',      'CMA1',
-                    '3', '*',      'pSW(CMA1,d=90,n=5)',
-                    '4', '*',      'pCMA0',
-                    '4', '*',      'CMA1',
-                    '4', '*',      'pPE(CMA1,gap=90)',
-                    '5', '!A',     'CMA2',
-                    '6', 'A',      'CMA9',
-                    '6', 'else',   'CMA2', # for all other medications for patient 6
-                    '7', 'A',      '*',    # * means use the default actions (i.e., those with ('*', '*'))
-                    '8', 'A & !A', 'CMA2',
-                    '9', '*',      'CMA9'), 
-                  ncol=3, byrow=TRUE);
-    colnames(tmp) <- c(qs(x,get(x, 'patid', 'pr')), qs(x,get(x, 'category', 'pr')), qs(x,get(x, 'action', 'pr')));
-    for( i in 1:nrow(tmp) )
-    {
-      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
-                                             "(",paste0(colnames(tmp),collapse=","),")",
-                                             " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
-    }
-
-    # The main results table: 
-    if( get(x, 'name', 're') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're'))," ( ",
-                                           qs(x,get(x, 'resid', 're')),      " INT NOT NULL AUTO_INCREMENT, ",
-                                           qs(x,get(x, 'patid', 'ev')),      " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get(x, 'procid', 're')),     " INT NULL DEFAULT -1, ",
-                                           qs(x,get(x, 'estim', 're')),      " FLOAT NULL DEFAULT NULL, ",
-                                           qs(x,get(x, 'estim_type', 're')), " VARCHAR(256) NULL DEFAULT NULL, ",
-                                           qs(x,get(x, 'jpg', 're')),        " LONGBLOB NULL DEFAULT NULL, ",
-                                           qs(x,get(x, 'html', 're')),       " LONGBLOB NULL DEFAULT NULL, ", 
-                                           "PRIMARY KEY (", get(x, 'resid', 're'), ") );"));
-    
-    # The sliding windows results table: 
-    if( get(x, 'name', 'sw') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw')),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw'))," ( ",
-                                           qs(x,get(x, 'resid', 'sw')), " INT NULL DEFAULT NULL, ",
-                                           qs(x,get(x, 'patid', 'sw')), " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get(x, 'wndid', 'sw')), " INT NOT NULL, ",
-                                           qs(x,get(x, 'start', 'sw')), " DATE NOT NULL, ",
-                                           qs(x,get(x, 'end', 'sw')),   " DATE NOT NULL, ",
-                                           qs(x,get(x, 'estim', 'sw')), " FLOAT NULL DEFAULT NULL );"));
-    
-    # The per episode results table: 
-    if( get(x, 'name', 'pe') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe')),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe'))," ( ",
-                                           qs(x,get(x, 'resid', 'pe')),    " INT NULL DEFAULT NULL, ",
-                                           qs(x,get(x, 'patid', 'pe')),    " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get(x, 'epid', 'pe')),     " INT NOT NULL, ",
-                                           qs(x,get(x, 'start', 'pe')),    " DATE NOT NULL, ",
-                                           qs(x,get(x, 'gap', 'pe')),      " INT NULL DEFAULT NULL, ",
-                                           qs(x,get(x, 'duration', 'pe')), " INT NULL DEFAULT NULL, ",
-                                           qs(x,get(x, 'end', 'pe')),      " DATE NOT NULL, ",
-                                           qs(x,get(x, 'estim', 'pe')),    " FLOAT NULL DEFAULT NULL );"));
-    
-    # The updated info table: 
-    if( get(x, 'name', 'up') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),";"));
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up'))," ( ",
-                                           qs(x,get(x, 'patid', 'up')), " VARCHAR(256) NOT NULL );"));
-    # Fill it in:
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),
-                                           " (",qs(x,get(x, 'patid', 'up')),") ",
-                                           " VALUES ",paste0("('",1:20,"')",collapse=", ")," ;")); # just the first 20 patients have updated info
-    
-  } else if( x$db_type == "mssql" )
-  {
-    # Delete and (re)create the needed tables:
-    db_tables <- list_tables(x);
-    
-    # The events table:
-    if( get(x, 'name', 'ev') %in% db_tables ) RODBC::sqlQuery(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),";"));
-    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," ( ",
-                                            qs(x,get(x, 'patid', 'ev'))," VARCHAR(256) NOT NULL, ",
-                                            qs(x,get(x, 'date', 'ev'))," DATE NOT NULL, ",
-                                            qs(x,get(x, 'perday', 'ev'))," INT NOT NULL, ",
-                                            qs(x,get(x, 'category', 'ev'))," VARCHAR(1024) NOT NULL, ",
-                                            qs(x,get(x, 'duration', 'ev'))," INT NOT NULL);"));
-    # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
-    for( i in 1:nrow(d) )
+    } else if( x$db_type == "mssql" )
     {
       RODBC::sqlQuery(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," VALUES (",
                                               paste0("'",as.character(d[i,]),"'",collapse=","),
                                               ");"));
     }
-    
   }
+  
+  # The actions table: 
+  if( get(x, 'name', 'ac') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac')),";"));
+  DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac'))," ( ",
+                                         qs(x,get(x, 'actid', 'ac')),  " VARCHAR(256) NOT NULL, ",
+                                         qs(x,get(x, 'action', 'ac')), " VARCHAR(128) NULL DEFAULT NULL, ",
+                                         qs(x,get(x, 'params', 'ac')), " VARCHAR(10240) NULL DEFAULT NULL, ", 
+                                         "PRIMARY KEY (", get(x, 'actid', 'ac'), ") );"));
+  # Fill it in one by one:
+  tmp <- matrix(c('CMA1',               'CMA1',                    '',
+                  'CMA2',               'CMA2',                    '',
+                  'CMA9',               'CMA9',                    '',
+                  'pCMA0',              'plot.CMA0',               '',
+                  'pCMA7',              'plot.CMA7',               '',
+                  'pCMA9',              'plot.CMA9',               '',
+                  'pSW(CMA1,d=90,n=5)', 'plot.CMA_sliding_window', 'CMA.to.apply=\"CMA1\", sliding.window.duration=90, sliding.window.no.steps=5',
+                  'pPE(CMA1,gap=90)',   'plot.CMA_per_episode',    'CMA.to.apply=\"CMA1\", maximum.permissible.gap=90'), 
+                ncol=3, byrow=TRUE);
+  colnames(tmp) <- c(qs(x,get(x, 'actid', 'ac')), qs(x,get(x, 'action', 'ac')), qs(x,get(x, 'params', 'ac')));
+  for( i in 1:nrow(tmp) )
+  {
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac')),
+                                           "(",paste0(colnames(tmp),collapse=","),")",
+                                           " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
+  }
+  
+  # The medication classes table: 
+  if( get(x, 'name', 'mc') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),";"));
+  DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc'))," ( ",
+                                         qs(x,get(x, 'mcid', 'mc')),  " VARCHAR(256) NOT NULL, ",
+                                         qs(x,get(x, 'class', 'mc')), " VARCHAR(10240) NULL DEFAULT NULL, ",
+                                         "PRIMARY KEY (", get(x, 'mcid', 'mc'), ") );"));
+  # Fill it in one by one:
+  tmp <- matrix(c('*',      '*', # the special default * rule must be defined!
+                  'A',      '[medA]',
+                  'A | B',  '[medA] | [medB]',
+                  '!A',     '![medA]',
+                  'A & !A', '[medA] & {!A}', # refer to another class using {})
+                  'else',   '@'), # @ means all other not otherwise matched medications for a given patient
+                ncol=2, byrow=TRUE);
+  colnames(tmp) <- c(qs(x,get(x, 'mcid', 'mc')), qs(x,get(x, 'class', 'mc')));
+  for( i in 1:nrow(tmp) )
+  {
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),
+                                           "(",paste0(colnames(tmp),collapse=","),")",
+                                           " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
+  }
+  
+  # The processings table specifying what to do to which entries: 
+  if( get(x, 'name', 'pr') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),";"));
+  DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr'))," ( ",
+                                         qs(x,get(x, 'procid', 'pr')),   " INT NOT NULL AUTO_INCREMENT, ",
+                                         qs(x,get(x, 'patid', 'pr')),    " VARCHAR(256) NOT NULL, ",
+                                         qs(x,get(x, 'category', 'pr')), " VARCHAR(256) NOT NULL, ",
+                                         qs(x,get(x, 'action', 'pr')),   " VARCHAR(256) NOT NULL, ",
+                                         "PRIMARY KEY (", get(x, 'procid', 'pr'), ") );"));
+  # Fill it in one by one:
+  tmp <- matrix(c('*', '*',      'pCMA0', # the default actions
+                  '*', '*',      'CMA9',
+                  '1', 'A',      'CMA2', # specific overrides
+                  '1', 'A',      'pCMA0',
+                  '1', 'A | B',  'pCMA7',
+                  '2', '*',      'pCMA0',
+                  '2', '*',      'pCMA9',
+                  '3', '*',      'pCMA0',
+                  '3', '*',      'CMA1',
+                  '3', '*',      'pSW(CMA1,d=90,n=5)',
+                  '4', '*',      'pCMA0',
+                  '4', '*',      'CMA1',
+                  '4', '*',      'pPE(CMA1,gap=90)',
+                  '5', '!A',     'CMA2',
+                  '6', 'A',      'CMA9',
+                  '6', 'else',   'CMA2', # for all other medications for patient 6
+                  '7', 'A',      '*',    # * means use the default actions (i.e., those with ('*', '*'))
+                  '8', 'A & !A', 'CMA2',
+                  '9', '*',      'CMA9'), 
+                ncol=3, byrow=TRUE);
+  colnames(tmp) <- c(qs(x,get(x, 'patid', 'pr')), qs(x,get(x, 'category', 'pr')), qs(x,get(x, 'action', 'pr')));
+  for( i in 1:nrow(tmp) )
+  {
+    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
+                                           "(",paste0(colnames(tmp),collapse=","),")",
+                                           " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
+  }
+  
+  # The main results table: 
+  if( get(x, 'name', 're') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')),";"));
+  DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're'))," ( ",
+                                         qs(x,get(x, 'resid', 're')),      " INT NOT NULL AUTO_INCREMENT, ",
+                                         qs(x,get(x, 'patid', 'ev')),      " VARCHAR(256) NOT NULL, ",
+                                         qs(x,get(x, 'procid', 're')),     " INT NULL DEFAULT -1, ",
+                                         qs(x,get(x, 'estim', 're')),      " FLOAT NULL DEFAULT NULL, ",
+                                         qs(x,get(x, 'estim_type', 're')), " VARCHAR(256) NULL DEFAULT NULL, ",
+                                         qs(x,get(x, 'jpg', 're')),        " LONGBLOB NULL DEFAULT NULL, ",
+                                         qs(x,get(x, 'html', 're')),       " LONGBLOB NULL DEFAULT NULL, ", 
+                                         "PRIMARY KEY (", get(x, 'resid', 're'), ") );"));
+  
+  # The sliding windows results table: 
+  if( get(x, 'name', 'sw') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw')),";"));
+  DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw'))," ( ",
+                                         qs(x,get(x, 'resid', 'sw')), " INT NULL DEFAULT NULL, ",
+                                         qs(x,get(x, 'patid', 'sw')), " VARCHAR(256) NOT NULL, ",
+                                         qs(x,get(x, 'wndid', 'sw')), " INT NOT NULL, ",
+                                         qs(x,get(x, 'start', 'sw')), " DATE NOT NULL, ",
+                                         qs(x,get(x, 'end', 'sw')),   " DATE NOT NULL, ",
+                                         qs(x,get(x, 'estim', 'sw')), " FLOAT NULL DEFAULT NULL );"));
+  
+  # The per episode results table: 
+  if( get(x, 'name', 'pe') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe')),";"));
+  DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe'))," ( ",
+                                         qs(x,get(x, 'resid', 'pe')),    " INT NULL DEFAULT NULL, ",
+                                         qs(x,get(x, 'patid', 'pe')),    " VARCHAR(256) NOT NULL, ",
+                                         qs(x,get(x, 'epid', 'pe')),     " INT NOT NULL, ",
+                                         qs(x,get(x, 'start', 'pe')),    " DATE NOT NULL, ",
+                                         qs(x,get(x, 'gap', 'pe')),      " INT NULL DEFAULT NULL, ",
+                                         qs(x,get(x, 'duration', 'pe')), " INT NULL DEFAULT NULL, ",
+                                         qs(x,get(x, 'end', 'pe')),      " DATE NOT NULL, ",
+                                         qs(x,get(x, 'estim', 'pe')),    " FLOAT NULL DEFAULT NULL );"));
+  
+  # The updated info table: 
+  if( get(x, 'name', 'up') %in% db_tables ) DBI::dbExecute(x$db_connection, paste0("DROP TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),";"));
+  DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up'))," ( ",
+                                         qs(x,get(x, 'patid', 'up')), " VARCHAR(256) NOT NULL );"));
+  # Fill it in:
+  DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),
+                                         " (",qs(x,get(x, 'patid', 'up')),") ",
+                                         " VALUES ",paste0("('",1:20,"')",collapse=", ")," ;")); # just the first 20 patients have updated info
+  
 }
                                     
