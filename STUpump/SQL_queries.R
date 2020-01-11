@@ -732,36 +732,14 @@ disconnect.SQL_db <- function(x)
 {
   if( !is.null(x$db_connection) )
   {
+    # Drop the temporary tables (if any):
+    if( !is.null(x$db_prtable_use_temp_table) &&
+        (x$db_prtable_use_temp_table %in% list_tables(x)) ) table_drop(x, x$db_prtable_use_temp_table);
+    if( !is.null(x$db_mctable_use_temp_table) &&
+        (x$db_mctable_use_temp_table %in% list_tables(x)) ) table_drop(x, x$db_mctable_use_temp_table);
+    
     if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
     {
-      if( !is.null(x$db_prtable_use_temp_table) &&
-          (x$db_prtable_use_temp_table %in% list_tables(x)) )
-      {
-        # Drop this temporary table:
-        tmp <- NULL;
-        try(tmp <- dbExecute(x$db_connection,
-                             paste0("DROP TABLE ",qs(x,x$db_prtable_use_temp_table)," ;")),
-            silent=TRUE);
-        if( is.null(tmp) )
-        {
-          .msg("Error dropping the temporary processing table!\n", x$log_file, "w");
-        }
-      }
-      
-      if( !is.null(x$db_mctable_use_temp_table) &&
-          (x$db_mctable_use_temp_table %in% list_tables(x)) )
-      {
-        # Drop this temporary table:
-        tmp <- NULL;
-        try(tmp <- dbExecute(x$db_connection,
-                             paste0("DROP TABLE ",qs(x,x$db_mctable_use_temp_table)," ;")),
-            silent=TRUE);
-        if( is.null(tmp) )
-        {
-          .msg("Error dropping the temporary medication classes table!\n", x$log_file, "w");
-        }
-      }
-      
       # Disconect from it:
       try(DBI::dbDisconnect(x$db_connection), silent=TRUE);
     } else if( x$db_type == "mssql" )
@@ -784,24 +762,54 @@ disconnect.SQL_db <- function(x)
 reset_results <- function(x) UseMethod("reset_results")
 reset_results.SQL_db <- function(x)
 {
-  db_tables <- list_tables(x);
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    if( get(x, 'name', 're') %in% db_tables ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 're')," ;")), silent=TRUE);
-    if( get(x, 'name', 'sw') %in% db_tables ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'sw')," ;")), silent=TRUE);
-    if( get(x, 'name', 'pe') %in% db_tables ) try(DBI::dbExecute(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'pe')," ;")), silent=TRUE);
-  } else if( x$db_type == "mssql" )
-  {
-    if( get(x, 'name', 're') %in% db_tables ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 're')," ;")), silent=TRUE);
-    if( get(x, 'name', 'sw') %in% db_tables ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'sw')," ;")), silent=TRUE);
-    if( get(x, 'name', 'pe') %in% db_tables ) try(RODBC::sqlQuery(x$db_connection, paste0("TRUNCATE ",get(x, 'name', 'pe')," ;")), silent=TRUE);
-  }
-  
+  table_clear(x, get(x, 'name', 're'));
+  table_clear(x, get(x, 'name', 'sw'));
+  table_clear(x, get(x, 'name', 'pe'));
+
   .msg("Reset: database results tables truncated...\n", x$log_file, "m");
   
   return (TRUE);
 }
 
+##
+## SQL queries and actions ####
+##
+
+sqlQ <- function(x, query, err_msg=NA, just_execute=FALSE) UseMethod("sqlQ")
+sqlQ.SQL_db <- function(x, query, err_msg=NA, just_execute=FALSE)
+{
+  ret_val <- NULL;
+  
+  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  {
+    if( just_execute )
+    {
+      if( !is.na(err_msg) )
+      {
+        try(ret_val <- DBI::dbExecute(x$db_connection, query), silent=TRUE);
+      } else
+      {
+        ret_val <- DBI::dbExecute(x$db_connection, query);
+      }
+    } else
+    {
+      ret_val <- DBI::dbGetQuery(x$db_connection, query);
+    }
+  } else if( x$db_type == "mssql" )
+  {
+    ret_val <- RODBC::sqlQuery(x$db_connection, query);
+  }
+  
+  if( !is.na(err_msg) && is.null(ret_val) )
+  {
+    .msg(err_msg, x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    return (NULL)
+  } else
+  {
+    return (ret_val);
+  }
+}
+  
 
 ##
 ## Database pre-processing ####
@@ -1131,21 +1139,8 @@ table_clear.SQL_db <- function(x, tbname)
   if( table_exists(x, tbname) )
   {
     # It does exist:
-    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-    {
-      tmp <- NULL;
-      try(tmp <- DBI::dbExecute(x$db_connection, 
-                                paste0("TRUNCATE TABLE ",qs(x,tbname)," ;")),
-          silent=TRUE);
-      if( is.null(tmp) )
-      {
-        .msg(paste0("Error clearing the table '",tbname,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-        return (FALSE);
-      }
-      return (TRUE); # all seems fine...
-    } else if( x$db_type == "mssql" )
-    {
-    }
+    return( !is.null(sqlQ(x, query=paste0("TRUNCATE TABLE ",qs(x,tbname)," ;"),
+                          err_msg=paste0("Error clearing the table '",tbname,"'!\n"), just_execute=TRUE)) );
   } else
   {
     # It does not exist:
@@ -1162,21 +1157,8 @@ table_drop.SQL_db <- function(x, tbname)
   if( table_exists(x, tbname) )
   {
     # It does exist:
-    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-    {
-      tmp <- NULL;
-      try(tmp <- DBI::dbExecute(x$db_connection, 
-                                paste0("DROP TABLE ",qs(x,tbname)," ;")),
-          silent=TRUE);
-      if( is.null(tmp) )
-      {
-        .msg(paste0("Error removing the table '",tbname,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-        return (FALSE);
-      }
-      return (TRUE); # all seems fine...
-    } else if( x$db_type == "mssql" )
-    {
-    }
+    return( !is.null(sqlQ(x, query=paste0("DROP TABLE ",qs(x,tbname)," ;"),
+                          err_msg=paste0("Error removing the table '",tbname,"'!\n"), just_execute=TRUE)) );
   } else
   {
     # It does not exist:
@@ -1200,9 +1182,7 @@ list_tables.SQL_db <- function(x)
     db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",qs(x,x$db_name),".information_schema.tables;")); # list the tables
     db_tables <- paste0(db_list$TABLE_SCHEMA,".",db_list$TABLE_NAME); # reconstruct the tables' names
   }
-  
-  #.msg(paste0("List tables: database contains the following tables: ",paste0("'",db_tables,"''",collapse=", "),"...\n"), x$log_file, "m");
-  
+
   # Return the list tables' names:
   return (db_tables);
 }
@@ -1310,43 +1290,35 @@ write_retable_entry <- function(x, id, procid, class="", type="", proc="", param
 write_retable_entry.SQL_db <- function(x, id, procid, class="", type="", proc="", params="", estimate=NA, estimate_type=NA, plot_jpg="", plot_html="")
 {
   # Write all these info into the retable:
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  result <- sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')),
+                                 "(",
+                                 qs(x,get(x, 'patid', 'ev')),", ",
+                                 qs(x,get(x, 'procid', 're')),", ",
+                                 qs(x,get(x, 'estim', 're')),", ",
+                                 qs(x,get(x, 'estim_type', 're')),", ",
+                                 qs(x,get(x, 'jpg', 're')),", ",
+                                 qs(x,get(x, 'html', 're')),
+                                 ")",
+                                 " VALUES (",
+                                 "'",id,"', ", # id
+                                 "'",procid,"', ", # reference to the processing key
+                                 ifelse(is.na(estimate),"NULL",paste0("'",estimate,"'")),", ", # estimate
+                                 ifelse(is.na(estimate_type),"NULL",paste0("'",estimate_type,"'")),", ", # estimate type
+                                 ifelse(is.na(plot_jpg)  || !file.exists(plot_jpg),  
+                                        "NULL", 
+                                        paste0("X'",paste0(readBin(plot_jpg,  n=file.size(plot_jpg) +1024, what="raw"),collapse=""),"'")),", ", # the JPEG file as a blob
+                                 ifelse(is.na(plot_html) || !file.exists(plot_html), 
+                                        "NULL", 
+                                        paste0("X'",paste0(readBin(plot_html, n=file.size(plot_html)+1024, what="raw"),collapse=""),"'")), # the HTML+SVG file as a blob
+                                 ");"),
+                 err_msg=paste0("Error writing into the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=TRUE);
+  if( result != 1 ) # should've written exactly one line
   {
-    result <- DBI::dbExecute(x$db_connection, 
-                             paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')),
-                                    "(",
-                                    qs(x,get(x, 'patid', 'ev')),", ",
-                                    qs(x,get(x, 'procid', 're')),", ",
-                                    qs(x,get(x, 'estim', 're')),", ",
-                                    qs(x,get(x, 'estim_type', 're')),", ",
-                                    qs(x,get(x, 'jpg', 're')),", ",
-                                    qs(x,get(x, 'html', 're')),
-                                    ")",
-                                    " VALUES (",
-                                    "'",id,"', ", # id
-                                    "'",procid,"', ", # reference to the processing key
-                                    #"'",class,"', ", # class
-                                    #"'",ifelse(tolower(type) == "plot",paste0(type,"."),""),proc,"', ", # type & proc 
-                                    #"'",params,"', ", # params
-                                    ifelse(is.na(estimate),"NULL",paste0("'",estimate,"'")),", ", # estimate
-                                    ifelse(is.na(estimate_type),"NULL",paste0("'",estimate_type,"'")),", ", # estimate type
-                                    ifelse(is.na(plot_jpg)  || !file.exists(plot_jpg),  
-                                           "NULL", 
-                                           paste0("X'",paste0(readBin(plot_jpg,  n=file.size(plot_jpg) +1024, what="raw"),collapse=""),"'")),", ", # the JPEG file as a blob
-                                    ifelse(is.na(plot_html) || !file.exists(plot_html), 
-                                           "NULL", 
-                                           paste0("X'",paste0(readBin(plot_html, n=file.size(plot_html)+1024, what="raw"),collapse=""),"'")), # the HTML+SVG file as a blob
-                                    ");"));
-    if( result != 1 ) # should've written exactly one line
-    {
-      .msg(paste0("Error writing row to the results table '",get(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-      return (FALSE);
-    } else
-    {
-      return (TRUE);
-    }
-  } else if( x$db_type == "mssql" )
+    .msg(paste0("Error writing row to the results table '",get(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    return (FALSE);
+  } else
   {
+    return (TRUE);
   }
   
   return (TRUE);
@@ -1355,28 +1327,22 @@ write_retable_entry.SQL_db <- function(x, id, procid, class="", type="", proc=""
 get_retable_resid_for_results <- function(x, id, procid, estimate_type) UseMethod("get_retable_resid_for_results")
 get_retable_resid_for_results.SQL_db <- function(x, id, procid, estimate_type)
 {
-  # Get the matching info:
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  # Get the resid of the previous insertion in the retable:
+  resid_ref <- sqlQ(x, query=paste0("SELECT ", qs(x,get(x, 'resid', 're')),
+                                    " FROM ", qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')), 
+                                    " WHERE ", qs(x,get(x, 'patid', 're')), " = '", id, "'", 
+                                    " AND ", qs(x,get(x, 'procid', 're')), " = '", procid, "'",
+                                    " AND ", qs(x,get(x, 'estim_type', 're')), " = '", estimate_type, "'",
+                                    ";"),
+                    err_msg=paste0("Error writing into the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=FALSE);
+  if( is.null(resid_ref) || nrow(resid_ref) != 1 )
   {
-    # Get the resid of the previous insertion in the retable:
-    resid_ref <- DBI::dbGetQuery(x$db_connection, 
-                                 paste0("SELECT ", qs(x,get(x, 'resid', 're')),
-                                        " FROM ", qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')), 
-                                        " WHERE ", qs(x,get(x, 'patid', 're')), " = '", id, "'", 
-                                        " AND ", qs(x,get(x, 'procid', 're')), " = '", procid, "'",
-                                        " AND ", qs(x,get(x, 'estim_type', 're')), " = '", estimate_type, "'",
-                                        ";"));
-    if( is.null(resid_ref) || nrow(resid_ref) != 1 )
-    {
-      # Error identifying the last inserted row!
-      .msg(paste0("Error identifying the last row written to the results table '",get(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-      return (NULL);
-    } else
-    {
-      return (resid_ref[1,1]);
-    }
-  } else if( x$db_type == "mssql" )
+    # Error identifying the last inserted row!
+    .msg(paste0("Error identifying the last row written to the results table '",get(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    return (NULL);
+  } else
   {
+    return (resid_ref[1,1]);
   }
   
   return (NULL);
@@ -1394,43 +1360,37 @@ write_swtable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
   cma$window.end   <- as.character(as.Date(cma$window.end,   format="%m/%d/%Y"), format="%Y-%m-%d");
 
   # Write all these info into the swtable:
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  result <- sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw')),
+                                 " (",
+                                 qs(x,get(x, 'resid', 'sw')),", ",
+                                 qs(x,get(x, 'patid', 'sw')),", ",
+                                 qs(x,get(x, 'wndid', 'sw')),", ",
+                                 qs(x,get(x, 'start', 'sw')),", ",
+                                 qs(x,get(x, 'end', 'sw')),", ",
+                                 qs(x,get(x, 'estim', 'sw')),
+                                 ")",
+                                 " VALUES ",
+                                 paste0("(",
+                                        vapply(1:nrow(cma), 
+                                               function(i) 
+                                                 paste0("'", resid, "', ",
+                                                        "'", cma[i,get(x, 'patid', 'ev')], "', ",
+                                                        "'", cma$window.ID[i], "', ",
+                                                        "'", cma$window.start[i], "', ",
+                                                        "'", cma$window.end[i], "', ",
+                                                        ifelse(!is.na(cma$CMA[i]), round(cma$CMA[i],4), "NULL")), 
+                                               character(1)),
+                                        ")",
+                                        collapse=", "),
+                                 ";"),
+                 err_msg=paste0("Error writing into the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=TRUE);
+  if( result != nrow(cma) ) # should've written exactly as many lines as in the data.frame
   {
-    # Write at once as usually there's few sliding windows:
-    result <- DBI::dbExecute(x$db_connection, 
-                             paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw')),
-                                    " (",
-                                    qs(x,get(x, 'resid', 'sw')),", ",
-                                    qs(x,get(x, 'patid', 'sw')),", ",
-                                    qs(x,get(x, 'wndid', 'sw')),", ",
-                                    qs(x,get(x, 'start', 'sw')),", ",
-                                    qs(x,get(x, 'end', 'sw')),", ",
-                                    qs(x,get(x, 'estim', 'sw')),
-                                    ")",
-                                    " VALUES ",
-                                    paste0("(",
-                                           vapply(1:nrow(cma), 
-                                                  function(i) 
-                                                    paste0("'", resid, "', ",
-                                                           "'", cma[i,get(x, 'patid', 'ev')], "', ",
-                                                           "'", cma$window.ID[i], "', ",
-                                                           "'", cma$window.start[i], "', ",
-                                                           "'", cma$window.end[i], "', ",
-                                                           ifelse(!is.na(cma$CMA[i]), round(cma$CMA[i],4), "NULL")), 
-                                                  character(1)),
-                                           ")",
-                                           collapse=", "),
-                                    ";"));
-    if( result != nrow(cma) ) # should've written exactly as many lines as in the data.frame
-    {
-      .msg(paste0("Error writing row to the sliding windows results table '",get(x, 'name', 'sw'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-      return (FALSE);
-    } else
-    {
-      return (TRUE);
-    }
-  } else if( x$db_type == "mssql" )
+    .msg(paste0("Error writing row to the sliding windows results table '",get(x, 'name', 'sw'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    return (FALSE);
+  } else
   {
+    return (TRUE);
   }
   
   return (TRUE);
@@ -1448,47 +1408,41 @@ write_petable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
   cma$episode.end   <- as.character(as.Date(cma$episode.end,   format="%m/%d/%Y"), format="%Y-%m-%d");
   
   # Write all these info into the swtable:
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  result <- sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe')),
+                                 " (",
+                                 qs(x,get(x, 'resid', 'pe')),", ",
+                                 qs(x,get(x, 'patid', 'pe')),", ",
+                                 qs(x,get(x, 'epid', 'pe')),", ",
+                                 qs(x,get(x, 'start', 'pe')),", ",
+                                 qs(x,get(x, 'gap', 'pe')),", ",
+                                 qs(x,get(x, 'duration', 'pe')),", ",
+                                 qs(x,get(x, 'end', 'pe')),", ",
+                                 qs(x,get(x, 'estim', 'pe')),
+                                 ")",
+                                 " VALUES ",
+                                 paste0("(",
+                                        vapply(1:nrow(cma), 
+                                               function(i) 
+                                                 paste0("'", resid, "', ",
+                                                        "'", cma[i,get(x, 'patid', 'ev')], "', ",
+                                                        "'", cma$episode.ID[i], "', ",
+                                                        "'", cma$episode.start[i], "', ",
+                                                        "'", cma$end.episode.gap.days[i], "', ",
+                                                        "'", cma$episode.duration[i], "', ",
+                                                        "'", cma$episode.end[i], "', ",
+                                                        ifelse(!is.na(cma$CMA[i]), round(cma$CMA[i],4), "NULL")), 
+                                               character(1)),
+                                        ")",
+                                        collapse=", "),
+                                 ";"),
+                 err_msg=paste0("Error writing row to the per episode results table '",get(x, 'name', 'pe'),"'!\n"), just_execute=TRUE);
+  if( result != nrow(cma) ) # should've written exactly as many lines as in the data.frame
   {
-    # Write at once as usually there's few sliding windows:
-    result <- DBI::dbExecute(x$db_connection, 
-                             paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe')),
-                                    " (",
-                                    qs(x,get(x, 'resid', 'pe')),", ",
-                                    qs(x,get(x, 'patid', 'pe')),", ",
-                                    qs(x,get(x, 'epid', 'pe')),", ",
-                                    qs(x,get(x, 'start', 'pe')),", ",
-                                    qs(x,get(x, 'gap', 'pe')),", ",
-                                    qs(x,get(x, 'duration', 'pe')),", ",
-                                    qs(x,get(x, 'end', 'pe')),", ",
-                                    qs(x,get(x, 'estim', 'pe')),
-                                    ")",
-                                    " VALUES ",
-                                    paste0("(",
-                                           vapply(1:nrow(cma), 
-                                                  function(i) 
-                                                    paste0("'", resid, "', ",
-                                                           "'", cma[i,get(x, 'patid', 'ev')], "', ",
-                                                           "'", cma$episode.ID[i], "', ",
-                                                           "'", cma$episode.start[i], "', ",
-                                                           "'", cma$end.episode.gap.days[i], "', ",
-                                                           "'", cma$episode.duration[i], "', ",
-                                                           "'", cma$episode.end[i], "', ",
-                                                           ifelse(!is.na(cma$CMA[i]), round(cma$CMA[i],4), "NULL")), 
-                                                  character(1)),
-                                           ")",
-                                           collapse=", "),
-                                    ";"));
-    if( result != nrow(cma) ) # should've written exactly as many lines as in the data.frame
-    {
-      .msg(paste0("Error writing row to the per episode results table '",get(x, 'name', 'pe'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-      return (FALSE);
-    } else
-    {
-      return (TRUE);
-    }
-  } else if( x$db_type == "mssql" )
+    .msg(paste0("Error writing row to the per episode results table '",get(x, 'name', 'pe'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    return (FALSE);
+  } else
   {
+    return (TRUE);
   }
   
   return (TRUE);
@@ -2046,6 +2000,8 @@ check_tables.SQL_db <- function(x)
 create_test_database <- function(x) UseMethod("create_test_database")
 create_test_database.SQL_db <- function(x)
 {
+  .msg(paste0("Creating the test database dervied from AdhereR::med.events...\n"), x$log_file, "m");
+  
   # Make sure the dates are in the right format:
   d <- AdhereR::med.events;
   d$DATE <- as.character(as.Date(d$DATE, format="%m/%d/%Y"), format="%Y-%m-%d"); # use the expected format for SQL's DATE
@@ -2056,56 +2012,29 @@ create_test_database.SQL_db <- function(x)
   
   # The events table:
   try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')))), silent=TRUE);
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," ( ",
-                                           qs(x,get(x, 'patid', 'ev')),    " VARCHAR(256) NOT NULL, ",
-                                           qs(x,get(x, 'date', 'ev')),     " DATE NOT NULL, ",
-                                           qs(x,get(x, 'perday', 'ev')),   " INT NOT NULL, ",
-                                           qs(x,get(x, 'category', 'ev')), " VARCHAR(1024) NULL DEFAULT NULL, ",
-                                           qs(x,get(x, 'duration', 'ev')), " INT NULL DEFAULT NULL );"));
-  } else if( x$db_type == "mssql" )
-  {
-    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," ( ",
-                                            qs(x,get(x, 'patid', 'ev')),    " VARCHAR(256) NOT NULL, ",
-                                            qs(x,get(x, 'date', 'ev')),     " DATE NOT NULL, ",
-                                            qs(x,get(x, 'perday', 'ev')),   " INT NOT NULL, ",
-                                            qs(x,get(x, 'category', 'ev')), " VARCHAR(1024) NULL DEFAULT NULL, ",
-                                            qs(x,get(x, 'duration', 'ev')), " INT NULL DEFAULT NULL );"));
-  }
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," ( ",
+                                   qs(x,get(x, 'patid', 'ev')),    " VARCHAR(256) NOT NULL, ",
+                                   qs(x,get(x, 'date', 'ev')),     " DATE NOT NULL, ",
+                                   qs(x,get(x, 'perday', 'ev')),   " INT NOT NULL, ",
+                                   qs(x,get(x, 'category', 'ev')), " VARCHAR(1024) NULL DEFAULT NULL, ",
+                                   qs(x,get(x, 'duration', 'ev')), " INT NULL DEFAULT NULL );"),
+                   err_msg=paste0("Error creating the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
   for( i in 1:nrow(d) )
   {
-    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-    {
-      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," VALUES (",
-                                             paste0("'",as.character(d[i,]),"'",collapse=","),
-                                             ");"));
-    } else if( x$db_type == "mssql" )
-    {
-      RODBC::sqlQuery(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," VALUES (",
-                                              paste0("'",as.character(d[i,]),"'",collapse=","),
-                                              ");"));
-    }
+    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),
+                                     " VALUES (",paste0("'",as.character(d[i,]),"'",collapse=","),");"),
+                     err_msg=paste0("Error writing into the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   }
   
   # The actions table: 
   try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac')))), silent=TRUE);
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac'))," ( ",
-                                         qs(x,get(x, 'actid', 'ac')),  " VARCHAR(256) NOT NULL, ",
-                                         qs(x,get(x, 'action', 'ac')), " VARCHAR(128) NULL DEFAULT NULL, ",
-                                         qs(x,get(x, 'params', 'ac')), " VARCHAR(5000) NULL DEFAULT NULL, ", 
-                                         "PRIMARY KEY (", get(x, 'actid', 'ac'), ") );"));
-  } else if( x$db_type == "mssql" )
-  {
-    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac'))," ( ",
-                                            qs(x,get(x, 'actid', 'ac')),  " VARCHAR(256) NOT NULL, ",
-                                            qs(x,get(x, 'action', 'ac')), " VARCHAR(128) NULL DEFAULT NULL, ",
-                                            qs(x,get(x, 'params', 'ac')), " VARCHAR(5000) NULL DEFAULT NULL, ", 
-                                            "PRIMARY KEY (", get(x, 'actid', 'ac'), ") );"));
-  }
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac'))," ( ",
+                                   qs(x,get(x, 'actid', 'ac')),  " VARCHAR(256) NOT NULL, ",
+                                   qs(x,get(x, 'action', 'ac')), " VARCHAR(128) NULL DEFAULT NULL, ",
+                                   qs(x,get(x, 'params', 'ac')), " VARCHAR(5000) NULL DEFAULT NULL, ", 
+                                   "PRIMARY KEY (", get(x, 'actid', 'ac'), ") );"),
+                   err_msg=paste0("Error creating the actions table '",get(x, 'name', 'ac'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one:
   tmp <- matrix(c('CMA1',               'CMA1',                    '',
                   'CMA2',               'CMA2',                    '',
@@ -2119,34 +2048,19 @@ create_test_database.SQL_db <- function(x)
   colnames(tmp) <- c(qs(x,get(x, 'actid', 'ac')), qs(x,get(x, 'action', 'ac')), qs(x,get(x, 'params', 'ac')));
   for( i in 1:nrow(tmp) )
   {
-    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-    {
-      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac')),
-                                           "(",paste0(colnames(tmp),collapse=","),")",
-                                           " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
-    } else if( x$db_type == "mssql" )
-    {
-      RODBC::sqlQuery(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac')),
-                                              "(",paste0(colnames(tmp),collapse=","),")",
-                                              " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
-    }
+    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac')),
+                                     "(",paste0(colnames(tmp),collapse=","),")",
+                                     " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"),
+                     err_msg=paste0("Error writing into the actions table '",get(x, 'name', 'ac'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   }
   
   # The medication classes table: 
   try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')))), silent=TRUE);
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc'))," ( ",
-                                         qs(x,get(x, 'mcid', 'mc')),  " VARCHAR(256) NOT NULL, ",
-                                         qs(x,get(x, 'class', 'mc')), " VARCHAR(5000) NULL DEFAULT NULL, ",
-                                         "PRIMARY KEY (", get(x, 'mcid', 'mc'), ") );"));
-  } else if( x$db_type == "mssql" )
-  {
-    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc'))," ( ",
-                                            qs(x,get(x, 'mcid', 'mc')),  " VARCHAR(256) NOT NULL, ",
-                                            qs(x,get(x, 'class', 'mc')), " VARCHAR(5000) NULL DEFAULT NULL, ",
-                                            "PRIMARY KEY (", get(x, 'mcid', 'mc'), ") );"));
-  }
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc'))," ( ",
+                                   qs(x,get(x, 'mcid', 'mc')),  " VARCHAR(256) NOT NULL, ",
+                                   qs(x,get(x, 'class', 'mc')), " VARCHAR(5000) NULL DEFAULT NULL, ",
+                                   "PRIMARY KEY (", qs(x,get(x, 'mcid', 'mc')), ") );"),
+                   err_msg=paste0("Error creating the medication classes table '",get(x, 'name', 'mc'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one:
   tmp <- matrix(c('*',      '*', # the special default * rule must be defined!
                   'A',      '[medA]',
@@ -2158,37 +2072,21 @@ create_test_database.SQL_db <- function(x)
   colnames(tmp) <- c(qs(x,get(x, 'mcid', 'mc')), qs(x,get(x, 'class', 'mc')));
   for( i in 1:nrow(tmp) )
   {
-    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-    {
-      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),
-                                           "(",paste0(colnames(tmp),collapse=","),")",
-                                           " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
-    } else if( x$db_type == "mssql" )
-    {
-      RODBC::sqlQuery(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),
-                                              "(",paste0(colnames(tmp),collapse=","),")",
-                                              " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
-    }
+    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),
+                                     "(",paste0(colnames(tmp),collapse=","),")",
+                                     " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"),
+                     err_msg=paste0("Error writing into the medication classes table '",get(x, 'name', 'mc'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   }
   
   # The processings table specifying what to do to which entries: 
   try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')))), silent=TRUE);
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr'))," ( ",
-                                         qs(x,get(x, 'procid', 'pr')),   " INT NOT NULL AUTO_INCREMENT, ",
-                                         qs(x,get(x, 'patid', 'pr')),    " VARCHAR(256) NOT NULL, ",
-                                         qs(x,get(x, 'category', 'pr')), " VARCHAR(256) NOT NULL, ",
-                                         qs(x,get(x, 'action', 'pr')),   " VARCHAR(256) NOT NULL, ",
-                                         "PRIMARY KEY (", get(x, 'procid', 'pr'), ") );"));
-  } else if( x$db_type == "mssql" )
-  {
-    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr'))," ( ",
-                                            qs(x,get(x, 'procid', 'pr')),   " INT IDENTITY(1,1) PRIMARY KEY, ",
-                                            qs(x,get(x, 'patid', 'pr')),    " VARCHAR(256) NOT NULL, ",
-                                            qs(x,get(x, 'category', 'pr')), " VARCHAR(256) NOT NULL, ",
-                                            qs(x,get(x, 'action', 'pr')),   " VARCHAR(256) NOT NULL );"));
-  }
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr'))," ( ",
+                                   qs(x,get(x, 'procid', 'pr')),   ifelse(x$db_type == "mssql", " INT IDENTITY(1,1), " ," INT NOT NULL AUTO_INCREMENT, "),
+                                   qs(x,get(x, 'patid', 'pr')),    " VARCHAR(256) NOT NULL, ",
+                                   qs(x,get(x, 'category', 'pr')), " VARCHAR(256) NOT NULL, ",
+                                   qs(x,get(x, 'action', 'pr')),   " VARCHAR(256) NOT NULL, ",
+                                   "PRIMARY KEY (", qs(x,get(x, 'procid', 'pr')), ") );"),
+                   err_msg=paste0("Error creating the processings table '",get(x, 'name', 'pr'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one:
   tmp <- matrix(c('*', '*',      'pCMA0', # the default actions
                   '*', '*',      'CMA9',
@@ -2213,111 +2111,60 @@ create_test_database.SQL_db <- function(x)
   colnames(tmp) <- c(qs(x,get(x, 'patid', 'pr')), qs(x,get(x, 'category', 'pr')), qs(x,get(x, 'action', 'pr')));
   for( i in 1:nrow(tmp) )
   {
-    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-    {
-      DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
-                                           "(",paste0(colnames(tmp),collapse=","),")",
-                                           " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
-    } else if( x$db_type == "mssql" )
-    {
-      RODBC::sqlQuery(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
-                                              "(",paste0(colnames(tmp),collapse=","),")",
-                                              " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"));
-    }
+    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
+                                     "(",paste0(colnames(tmp),collapse=","),")",
+                                     " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"),
+                     err_msg=paste0("Error writing into the processings table '",get(x, 'name', 'pr'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   }
   
   # The main results table: 
   try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')))), silent=TRUE);
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're'))," ( ",
-                                         qs(x,get(x, 'resid', 're')),      " INT NOT NULL AUTO_INCREMENT, ",
-                                         qs(x,get(x, 'patid', 'ev')),      " VARCHAR(256) NOT NULL, ",
-                                         qs(x,get(x, 'procid', 're')),     " INT NULL DEFAULT -1, ",
-                                         qs(x,get(x, 'estim', 're')),      " FLOAT NULL DEFAULT NULL, ",
-                                         qs(x,get(x, 'estim_type', 're')), " VARCHAR(256) NULL DEFAULT NULL, ",
-                                         qs(x,get(x, 'jpg', 're')),        " LONGBLOB NULL DEFAULT NULL, ",
-                                         qs(x,get(x, 'html', 're')),       " LONGBLOB NULL DEFAULT NULL, ", 
-                                         "PRIMARY KEY (", get(x, 'resid', 're'), ") );"));
-  } else if( x$db_type == "mssql" )
-  {
-    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're'))," ( ",
-                                            qs(x,get(x, 'resid', 're')),      " INT IDENTITY(1,1) PRIMARY KEY, ",
-                                            qs(x,get(x, 'patid', 'ev')),      " VARCHAR(256) NOT NULL, ",
-                                            qs(x,get(x, 'procid', 're')),     " INT NULL DEFAULT -1, ",
-                                            qs(x,get(x, 'estim', 're')),      " FLOAT NULL DEFAULT NULL, ",
-                                            qs(x,get(x, 'estim_type', 're')), " VARCHAR(256) NULL DEFAULT NULL, ",
-                                            qs(x,get(x, 'jpg', 're')),        " VARBINARY(MAX) NULL DEFAULT NULL, ",
-                                            qs(x,get(x, 'html', 're')),       " VARBINARY(MAX) NULL DEFAULT NULL );"));
-  }
-  
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're'))," ( ",
+                                   qs(x,get(x, 'resid', 're')),      ifelse(x$db_type == "mssql", " INT IDENTITY(1,1), " ," INT NOT NULL AUTO_INCREMENT, "),
+                                   qs(x,get(x, 'patid', 'ev')),      " VARCHAR(256) NOT NULL, ",
+                                   qs(x,get(x, 'procid', 're')),     " INT NULL DEFAULT -1, ",
+                                   qs(x,get(x, 'estim', 're')),      " FLOAT NULL DEFAULT NULL, ",
+                                   qs(x,get(x, 'estim_type', 're')), " VARCHAR(256) NULL DEFAULT NULL, ",
+                                   qs(x,get(x, 'jpg', 're')),        ifelse(x$db_type == "mssql", " VARBINARY(MAX), " ," LONGBLOB NULL DEFAULT NULL, "),
+                                   qs(x,get(x, 'html', 're')),       ifelse(x$db_type == "mssql", " VARBINARY(MAX), " ," LONGBLOB NULL DEFAULT NULL, "), 
+                                   "PRIMARY KEY (", qs(x,get(x, 'resid', 're')), ") );"),
+                   err_msg=paste0("Error creating the main results table '",get(x, 'name', 're'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+
   # The sliding windows results table: 
   try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw')))), silent=TRUE);
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw'))," ( ",
-                                         qs(x,get(x, 'resid', 'sw')), " INT NULL DEFAULT NULL, ",
-                                         qs(x,get(x, 'patid', 'sw')), " VARCHAR(256) NOT NULL, ",
-                                         qs(x,get(x, 'wndid', 'sw')), " INT NOT NULL, ",
-                                         qs(x,get(x, 'start', 'sw')), " DATE NOT NULL, ",
-                                         qs(x,get(x, 'end', 'sw')),   " DATE NOT NULL, ",
-                                         qs(x,get(x, 'estim', 'sw')), " FLOAT NULL DEFAULT NULL );"));
-  } else if( x$db_type == "mssql" )
-  {
-    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw'))," ( ",
-                                            qs(x,get(x, 'resid', 'sw')), " INT NULL DEFAULT NULL, ",
-                                            qs(x,get(x, 'patid', 'sw')), " VARCHAR(256) NOT NULL, ",
-                                            qs(x,get(x, 'wndid', 'sw')), " INT NOT NULL, ",
-                                            qs(x,get(x, 'start', 'sw')), " DATE NOT NULL, ",
-                                            qs(x,get(x, 'end', 'sw')),   " DATE NOT NULL, ",
-                                            qs(x,get(x, 'estim', 'sw')), " FLOAT NULL DEFAULT NULL );"));
-  }
-  
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw'))," ( ",
+                                   qs(x,get(x, 'resid', 'sw')), " INT NULL DEFAULT NULL, ",
+                                   qs(x,get(x, 'patid', 'sw')), " VARCHAR(256) NOT NULL, ",
+                                   qs(x,get(x, 'wndid', 'sw')), " INT NOT NULL, ",
+                                   qs(x,get(x, 'start', 'sw')), " DATE NOT NULL, ",
+                                   qs(x,get(x, 'end', 'sw')),   " DATE NOT NULL, ",
+                                   qs(x,get(x, 'estim', 'sw')), " FLOAT NULL DEFAULT NULL );"),
+                   err_msg=paste0("Error creating the sliding windows results table '",get(x, 'name', 'sw'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+
   # The per episode results table: 
   try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe')))), silent=TRUE);
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe'))," ( ",
-                                         qs(x,get(x, 'resid', 'pe')),    " INT NULL DEFAULT NULL, ",
-                                         qs(x,get(x, 'patid', 'pe')),    " VARCHAR(256) NOT NULL, ",
-                                         qs(x,get(x, 'epid', 'pe')),     " INT NOT NULL, ",
-                                         qs(x,get(x, 'start', 'pe')),    " DATE NOT NULL, ",
-                                         qs(x,get(x, 'gap', 'pe')),      " INT NULL DEFAULT NULL, ",
-                                         qs(x,get(x, 'duration', 'pe')), " INT NULL DEFAULT NULL, ",
-                                         qs(x,get(x, 'end', 'pe')),      " DATE NOT NULL, ",
-                                         qs(x,get(x, 'estim', 'pe')),    " FLOAT NULL DEFAULT NULL );"));
-  } else if( x$db_type == "mssql" )
-  {
-    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe'))," ( ",
-                                            qs(x,get(x, 'resid', 'pe')),    " INT NULL DEFAULT NULL, ",
-                                            qs(x,get(x, 'patid', 'pe')),    " VARCHAR(256) NOT NULL, ",
-                                            qs(x,get(x, 'epid', 'pe')),     " INT NOT NULL, ",
-                                            qs(x,get(x, 'start', 'pe')),    " DATE NOT NULL, ",
-                                            qs(x,get(x, 'gap', 'pe')),      " INT NULL DEFAULT NULL, ",
-                                            qs(x,get(x, 'duration', 'pe')), " INT NULL DEFAULT NULL, ",
-                                            qs(x,get(x, 'end', 'pe')),      " DATE NOT NULL, ",
-                                            qs(x,get(x, 'estim', 'pe')),    " FLOAT NULL DEFAULT NULL );"));
-  }
-  
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe'))," ( ",
+                                   qs(x,get(x, 'resid', 'pe')),    " INT NULL DEFAULT NULL, ",
+                                   qs(x,get(x, 'patid', 'pe')),    " VARCHAR(256) NOT NULL, ",
+                                   qs(x,get(x, 'epid', 'pe')),     " INT NOT NULL, ",
+                                   qs(x,get(x, 'start', 'pe')),    " DATE NOT NULL, ",
+                                   qs(x,get(x, 'gap', 'pe')),      " INT NULL DEFAULT NULL, ",
+                                   qs(x,get(x, 'duration', 'pe')), " INT NULL DEFAULT NULL, ",
+                                   qs(x,get(x, 'end', 'pe')),      " DATE NOT NULL, ",
+                                   qs(x,get(x, 'estim', 'pe')),    " FLOAT NULL DEFAULT NULL );"),
+                   err_msg=paste0("Error creating the per episode results table '",get(x, 'name', 'pe'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+
   # The updated info table: 
   try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')))), silent=TRUE);
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    DBI::dbExecute(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up'))," ( ",
-                                         qs(x,get(x, 'patid', 'up')), " VARCHAR(256) NOT NULL );"));
-    # Fill it in:
-    DBI::dbExecute(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),
-                                           " (",qs(x,get(x, 'patid', 'up')),") ",
-                                           " VALUES ",paste0("('",1:20,"')",collapse=", ")," ;")); # just the first 20 patients have updated info
-  } else if( x$db_type == "mssql" )
-  {
-    RODBC::sqlQuery(x$db_connection, paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up'))," ( ",
-                                            qs(x,get(x, 'patid', 'up')), " VARCHAR(256) NOT NULL );"));
-    # Fill it in:
-    RODBC::sqlQuery(x$db_connection, paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),
-                                           " (",qs(x,get(x, 'patid', 'up')),") ",
-                                           " VALUES ",paste0("('",1:20,"')",collapse=", ")," ;")); # just the first 20 patients have updated info
-  }
-  
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up'))," ( ",
+                                   qs(x,get(x, 'patid', 'up')), " VARCHAR(256) NOT NULL );"),
+                   err_msg=paste0("Error creating the updated info table '",get(x, 'name', 'up'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+  # Fill it in:
+  if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),
+                                   " (",qs(x,get(x, 'patid', 'up')),") ",
+                                   " VALUES ",paste0("('",1:20,"')",collapse=", ")," ;"), # just the first 20 patients have updated info
+                   err_msg=paste0("Error writing into the updated info table '",get(x, 'name', 'up'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+
+  .msg(paste0("Finished creating the test database...\n\n"), x$log_file, "m");
 }
                                     
