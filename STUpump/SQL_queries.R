@@ -818,6 +818,8 @@ sqlQ.SQL_db <- function(x, query, err_msg=NA, just_execute=FALSE)
 preprocess <- function(x, patient_id) UseMethod("preprocess")
 preprocess.SQL_db <- function(x)
 {
+  .msg(paste0("Preprocessing of the database started...\n"), x$log_file, "m");
+  
   # The processings table
   # Solve the "*" action (meaning the default ones, defined as the ones with * for both patid and category in the same table
   
@@ -900,87 +902,73 @@ preprocess.SQL_db <- function(x)
   # Solve the {} referencing to another classes within a class definition
   
   # Do we need to do anything about this?
-  ref_classes <- NULL;
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  ref_classes <- sqlQ(x, query=paste0("SELECT *",
+                                      " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),
+                                      " WHERE ",qs(x,get(x, 'class', 'mc'))," LIKE '%{%}%'",
+                                      " ;"),
+                      err_msg=NA, just_execute=FALSE);
+  if( !is.null(ref_classes) && nrow(ref_classes) > 0 )
   {
-    try(ref_classes <- DBI::dbGetQuery(x$db_connection, 
-                                       paste0("SELECT *",
-                                              " FROM ",qs(x,get(x, 'name', 'mc')),
-                                              " WHERE ",qs(x,get(x, 'class', 'mc'))," LIKE '%{%}%'",
-                                              " ;")),
-        silent=TRUE);
-    if( !is.null(ref_classes) && nrow(ref_classes) > 0 )
+    # There's at least one {} reference!
+    # Ok: create (if necessary) a new table and copy everything in it:
+    tmp_class_table <- paste0(get(x, 'prefix'),'tmp_',get(x, 'name', 'mc', append_prefix_to_table_name=FALSE));
+    
+    if( !(tmp_class_table %in% list_tables(x)) )
     {
-      # There's at least one {} reference!
-      # Ok: create (if necessary) a new table and copy everything in it:
-      tmp_class_table <- paste0(get(x, 'prefix'),'tmp_',get(x, 'name', 'mc', append_prefix_to_table_name=FALSE));
-      
-      if( !(tmp_class_table %in% list_tables(x)) )
+      # Seems not to exist: create it:
+      if( !table_create(x, tmp_class_table, duplicate_from=get(x, 'name', 'mc'), clear_if_exists=TRUE) ) return (NULL);
+    } else
+    {
+      # Seems to already exist: delete any entries it might have:
+      if( !table_clear(x, tmp_class_table) ) return (NULL);
+    }
+    
+    # Copy everything from the classes table:
+    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,tmp_class_table),
+                                     "SELECT * FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),
+                                     " ;"),
+                     err_msg=paste0("Error compying the non-defaults from the classes table into the temporary database '",tmp_class_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
+
+    # Replace the references by their definitions:
+    max_iterations <- 256; # the maximum depth of references to be solved
+    while( !is.null(ref_classes) && nrow(ref_classes) > 0 && max_iterations > 0 )
+    {
+      ref_classes$solved <- as.character(ref_classes[,get(x, 'class', 'mc')]);
+      for( i in 1:nrow(ref_classes) )
       {
-        # Seems not to exist: create it:
-        if( !table_create(x, tmp_class_table, duplicate_from=get(x, 'name', 'mc'), clear_if_exists=TRUE) ) return (NULL);
-      } else
-      {
-        # Seems to already exist: delete any entries it might have:
-        if( !table_clear(x, tmp_class_table) ) return (NULL);
-      }
-      
-      # Copy everything from the classes table:
-      tmp <- NULL;
-      try(tmp <- DBI::dbExecute(x$db_connection, 
-                                paste0("INSERT INTO ",qs(x,tmp_class_table),
-                                       "SELECT * FROM ", qs(x,get(x, 'name', 'mc')),
-                                       " ;")),
-          silent=TRUE);
-      if( is.null(tmp) )
-      {
-        .msg(paste0("Error compying the non-defaults from the classes table into the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-        return (NULL);
-      }
-      
-      # Replace the references by their definitions:
-      max_iterations <- 256; # the maximum depth of references to be solved
-      while( !is.null(ref_classes) && nrow(ref_classes) > 0 && max_iterations > 0 )
-      {
-        ref_classes$solved <- ref_classes[,get(x, 'class', 'mc')];
-        for( i in 1:nrow(ref_classes) )
+        updated_class <- FALSE;
+        
+        s <- as.character(ref_classes[i,get(x, 'class', 'mc')]);
+        
+        # Find the references to classes and extract their names (if any):
+        n <- gregexpr("\\{[^\\}]+\\}", s)[[1]];
+        if( length(n) == 1 && n == (-1) )
         {
-          updated_class <- FALSE;
-          
-          s <- as.character(ref_classes[i,get(x, 'class', 'mc')]);
-          
-          # Find the references to classes and extract their names (if any):
-          n <- gregexpr("\\{[^\\}]+\\}", s)[[1]];
-          if( length(n) == 1 && n == (-1) )
+          # No match -- what's going on?
+          .msg(paste0("Error finding class match {} where one should have been: '",s,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        } else
+        {
+          # Extract the names:
+          class_names <- substring(s, n+1, n+attr(n,"match.length")-2);
+          # Check for recursions:
+          if( any(class_names == ref_classes[i,get(x, 'mcid', 'mc')]) )
           {
-            # No match -- what's going on?
-            .msg(paste0("Error finding class match {} where one should have been: '",s,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+            # Recursion detected!
+            .msg(paste0("Medication class definitions cannot be recursive, but '",as.character(ref_classes[i,get(x, 'mcid', 'mc')]),"' seems to be!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+            return (NULL);
           } else
           {
-            # Extract the names:
-            class_names <- substring(s, n+1, n+attr(n,"match.length")-2);
-            # Check for recursions:
-            if( any(class_names == ref_classes[i,get(x, 'mcid', 'mc')]) )
+            # Replace the references by their definitions:
+            for( cn in class_names )
             {
-              # Recursion detected!
-              .msg(paste0("Medication class definitions cannot be recursive, but '",as.character(ref_classes[i,get(x, 'mcid', 'mc')]),"' seems to be!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-              return (NULL);
-            } else
-            {
-              # Replace the references by their definitions:
-              for( cn in class_names )
+              tmp <- sqlQ(x, query=paste0("SELECT ",qs(x,get(x, 'class', 'mc')),
+                                          " FROM ",qs(x,get(x, 'name')),".",qs(x,tmp_class_table),
+                                          " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",cn,"'",
+                                          " ;"),
+                          err_msg=paste0("Cannot find the definition of medication class '",cn,"'!\n"), just_execute=FALSE);
+              if( !is.null(tmp) )
               {
-                tmp <- NULL;
-                try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                                           paste0("SELECT ",qs(x,get(x, 'class', 'mc')),
-                                                  " FROM ", qs(x,tmp_class_table),
-                                                  " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",cn,"'",
-                                                  " ;")),
-                    silent=TRUE);
-                if( is.null(tmp) || nrow(tmp) == 0 )
-                {
-                  .msg(paste0("Cannot find the definition of medication class '",cn,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-                } else if( nrow(tmp) > 1 )
+                if( nrow(tmp) > 1 )
                 {
                   .msg(paste0("The definition of medication class '",cn,"' is not unique!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
                 } else
@@ -991,51 +979,42 @@ preprocess.SQL_db <- function(x)
               }
             }
           }
-          
-          # If updated, write it back to the SQL database:
-          if( updated_class )
-          {
-            tmp <- NULL;
-            try(tmp <- DBI::dbExecute(x$db_connection, 
-                                      paste0("UPDATE ",qs(x,tmp_class_table),
-                                             " SET ",qs(x,get(x, 'class', 'mc'))," = '",ref_classes$solved[i],"'",
-                                             " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",ref_classes[i,get(x, 'mcid', 'mc')],"'",
-                                             " AND ",qs(x,get(x, 'class', 'mc'))," = '",ref_classes[i,get(x, 'class', 'mc')],"'",
-                                             " ;")),
-                silent=TRUE);
-            if( is.null(tmp) )
-            {
-              .msg(paste0("Error updating the temporary database '",tmp_class_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-              return (NULL);
-            }
-          }
         }
         
-        # Redo the whole thing again until there's no more {} refs left:
-        ref_classes <- NULL;
-        try(ref_classes <- DBI::dbGetQuery(x$db_connection, 
-                                           paste0("SELECT *",
-                                                  " FROM ",qs(x,tmp_class_table),
-                                                  " WHERE ",qs(x,get(x, 'class', 'mc'))," LIKE '%{%}%'",
-                                                  " ;")),
-            silent=TRUE);
-        
-        max_iterations <- (max_iterations - 1);
-      }
-      if( max_iterations == 0 )
-      {
-        .msg(paste0("Too deep medication class references {}: not all have been solved, please reduce this referencing depth!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-        return (NULL);
+        # If updated, write it back to the SQL database:
+        if( updated_class )
+        {
+          if( is.null(sqlQ(x, query=paste0("UPDATE ",qs(x,get(x, 'name')),".",qs(x,tmp_class_table),
+                                           " SET ",qs(x,get(x, 'class', 'mc'))," = '",ref_classes$solved[i],"'",
+                                           " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '",ref_classes[i,get(x, 'mcid', 'mc')],"'",
+                                           " AND ",qs(x,get(x, 'class', 'mc'))," = '",ref_classes[i,get(x, 'class', 'mc')],"'",
+                                           " ;"),
+                           err_msg=paste0("Error updating the temporary database '",tmp_class_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
+        }
       }
       
-      # All good: use this temporary table as the medication classes table:
-      x$db_mctable_use_temp_table <- tmp_class_table;
+      # Redo the whole thing again until there's no more {} refs left:
+      ref_classes <- NULL;
+      try(ref_classes <- sqlQ(x, query=paste0("SELECT *",
+                                              " FROM ",qs(x,get(x, 'name')),".",qs(x,tmp_class_table),
+                                              " WHERE ",qs(x,get(x, 'class', 'mc'))," LIKE '%{%}%'",
+                                              " ;"),
+                              err_msg=NA, just_execute=FALSE), silent=TRUE);
       
+      max_iterations <- (max_iterations - 1);
     }
-  } else if( x$db_type == "mssql" )
-  {
-  }
+    if( max_iterations == 0 )
+    {
+      .msg(paste0("Too deep medication class references {}: not all have been solved, please reduce this referencing depth!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+      return (NULL);
+    }
+    
+    # All good: use this temporary table as the medication classes table:
+    x$db_mctable_use_temp_table <- tmp_class_table;
+  }  
   
+  
+  .msg(paste0("Preprocessing of the database ended.\n\n"), x$log_file, "m");
   
   # Return this (possibly modified) object:
   return (x);
