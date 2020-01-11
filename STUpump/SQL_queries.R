@@ -1157,7 +1157,7 @@ table_drop.SQL_db <- function(x, tbname)
   if( table_exists(x, tbname) )
   {
     # It does exist:
-    return( !is.null(sqlQ(x, query=paste0("DROP TABLE ",qs(x,tbname)," ;"),
+    return( !is.null(sqlQ(x, query=paste0("DROP TABLE ",qs(x,get(x,"name")),".",qs(x,tbname)," ;"),
                           err_msg=paste0("Error removing the table '",tbname,"'!\n"), just_execute=TRUE)) );
   } else
   {
@@ -1457,42 +1457,28 @@ list_patients <- function(x, with_updated_info_only=TRUE) UseMethod("list_patien
 list_patients.SQL_db <- function(x, with_updated_info_only=TRUE)
 {
   patient_ids <- NULL;
-  
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  if( !with_updated_info_only || # specifically requested to use all patients, or
+      is.null(up_info <- get_cols_info(x, get(x, 'name', 'up'))) || up_info$nrow == 0 ) # the updated_info table is not defined or empty
   {
-    tmp <- NULL;
-    if( !with_updated_info_only || # specifically requested to use all patients, or
-        is.null(up_info <- get_cols_info(x, get(x, 'name', 'up'))) || up_info$nrow == 0 ) # the updated_info table is not defined or empty
-    {
-      # List all patients in the events table:
-      try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get(x, 'patid', 'ev')),
-                                                         " FROM ",qs(x,get(x, 'name', 'ev')),";
-                                                         ")), 
-          silent=TRUE);
-      if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
-    } else
-    {
-      # List only those in the events table that are also mentioned in the updated_info table:
-      try(tmp <- DBI::dbGetQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get(x, 'name', 'ev')),".",qs(x,get(x, 'patid', 'ev')),
-                                                         " FROM ",qs(x,get(x, 'name', 'ev')),
-                                                         " INNER JOIN ",qs(x,get(x, 'name', 'up')),
-                                                         " ON ",qs(x,get(x, 'name', 'ev')),".",qs(x,get(x, 'patid', 'ev')),
-                                                         " = ",qs(x,get(x, 'name', 'up')),".",qs(x,get(x, 'patid', 'up')),
-                                                         ";")), 
-          silent=TRUE);
-      if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
-    }
-  } else if( x$db_type == "mssql" )
+    # List all patients in the events table:
+    tmp <- sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," VALUES (",
+                                paste0("'",as.character(d[i,]),"'",collapse=","),
+                                ");"),
+                err_msg=paste0("Error retrieving the list of patients to processes!\n"), just_execute=FALSE);
+    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
+  } else
   {
-    tmp <- NULL;
-    try(tmp <- RODBC::sqlQuery(x$db_connection, paste0("SELECT DISTINCT ",qs(x,get(x, 'patid', 'ev'))," FROM ",
-                                                       qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),";")), 
-        silent=TRUE);
+    # List only those in the events table that are also mentioned in the updated_info table:
+    tmp <- sqlQ(x, query=paste0("SELECT DISTINCT ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),".",qs(x,get(x, 'patid', 'ev')),
+                                " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),
+                                " INNER JOIN ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),
+                                " ON ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),".",qs(x,get(x, 'patid', 'ev')),
+                                " = ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')),".",qs(x,get(x, 'patid', 'up')),
+                                ";"),
+                err_msg=paste0("Error retrieving the list of patients to processes!\n"), just_execute=FALSE);
     if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
   }
-  
-  if( is.null(patient_ids) ) .msg(paste0("Error retrieving the list of patients to processes!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-  
+
   # Return patient ids:
   return (patient_ids);
 }
@@ -1503,36 +1489,16 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
 {
   db_pat_info <- NULL;
   
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    tmp <- NULL;
-    try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                               paste0("SELECT ",
-                                      if(is.na(cols)) "*" else paste0(qs(x,cols),collapse=","),
-                                      " FROM ",qs(x,get(x, 'name', 'ev')),
-                                      " WHERE ",qs(x,get(x, 'patid', 'ev')),
-                                      " IN (",paste0("'",patient_id,"'",collapse=","),")",
-                                      if(!is.na(maxrows)) paste0("LIMIT ",maxrows),
-                                      ";")),
-        silent=TRUE);
-    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) db_pat_info <- tmp;
-  } else if( x$db_type == "mssql" )
-  {
-    tmp <- NULL;
-    try(tmp <- RODBC::sqlQuery(x$db_connection, 
-                               paste0("SELECT ",
-                                      if(is.na(cols)) "*" else paste0(qs(x,cols),collapse=","),
-                                      " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),
-                                      " WHERE ",qs(x,get(x, 'patid', 'ev')),
-                                      " IN (",paste0("'",patient_id,"'",collapse=","),")",
-                                      if(!is.na(maxrows)) paste0("LIMIT ",maxrows),
-                                      ";")),
-        silent=TRUE);
-    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) db_pat_info <- tmp;
-  }
-  
-  if( is.null(db_pat_info) ) .msg(paste0("Error retreiving info for patient(s) ",paste0("'",patient_id,"'",collapse=", "),"!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-  
+  tmp <- sqlQ(x, query=paste0("SELECT ",
+                                   ifelse(is.na(cols), "*", paste0(qs(x,cols),collapse=",")),
+                                   " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')),
+                                   " WHERE ",qs(x,get(x, 'patid', 'ev')),
+                                   " IN (",paste0("'",patient_id,"'",collapse=","),")",
+                                   ifelse(is.na(maxrows), "",paste0("LIMIT ",maxrows)),
+                                   " ;"),
+                   err_msg=paste0("Error retreiving info for patient(s) ",paste0("'",patient_id,"'",collapse=", "),"!\n"), just_execute=FALSE);
+  if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) db_pat_info <- tmp;
+
   # Return the patient info:
   return (db_pat_info);
 }
@@ -2011,7 +1977,7 @@ create_test_database.SQL_db <- function(x)
   db_tables <- list_tables(x);
   
   # The events table:
-  try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev')))), silent=TRUE);
+  try(table_drop(x, get(x, 'name', 'ev')), silent=TRUE);
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," ( ",
                                    qs(x,get(x, 'patid', 'ev')),    " VARCHAR(256) NOT NULL, ",
                                    qs(x,get(x, 'date', 'ev')),     " DATE NOT NULL, ",
@@ -2028,7 +1994,7 @@ create_test_database.SQL_db <- function(x)
   }
   
   # The actions table: 
-  try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac')))), silent=TRUE);
+  try(table_drop(x, get(x, 'name', 'ac')), silent=TRUE);
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ac'))," ( ",
                                    qs(x,get(x, 'actid', 'ac')),  " VARCHAR(256) NOT NULL, ",
                                    qs(x,get(x, 'action', 'ac')), " VARCHAR(128) NULL DEFAULT NULL, ",
@@ -2055,7 +2021,7 @@ create_test_database.SQL_db <- function(x)
   }
   
   # The medication classes table: 
-  try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')))), silent=TRUE);
+  try(table_drop(x, get(x, 'name', 'mc')), silent=TRUE);
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc'))," ( ",
                                    qs(x,get(x, 'mcid', 'mc')),  " VARCHAR(256) NOT NULL, ",
                                    qs(x,get(x, 'class', 'mc')), " VARCHAR(5000) NULL DEFAULT NULL, ",
@@ -2079,7 +2045,7 @@ create_test_database.SQL_db <- function(x)
   }
   
   # The processings table specifying what to do to which entries: 
-  try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')))), silent=TRUE);
+  try(table_drop(x, get(x, 'name', 'pr')), silent=TRUE);
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr'))," ( ",
                                    qs(x,get(x, 'procid', 'pr')),   ifelse(x$db_type == "mssql", " INT IDENTITY(1,1), " ," INT NOT NULL AUTO_INCREMENT, "),
                                    qs(x,get(x, 'patid', 'pr')),    " VARCHAR(256) NOT NULL, ",
@@ -2118,7 +2084,7 @@ create_test_database.SQL_db <- function(x)
   }
   
   # The main results table: 
-  try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')))), silent=TRUE);
+  try(table_drop(x, get(x, 'name', 're')), silent=TRUE);
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're'))," ( ",
                                    qs(x,get(x, 'resid', 're')),      ifelse(x$db_type == "mssql", " INT IDENTITY(1,1), " ," INT NOT NULL AUTO_INCREMENT, "),
                                    qs(x,get(x, 'patid', 'ev')),      " VARCHAR(256) NOT NULL, ",
@@ -2131,7 +2097,7 @@ create_test_database.SQL_db <- function(x)
                    err_msg=paste0("Error creating the main results table '",get(x, 'name', 're'),"'!\n"), just_execute=TRUE)) ) return (NULL);
 
   # The sliding windows results table: 
-  try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw')))), silent=TRUE);
+  try(table_drop(x, get(x, 'name', 'sw')), silent=TRUE);
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'sw'))," ( ",
                                    qs(x,get(x, 'resid', 'sw')), " INT NULL DEFAULT NULL, ",
                                    qs(x,get(x, 'patid', 'sw')), " VARCHAR(256) NOT NULL, ",
@@ -2142,7 +2108,7 @@ create_test_database.SQL_db <- function(x)
                    err_msg=paste0("Error creating the sliding windows results table '",get(x, 'name', 'sw'),"'!\n"), just_execute=TRUE)) ) return (NULL);
 
   # The per episode results table: 
-  try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe')))), silent=TRUE);
+  try(table_drop(x, get(x, 'name', 'pe')), silent=TRUE);
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pe'))," ( ",
                                    qs(x,get(x, 'resid', 'pe')),    " INT NULL DEFAULT NULL, ",
                                    qs(x,get(x, 'patid', 'pe')),    " VARCHAR(256) NOT NULL, ",
@@ -2155,7 +2121,7 @@ create_test_database.SQL_db <- function(x)
                    err_msg=paste0("Error creating the per episode results table '",get(x, 'name', 'pe'),"'!\n"), just_execute=TRUE)) ) return (NULL);
 
   # The updated info table: 
-  try(table_drop(x, paste0(qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up')))), silent=TRUE);
+  try(table_drop(x, get(x, 'name', 'up')), silent=TRUE);
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'up'))," ( ",
                                    qs(x,get(x, 'patid', 'up')), " VARCHAR(256) NOT NULL );"),
                    err_msg=paste0("Error creating the updated info table '",get(x, 'name', 'up'),"'!\n"), just_execute=TRUE)) ) return (NULL);
