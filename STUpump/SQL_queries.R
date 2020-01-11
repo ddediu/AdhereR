@@ -463,7 +463,7 @@ SQL_db <- function(spec_file=NA,                                                
 ##
 
 # Get various attributes either for the whole database (table=NULL) or for a specific table:
-get <- function(x, variable, table=NULL, df.compat=FALSE) UseMethod("get")
+get <- function(x, variable, table=NULL, append_prefix_to_table_name=TRUE, df.compat=FALSE) UseMethod("get")
 get.SQL_db <- function(x, variable, 
                        table=NULL, append_prefix_to_table_name=TRUE,
                        df.compat=FALSE) # ensure these are valid data.frame names?
@@ -822,103 +822,77 @@ preprocess.SQL_db <- function(x)
   # Solve the "*" action (meaning the default ones, defined as the ones with * for both patid and category in the same table
   
   # Do we need to do anything about this?
-  default_actions <- default_actions_defined <- FALSE;
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+  default_actions <- sqlQ(x, query=paste0("SELECT COUNT(*)",
+                                          " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
+                                          " WHERE ",qs(x,get(x, 'action', 'pr'))," = '*'",
+                                          " ;"),
+                          err_msg=paste0("Error retreiving the number of default actions '*' from the processings table '",get(x, 'name', 'pr'),"'!\n"), just_execute=FALSE);
+  if( is.null(default_actions) || nrow(default_actions) == 0 )
   {
-    tmp <- NULL;
-    try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                               paste0("SELECT COUNT(*)",
-                                      " FROM ",qs(x,get(x, 'name', 'pr')),
-                                      " WHERE ",qs(x,get(x, 'action', 'pr'))," = '*'",
-                                      " ;")),
-        silent=TRUE);
-    if( is.null(tmp) || nrow(tmp) == 0 )
+    return (NULL);
+  } else
+  {
+    default_actions <- (default_actions[1,1] > 0);
+  }
+  
+  if( default_actions )
+  {
+    # Ok, are there defaults defined?
+    default_actions_defined <- sqlQ(x, query=paste0("SELECT COUNT(*)",
+                                                    " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
+                                                    " WHERE ",qs(x,get(x, 'patid', 'pr'))," = '*'",
+                                                    " AND ",qs(x,get(x, 'category', 'pr'))," = '*'",
+                                                    " ;"),
+                                    err_msg=paste0("Error retreiving the defaults for the processings table '",get(x, 'name', 'pr'),"'!\n"), just_execute=FALSE);
+    if( is.null(default_actions_defined) || nrow(default_actions_defined) == 0 )
     {
-      # We can't get the count!
-      .msg(paste0("Error retreiving the number of default actions '*' from the processings table '",get(x, 'name', 'pr'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
       return (NULL);
     } else
     {
-      default_actions <- (tmp[1,1] > 0);
+      default_actions_defined <- (default_actions_defined[1,1] > 0);
     }
     
-    if( default_actions )
+    if( default_actions_defined )
     {
-      # Ok, are there defaults defined?
-      tmp <- NULL;
-      try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                                 paste0("SELECT COUNT(*)",
-                                        " FROM ",qs(x,get(x, 'name', 'pr')),
-                                        " WHERE ",qs(x,get(x, 'patid', 'pr'))," = '*'",
-                                        " AND ",qs(x,get(x, 'category', 'pr'))," = '*'",
-                                        " ;")),
-          silent=TRUE);
-      if( is.null(tmp) || nrow(tmp) == 0 )
+      # Ok: create (if necessary) a new processings table and replace the default actions by the defaults:
+      tmp_procs_table <- paste0(get(x, 'prefix'),'tmp_',get(x, 'name', 'pr', append_prefix_to_table_name=FALSE));
+      
+      if( !(tmp_procs_table %in% list_tables(x)) )
       {
-        # We can't get the count!
-        .msg(paste0("Error retreiving the defaults for the processings table '",get(x, 'name', 'pr'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-        return (NULL);
+        # Seems not to exist: create it:
+        if( !table_create(x, tmp_procs_table, duplicate_from=get(x, 'name', 'pr'), clear_if_exists=TRUE) ) return (NULL);
       } else
       {
-        default_actions_defined <- (tmp[1,1] > 0);
+        # Seems to already exist: delete any entries it might have:
+        if( !table_clear(x, tmp_procs_table) ) return (NULL);
       }
       
-      if( default_actions_defined )
-      {
-        # Ok: create (if necessary) a new processings table and replace the default actions by the defaults:
-        tmp_procs_table <- paste0(get(x, 'prefix'),'tmp_',get(x, 'name', 'pr', append_prefix_to_table_name=FALSE));
-        
-        if( !(tmp_procs_table %in% list_tables(x)) )
-        {
-          # Seems not to exist: create it:
-          if( !table_create(x, tmp_procs_table, duplicate_from=get(x, 'name', 'pr'), clear_if_exists=TRUE) ) return (NULL);
-        } else
-        {
-          # Seems to already exist: delete any entries it might have:
-          if( !table_clear(x, tmp_procs_table) ) return (NULL);
-        }
-        
-        # Copy the non-"*" entries from the processing table:
-        tmp <- NULL;
-        try(tmp <- DBI::dbExecute(x$db_connection, 
-                                  paste0("INSERT INTO ",qs(x,tmp_procs_table),
-                                         "SELECT * FROM ", qs(x,get(x, 'name', 'pr')),
-                                         " WHERE ",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'action', 'pr'))," <> '*'",
-                                         " ;")),
-            silent=TRUE);
-        if( is.null(tmp) )
-        {
-          .msg(paste0("Error compying the non-defaults from the processings into the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-          return (NULL);
-        }
-        
-        # Insert the defaults corresponsind to the "*" entries from the processing table:
-        tmp <- NULL;
-        try(tmp <- DBI::dbExecute(x$db_connection, 
-                                  paste0("INSERT INTO ",qs(x,tmp_procs_table),
-                                         " (",qs(x,get(x, 'patid', 'pr')),", ",qs(x,get(x, 'category', 'pr')),", ",qs(x,get(x, 'action', 'pr')),")",
-                                         " SELECT ",
-                                         "`a`.",qs(x,get(x, 'patid', 'pr')),",",
-                                         "`a`.",qs(x,get(x, 'category', 'pr')),",",
-                                         "`b`.",qs(x,get(x, 'action', 'pr')),
-                                         " FROM ",qs(x,get(x, 'name', 'pr'))," `a`, ",qs(x,get(x, 'name', 'pr'))," `b`",
-                                         " WHERE ","`a`.",qs(x,get(x, 'action', 'pr'))," = '*'",
-                                         " AND ","`b`.",qs(x,get(x, 'patid', 'pr'))," = '*'",
-                                         " AND ","`b`.",qs(x,get(x, 'category', 'pr'))," = '*'",
-                                         " ;")),
-            silent=TRUE);
-        if( is.null(tmp) )
-        {
-          .msg(paste0("Error solving the default actions in the temporary database '",tmp_procs_table,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-          return (NULL);
-        }
-        
-        # All good: use this temporary table as the processing table:
-        x$db_prtable_use_temp_table <- tmp_procs_table;
-      }
+      # Copy the non-"*" entries from the processing table:
+      if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,tmp_procs_table),
+                                       " SELECT ",qs(x,get(x, 'patid', 'pr')),", ",qs(x,get(x, 'category', 'pr')),", ",qs(x,get(x, 'action', 'pr')),
+                                       " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
+                                       " WHERE ",qs(x,get(x, 'action', 'pr'))," <> '*'",
+                                       " ;"),
+                       err_msg=paste0("Error compying the non-defaults from the processings into the temporary database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
+      
+      # Insert the defaults corresponsind to the "*" entries from the processing table:
+      if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,tmp_procs_table),
+                                       " (",qs(x,get(x, 'patid', 'pr')),", ",qs(x,get(x, 'category', 'pr')),", ",qs(x,get(x, 'action', 'pr')),")",
+                                       " SELECT ",
+                                       qs(x,'a'),".",qs(x,get(x, 'patid', 'pr')),",",
+                                       qs(x,'a'),".",qs(x,get(x, 'category', 'pr')),",",
+                                       qs(x,'b'),".",qs(x,get(x, 'action', 'pr')),
+                                       " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr'))," ",qs(x,'a'),", ",
+                                       qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr'))," ",qs(x,'b'),
+                                       " WHERE ",qs(x,'a'),".",qs(x,get(x, 'action', 'pr'))," = '*'",
+                                       " AND ",qs(x,'b'),".",qs(x,get(x, 'patid', 'pr'))," = '*'",
+                                       " AND ",qs(x,'b'),".",qs(x,get(x, 'category', 'pr'))," = '*'",
+                                       " ;"),
+                       err_msg=paste0("Error solving the default actions in the temporary database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
+      
+      # All good: use this temporary table as the processing table:
+      x$db_prtable_use_temp_table <- tmp_procs_table;
     }
-  } else if( x$db_type == "mssql" )
-  {
   }
   
   
@@ -1087,28 +1061,22 @@ table_create.SQL_db <- function(x, tbname, duplicate_from=NA, clear_if_exists=TR
   if( !table_exists(x, tbname) )
   {
     # Does not exist yet: create it de novo:
-    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
+    if( is.na(duplicate_from) )
     {
-      tmp <- NULL;
-      if( is.na(duplicate_from) )
+      # Create a new table:
+      if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'ev'))," ;"),
+                       err_msg=paste0("Error creating the table '",tbname,"'!\n"), just_execute=TRUE)) ) return (FALSE);
+    } else
+    {
+      # Duplicate an existing table:
+      if( !table_exists(x, duplicate_from) )
       {
-        # Create anew table:
-        try(tmp <- DBI::dbExecute(x$db_connection, 
-                                  paste0("CREATE TABLE ",qs(x,tbname)," ;")),
-            silent=TRUE);
-        if( is.null(tmp) )
-        {
-          .msg(paste0("Error creating the table '",tbname,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-          return (FALSE);
-        }
+        .msg(paste0("Error creating the table '",tbname,"': the table that should be duplicated '",duplicate_from,"' does not seem to exist!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+        return (FALSE);
       } else
       {
-        # Duplicate a table:
-        if( !table_exists(x, duplicate_from) )
-        {
-          .msg(paste0("Error creating the table '",tbname,"': the table that should be duplicated '",duplicate_from,"' does not seem to exist!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-          return (FALSE);
-        } else
+        # Duplication is database-dependent:
+        if( x$db_type %in% c("mariadb", "mysql") )
         {
           try(tmp <- DBI::dbExecute(x$db_connection, 
                                     paste0("CREATE TABLE ",qs(x,tbname)," LIKE ",qs(x,duplicate_from)," ;")),
@@ -1118,16 +1086,26 @@ table_create.SQL_db <- function(x, tbname, duplicate_from=NA, clear_if_exists=TR
             .msg(paste0("Error duplicating table '",tbname,"' from table '",duplicate_from,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
             return (NULL);
           }
+        } else  if( x$db_type == "mssql" )
+        {
+          try(tmp <- RODBC::sqlQuery(x$db_connection, 
+                                     paste0("SELECT * INTO ",qs(x,get(x, 'name')),".",qs(x,tbname),
+                                            " FROM ",qs(x,get(x, 'name')),".",qs(x,duplicate_from),
+                                            " WHERE 1 = 0 ;")),
+              silent=TRUE);
+          if( is.null(tmp) )
+          {
+            .msg(paste0("Error duplicating table '",tbname,"' from table '",duplicate_from,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+            return (NULL);
+          }
         }
       }
-    } else if( x$db_type == "mssql" )
-    {
     }
   }
   
   # Clear it:
   if( clear_if_exists ) return (table_clear(x,tbname));
-
+  
   return (TRUE); # all seems fine...
 }
 
@@ -1139,7 +1117,7 @@ table_clear.SQL_db <- function(x, tbname)
   if( table_exists(x, tbname) )
   {
     # It does exist:
-    return( !is.null(sqlQ(x, query=paste0("TRUNCATE TABLE ",qs(x,tbname)," ;"),
+    return( !is.null(sqlQ(x, query=paste0("TRUNCATE TABLE ",qs(x,get(x,"name")),".",qs(x,tbname)," ;"),
                           err_msg=paste0("Error clearing the table '",tbname,"'!\n"), just_execute=TRUE)) );
   } else
   {
@@ -1267,10 +1245,10 @@ get_cols_info.SQL_db <- function(x, db_table)
 }
 
 # Get the column names for a given table:
-get_col_names <- function(x) UseMethod("get_col_names")
-get_col_names.SQL_db <- function(x)
+get_col_names <- function(x, db_table) UseMethod("get_col_names")
+get_col_names.SQL_db <- function(x, db_table)
 {
-  db_cols_info <- get_cols_info(x);
+  db_cols_info <- get_cols_info(x, db_table);
   if( !is.null(db_cols_info) && nrow(db_cols_info) > 0 )
   {
     return (as.character(db_cols_info$column));
@@ -1880,26 +1858,11 @@ check_tables.SQL_db <- function(x)
   
   default_class_defined <- function(x) 
   {
-    if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-    {
-      result <- DBI::dbGetQuery(x$db_connection, 
-                               paste0("SELECT COUNT(*) FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),
-                                      " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '*' AND ",qs(x,get(x, 'class', 'mc'))," = '*' ",
-                                      ";"));
-      if( !is.null(result) && result[1,1] > 0 )
-      {
-        return (TRUE);
-      } else
-      {
-        msg <- paste0("The default class ('*','*') is not defined in the classes table '",get(x, 'name', 'mc'),"'!\n");
-        .msg(msg, x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-        return (FALSE);
-      }
-    } else if( x$db_type == "mssql" )
-    {
-    }
-    
-    return (FALSE);
+    tmp <- sqlQ(x, query=paste0("SELECT COUNT(*) FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'mc')),
+                                          " WHERE ",qs(x,get(x, 'mcid', 'mc'))," = '*' AND ",qs(x,get(x, 'class', 'mc'))," = '*' ",
+                                          ";"),
+                          err_msg=paste0("The default class ('*','*') is not defined in the classes table '",get(x, 'name', 'mc'),"'!\n"), just_execute=TRUE);
+    return (!is.null(tmp) && tmp > 0 );
   }
   
   # Events:
