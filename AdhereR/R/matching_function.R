@@ -247,6 +247,8 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #'      by special durations or treatment interruptions of type "continue".
 #'      \item \code{CARRYOVER.DURATION} the number of days \emph{after} the current duration affected
 #'      by special durations or treatment interruptions of type "carryover".
+#'      \item \code{EVENT.ID}: in case of multiple events with the same dispensing date
+#'      (e.g. for dosage changes or interruptions); a unique ID starting at 1 for the first event
 #'      \item \code{tot.presc.interruptions} the total number of prescription interruptions
 #'      per patient for a specific medication.
 #'      \item \code{tot.dosage.changes} the total number of dosage changes per patient
@@ -935,7 +937,7 @@ compute_event_durations <- function(disp.data = NULL,
 
                     med_event <-  rbind(med_event,
                                         cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
-                                              all.events[,3:9]),
+                                              all.events[,3:10]),
                                         fill = TRUE);
 
                     break;
@@ -943,7 +945,7 @@ compute_event_durations <- function(disp.data = NULL,
                   {
                     med_event <-  rbind(med_event,
                                         cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
-                                              all.events[,3:9]),
+                                              all.events[,3:10]),
                                         fill = TRUE);
 
                     break;
@@ -954,7 +956,7 @@ compute_event_durations <- function(disp.data = NULL,
 
                     med_event <-  rbind(med_event,
                                         cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
-                                              all.events[,3:9]),
+                                              all.events[,3:10]),
                                         fill = TRUE);
                     break;
                   } else # if supply duration is longer than the sum of the durations
@@ -965,7 +967,7 @@ compute_event_durations <- function(disp.data = NULL,
 
                     med_event <-  rbind(med_event,
                                         cbind(curr_disp[,c("ID", medication.class.colnames, "TOTAL.DOSE", "DISP.DATE"), with = FALSE],
-                                              all.events[,3:9]),
+                                              all.events[,3:10]),
                                         fill = TRUE);
                     next;
                   }
@@ -1494,6 +1496,12 @@ compute_event_durations <- function(disp.data = NULL,
            new = c(ID.colname,
                    presc.daily.dose.colname)
   )
+
+  # only return special periods for selected patients
+  if(!is.null(special.periods.data)) {
+    special.periods.data.copy <- special.periods.data.copy[ID %in% disp_presc_IDs]
+  } else {special.periods.data.copy <- NULL}
+
 if(!is.null(special.periods.data.copy)) {
   setnames(special.periods.data.copy,
            old = c("ID"),
@@ -1512,11 +1520,6 @@ if(progress.bar == TRUE) { close(pb) }
 
   }
 
-  # only return special periods for selected patients
-  if(!is.null(special.periods.data)) {
-    special.periods.data.copy <- special.periods.data.copy[get(ID.colname) %in% disp_presc_IDs]
-  } else {special.periods.data.copy <- NULL}
-
   # set order of column names
   opt_cols <- c("SPECIAL.DURATION","tot.presc.interruptions","tot.dosage.changes","CARRYOVER.DURATION")
   opt_cols <- opt_cols[opt_cols %in% names(events_output_durations)]
@@ -1526,6 +1529,7 @@ if(progress.bar == TRUE) { close(pb) }
                 disp.date.colname,
                 total.dose.colname,
                 presc.daily.dose.colname,
+                "EVENT.ID",
                 "DISP.START",
                 "DURATION",
                 "episode.start",
@@ -2288,13 +2292,15 @@ time_to_initiation <- function(presc.data = NULL,
   }
 
   presc.data <- presc.data[,c(ID.colname, presc.start.colname, medication.class.colnames), with = FALSE]
+
+  # only first dispensing events with a duration
   disp.data <- disp.data[,c(ID.colname, disp.date.colname, medication.class.colnames), with = FALSE]
 
   # convert dates
   presc.data[,(presc.start.colname) := as.Date(get(presc.start.colname), format = date.format)];
   disp.data[,(disp.date.colname) := as.Date(get(disp.date.colname), format = date.format)];
 
-  # set join date to the beginning of special durations
+  # set join date to the beginning of prescription episodes
   presc.data[, join_date := get(presc.start.colname)]
   disp.data[, join_date := get(disp.date.colname)]
 
