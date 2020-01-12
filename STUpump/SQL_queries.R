@@ -97,7 +97,7 @@ SQL_db <- function(spec_file=NA,                                                
     if( !("psswd" %in% names(db_info$database)) ) 
       .msg(paste0("Error in the config file '",spec_file,"': 'database:psswd' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     db_psswd <- db_info$database$psswd;
-    .msg(paste0("Config: read 'database:psswd' = '",paste0(rep("*",nchar(db_psswd)),collapse=""),"'.\n"), log_file, "m");
+    .msg(paste0("Config: read 'database:psswd' = '",ifelse(is.null(db_psswd) || is.na(db_psswd), "***", paste0(rep("*",nchar(db_psswd)),collapse="")),"'.\n"), log_file, "m");
     
     if( !("name" %in% names(db_info$database)) ) 
       .msg(paste0("Error in the config file '",spec_file,"': 'database:name' entry is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
@@ -660,7 +660,7 @@ qfq_get.SQL_db <- function(x, variable, table=NULL, table_name=NULL)
 {
   ret_val <- c();
   
-  if( TRUE || x$db_type == "mssql" )
+  if( x$db_type != "sqlite" )
   {
     ret_val <- c(ret_val, qs(x,get(x,"name"))); # must be prefixed by the database's name
   }
@@ -732,7 +732,7 @@ connect.SQL_db <- function(x)
   {
     # SQLite:
     require(RSQLite);
-    x$db_connection <- DBI::dbConnect(RSQLite::SQLite(), host=x$db_host);
+    x$db_connection <- DBI::dbConnect(RSQLite::SQLite(), dbname=x$db_name);
   } else if( x$db_type == "mssql" )
   {
     #  Microsoft SQL Server:
@@ -800,9 +800,9 @@ disconnect.SQL_db <- function(x)
 reset_results <- function(x) UseMethod("reset_results")
 reset_results.SQL_db <- function(x)
 {
-  table_clear(x, get(x, 'name', 're'));
-  table_clear(x, get(x, 'name', 'sw'));
-  table_clear(x, get(x, 'name', 'pe'));
+  try(table_clear(x, get(x, 'name', 're')), silent=TRUE);
+  try(table_clear(x, get(x, 'name', 'sw')), silent=TRUE);
+  try(table_clear(x, get(x, 'name', 'pe')), silent=TRUE);
 
   .msg("Reset: database results tables truncated...\n", x$log_file, "m");
   
@@ -897,16 +897,10 @@ preprocess.SQL_db <- function(x)
       # Ok: create (if necessary) a new processings table and replace the default actions by the defaults:
       tmp_procs_table <- paste0(get(x, 'prefix'),'tmp_',get(x, 'name', 'pr', append_prefix_to_table_name=FALSE));
       
-      if( !(tmp_procs_table %in% list_tables(x)) )
-      {
-        # Seems not to exist: create it:
-        if( !table_create(x, tmp_procs_table, duplicate_from=get(x, 'name', 'pr'), clear_if_exists=TRUE) ) return (NULL);
-      } else
-      {
-        # Seems to already exist: delete any entries it might have:
-        if( !table_clear(x, tmp_procs_table) ) return (NULL);
-      }
-      
+      # Create the table (delete it first if it already existed):
+      if( tmp_procs_table %in% list_tables(x) ) try(table_drop(x, tmp_procs_table), silent=TRUE);
+      if( !table_create(x, tmp_procs_table, duplicate_from=get(x, 'name', 'pr'), clear_if_exists=TRUE) ) return (NULL);
+
       # Copy the non-"*" entries from the processing table:
       if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x,table_name=tmp_procs_table),
                                        " (",qs_get(x, 'patid', 'pr'),", ",qs_get(x, 'category', 'pr'),", ",qs_get(x, 'action', 'pr'),")",
@@ -951,16 +945,10 @@ preprocess.SQL_db <- function(x)
     # Ok: create (if necessary) a new table and copy everything in it:
     tmp_class_table <- paste0(get(x, 'prefix'),'tmp_',get(x, 'name', 'mc', append_prefix_to_table_name=FALSE));
     
-    if( !(tmp_class_table %in% list_tables(x)) )
-    {
-      # Seems not to exist: create it:
-      if( !table_create(x, tmp_class_table, duplicate_from=get(x, 'name', 'mc'), clear_if_exists=TRUE) ) return (NULL);
-    } else
-    {
-      # Seems to already exist: delete any entries it might have:
-      if( !table_clear(x, tmp_class_table) ) return (NULL);
-    }
-    
+    # Create the table (delete it first if it already existed):
+    if( tmp_class_table %in% list_tables(x) ) try(table_drop(x, tmp_class_table), silent=TRUE);
+    if( !table_create(x, tmp_class_table, duplicate_from=get(x, 'name', 'mc'), clear_if_exists=TRUE) ) return (NULL);
+
     # Copy everything from the classes table:
     if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x,table_name=tmp_class_table),
                                      "SELECT * FROM ",qfq_get(x, 'name', 'mc'),
@@ -1095,6 +1083,8 @@ table_create.SQL_db <- function(x, tbname, duplicate_from=NA, clear_if_exists=TR
         # Duplication is database-dependent:
         if( x$db_type %in% c("mariadb", "mysql") )
         {
+          # For MySQL this also duplicates the key and autoincrement:
+          tmp <- NULL;
           try(tmp <- DBI::dbExecute(x$db_connection, 
                                     paste0("CREATE TABLE ",qs(x,tbname)," LIKE ",qs(x,duplicate_from)," ;")),
               silent=TRUE);
@@ -1103,8 +1093,34 @@ table_create.SQL_db <- function(x, tbname, duplicate_from=NA, clear_if_exists=TR
             .msg(paste0("Error duplicating table '",tbname,"' from table '",duplicate_from,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
             return (NULL);
           }
-        } else  if( x$db_type == "mssql" )
+        } else if( x$db_type == "sqlite" )
         {
+          # For SQLite we use a trick by reusing the SQL command used to create the original table:
+          try(sql_cmd <- DBI::dbGetQuery(x$db_connection, 
+                                         paste0("SELECT sql FROM sqlite_master WHERE type='table' AND name='",duplicate_from,"' ;")),
+              silent=TRUE);
+          if( is.null(sql_cmd) || nrow(sql_cmd) != 1 )
+          {
+            .msg(paste0("Error duplicating table '",tbname,"' from table '",duplicate_from,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+            return (NULL);
+          }
+          
+          sql_cmd <- as.character(sql_cmd[1,1]);
+          sql_cmd <- gsub(duplicate_from, tbname, sql_cmd, fixed=TRUE); # replace the source table name by the destination one
+          
+          tmp <- NULL;
+          try(tmp <- DBI::dbExecute(x$db_connection, 
+                                    sql_cmd),
+              silent=TRUE);
+          if( is.null(tmp) )
+          {
+            .msg(paste0("Error duplicating table '",tbname,"' from table '",duplicate_from,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+            return (NULL);
+          }
+        } else if( x$db_type == "mssql" )
+        {
+          # For Microsoft SQL this seems to also duplicate the key and identityt(1,1):
+          tmp <- NULL;
           try(tmp <- RODBC::sqlQuery(x$db_connection, 
                                      paste0("SELECT * INTO ",qfq_get(x,table_name=tbname),
                                             " FROM ",qfq_get(x,table_name=duplicate_from),
@@ -1121,7 +1137,7 @@ table_create.SQL_db <- function(x, tbname, duplicate_from=NA, clear_if_exists=TR
   }
   
   # Clear it:
-  if( clear_if_exists ) return (table_clear(x,tbname));
+  if( clear_if_exists ) try(table_clear(x,tbname), silent=TRUE);
   
   return (TRUE); # all seems fine...
 }
@@ -1134,7 +1150,9 @@ table_clear.SQL_db <- function(x, tbname)
   if( table_exists(x, tbname) )
   {
     # It does exist:
-    return( !is.null(sqlQ(x, query=paste0("TRUNCATE TABLE ",qfq_get(x,table_name=tbname)," ;"),
+    return( !is.null(sqlQ(x, query=paste0(ifelse(x$db_type == "sqlite", "DELETE FROM ","TRUNCATE TABLE "),
+                                          qfq_get(x,table_name=tbname),
+                                          " ;"),
                           err_msg=paste0("Error clearing the table '",tbname,"'!\n"), just_execute=TRUE)) );
   } else
   {
@@ -1667,7 +1685,8 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
                               "event.duration.colname='",get(x, 'duration', 'ev'),"', ",
                               ifelse(!is.na(get(x, 'perday', 'ev')), paste0("event.daily.dose.colname='",get(x, 'perday', 'ev'),"', "), ""),
                               ifelse(!is.na(get(x, 'category', 'ev')), paste0("medication.class.colname='",get(x, 'category', 'ev'),"' "), ""),
-                              ifelse(procs_action$params[1] != "", paste0(", ",procs_action$params[1]),""), 
+                              ifelse(procs_action$params[1] != "", paste0(", ",procs_action$params[1]),""),", ",
+                              "date.format='%Y-%m-%d'", # make sure we use the SQL date format
                               ")");
   try(procs_action_expr <- parse(text=procs_action_call), silent=TRUE);
   if( is.null(procs_action_expr) )
@@ -2018,11 +2037,15 @@ create_test_database.SQL_db <- function(x)
   # The processings table specifying what to do to which entries: 
   try(table_drop(x, get(x, 'name', 'pr')), silent=TRUE);
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 'pr')," ( ",
-                                   qs_get(x, 'procid', 'pr'),   ifelse(x$db_type == "mssql", " INT IDENTITY(1,1), " ," INT NOT NULL AUTO_INCREMENT, "),
+                                   qs_get(x, 'procid', 'pr'),   switch(x$db_type,
+                                                                       "mssql"=" INT IDENTITY(1,1) PRIMARY KEY, ",
+                                                                       "sqlite"=" INTEGER PRIMARY KEY AUTOINCREMENT, ",
+                                                                       "mariadb"=,
+                                                                       "mysql"=" INT NOT NULL AUTO_INCREMENT PRIMARY KEY, "),
                                    qs_get(x, 'patid', 'pr'),    " VARCHAR(256) NOT NULL, ",
                                    qs_get(x, 'category', 'pr'), " VARCHAR(256) NOT NULL, ",
-                                   qs_get(x, 'action', 'pr'),   " VARCHAR(256) NOT NULL, ",
-                                   "PRIMARY KEY (", qs_get(x, 'procid', 'pr'), ") );"),
+                                   qs_get(x, 'action', 'pr'),   " VARCHAR(256) NOT NULL",
+                                   ");"),
                    err_msg=paste0("Error creating the processings table '",get(x, 'name', 'pr'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one:
   tmp <- matrix(c('*', '*',      'pCMA0', # the default actions
@@ -2057,14 +2080,18 @@ create_test_database.SQL_db <- function(x)
   # The main results table: 
   try(table_drop(x, get(x, 'name', 're')), silent=TRUE);
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 're')," ( ",
-                                   qs_get(x, 'resid', 're'),      ifelse(x$db_type == "mssql", " INT IDENTITY(1,1), " ," INT NOT NULL AUTO_INCREMENT, "),
+                                   qs_get(x, 'resid', 're'),      switch(x$db_type,
+                                                                         "mssql"=" INT IDENTITY(1,1) PRIMARY KEY, ",
+                                                                         "sqlite"=" INTEGER PRIMARY KEY AUTOINCREMENT, ",
+                                                                         "mariadb"=,
+                                                                         "mysql"=" INT NOT NULL AUTO_INCREMENT PRIMARY KEY, "),
                                    qs_get(x, 'patid', 'ev'),      " VARCHAR(256) NOT NULL, ",
                                    qs_get(x, 'procid', 're'),     " INT NULL DEFAULT -1, ",
                                    qs_get(x, 'estim', 're'),      " FLOAT NULL DEFAULT NULL, ",
                                    qs_get(x, 'estim_type', 're'), " VARCHAR(256) NULL DEFAULT NULL, ",
                                    qs_get(x, 'jpg', 're'),        ifelse(x$db_type == "mssql", " VARBINARY(MAX), " ," LONGBLOB NULL DEFAULT NULL, "),
-                                   qs_get(x, 'html', 're'),       ifelse(x$db_type == "mssql", " VARBINARY(MAX), " ," LONGBLOB NULL DEFAULT NULL, "), 
-                                   "PRIMARY KEY (", qs_get(x, 'resid', 're'), ") );"),
+                                   qs_get(x, 'html', 're'),       ifelse(x$db_type == "mssql", " VARBINARY(MAX), " ," LONGBLOB NULL DEFAULT NULL "), 
+                                   " );"),
                    err_msg=paste0("Error creating the main results table '",get(x, 'name', 're'),"'!\n"), just_execute=TRUE)) ) return (NULL);
 
   # The sliding windows results table: 
