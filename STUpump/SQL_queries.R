@@ -21,12 +21,59 @@
 ###############################################################################################
 
 ##
-## Libraries and settings ####
+## Check if the needed packages are installed, loaded and with the correct version ####
 ##
 
-library(configr); # read YAML config files
+.check_install_load_package <- function(pkg_name, pkg_min_version=NA, 
+                                        attempt_install=TRUE, stop_on_failure=TRUE)
+{
+  if( !require(pkg_name, character.only=TRUE) || # try to load the package
+      (!is.na(pkg_min_version) &&                # check version requirements (if any)
+       compareVersion(pkg_min_version, as.character(packageVersion(pkg_name))) > 0) )
+  { 
+    # Package not present or too old -> stop!
+    if( attempt_install )
+    {
+      # Try to install it:
+      install.packages(pkg_name, dependencies=TRUE, quiet=TRUE, verbose=FALSE);
+      
+      # Check again:
+      if( !require(pkg_name, character.only=TRUE) || # try to load the package
+          (!is.na(pkg_min_version) &&                # check version requirements (if any)
+           compareVersion(pkg_min_version, as.character(packageVersion(pkg_name))) > 0) )
+      {
+        # Failed to install:
+        msg <- paste0("Please make sure package '",pkg_name,"' is installed",
+                      ifelse(is.na(pkg_min_version),
+                             "",
+                             paste0(" and at least version ",pkg_min_version)),
+                      "!\n");
+        if( stop_on_failure) 
+        {
+          stop(msg);
+        } else
+        {
+          warning(msg);
+        }
+        return (invisible(FALSE));
+      }
+    }
+  }
+  
+  # All ok:
+  return (invisible(TRUE));
+}
+
+.check_install_load_package("AdhereR", "0.5"); # AdhereR for cma computation and plotting (and also, possibly, for the test dataset)
+.check_install_load_package("configr", "0.3"); # read YAML config files
+
+
+##
+## Global settings ####
+##
 
 options(warn=1); # show warning as they occur (and allow their capture with capture.output)
+
 
 ##
 ## The SQL_db class that ecapsulates all SQL-related things ####
@@ -726,17 +773,17 @@ connect.SQL_db <- function(x)
   if( x$db_type %in% c("mariadb", "mysql") )
   {
     # MariaDB or MySQL:
-    require(RMariaDB);
+    .check_install_load_package("RMariaDB", "1.0");
     x$db_connection <- DBI::dbConnect(RMariaDB::MariaDB(), user=x$db_user, password=x$db_psswd, dbname=x$db_name, host=x$db_host);
   } else if( x$db_type == "sqlite" )
   {
     # SQLite:
-    require(RSQLite);
+    .check_install_load_package("RSQLite", "2.1");
     x$db_connection <- DBI::dbConnect(RSQLite::SQLite(), dbname=x$db_name);
   } else if( x$db_type == "mssql" )
   {
     #  Microsoft SQL Server:
-    require(RODBC);
+    .check_install_load_package("RODBC", "1.3");
     x$db_connection <- RODBC::odbcConnect(dsn=x$db_dsn, uid=x$db_user, pwd=x$db_psswd);
     # Check if the database exists:
     db_list <- RODBC::sqlQuery(x$db_connection, "SELECT name FROM master.sys.databases");

@@ -9,7 +9,7 @@
   
   - [*OK*] function for fully qualifed database and attribute name (to avoind long concatenations of specific calls)
   
-  - function for checking package, installing and loading it
+  - [*OK*] function for checking package, installing and loading it
 
   
 ## Error handling
@@ -37,6 +37,8 @@
 
 ## Check it on MySQL/MariaDB, SQLite and MS SQL
 
-  - [*OK*] make it work on MS SQL as well
+  - [*OK*] test on MySQL, MS SQL and SQLite
 
   - allow "normal" (i.e. non-ODBC) MS SQL servers
+  
+  

@@ -18,42 +18,19 @@
 #
 ###############################################################################################
 
-##
-## Check if the needed packages are installed and with the correct version ####
-##
-.needed_packages <- data.frame(names  =c("AdhereR", "configr"),
-                               version=c(    "0.5",     "0.3"), # use NA if version doesn't matter
-                               stringsAsFactors=FALSE); 
-for( i in 1:nrow(.needed_packages) )
-{
-  .package_name    <- .needed_packages$names[i];
-  .package_version <- .needed_packages$version[i];
-  if( !require(.package_name, character.only=TRUE) || # try to load the package
-      (!is.na(.package_version) &&                    # check version requirements (if any)
-       compareVersion(.package_version, as.character(packageVersion(.package_name))) > 0) )
-  { 
-    # Package not present or too old -> stop!
-    stop(paste0("Please make sure package '",.package_name,"' is installed",
-                ifelse(is.na(.package_version),
-                       "",
-                       paste0(" and at least version ",.package_version)),
-                ": ABORTING NOW...\n"));
-  }
-}
-
 
 ##
 ## Global variables and settings ####
 ##
 
-spec_file <- switch(c("MSSQL", "MySQL", "SQLite")[1],
+spec_file <- switch(c("MSSQL", "MySQL", "SQLite")[3],
                     "MSSQL" ="./STUpump-MSSQL.yml",
                     "MySQL" ="./STUpump-MySQL.yml",
                     "SQLite"="./STUpump-SQLite.yml");
 
 STUpump_version <- "0.1";
 
-# Load the SQL-stuff:
+# Load the SQL-specific stuff:
 source("./SQL_queries.R", echo=FALSE);
 
 
