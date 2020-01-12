@@ -483,7 +483,7 @@ get.SQL_db <- function(x, variable,
                    "name"     =x$db_name,
                    "table_prefix"=,
                    "prefix"   =,
-                   "pre"      =ifelse(!is.na(x$db_table_prefix) && !is.null(x$db_table_prefix) && x$db_table_prefix != "", x$db_table_prefix, ""),
+                   "pre"      =ifelse(!is.null(x$db_table_prefix) && !is.na(x$db_table_prefix) && x$db_table_prefix != "", x$db_table_prefix, ""),
                    .msg(paste0("Undefined global attribute '",variable,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
     ));
   } else
@@ -660,7 +660,7 @@ qfq_get.SQL_db <- function(x, variable, table=NULL, table_name=NULL)
 {
   ret_val <- c();
   
-  if( x$db_type == "mssql" )
+  if( TRUE || x$db_type == "mssql" )
   {
     ret_val <- c(ret_val, qs(x,get(x,"name"))); # must be prefixed by the database's name
   }
@@ -909,11 +909,12 @@ preprocess.SQL_db <- function(x)
       
       # Copy the non-"*" entries from the processing table:
       if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x,table_name=tmp_procs_table),
+                                       " (",qs_get(x, 'patid', 'pr'),", ",qs_get(x, 'category', 'pr'),", ",qs_get(x, 'action', 'pr'),")",
                                        " SELECT ",qs_get(x, 'patid', 'pr'),", ",qs_get(x, 'category', 'pr'),", ",qs_get(x, 'action', 'pr'),
                                        " FROM ",qfq_get(x, 'name', 'pr'),
                                        " WHERE ",qs_get(x, 'action', 'pr')," <> '*'",
                                        " ;"),
-                       err_msg=paste0("Error compying the non-defaults from the processings into the temporary database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
+                       err_msg=paste0("Error copying the non-defaults from the processings into the temporary database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
       
       # Insert the defaults corresponsind to the "*" entries from the processing table:
       if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x,table_name=tmp_procs_table),
@@ -1868,8 +1869,8 @@ check_tables.SQL_db <- function(x)
     tmp <- sqlQ(x, query=paste0("SELECT COUNT(*) FROM ",qfq_get(x, 'name', 'mc'),
                                           " WHERE ",qs_get(x, 'mcid', 'mc')," = '*' AND ",qs_get(x, 'class', 'mc')," = '*' ",
                                           ";"),
-                          err_msg=paste0("The default class ('*','*') is not defined in the classes table '",get(x, 'name', 'mc'),"'!\n"), just_execute=TRUE);
-    return (!is.null(tmp) && tmp > 0 );
+                          err_msg=paste0("The default class ('*','*') is not defined in the classes table '",get(x, 'name', 'mc'),"'!\n"), just_execute=FALSE);
+    return (!is.null(tmp) && tmp[1,1] > 0 );
   }
   
   # Events:

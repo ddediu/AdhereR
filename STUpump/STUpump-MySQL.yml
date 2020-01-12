@@ -22,6 +22,9 @@ database:
 
 # Parameters specific to the various tables (NB, not all columns can be changed by the user; e.g., table procs contains a patient ID but this uses the column name defined for table events):
 tables:
+  # Is there a prefix required to access the tables?
+  table_prefix: null # sometimes the table name must be preceded by a prefix (if not, this is simply null)
+
   # The table contaning the actual events in the format needed by AdhereR:
   events:
     name:       in_events  # table name

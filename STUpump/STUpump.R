@@ -46,8 +46,8 @@ for( i in 1:nrow(.needed_packages) )
 ## Global variables and settings ####
 ##
 
-spec_file <- "./STUpump-MSSQL.yml"; # the file storing the database server info and credentials for MS SQL server
-#spec_file <- "./STUpump-MySQL.yml"; # the file storing the database server info and credentials for MySQL server
+#spec_file <- "./STUpump-MSSQL.yml"; # the file storing the database server info and credentials for MS SQL server
+spec_file <- "./STUpump-MySQL.yml"; # the file storing the database server info and credentials for MySQL server
 
 STUpump_version <- "0.1";
 
