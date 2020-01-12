@@ -6,6 +6,10 @@
   - [*NOT NECESSARY*] make sure get(...) has a version for data.table (i.e., sometimes the attribute's SQL value might not work as an attribute for data.frame!)
   
   - [*IN PROGRESS*] refactor so that the database-specific stuff is better insulated from the algortihms
+  
+  - function for fully qualifed database and attribute name (to avoind long concatenations of specific calls)
+  
+  - function for checking package, installing and loading it
 
   
 ## Error handling

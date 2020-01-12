@@ -1246,6 +1246,27 @@ get_col_names.SQL_db <- function(x, db_table)
 write_retable_entry <- function(x, id, procid, class="", type="", proc="", params="", estimate=NA, estimate_type=NA, plot_jpg="", plot_html="") UseMethod("write_retable_entry")
 write_retable_entry.SQL_db <- function(x, id, procid, class="", type="", proc="", params="", estimate=NA, estimate_type=NA, plot_jpg="", plot_html="")
 {
+  # File to blob:
+  file2blob <- function(x, file_name)
+  {
+    if( is.na(file_name)  || !file.exists(file_name) )
+    {
+      return ("NULL");
+    } else
+    {
+      # Read the file as raw:
+      file_raw <- readBin(file_name, n=file.size(file_name)+64, what="raw"); # allocate a bit more memory just in case...
+      
+      if( x$db_type == "mssql" )
+      {
+        return (paste0("CONVERT(VARBINARY(MAX), 0x",paste0(file_raw,collapse=""),")"));
+      } else
+      {
+        return (paste0("X'",paste0(file_raw,collapse=""),"'"));
+      }
+    }
+  }
+  
   # Write all these info into the retable:
   result <- sqlQ(x, query=paste0("INSERT INTO ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 're')),
                                  "(",
@@ -1261,15 +1282,11 @@ write_retable_entry.SQL_db <- function(x, id, procid, class="", type="", proc=""
                                  "'",procid,"', ", # reference to the processing key
                                  ifelse(is.na(estimate),"NULL",paste0("'",estimate,"'")),", ", # estimate
                                  ifelse(is.na(estimate_type),"NULL",paste0("'",estimate_type,"'")),", ", # estimate type
-                                 ifelse(is.na(plot_jpg)  || !file.exists(plot_jpg),  
-                                        "NULL", 
-                                        paste0("X'",paste0(readBin(plot_jpg,  n=file.size(plot_jpg) +1024, what="raw"),collapse=""),"'")),", ", # the JPEG file as a blob
-                                 ifelse(is.na(plot_html) || !file.exists(plot_html), 
-                                        "NULL", 
-                                        paste0("X'",paste0(readBin(plot_html, n=file.size(plot_html)+1024, what="raw"),collapse=""),"'")), # the HTML+SVG file as a blob
+                                 file2blob(x,plot_jpg),", ", # the JPEG file as a blob
+                                 file2blob(x,plot_html), # the HTML+SVG file as a blob
                                  ");"),
                  err_msg=paste0("Error writing into the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=TRUE);
-  if( result != 1 ) # should've written exactly one line
+  if( is.null(result) )
   {
     .msg(paste0("Error writing row to the results table '",get(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
     return (FALSE);
@@ -1341,7 +1358,7 @@ write_swtable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
                                         collapse=", "),
                                  ";"),
                  err_msg=paste0("Error writing into the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=TRUE);
-  if( result != nrow(cma) ) # should've written exactly as many lines as in the data.frame
+  if( is.null(result) )
   {
     .msg(paste0("Error writing row to the sliding windows results table '",get(x, 'name', 'sw'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
     return (FALSE);
@@ -1393,7 +1410,7 @@ write_petable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
                                         collapse=", "),
                                  ";"),
                  err_msg=paste0("Error writing row to the per episode results table '",get(x, 'name', 'pe'),"'!\n"), just_execute=TRUE);
-  if( result != nrow(cma) ) # should've written exactly as many lines as in the data.frame
+  if( is.null(result) )
   {
     .msg(paste0("Error writing row to the per episode results table '",get(x, 'name', 'pe'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
     return (FALSE);
@@ -1469,44 +1486,21 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
 get_processings_for_patient <- function(x, patient_id) UseMethod("get_processings_for_patient")
 get_processings_for_patient.SQL_db <- function(x, patient_id)
 {
-  db_procs <- NULL;
-  
-  # For the given patient(s), select both the default and the specific classes and actions:
-  if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
-  {
-    tmp <- NULL;
-    try(tmp <- DBI::dbGetQuery(x$db_connection, 
-                               paste0("SELECT *",
-                                      " FROM ",qs(x,get(x, 'name', 'pr')),
-                                      " INNER JOIN ",qs(x,get(x, 'name', 'mc')),
-                                      " ON ",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'category', 'pr'))," = ",qs(x,get(x, 'name', 'mc')),".",qs(x,get(x, 'mcid', 'mc')),
-                                      " INNER JOIN ",qs(x,get(x, 'name', 'ac')),
-                                      " ON ",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'action', 'pr'))," = ",qs(x,get(x, 'name', 'ac')),".",qs(x,get(x, 'actid', 'ac')),
-                                      " AND ",qs(x,get(x, 'patid', 'pr'))," IN ('*', ",paste0("'",patient_id,"'",collapse=","),")",
-                                      ";")),
-        silent=TRUE);
-    if( is.null(tmp) || nrow(tmp) == 0 )
-    {
-      # We can't get even the defaults: error!
-      .msg(paste0("Error retreiving the default processings for patient(s) ",paste0("'",patient_id,"'",collapse=", "),"!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-      return (NULL);
-    } else
-    {
-      db_procs <- tmp;
-    }
-  } else if( x$db_type == "mssql" )
-  {
-    tmp <- NULL;
-    try(tmp <- RODBC::sqlQuery(x$db_connection, 
-                               paste0("SELECT *",
-                                      " FROM ",qs(x,get(x, 'name')),".",qs(x,get(x, 'name', 'pr')),
-                                      " WHERE ",qs(x,get(x, 'patid', 'pr')),
-                                      " IN (",paste0("'",patient_id,"'",collapse=","),")",
-                                      ";")),
-        silent=TRUE);
-    if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) db_procs <- tmp;
-  }
-  
+  # Select the actions specific to the patient(s) but also the defaults:
+  db_procs <- sqlQ(x, query=paste0("SELECT *",
+                                   " FROM ",qs(x,get(x,"name")),".",qs(x,get(x, 'name', 'pr')),
+                                   " INNER JOIN ",qs(x,get(x,"name")),".",qs(x,get(x, 'name', 'mc')),
+                                   " ON ",qs(x,get(x,"name")),".",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'category', 'pr')),
+                                   " = ",qs(x,get(x,"name")),".",qs(x,get(x, 'name', 'mc')),".",qs(x,get(x, 'mcid', 'mc')),
+                                   " INNER JOIN ",qs(x,get(x,"name")),".",qs(x,get(x, 'name', 'ac')),
+                                   " ON ",qs(x,get(x,"name")),".",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'action', 'pr')),
+                                   " = ",qs(x,get(x,"name")),".",qs(x,get(x, 'name', 'ac')),".",qs(x,get(x, 'actid', 'ac')),
+                                   " AND ",qs(x,get(x,"name")),".",qs(x,get(x, 'name', 'pr')),".",qs(x,get(x, 'patid', 'pr')),
+                                   " IN ('*', ",paste0("'",patient_id,"'",collapse=","),")",
+                                   ";"),
+                   err_msg=paste0("Error retreiving the default processings for patient(s) ",paste0("'",patient_id,"'",collapse=", "),"!\n"), just_execute=FALSE);
+  if( is.null(db_procs) || nrow(db_procs) == 0 ) return (NULL);
+    
   # Re-arrange it in the "procid", "patid", "mcid", "actid", "class", "type", "action" & "params" format:
   db_procs <- db_procs[, c(get(x, 'procid', 'pr'), get(x, 'patid', 'pr'), get(x, 'category', 'pr'), get(x, 'action', 'pr'),
                            get(x, 'class', 'mc'), get(x, 'action', 'ac'), get(x, 'params', 'ac'))];
@@ -1533,6 +1527,7 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
   # Remove the trailing spaces:
   db_procs$class  <- trimws(db_procs$class);
   db_procs$action <- trimws(db_procs$action);
+  db_procs$params[ is.na(db_procs$params) ] <- ""; # make sure the empty params are represented by emty strings
   db_procs$params <- trimws(db_procs$params);
 
   return (db_procs);
