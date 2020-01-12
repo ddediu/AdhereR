@@ -7,7 +7,7 @@
   
   - [*IN PROGRESS*] refactor so that the database-specific stuff is better insulated from the algortihms
   
-  - function for fully qualifed database and attribute name (to avoind long concatenations of specific calls)
+  - [*OK*] function for fully qualifed database and attribute name (to avoind long concatenations of specific calls)
   
   - function for checking package, installing and loading it
 
@@ -37,6 +37,6 @@
 
 ## Check it on MySQL/MariaDB, SQLite and MS SQL
 
-  - make it work on MS SQL as well
+  - [*OK*] make it work on MS SQL as well
 
   - allow "normal" (i.e. non-ODBC) MS SQL servers
