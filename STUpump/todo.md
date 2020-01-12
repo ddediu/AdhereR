@@ -10,6 +10,11 @@
   - [*OK*] function for fully qualifed database and attribute name (to avoind long concatenations of specific calls)
   
   - [*OK*] function for checking package, installing and loading it
+  
+  
+## Plotting
+
+  - better vertical size especially for a small number of events
 
   
 ## Error handling

@@ -10,3 +10,7 @@ STUpump/server_credentials_STUpump.tsv
 STUpump/_Create_MSSQL_test_db.R
 
 STUpump/STUpump-MSSQL.yml
+
+STUpump/STUpumpTests.sqlite
+
+STUpump/STUpumpTests.sqlite

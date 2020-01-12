@@ -1,20 +1,20 @@
 ################################################### 
 # 
 # STUpump v.0.1 log file 
-# generated on 2020-01-12 18:57:08
-# using config file './STUpump-MySQL.yml' 
+# generated on 2020-01-12 19:22:26
+# using config file './STUpump-SQLite.yml' 
 # 
 ################################################### 
 
 
-## Reading and parsing the config file './STUpump-MySQL.yml' ##
+## Reading and parsing the config file './STUpump-SQLite.yml' ##
 
-Config: read 'database:type' = 'mysql'.
-Config: read 'database:host' = 'localhost'.
+Config: read 'database:type' = 'sqlite'.
+Config: read 'database:host' = ''.
 Config: read 'database:DSN' = ''.
-Config: read 'database:user' = 'adherentuser'.
-Config: read 'database:psswd' = '***********'.
-Config: read 'database:name' = 'STUpumpTests'.
+Config: read 'database:user' = ''.
+Config: read 'database:psswd' = '***'.
+Config: read 'database:name' = './STUpumpTests.sqlite'.
 
 Config: read 'table:table_prefix' = ''.
 Config: read 'table:events:name' = 'in_events'.
