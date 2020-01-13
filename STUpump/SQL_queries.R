@@ -76,6 +76,38 @@ options(warn=1); # show warning as they occur (and allow their capture with capt
 
 
 ##
+## Safe evaluation of functions as per https://stackoverflow.com/a/18391779 ####
+##
+
+# The safe functions:
+.safe_f <- c(
+  getGroupMembers("Math"),
+  getGroupMembers("Arith"),
+  getGroupMembers("Logic"),
+  getGroupMembers("Compare"),
+  "(", "["
+)
+
+# The safe environment (no parent) contaning only the needed variables:
+.safe_env_original <- new.env(parent = emptyenv());
+.safe_env <- NULL; # this is the environment where we work and which is restored to its original state after each use
+
+# Add the needed functions and variables only:
+for( .f in .safe_f ) .safe_env_original[[.f]] <- get(.f, "package:base");
+assign(".c", NULL, envir=.safe_env_original); assign(".d", NULL, envir=.safe_env_original);
+
+# Set or restore the safe environment to its original state:
+.reset_safe_env <- function() .safe_env <<-  .safe_env_original;
+.reset_safe_env();
+
+# Save a variable in the safe environment:
+.safe_set <- function(var, value) assign(var, value, envir=.safe_env);
+
+# The safe eval function:
+.safe_eval <- function(x) eval(x, env = .safe_env);
+
+
+##
 ## The SQL_db class that ecapsulates all SQL-related things ####
 ##
 
@@ -156,13 +188,12 @@ SQL_db <- function(spec_file=NA,                                                
     
     # The symbols with special meaning:
     # The default values (in case they are not defined):
-      class_default        <- "*";
-      class_others         <- "@";
-      class_med_lquote     <- "["; class_med_rquote   <- "]";
-      class_ref_lquote     <- "{"; class_ref_rquote   <- "}";
-      class_med_dose       <- "^"; 
-      med_dose_aggregate   <- c("first"=function(v){ if(is.null(v) || length(v) == 0 || !is.numeric(v)) return (NA); v1 <- v[!is.na(v)]; ifelse(is.null(v1) || length(v1) == 0, NA, v1[1]); });
-      procs_default_action <- class_default;
+      class_default          <- "*";
+      class_others           <- "?";
+      class_med_lquote       <- "["; class_med_rquote   <- "]";
+      class_ref_lquote       <- "{"; class_ref_rquote   <- "}";
+      class_med_dose         <- "@"; 
+      procs_default_action   <- class_default;
 
     if( "special_symbols" %in% names(db_info) )
     {
@@ -246,35 +277,6 @@ SQL_db <- function(spec_file=NA,                                                
         .msg(paste0("Unrecognised special symbol 'class_med_dose': using the default value.\n"), log_file, "w");
       }
 
-      if( "med_dose_aggregate" %in% names(db_info$special_symbols) && 
-          !is.null(db_info$special_symbols$med_dose_aggregate) && !is.na(db_info$special_symbols$med_dose_aggregate) && 
-          is.character(db_info$special_symbols$med_dose_aggregate) && length(db_info$special_symbols$med_dose_aggregate) == 1 &&
-          db_info$special_symbols$med_dose_aggregate != "" )
-      {
-        f <- switch(db_info$special_symbols$med_dose_aggregate,
-                    "first" =function(v){ if(is.null(v) || length(v) == 0 || !is.numeric(v)) return (NA); v1 <- v[!is.na(v)]; ifelse(is.null(v1) || length(v1) == 0, NA, v1[1]); },
-                    "last"  =function(v){ if(is.null(v) || length(v) == 0 || !is.numeric(v)) return (NA); v1 <- v[!is.na(v)]; ifelse(is.null(v1) || length(v1) == 0, NA, v1[length(v1)]); },
-                    "min"   =function(v){ if(is.null(v) || length(v) == 0 || !is.numeric(v)) return (NA); min(v,na.rm=TRUE); },
-                    "max"   =function(v){ if(is.null(v) || length(v) == 0 || !is.numeric(v)) return (NA); max(v,na.rm=TRUE); },
-                    "mean"  =function(v){ if(is.null(v) || length(v) == 0 || !is.numeric(v)) return (NA); mean(v,na.rm=TRUE); },
-                    "median"=function(v){ if(is.null(v) || length(v) == 0 || !is.numeric(v)) return (NA); median(v,na.rm=TRUE); },
-                    db_info$special_symbols$med_dose_aggregate);
-        if( is.character(f) )
-        {
-          # Try to parse it:
-          f_cmp <- NULL
-          try(f_cmp <- parse(text=f), silent=TRUE);
-          if( is.null(f_cmp) ) .msg(paste0("Error parsing the custom function definition for 'med_dose_aggregate'!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
-          med_dose_aggregate <- c(f_cmp); names(med_dose_aggregate) <- f;
-        } else
-        {
-          med_dose_aggregate <- c(f); names(med_dose_aggregate) <- db_info$special_symbols$med_dose_aggregate;
-        }
-      } else
-      {
-        .msg(paste0("Unrecognised special symbol 'class_med_dose': using the default value.\n"), log_file, "w");
-      }
-
       if( "procs_default_action" %in% names(db_info$special_symbols) && 
           !is.null(db_info$special_symbols$procs_default_action) && !is.na(db_info$special_symbols$procs_default_action) && 
           is.character(db_info$special_symbols$procs_default_action) && length(db_info$special_symbols$procs_default_action) == 1 &&
@@ -296,7 +298,6 @@ SQL_db <- function(spec_file=NA,                                                
     .msg(paste0("  - 'class_med_rquote':     '",class_med_rquote,"';\n"), log_file, "m");
     .msg(paste0("  - 'class_ref_lquote':     '",class_ref_lquote,"';\n"), log_file, "m");
     .msg(paste0("  - 'class_med_dose':       '",class_med_dose,"';\n"), log_file, "m");
-    .msg(paste0("  - 'med_dose_aggregate':   '",names(med_dose_aggregate),"';\n"), log_file, "m");
     .msg(paste0("  - 'procs_default_action': '",procs_default_action,"'.\n\n"), log_file, "m");
         
     
@@ -581,15 +582,14 @@ SQL_db <- function(spec_file=NA,                                                
                               "db_table_prefix"=db_table_prefix,
                               
                               # special symbols:
-                              "class_default"       =class_default,
-                              "class_others"        =class_others,
-                              "class_med_lquote"    =class_med_lquote,
-                              "class_med_rquote"    =class_med_rquote,
-                              "class_ref_lquote"    =class_ref_lquote,
-                              "class_ref_rquote"    =class_ref_rquote,
-                              "class_med_dose"      =class_med_dose,
-                              "med_dose_aggregate"  =med_dose_aggregate,
-                              "procs_default_action"=procs_default_action,
+                              "class_default"         =class_default,
+                              "class_others"          =class_others,
+                              "class_med_lquote"      =class_med_lquote,
+                              "class_med_rquote"      =class_med_rquote,
+                              "class_ref_lquote"      =class_ref_lquote,
+                              "class_ref_rquote"      =class_ref_rquote,
+                              "class_med_dose"        =class_med_dose,
+                              "procs_default_action"  =procs_default_action,
                               
                               # the important tables:
                               "db_evtable_name"=db_evtable_name,
@@ -668,10 +668,10 @@ SQL_db <- function(spec_file=NA,                                                
 ##
 
 # Get various attributes either for the whole database (table=NULL) or for a specific table:
-get <- function(x, variable, table=NULL, append_prefix_to_table_name=TRUE, df.compat=FALSE) UseMethod("get")
-get.SQL_db <- function(x, variable, 
-                       table=NULL, append_prefix_to_table_name=TRUE,
-                       df.compat=FALSE) # ensure these are valid data.frame names?
+geta <- function(x, variable, table=NULL, append_prefix_to_table_name=TRUE, df.compat=FALSE) UseMethod("geta")
+geta.SQL_db <- function(x, variable, 
+                        table=NULL, append_prefix_to_table_name=TRUE,
+                        df.compat=FALSE) # ensure these are valid data.frame names?
 {
   if( is.null(table) )
   {
@@ -698,7 +698,7 @@ get.SQL_db <- function(x, variable,
                    # Events:
                    "events"=,
                    "ev"=switch(tolower(variable),
-                               "name"      =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_evtable_name), x$db_evtable_name),
+                               "name"      =ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_evtable_name), x$db_evtable_name),
                                "patient_id"=,
                                "patid"     =,
                                "id"        =x$db_evtable_cols["ID"],
@@ -713,7 +713,7 @@ get.SQL_db <- function(x, variable,
                    # Actions:
                    "actions"=,
                    "ac"=switch(tolower(variable),
-                               "name"     =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_actable_name), x$db_actable_name),
+                               "name"     =ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_actable_name), x$db_actable_name),
                                "action_id"=,
                                "actid"    =,
                                "id"       =x$db_actable_cols["ID"],
@@ -729,7 +729,7 @@ get.SQL_db <- function(x, variable,
                    "medications"       =,
                    "mc"=switch(tolower(variable),
                                "name"        =ifelse(is.null(x$db_mctable_use_temp_table), 
-                                                     ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_mctable_name), x$db_mctable_name),
+                                                     ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_mctable_name), x$db_mctable_name),
                                                      x$db_mctable_use_temp_table), # use the solved default temp table?,
                                "med_class_id"=,
                                "mcid"        =,
@@ -743,16 +743,16 @@ get.SQL_db <- function(x, variable,
                    "procs"      =,
                    "pr"=switch(tolower(variable),
                                "name"         =ifelse(is.null(x$db_prtable_use_temp_table), 
-                                                      ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_prtable_name), x$db_prtable_name), 
+                                                      ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_prtable_name), x$db_prtable_name), 
                                                       x$db_prtable_use_temp_table), # use the solved default temp table?
                                "processing_id"=,
                                "procid"       =,
                                "id"           =x$db_prtable_cols["ID"],
                                "patient_id"   =,
-                               "patid"        =get(x, "patid", "ev"),
+                               "patid"        =geta(x, "patid", "ev"),
                                "cat"          =,
-                               "category"     =get(x, "mcid", "mc"),
-                               "action"       =get(x, "actid", "ac"),
+                               "category"     =geta(x, "mcid", "mc"),
+                               "action"       =geta(x, "actid", "ac"),
                                .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
                    ),
                    
@@ -760,14 +760,14 @@ get.SQL_db <- function(x, variable,
                    "main results"=,
                    "results"     =,
                    "re"=switch(tolower(variable),
-                               "name"         =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_retable_name), x$db_retable_name),
+                               "name"         =ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_retable_name), x$db_retable_name),
                                "result_id"    =,
                                "resid"        =,
                                "id"           =x$db_retable_cols["ID"],
                                "processing_id"=,
-                               "procid"       =get(x, "procid", "pr"),
+                               "procid"       =geta(x, "procid", "pr"),
                                "patient_id"   =,
-                               "patid"        =get(x, "patid", "ev"),
+                               "patid"        =geta(x, "patid", "ev"),
                                "estim"        =,
                                "estimate"     =x$db_retable_cols["ESTIMATE"],
                                "estim_type"   =,
@@ -783,12 +783,12 @@ get.SQL_db <- function(x, variable,
                    "sliding windows results"=,
                    "sliding windows"        =,
                    "sw"=switch(tolower(variable),
-                               "name"           =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_swtable_name), x$db_swtable_name),
+                               "name"           =ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_swtable_name), x$db_swtable_name),
                                "result_id"      =,
-                               "resid"          =get(x, "resid", "re"),
+                               "resid"          =geta(x, "resid", "re"),
                                "patid"          =,
                                "id"             =,
-                               "patient_id"     =get(x, "patid", "ev"),
+                               "patient_id"     =geta(x, "patid", "ev"),
                                "wndid"          =,
                                "window_id"      =x$db_swtable_cols["WINDOW_ID"],
                                "wndstart"       =,
@@ -808,12 +808,12 @@ get.SQL_db <- function(x, variable,
                    "per episode results"=,
                    "per episode"        =,
                    "pe"=switch(tolower(variable),
-                               "name"            =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_petable_name), x$db_petable_name),
+                               "name"            =ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_petable_name), x$db_petable_name),
                                "result_id"       =,
-                               "resid"           =get(x, "resid", "re"),
+                               "resid"           =geta(x, "resid", "re"),
                                "patid"           =,
                                "id"              =,
-                               "patient_id"      =get(x, "patid", "ev"),
+                               "patient_id"      =geta(x, "patid", "ev"),
                                "epid"            =,
                                "episode_id"      =x$db_petable_cols["EPISODE_ID"],
                                "epstart"         =,
@@ -838,10 +838,10 @@ get.SQL_db <- function(x, variable,
                    "updated info"=,
                    "updated"     =,
                    "up"=switch(tolower(variable),
-                               "name"            =ifelse(append_prefix_to_table_name && get(x,"pre") != "", paste0(get(x,"pre"),x$db_uptable_name), x$db_uptable_name),
+                               "name"            =ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_uptable_name), x$db_uptable_name),
                                "patid"           =,
                                "id"              =,
-                               "patient_id"      =get(x, "patid", "ev"),
+                               "patient_id"      =geta(x, "patid", "ev"),
                                .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
                    ),
                    
@@ -851,23 +851,23 @@ get.SQL_db <- function(x, variable,
 }
 
 # Quoted get:
-qs_get <- function(x, variable, table=NULL, append_prefix_to_table_name=TRUE, df.compat=FALSE) UseMethod("qs_get")
-qs_get.SQL_db <- function(x, variable, 
-                          table=NULL, append_prefix_to_table_name=TRUE,
-                          df.compat=FALSE) # ensure these are valid data.frame names?
+qs_geta <- function(x, variable, table=NULL, append_prefix_to_table_name=TRUE, df.compat=FALSE) UseMethod("qs_geta")
+qs_geta.SQL_db <- function(x, variable, 
+                           table=NULL, append_prefix_to_table_name=TRUE,
+                           df.compat=FALSE) # ensure these are valid data.frame names?
 {
-  qs(x, get(x, variable, table, append_prefix_to_table_name, df.compat));
+  qs(x, geta(x, variable, table, append_prefix_to_table_name, df.compat));
 }
 
 # Get a quoted and fully qualified (qfq) attributes either for the whole database (table=NULL) or for a specific table:
-qfq_get <- function(x, variable, table=NULL, table_name=NULL) UseMethod("qfq_get")
-qfq_get.SQL_db <- function(x, variable, table=NULL, table_name=NULL)
+qfq_geta <- function(x, variable, table=NULL, table_name=NULL) UseMethod("qfq_geta")
+qfq_geta.SQL_db <- function(x, variable, table=NULL, table_name=NULL)
 {
   ret_val <- c();
   
   if( x$db_type != "sqlite" )
   {
-    ret_val <- c(ret_val, qs(x,get(x,"name"))); # must be prefixed by the database's name
+    ret_val <- c(ret_val, qs(x,geta(x,"name"))); # must be prefixed by the database's name
   }
   
   if( !is.null(table_name) )
@@ -878,10 +878,10 @@ qfq_get.SQL_db <- function(x, variable, table=NULL, table_name=NULL)
   {
     if( !is.null(table) && variable != "name" )
     {
-      ret_val <- c(ret_val, qs(x,get(x,"name",table))); # table-level columns (so, not the table's name) must be precede by the table's name
+      ret_val <- c(ret_val, qs(x,geta(x,"name",table))); # table-level columns (so, not the table's name) must be precede by the table's name
     }
     
-    ret_val <- c(ret_val, qs(x,get(x,variable,table))); # the attribute's value
+    ret_val <- c(ret_val, qs(x,geta(x,variable,table))); # the attribute's value
   }
   
   return (paste0(ret_val, collapse=".")); # these are all separated by "."s
@@ -1006,9 +1006,9 @@ disconnect.SQL_db <- function(x)
 reset_results <- function(x) UseMethod("reset_results")
 reset_results.SQL_db <- function(x)
 {
-  try(table_clear(x, get(x, 'name', 're')), silent=TRUE);
-  try(table_clear(x, get(x, 'name', 'sw')), silent=TRUE);
-  try(table_clear(x, get(x, 'name', 'pe')), silent=TRUE);
+  try(table_clear(x, geta(x, 'name', 're')), silent=TRUE);
+  try(table_clear(x, geta(x, 'name', 'sw')), silent=TRUE);
+  try(table_clear(x, geta(x, 'name', 'pe')), silent=TRUE);
 
   .msg("Reset: database results tables truncated...\n", x$log_file, "m");
   
@@ -1069,10 +1069,10 @@ preprocess.SQL_db <- function(x)
   
   # Do we need to do anything about this?
   default_actions <- sqlQ(x, query=paste0("SELECT COUNT(*)",
-                                          " FROM ",qfq_get(x, 'name', 'pr'),
-                                          " WHERE ",qs_get(x, 'action', 'pr')," = '",x$procs_default_action,"'",
+                                          " FROM ",qfq_geta(x, 'name', 'pr'),
+                                          " WHERE ",qs_geta(x, 'action', 'pr')," = '",x$procs_default_action,"'",
                                           " ;"),
-                          err_msg=paste0("Error retreiving the number of default actions '",x$procs_default_action,"' from the processings table '",get(x, 'name', 'pr'),"'!\n"), just_execute=FALSE);
+                          err_msg=paste0("Error retreiving the number of default actions '",x$procs_default_action,"' from the processings table '",geta(x, 'name', 'pr'),"'!\n"), just_execute=FALSE);
   if( is.null(default_actions) || nrow(default_actions) == 0 )
   {
     return (NULL);
@@ -1085,11 +1085,11 @@ preprocess.SQL_db <- function(x)
   {
     # Ok, are there defaults defined?
     default_actions_defined <- sqlQ(x, query=paste0("SELECT COUNT(*)",
-                                                    " FROM ",qfq_get(x, 'name', 'pr'),
-                                                    " WHERE ",qs_get(x, 'patid', 'pr')," = '",x$class_default,"'",
-                                                    " AND ",qs_get(x, 'category', 'pr')," = '",x$class_default,"'",
+                                                    " FROM ",qfq_geta(x, 'name', 'pr'),
+                                                    " WHERE ",qs_geta(x, 'patid', 'pr')," = '",x$class_default,"'",
+                                                    " AND ",qs_geta(x, 'category', 'pr')," = '",x$class_default,"'",
                                                     " ;"),
-                                    err_msg=paste0("Error retreiving the defaults for the processings table '",get(x, 'name', 'pr'),"'!\n"), just_execute=FALSE);
+                                    err_msg=paste0("Error retreiving the defaults for the processings table '",geta(x, 'name', 'pr'),"'!\n"), just_execute=FALSE);
     if( is.null(default_actions_defined) || nrow(default_actions_defined) == 0 )
     {
       return (NULL);
@@ -1101,32 +1101,32 @@ preprocess.SQL_db <- function(x)
     if( default_actions_defined )
     {
       # Ok: create (if necessary) a new processings table and replace the default actions by the defaults:
-      tmp_procs_table <- paste0(get(x, 'prefix'),'tmp_',get(x, 'name', 'pr', append_prefix_to_table_name=FALSE));
+      tmp_procs_table <- paste0(geta(x, 'prefix'),'tmp_',geta(x, 'name', 'pr', append_prefix_to_table_name=FALSE));
       
       # Create the table (delete it first if it already existed):
       if( tmp_procs_table %in% list_tables(x) ) try(table_drop(x, tmp_procs_table), silent=TRUE);
-      if( !table_create(x, tmp_procs_table, duplicate_from=get(x, 'name', 'pr'), clear_if_exists=TRUE) ) return (NULL);
+      if( !table_create(x, tmp_procs_table, duplicate_from=geta(x, 'name', 'pr'), clear_if_exists=TRUE) ) return (NULL);
 
       # Copy the non-"*" entries from the processing table:
-      if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x,table_name=tmp_procs_table),
-                                       " (",qs_get(x, 'patid', 'pr'),", ",qs_get(x, 'category', 'pr'),", ",qs_get(x, 'action', 'pr'),")",
-                                       " SELECT ",qs_get(x, 'patid', 'pr'),", ",qs_get(x, 'category', 'pr'),", ",qs_get(x, 'action', 'pr'),
-                                       " FROM ",qfq_get(x, 'name', 'pr'),
-                                       " WHERE ",qs_get(x, 'action', 'pr')," <> '",x$procs_default_action,"'",
+      if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x,table_name=tmp_procs_table),
+                                       " (",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),")",
+                                       " SELECT ",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),
+                                       " FROM ",qfq_geta(x, 'name', 'pr'),
+                                       " WHERE ",qs_geta(x, 'action', 'pr')," <> '",x$procs_default_action,"'",
                                        " ;"),
                        err_msg=paste0("Error copying the non-defaults from the processings into the temporary database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
       
       # Insert the defaults corresponsind to the "*" entries from the processing table:
-      if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x,table_name=tmp_procs_table),
-                                       " (",qs_get(x, 'patid', 'pr'),", ",qs_get(x, 'category', 'pr'),", ",qs_get(x, 'action', 'pr'),")",
+      if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x,table_name=tmp_procs_table),
+                                       " (",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),")",
                                        " SELECT ",
-                                       qs(x,'a'),".",qs_get(x, 'patid', 'pr'),",",
-                                       qs(x,'a'),".",qs_get(x, 'category', 'pr'),",",
-                                       qs(x,'b'),".",qs_get(x, 'action', 'pr'),
-                                       " FROM ",qfq_get(x, 'name', 'pr')," ",qs(x,'a'),", ",qfq_get(x, 'name', 'pr')," ",qs(x,'b'),
-                                       " WHERE ",qs(x,'a'),".",qs_get(x, 'action', 'pr')," = '",x$procs_default_action,"'",
-                                       " AND ",qs(x,'b'),".",qs_get(x, 'patid', 'pr')," = '",x$class_default,"'",
-                                       " AND ",qs(x,'b'),".",qs_get(x, 'category', 'pr')," = '",x$class_default,"'",
+                                       qs(x,'a'),".",qs_geta(x, 'patid', 'pr'),",",
+                                       qs(x,'a'),".",qs_geta(x, 'category', 'pr'),",",
+                                       qs(x,'b'),".",qs_geta(x, 'action', 'pr'),
+                                       " FROM ",qfq_geta(x, 'name', 'pr')," ",qs(x,'a'),", ",qfq_geta(x, 'name', 'pr')," ",qs(x,'b'),
+                                       " WHERE ",qs(x,'a'),".",qs_geta(x, 'action', 'pr')," = '",x$procs_default_action,"'",
+                                       " AND ",qs(x,'b'),".",qs_geta(x, 'patid', 'pr')," = '",x$class_default,"'",
+                                       " AND ",qs(x,'b'),".",qs_geta(x, 'category', 'pr')," = '",x$class_default,"'",
                                        " ;"),
                        err_msg=paste0("Error solving the default actions in the temporary database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
       
@@ -1141,23 +1141,23 @@ preprocess.SQL_db <- function(x)
   
   # Do we need to do anything about this?
   ref_classes <- sqlQ(x, query=paste0("SELECT *",
-                                      " FROM ",qfq_get(x, 'name', 'mc'),
-                                      " WHERE ",qs_get(x, 'class', 'mc')," LIKE '%{%}%'",
+                                      " FROM ",qfq_geta(x, 'name', 'mc'),
+                                      " WHERE ",qs_geta(x, 'class', 'mc')," LIKE '%{%}%'",
                                       " ;"),
                       err_msg=NA, just_execute=FALSE);
   if( !is.null(ref_classes) && nrow(ref_classes) > 0 )
   {
     # There's at least one {} reference!
     # Ok: create (if necessary) a new table and copy everything in it:
-    tmp_class_table <- paste0(get(x, 'prefix'),'tmp_',get(x, 'name', 'mc', append_prefix_to_table_name=FALSE));
+    tmp_class_table <- paste0(geta(x, 'prefix'),'tmp_',geta(x, 'name', 'mc', append_prefix_to_table_name=FALSE));
     
     # Create the table (delete it first if it already existed):
     if( tmp_class_table %in% list_tables(x) ) try(table_drop(x, tmp_class_table), silent=TRUE);
-    if( !table_create(x, tmp_class_table, duplicate_from=get(x, 'name', 'mc'), clear_if_exists=TRUE) ) return (NULL);
+    if( !table_create(x, tmp_class_table, duplicate_from=geta(x, 'name', 'mc'), clear_if_exists=TRUE) ) return (NULL);
 
     # Copy everything from the classes table:
-    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x,table_name=tmp_class_table),
-                                     "SELECT * FROM ",qfq_get(x, 'name', 'mc'),
+    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x,table_name=tmp_class_table),
+                                     "SELECT * FROM ",qfq_geta(x, 'name', 'mc'),
                                      " ;"),
                      err_msg=paste0("Error compying the non-defaults from the classes table into the temporary database '",tmp_class_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
 
@@ -1165,12 +1165,12 @@ preprocess.SQL_db <- function(x)
     max_iterations <- 256; # the maximum depth of references to be solved
     while( !is.null(ref_classes) && nrow(ref_classes) > 0 && max_iterations > 0 )
     {
-      ref_classes$solved <- as.character(ref_classes[,get(x, 'class', 'mc')]);
+      ref_classes$solved <- as.character(ref_classes[,geta(x, 'class', 'mc')]);
       for( i in 1:nrow(ref_classes) )
       {
         updated_class <- FALSE;
         
-        s <- as.character(ref_classes[i,get(x, 'class', 'mc')]);
+        s <- as.character(ref_classes[i,geta(x, 'class', 'mc')]);
         
         # Find the references to classes and extract their names (if any):
         n <- gregexpr("\\{[^\\}]+\\}", s)[[1]];
@@ -1183,19 +1183,19 @@ preprocess.SQL_db <- function(x)
           # Extract the names:
           class_names <- substring(s, n+1, n+attr(n,"match.length")-2);
           # Check for recursions:
-          if( any(class_names == ref_classes[i,get(x, 'mcid', 'mc')]) )
+          if( any(class_names == ref_classes[i,geta(x, 'mcid', 'mc')]) )
           {
             # Recursion detected!
-            .msg(paste0("Medication class definitions cannot be recursive, but '",as.character(ref_classes[i,get(x, 'mcid', 'mc')]),"' seems to be!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+            .msg(paste0("Medication class definitions cannot be recursive, but '",as.character(ref_classes[i,geta(x, 'mcid', 'mc')]),"' seems to be!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
             return (NULL);
           } else
           {
             # Replace the references by their definitions:
             for( cn in class_names )
             {
-              tmp <- sqlQ(x, query=paste0("SELECT ",qs_get(x, 'class', 'mc'),
-                                          " FROM ",qfq_get(x,table_name=tmp_class_table),
-                                          " WHERE ",qs_get(x, 'mcid', 'mc')," = '",cn,"'",
+              tmp <- sqlQ(x, query=paste0("SELECT ",qs_geta(x, 'class', 'mc'),
+                                          " FROM ",qfq_geta(x,table_name=tmp_class_table),
+                                          " WHERE ",qs_geta(x, 'mcid', 'mc')," = '",cn,"'",
                                           " ;"),
                           err_msg=paste0("Cannot find the definition of medication class '",cn,"'!\n"), just_execute=FALSE);
               if( !is.null(tmp) )
@@ -1217,10 +1217,10 @@ preprocess.SQL_db <- function(x)
         # If updated, write it back to the SQL database:
         if( updated_class )
         {
-          if( is.null(sqlQ(x, query=paste0("UPDATE ",qfq_get(x,table_name=tmp_class_table),
-                                           " SET ",qs_get(x, 'class', 'mc')," = '",ref_classes$solved[i],"'",
-                                           " WHERE ",qs_get(x, 'mcid', 'mc')," = '",ref_classes[i,get(x, 'mcid', 'mc')],"'",
-                                           " AND ",qs_get(x, 'class', 'mc')," = '",ref_classes[i,get(x, 'class', 'mc')],"'",
+          if( is.null(sqlQ(x, query=paste0("UPDATE ",qfq_geta(x,table_name=tmp_class_table),
+                                           " SET ",qs_geta(x, 'class', 'mc')," = '",ref_classes$solved[i],"'",
+                                           " WHERE ",qs_geta(x, 'mcid', 'mc')," = '",ref_classes[i,geta(x, 'mcid', 'mc')],"'",
+                                           " AND ",qs_geta(x, 'class', 'mc')," = '",ref_classes[i,geta(x, 'class', 'mc')],"'",
                                            " ;"),
                            err_msg=paste0("Error updating the temporary database '",tmp_class_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
         }
@@ -1229,8 +1229,8 @@ preprocess.SQL_db <- function(x)
       # Redo the whole thing again until there's no more {} refs left:
       ref_classes <- NULL;
       try(ref_classes <- sqlQ(x, query=paste0("SELECT *",
-                                              " FROM ",qfq_get(x,table_name=tmp_class_table),
-                                              " WHERE ",qs_get(x, 'class', 'mc')," LIKE '%{%}%'",
+                                              " FROM ",qfq_geta(x,table_name=tmp_class_table),
+                                              " WHERE ",qs_geta(x, 'class', 'mc')," LIKE '%{%}%'",
                                               " ;"),
                               err_msg=NA, just_execute=FALSE), silent=TRUE);
       
@@ -1276,7 +1276,7 @@ table_create.SQL_db <- function(x, tbname, duplicate_from=NA, clear_if_exists=TR
     if( is.na(duplicate_from) )
     {
       # Create a new table:
-      if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 'ev')," ;"),
+      if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_geta(x, 'name', 'ev')," ;"),
                        err_msg=paste0("Error creating the table '",tbname,"'!\n"), just_execute=TRUE)) ) return (FALSE);
     } else
     {
@@ -1329,8 +1329,8 @@ table_create.SQL_db <- function(x, tbname, duplicate_from=NA, clear_if_exists=TR
           # For Microsoft SQL this seems to also duplicate the key and identityt(1,1):
           tmp <- NULL;
           try(tmp <- RODBC::sqlQuery(x$db_connection, 
-                                     paste0("SELECT * INTO ",qfq_get(x,table_name=tbname),
-                                            " FROM ",qfq_get(x,table_name=duplicate_from),
+                                     paste0("SELECT * INTO ",qfq_geta(x,table_name=tbname),
+                                            " FROM ",qfq_geta(x,table_name=duplicate_from),
                                             " WHERE 1 = 0 ;")),
               silent=TRUE);
           if( is.null(tmp) )
@@ -1358,7 +1358,7 @@ table_clear.SQL_db <- function(x, tbname)
   {
     # It does exist:
     return( !is.null(sqlQ(x, query=paste0(ifelse(x$db_type == "sqlite", "DELETE FROM ","TRUNCATE TABLE "),
-                                          qfq_get(x,table_name=tbname),
+                                          qfq_geta(x,table_name=tbname),
                                           " ;"),
                           err_msg=paste0("Error clearing the table '",tbname,"'!\n"), just_execute=TRUE)) );
   } else
@@ -1377,7 +1377,7 @@ table_drop.SQL_db <- function(x, tbname)
   if( table_exists(x, tbname) )
   {
     # It does exist:
-    return( !is.null(sqlQ(x, query=paste0("DROP TABLE ",qfq_get(x,table_name=tbname)," ;"),
+    return( !is.null(sqlQ(x, query=paste0("DROP TABLE ",qfq_geta(x,table_name=tbname)," ;"),
                           err_msg=paste0("Error removing the table '",tbname,"'!\n"), just_execute=TRUE)) );
   } else
   {
@@ -1459,7 +1459,7 @@ get_cols_info.SQL_db <- function(x, db_table)
   } else if( x$db_type == "mssql" )
   {
     n <- NULL;
-    try(n <- RODBC::sqlQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",qfq_get(x,table_name=db_table),";")), silent=TRUE);
+    try(n <- RODBC::sqlQuery(x$db_connection, paste0("SELECT COUNT(*) FROM ",qfq_geta(x,table_name=db_table),";")), silent=TRUE);
     if( is.null(n) || !inherits(n, "data.frame") || nrow(n) != 1 || ncol(n) != 1 )
     {
       # Error retreiving the number of rows:
@@ -1469,7 +1469,7 @@ get_cols_info.SQL_db <- function(x, db_table)
     {
       n <- as.numeric(n[1,1]);
     }
-    db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",qs_get(x, 'name'),".INFORMATION_SCHEMA.COLUMNS ORDER BY ORDINAL_POSITION;"));
+    db_list <- RODBC::sqlQuery(x$db_connection, paste0("SELECT * FROM ",qs_geta(x, 'name'),".INFORMATION_SCHEMA.COLUMNS ORDER BY ORDINAL_POSITION;"));
     if( !is.null(db_list) && nrow(db_list) > 0 )
     {
       db_list <- db_list[ paste0(db_list$TABLE_SCHEMA,".",db_list$TABLE_NAME) == db_table, ];
@@ -1531,14 +1531,14 @@ write_retable_entry.SQL_db <- function(x, id, procid, class="", type="", proc=""
   }
   
   # Write all these info into the retable:
-  result <- sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x, 'name', 're'),
+  result <- sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x, 'name', 're'),
                                  "(",
-                                 qs_get(x, 'patid', 'ev'),", ",
-                                 qs_get(x, 'procid', 're'),", ",
-                                 qs_get(x, 'estim', 're'),", ",
-                                 qs_get(x, 'estim_type', 're'),", ",
-                                 qs_get(x, 'jpg', 're'),", ",
-                                 qs_get(x, 'html', 're'),
+                                 qs_geta(x, 'patid', 'ev'),", ",
+                                 qs_geta(x, 'procid', 're'),", ",
+                                 qs_geta(x, 'estim', 're'),", ",
+                                 qs_geta(x, 'estim_type', 're'),", ",
+                                 qs_geta(x, 'jpg', 're'),", ",
+                                 qs_geta(x, 'html', 're'),
                                  ")",
                                  " VALUES (",
                                  "'",id,"', ", # id
@@ -1548,10 +1548,10 @@ write_retable_entry.SQL_db <- function(x, id, procid, class="", type="", proc=""
                                  file2blob(x,plot_jpg),", ", # the JPEG file as a blob
                                  file2blob(x,plot_html), # the HTML+SVG file as a blob
                                  ");"),
-                 err_msg=paste0("Error writing into the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=TRUE);
+                 err_msg=paste0("Error writing into the events table '",geta(x, 'name', 'ev'),"'!\n"), just_execute=TRUE);
   if( is.null(result) )
   {
-    .msg(paste0("Error writing row to the results table '",get(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    .msg(paste0("Error writing row to the results table '",geta(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
     return (FALSE);
   } else
   {
@@ -1565,17 +1565,17 @@ get_retable_resid_for_results <- function(x, id, procid, estimate_type) UseMetho
 get_retable_resid_for_results.SQL_db <- function(x, id, procid, estimate_type)
 {
   # Get the resid of the previous insertion in the retable:
-  resid_ref <- sqlQ(x, query=paste0("SELECT ", qs_get(x, 'resid', 're'),
-                                    " FROM ", qfq_get(x, 'name', 're'), 
-                                    " WHERE ", qs_get(x, 'patid', 're'), " = '", id, "'", 
-                                    " AND ", qs_get(x, 'procid', 're'), " = '", procid, "'",
-                                    " AND ", qs_get(x, 'estim_type', 're'), " = '", estimate_type, "'",
+  resid_ref <- sqlQ(x, query=paste0("SELECT ", qs_geta(x, 'resid', 're'),
+                                    " FROM ", qfq_geta(x, 'name', 're'), 
+                                    " WHERE ", qs_geta(x, 'patid', 're'), " = '", id, "'", 
+                                    " AND ", qs_geta(x, 'procid', 're'), " = '", procid, "'",
+                                    " AND ", qs_geta(x, 'estim_type', 're'), " = '", estimate_type, "'",
                                     ";"),
-                    err_msg=paste0("Error writing into the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=FALSE);
+                    err_msg=paste0("Error writing into the events table '",geta(x, 'name', 'ev'),"'!\n"), just_execute=FALSE);
   if( is.null(resid_ref) || nrow(resid_ref) != 1 )
   {
     # Error identifying the last inserted row!
-    .msg(paste0("Error identifying the last row written to the results table '",get(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    .msg(paste0("Error identifying the last row written to the results table '",geta(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
     return (NULL);
   } else
   {
@@ -1597,21 +1597,21 @@ write_swtable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
   cma$window.end   <- as.character(as.Date(cma$window.end,   format="%m/%d/%Y"), format="%Y-%m-%d");
 
   # Write all these info into the swtable:
-  result <- sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x, 'name', 'sw'),
+  result <- sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x, 'name', 'sw'),
                                  " (",
-                                 qs_get(x, 'resid', 'sw'),", ",
-                                 qs_get(x, 'patid', 'sw'),", ",
-                                 qs_get(x, 'wndid', 'sw'),", ",
-                                 qs_get(x, 'start', 'sw'),", ",
-                                 qs_get(x, 'end', 'sw'),", ",
-                                 qs_get(x, 'estim', 'sw'),
+                                 qs_geta(x, 'resid', 'sw'),", ",
+                                 qs_geta(x, 'patid', 'sw'),", ",
+                                 qs_geta(x, 'wndid', 'sw'),", ",
+                                 qs_geta(x, 'start', 'sw'),", ",
+                                 qs_geta(x, 'end', 'sw'),", ",
+                                 qs_geta(x, 'estim', 'sw'),
                                  ")",
                                  " VALUES ",
                                  paste0("(",
                                         vapply(1:nrow(cma), 
                                                function(i) 
                                                  paste0("'", resid, "', ",
-                                                        "'", cma[i,get(x, 'patid', 'ev')], "', ",
+                                                        "'", cma[i,geta(x, 'patid', 'ev')], "', ",
                                                         "'", cma$window.ID[i], "', ",
                                                         "'", cma$window.start[i], "', ",
                                                         "'", cma$window.end[i], "', ",
@@ -1620,10 +1620,10 @@ write_swtable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
                                         ")",
                                         collapse=", "),
                                  ";"),
-                 err_msg=paste0("Error writing into the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=TRUE);
+                 err_msg=paste0("Error writing into the events table '",geta(x, 'name', 'ev'),"'!\n"), just_execute=TRUE);
   if( is.null(result) )
   {
-    .msg(paste0("Error writing row to the sliding windows results table '",get(x, 'name', 'sw'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    .msg(paste0("Error writing row to the sliding windows results table '",geta(x, 'name', 'sw'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
     return (FALSE);
   } else
   {
@@ -1645,23 +1645,23 @@ write_petable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
   cma$episode.end   <- as.character(as.Date(cma$episode.end,   format="%m/%d/%Y"), format="%Y-%m-%d");
   
   # Write all these info into the swtable:
-  result <- sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x, 'name', 'pe'),
+  result <- sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x, 'name', 'pe'),
                                  " (",
-                                 qs_get(x, 'resid', 'pe'),", ",
-                                 qs_get(x, 'patid', 'pe'),", ",
-                                 qs_get(x, 'epid', 'pe'),", ",
-                                 qs_get(x, 'start', 'pe'),", ",
-                                 qs_get(x, 'gap', 'pe'),", ",
-                                 qs_get(x, 'duration', 'pe'),", ",
-                                 qs_get(x, 'end', 'pe'),", ",
-                                 qs_get(x, 'estim', 'pe'),
+                                 qs_geta(x, 'resid', 'pe'),", ",
+                                 qs_geta(x, 'patid', 'pe'),", ",
+                                 qs_geta(x, 'epid', 'pe'),", ",
+                                 qs_geta(x, 'start', 'pe'),", ",
+                                 qs_geta(x, 'gap', 'pe'),", ",
+                                 qs_geta(x, 'duration', 'pe'),", ",
+                                 qs_geta(x, 'end', 'pe'),", ",
+                                 qs_geta(x, 'estim', 'pe'),
                                  ")",
                                  " VALUES ",
                                  paste0("(",
                                         vapply(1:nrow(cma), 
                                                function(i) 
                                                  paste0("'", resid, "', ",
-                                                        "'", cma[i,get(x, 'patid', 'ev')], "', ",
+                                                        "'", cma[i,geta(x, 'patid', 'ev')], "', ",
                                                         "'", cma$episode.ID[i], "', ",
                                                         "'", cma$episode.start[i], "', ",
                                                         "'", cma$end.episode.gap.days[i], "', ",
@@ -1672,10 +1672,10 @@ write_petable_entry.SQL_db <- function(x, resid=-1, cma=NULL)
                                         ")",
                                         collapse=", "),
                                  ";"),
-                 err_msg=paste0("Error writing row to the per episode results table '",get(x, 'name', 'pe'),"'!\n"), just_execute=TRUE);
+                 err_msg=paste0("Error writing row to the per episode results table '",geta(x, 'name', 'pe'),"'!\n"), just_execute=TRUE);
   if( is.null(result) )
   {
-    .msg(paste0("Error writing row to the per episode results table '",get(x, 'name', 'pe'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
+    .msg(paste0("Error writing row to the per episode results table '",geta(x, 'name', 'pe'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
     return (FALSE);
   } else
   {
@@ -1695,10 +1695,10 @@ list_patients.SQL_db <- function(x, with_updated_info_only=TRUE)
 {
   patient_ids <- NULL;
   if( !with_updated_info_only || # specifically requested to use all patients, or
-      is.null(up_info <- get_cols_info(x, get(x, 'name', 'up'))) || up_info$nrow == 0 ) # the updated_info table is not defined or empty
+      is.null(up_info <- get_cols_info(x, geta(x, 'name', 'up'))) || up_info$nrow == 0 ) # the updated_info table is not defined or empty
   {
     # List all patients in the events table:
-    tmp <- sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x, 'name', 'ev')," VALUES (",
+    tmp <- sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x, 'name', 'ev')," VALUES (",
                                 paste0("'",as.character(d[i,]),"'",collapse=","),
                                 ");"),
                 err_msg=paste0("Error retrieving the list of patients to processes!\n"), just_execute=FALSE);
@@ -1706,10 +1706,10 @@ list_patients.SQL_db <- function(x, with_updated_info_only=TRUE)
   } else
   {
     # List only those in the events table that are also mentioned in the updated_info table:
-    tmp <- sqlQ(x, query=paste0("SELECT DISTINCT ",qfq_get(x, 'patid', 'ev'),
-                                " FROM ",qfq_get(x, 'name', 'ev'),
-                                " INNER JOIN ",qfq_get(x, 'name', 'up'),
-                                " ON ",qfq_get(x, 'patid', 'ev')," = ",qfq_get(x, 'patid', 'up'),
+    tmp <- sqlQ(x, query=paste0("SELECT DISTINCT ",qfq_geta(x, 'patid', 'ev'),
+                                " FROM ",qfq_geta(x, 'name', 'ev'),
+                                " INNER JOIN ",qfq_geta(x, 'name', 'up'),
+                                " ON ",qfq_geta(x, 'patid', 'ev')," = ",qfq_geta(x, 'patid', 'up'),
                                 ";"),
                 err_msg=paste0("Error retrieving the list of patients to processes!\n"), just_execute=FALSE);
     if( !is.null(tmp) && inherits(tmp, "data.frame") && nrow(tmp) > 0 ) patient_ids <- as.character(tmp[,1]);
@@ -1727,8 +1727,8 @@ get_evtable_patients_info.SQL_db <- function(x, patient_id, cols=NA, maxrows=NA)
   
   tmp <- sqlQ(x, query=paste0("SELECT ",
                                    ifelse(is.na(cols), "*", paste0(qs(x,cols),collapse=",")),
-                                   " FROM ",qfq_get(x, 'name', 'ev'),
-                                   " WHERE ",qs_get(x, 'patid', 'ev'),
+                                   " FROM ",qfq_geta(x, 'name', 'ev'),
+                                   " WHERE ",qs_geta(x, 'patid', 'ev'),
                                    " IN (",paste0("'",patient_id,"'",collapse=","),")",
                                    ifelse(is.na(maxrows), "",paste0("LIMIT ",maxrows)),
                                    " ;"),
@@ -1750,19 +1750,19 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
 {
   # Select the actions specific to the patient(s) but also the defaults:
   db_procs <- sqlQ(x, query=paste0("SELECT *",
-                                   " FROM ",qfq_get(x, 'name', 'pr'),
-                                   " INNER JOIN ",qfq_get(x, 'name', 'mc'),
-                                   " ON ",qfq_get(x, 'category', 'pr')," = ",qfq_get(x, 'mcid', 'mc'),
-                                   " INNER JOIN ",qfq_get(x, 'name', 'ac'),
-                                   " ON ",qfq_get(x, 'action', 'pr')," = ",qfq_get(x, 'actid', 'ac'),
-                                   " AND ",qfq_get(x, 'patid', 'pr')," IN ('",x$class_default,"', ",paste0("'",patient_id,"'",collapse=","),")",
+                                   " FROM ",qfq_geta(x, 'name', 'pr'),
+                                   " INNER JOIN ",qfq_geta(x, 'name', 'mc'),
+                                   " ON ",qfq_geta(x, 'category', 'pr')," = ",qfq_geta(x, 'mcid', 'mc'),
+                                   " INNER JOIN ",qfq_geta(x, 'name', 'ac'),
+                                   " ON ",qfq_geta(x, 'action', 'pr')," = ",qfq_geta(x, 'actid', 'ac'),
+                                   " AND ",qfq_geta(x, 'patid', 'pr')," IN ('",x$class_default,"', ",paste0("'",patient_id,"'",collapse=","),")",
                                    ";"),
                    err_msg=paste0("Error retreiving the default processings for patient(s) ",paste0("'",patient_id,"'",collapse=", "),"!\n"), just_execute=FALSE);
   if( is.null(db_procs) || nrow(db_procs) == 0 ) return (NULL);
     
   # Re-arrange it in the "procid", "patid", "mcid", "actid", "class", "type", "action" & "params" format:
-  db_procs <- db_procs[, c(get(x, 'procid', 'pr'), get(x, 'patid', 'pr'), get(x, 'category', 'pr'), get(x, 'action', 'pr'),
-                           get(x, 'class', 'mc'), get(x, 'action', 'ac'), get(x, 'params', 'ac'))];
+  db_procs <- db_procs[, c(geta(x, 'procid', 'pr'), geta(x, 'patid', 'pr'), geta(x, 'category', 'pr'), geta(x, 'action', 'pr'),
+                           geta(x, 'class', 'mc'), geta(x, 'action', 'ac'), geta(x, 'params', 'ac'))];
   names(db_procs) <- c('procid', 'patid', 'mcid', 'actid', 'class', 'action', 'params');
   
   # If a specific processing is defined, discard the defaults:
@@ -1810,7 +1810,7 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
     return (rep(TRUE, nrow(patient_info)));
   }
   
-  # Special case for "all others" ('@')?
+  # Special case for "all others" ('?')?
   if( procs_class == x$class_others )
   {
     # All medications not otherwise selected by the other class definitions for this patient (or all, if not classes defined):
@@ -1829,13 +1829,13 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
   
   # Do the specific selection:
   # Get the medication classes for this patient:
-  if( is.na(get(x, 'category', 'ev')) )
+  if( is.na(geta(x, 'category', 'ev')) )
   {
     # No medication classes:
     .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
     return (rep(TRUE, nrow(patient_info))); # select all
   }
-  pat_classes <- patient_info[ , get(x, 'category', 'ev') ]; 
+  pat_classes <- patient_info[ , geta(x, 'category', 'ev') ]; 
   if( is.null(pat_classes) )
   {
     # No medication classes:
@@ -1843,14 +1843,93 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
     return (rep(TRUE, nrow(patient_info))); # select all
   }
   
+  # Do we also need the dosage?
+  pat_doses <- rep(NA, nrow(patient_info));
+  if( any(grepl(x$class_med_dose, procs_class, fixed=TRUE)) )
+  {
+    # Get the dosage for this patient:
+    if( is.na(geta(x, 'perday', 'ev')) )
+    {
+      # No dosage:
+      .msg(paste0("Warning: dosage not defined: selecting all events...\n"), x$log_file, "w");
+      return (rep(TRUE, nrow(patient_info))); # select all
+    }
+    pat_doses <- patient_info[ , geta(x, 'perday', 'ev') ]; 
+    if( is.null(pat_doses) )
+    {
+      # No dosage:
+      .msg(paste0("Warning: dosage not defined: selecting all events...\n"), x$log_file, "w");
+      return (rep(TRUE, nrow(patient_info))); # select all
+    }
+  }
+  
   # Transform the procs_class specification into a logical expression to be evaluated on pat_classes:
   procs_class_expr <- NULL;
   procs_class2 <- procs_class;
-  procs_class2 <- gsub(x$class_med_rquote, "')", # replace "[ XX ]" by the actual R test "(pat_classes == 'XX')"
-                       gsub(x$class_med_lquote, "(pat_classes == '",
-                            procs_class2, 
+  # Replace medication class "[ XX ]" by the actual R test "(pat_classes == 'XX')":
+  procs_class2 <- gsub(x$class_med_rquote, "')", 
+                       gsub(x$class_med_lquote, "(.c == '",
+                            procs_class2,
                             fixed=TRUE), 
                        fixed=TRUE);
+  
+  # Replace the dosage "@" by the actual dosage aggregation function:
+  while( !is.null(dosage_symbols <- regexpr(x$class_med_dose, procs_class2, fixed=TRUE)) && 
+         length(dosage_symbols) == 1 && 
+         dosage_symbols != (-1) ) # find the first "@"
+  {
+    # See what's the next character:
+    cur_pos <- dosage_symbols + attr(dosage_symbols, "match.length");
+    if( cur_pos + 1 >= nchar(procs_class2) )
+    {
+      .msg(paste0("Error parsing the medication class definition '",procs_class2,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+      return (NULL);
+    }
+    
+    # Skip all whitespaces:
+    next_op <- trimws(substring(procs_class2, cur_pos));
+    if( substring(next_op, 1, 1) != "(" )
+    {
+      # Must be a "("!
+      .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+      return (NULL);
+    }
+    
+    # Find the matching ")": find all the "(" and ")", mark them as +1 and -1 respectively, order them by their position and select the first position with cumsum == 0:
+    pars_l <- gregexpr("(", next_op, fixed=TRUE); pars_r <- gregexpr(")", next_op, fixed=TRUE); 
+    if( is.null(pars_l) || length(pars_l) != 1 || pars_l[[1]][1] == (-1) ||
+        is.null(pars_r) || length(pars_r) != 1 || pars_r[[1]][1] == (-1) )
+    {
+      # Non-matching arantheses!
+      .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+      return (NULL);
+    }
+    pars_lr <- data.frame(type=c(rep(+1, length(pars_l[[1]])), rep(-1, length(pars_r[[1]]))),
+                          pos= c(pars_l[[1]],                  pars_r[[1]])); 
+    pars_lr <- pars_lr[ pars_lr$pos > 0, ]; pars_lr <- pars_lr[ order(pars_lr$pos), ]; 
+    if( nrow(pars_lr) == 0 )
+    {
+      # Non-matching arantheses!
+      .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+      return (NULL);
+    }
+    pars_lr$sum <- cumsum(pars_lr$type);
+    if( sum(pars_lr$sum == 0) == 0 )
+    {
+      # Non-matching arantheses!
+      .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+      return (NULL);
+    }
+    
+    # The end of the operand:
+    next_op_end <- min(pars_lr$pos[ pars_lr$sum == 0 ], na.rm=TRUE) + dosage_symbols;
+      
+    procs_class2 <- gsub(substring(procs_class2, dosage_symbols, next_op_end), 
+                         paste0(".d[ ", substring(procs_class2, dosage_symbols+1, next_op_end), " ]"),
+                         procs_class2, fixed=TRUE);
+  }
+  
+  # Parse it:
   try(procs_class_expr <- parse(text=procs_class2), silent=TRUE);
   if( is.null(procs_class_expr) )
   {
@@ -1858,13 +1937,15 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
     return (NULL);
   }
   
-  # Evaluate the expression:
-  s <- eval(procs_class_expr);
+  # Evaluate the expression in a safe environment (to avoid any nasties) as per https://stackoverflow.com/a/18391779:
+  .reset_safe_env(); .safe_set(".c", pat_classes); .safe_set(".d", pat_doses); # put the pat_classes and pat_doses in the safe environment
+  s <- .safe_eval(procs_class_expr); # evaluate the expression in the safe environment
   if( (!is.na(s) || !is.null(s)) && !is.logical(s) )
   {
     .msg(paste0("Error applying the medication class definition '",procs_class,"' to the data: the result should be logical!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
     return (NULL);
   }
+  .reset_safe_env(); # remove the values of the pat_classes and pat_doses from the safe environment
   
   # Return it:
   return (s);
@@ -1887,11 +1968,11 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   procs_action_call <- paste0(procs_action$proc[1], 
                               "(",
                               "data=patient_info, ",
-                              "ID.colname='",get(x, 'patid', 'ev'),"', ",
-                              "event.date.colname='",get(x, 'date', 'ev'),"', ",
-                              "event.duration.colname='",get(x, 'duration', 'ev'),"', ",
-                              ifelse(!is.na(get(x, 'perday', 'ev')), paste0("event.daily.dose.colname='",get(x, 'perday', 'ev'),"', "), ""),
-                              ifelse(!is.na(get(x, 'category', 'ev')), paste0("medication.class.colname='",get(x, 'category', 'ev'),"' "), ""),
+                              "ID.colname='",geta(x, 'patid', 'ev'),"', ",
+                              "event.date.colname='",geta(x, 'date', 'ev'),"', ",
+                              "event.duration.colname='",geta(x, 'duration', 'ev'),"', ",
+                              ifelse(!is.na(geta(x, 'perday', 'ev')), paste0("event.daily.dose.colname='",geta(x, 'perday', 'ev'),"', "), ""),
+                              ifelse(!is.na(geta(x, 'category', 'ev')), paste0("medication.class.colname='",geta(x, 'category', 'ev'),"' "), ""),
                               ifelse(procs_action$params[1] != "", paste0(", ",procs_action$params[1]),""),", ",
                               "date.format='%Y-%m-%d'", # make sure we use the SQL date format
                               ")");
@@ -1964,7 +2045,7 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   }
   
   # Return the results:
-  return (list("id"=patient_info[ 1, get(x, 'patid', 'ev') ],
+  return (list("id"=patient_info[ 1, geta(x, 'patid', 'ev') ],
                "procid"=procs_action$procid[1], "class"=procs_action$class[1], "type"=procs_action$type[1], "proc"=procs_action$proc[1], "params"=procs_action$params[1], 
                "cma"=cma, 
                "plots"=cma_plots));
@@ -2059,30 +2140,30 @@ check_tables.SQL_db <- function(x)
   check_table <- function(x, tbname="events", tbcolumns=c("name", "patient_id", "date", "perday", "category", "duration"), 
                           check_empty=FALSE, stop_on_error=TRUE)
   {
-    if( !(get(x, 'name', tbname) %in% db_tables) )
+    if( !(geta(x, 'name', tbname) %in% db_tables) )
     {
-      msg <- paste0("The required table '",get(x, 'name', tbname),"' does not seem to exist in the database!\n");
+      msg <- paste0("The required table '",geta(x, 'name', tbname),"' does not seem to exist in the database!\n");
       .msg(msg, x$log_file, ifelse(stop_on_error,"e","w"));
       return (FALSE);
     }
-    table_info <- get_cols_info(x, get(x, 'name', tbname));
+    table_info <- get_cols_info(x, geta(x, 'name', tbname));
     if( is.null(table_info) || nrow(table_info) == 0 )
     {
-      msg <- paste0("Cannot get the information about the table '",get(x, 'name', tbname),"'!\n");
+      msg <- paste0("Cannot get the information about the table '",geta(x, 'name', tbname),"'!\n");
       .msg(msg, x$log_file, ifelse(stop_on_error,"e","w"));
       return (FALSE);
     }
     if( check_empty && table_info$nrow[1] == 0 )
     {
-      msg <- paste0("The table '",get(x, 'name', tbname),"' seems empty!\n");
+      msg <- paste0("The table '",geta(x, 'name', tbname),"' seems empty!\n");
       .msg(msg, x$log_file, ifelse(stop_on_error,"e","w"));
       return (FALSE);
     }
     for( tbcol in setdiff(tbcolumns, "name") ) # "name" is not a column
     {
-      if( !(get(x, tbcol, tbname) %in% table_info$column) )
+      if( !(geta(x, tbcol, tbname) %in% table_info$column) )
       {
-        msg <- paste0("The required column '",get(x, tbcol, tbname),"' does not seem to exist in the table '",get(x, 'name', tbname),"'!\n");
+        msg <- paste0("The required column '",geta(x, tbcol, tbname),"' does not seem to exist in the table '",geta(x, 'name', tbname),"'!\n");
         .msg(msg, x$log_file, ifelse(stop_on_error,"e","w"));
         return (FALSE);
       }
@@ -2092,10 +2173,10 @@ check_tables.SQL_db <- function(x)
   
   default_class_defined <- function(x) 
   {
-    tmp <- sqlQ(x, query=paste0("SELECT COUNT(*) FROM ",qfq_get(x, 'name', 'mc'),
-                                          " WHERE ",qs_get(x, 'mcid', 'mc')," = '",x$class_default,"' AND ",qs_get(x, 'class', 'mc')," = '",x$class_default,"' ",
+    tmp <- sqlQ(x, query=paste0("SELECT COUNT(*) FROM ",qfq_geta(x, 'name', 'mc'),
+                                          " WHERE ",qs_geta(x, 'mcid', 'mc')," = '",x$class_default,"' AND ",qs_geta(x, 'class', 'mc')," = '",x$class_default,"' ",
                                           ";"),
-                          err_msg=paste0("The default class ('",x$class_default,"','",x$class_default,"') is not defined in the classes table '",get(x, 'name', 'mc'),"'!\n"), just_execute=FALSE);
+                          err_msg=paste0("The default class ('",x$class_default,"','",x$class_default,"') is not defined in the classes table '",geta(x, 'name', 'mc'),"'!\n"), just_execute=FALSE);
     return (!is.null(tmp) && tmp[1,1] > 0 );
   }
   
@@ -2174,30 +2255,30 @@ create_test_database.SQL_db <- function(x)
   db_tables <- list_tables(x);
   
   # The events table:
-  try(table_drop(x, get(x, 'name', 'ev')), silent=TRUE);
-  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 'ev')," ( ",
-                                   qs_get(x, 'patid', 'ev'),    " VARCHAR(256) NOT NULL, ",
-                                   qs_get(x, 'date', 'ev'),     " DATE NOT NULL, ",
-                                   qs_get(x, 'perday', 'ev'),   " INT NOT NULL, ",
-                                   qs_get(x, 'category', 'ev'), " VARCHAR(1024) NULL DEFAULT NULL, ",
-                                   qs_get(x, 'duration', 'ev'), " INT NULL DEFAULT NULL );"),
-                   err_msg=paste0("Error creating the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+  try(table_drop(x, geta(x, 'name', 'ev')), silent=TRUE);
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_geta(x, 'name', 'ev')," ( ",
+                                   qs_geta(x, 'patid', 'ev'),    " VARCHAR(256) NOT NULL, ",
+                                   qs_geta(x, 'date', 'ev'),     " DATE NOT NULL, ",
+                                   qs_geta(x, 'perday', 'ev'),   " INT NOT NULL, ",
+                                   qs_geta(x, 'category', 'ev'), " VARCHAR(1024) NULL DEFAULT NULL, ",
+                                   qs_geta(x, 'duration', 'ev'), " INT NULL DEFAULT NULL );"),
+                   err_msg=paste0("Error creating the events table '",geta(x, 'name', 'ev'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
   for( i in 1:nrow(d) )
   {
-    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x, 'name', 'ev'),
+    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x, 'name', 'ev'),
                                      " VALUES (",paste0("'",as.character(d[i,]),"'",collapse=","),");"),
-                     err_msg=paste0("Error writing into the events table '",get(x, 'name', 'ev'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+                     err_msg=paste0("Error writing into the events table '",geta(x, 'name', 'ev'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   }
   
   # The actions table: 
-  try(table_drop(x, get(x, 'name', 'ac')), silent=TRUE);
-  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 'ac')," ( ",
-                                   qs_get(x, 'actid', 'ac'),  " VARCHAR(256) NOT NULL, ",
-                                   qs_get(x, 'action', 'ac'), " VARCHAR(128) NULL DEFAULT NULL, ",
-                                   qs_get(x, 'params', 'ac'), " VARCHAR(5000) NULL DEFAULT NULL, ", 
-                                   "PRIMARY KEY (", get(x, 'actid', 'ac'), ") );"),
-                   err_msg=paste0("Error creating the actions table '",get(x, 'name', 'ac'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+  try(table_drop(x, geta(x, 'name', 'ac')), silent=TRUE);
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_geta(x, 'name', 'ac')," ( ",
+                                   qs_geta(x, 'actid', 'ac'),  " VARCHAR(256) NOT NULL, ",
+                                   qs_geta(x, 'action', 'ac'), " VARCHAR(128) NULL DEFAULT NULL, ",
+                                   qs_geta(x, 'params', 'ac'), " VARCHAR(5000) NULL DEFAULT NULL, ", 
+                                   "PRIMARY KEY (", geta(x, 'actid', 'ac'), ") );"),
+                   err_msg=paste0("Error creating the actions table '",geta(x, 'name', 'ac'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one:
   tmp <- matrix(c('CMA1',               'CMA1',                    '',
                   'CMA2',               'CMA2',                    '',
@@ -2208,53 +2289,57 @@ create_test_database.SQL_db <- function(x)
                   'pSW(CMA1,d=90,n=5)', 'plot.CMA_sliding_window', 'CMA.to.apply=\"CMA1\", sliding.window.duration=90, sliding.window.no.steps=5',
                   'pPE(CMA1,gap=90)',   'plot.CMA_per_episode',    'CMA.to.apply=\"CMA1\", maximum.permissible.gap=90'), 
                 ncol=3, byrow=TRUE);
-  colnames(tmp) <- c(qs_get(x, 'actid', 'ac'), qs_get(x, 'action', 'ac'), qs_get(x, 'params', 'ac'));
+  colnames(tmp) <- c(qs_geta(x, 'actid', 'ac'), qs_geta(x, 'action', 'ac'), qs_geta(x, 'params', 'ac'));
   for( i in 1:nrow(tmp) )
   {
-    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x, 'name', 'ac'),
+    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x, 'name', 'ac'),
                                      "(",paste0(colnames(tmp),collapse=","),")",
                                      " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"),
-                     err_msg=paste0("Error writing into the actions table '",get(x, 'name', 'ac'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+                     err_msg=paste0("Error writing into the actions table '",geta(x, 'name', 'ac'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   }
   
   # The medication classes table: 
-  try(table_drop(x, get(x, 'name', 'mc')), silent=TRUE);
-  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 'mc')," ( ",
-                                   qs_get(x, 'mcid', 'mc'),  " VARCHAR(256) NOT NULL, ",
-                                   qs_get(x, 'class', 'mc'), " VARCHAR(5000) NULL DEFAULT NULL, ",
-                                   "PRIMARY KEY (", qs_get(x, 'mcid', 'mc'), ") );"),
-                   err_msg=paste0("Error creating the medication classes table '",get(x, 'name', 'mc'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+  try(table_drop(x, geta(x, 'name', 'mc')), silent=TRUE);
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_geta(x, 'name', 'mc')," ( ",
+                                   qs_geta(x, 'mcid', 'mc'),  " VARCHAR(256) NOT NULL, ",
+                                   qs_geta(x, 'class', 'mc'), " VARCHAR(5000) NULL DEFAULT NULL, ",
+                                   "PRIMARY KEY (", qs_geta(x, 'mcid', 'mc'), ") );"),
+                   err_msg=paste0("Error creating the medication classes table '",geta(x, 'name', 'mc'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one:
   tmp <- matrix(c(x$class_default, x$class_default, # the special default rule must be defined (implicitely, '*', '*')
                   'A',             paste0(x$class_med_lquote,'medA',x$class_med_rquote), # implictely [medA]
                   'A | B',         paste0(x$class_med_lquote,'medA',x$class_med_rquote,' | ',x$class_med_lquote,'medB',x$class_med_rquote), # implictely [medA] | [medB]
                   '!A',            paste0('!',x$class_med_lquote,'medA',x$class_med_rquote), # implicitely '![medA]'
-                  'A>4',           paste0(x$class_med_dose,'(',x$class_med_lquote,'medA',x$class_med_rquote,')',' > 4'), # implicitely '^([medA]) > 4'
-                  'A & !A',        paste0(x$class_med_lquote,'medA',x$class_med_rquote,' & ',x$class_ref_lquote,'!A',x$class_ref_rquote), # implicitely '[medA] & {!A}' (thus, with reference to !A)
+                  'B>2',           paste0(x$class_med_lquote,'medB',x$class_med_rquote," & ",
+                                          x$class_med_dose,x$class_med_lquote,'medB',x$class_med_rquote,' > 2'), # implicitely '[medB] & @[medB] > 2'
+                  'A | B > 2',     paste0(x$class_med_dose,"(",x$class_med_lquote,'medA',x$class_med_rquote," | ",
+                                          x$class_med_lquote,'medB',x$class_med_rquote,")",' > 2'), # implicitely '@([medA] | [medB]) > 2'
+                  'A & !A',        paste0(x$class_med_lquote,'medA',x$class_med_rquote,' & ',
+                                          x$class_ref_lquote,'!A',x$class_ref_rquote), # implicitely '[medA] & {!A}' (thus, with reference to !A)
                   'else',          x$class_others), # class_others means all other not otherwise matched medications for a given patient
                 ncol=2, byrow=TRUE);
-  colnames(tmp) <- c(qs_get(x, 'mcid', 'mc'), qs_get(x, 'class', 'mc'));
+  colnames(tmp) <- c(qs_geta(x, 'mcid', 'mc'), qs_geta(x, 'class', 'mc'));
   for( i in 1:nrow(tmp) )
   {
-    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x, 'name', 'mc'),
+    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x, 'name', 'mc'),
                                      "(",paste0(colnames(tmp),collapse=","),")",
                                      " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"),
-                     err_msg=paste0("Error writing into the medication classes table '",get(x, 'name', 'mc'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+                     err_msg=paste0("Error writing into the medication classes table '",geta(x, 'name', 'mc'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   }
   
   # The processings table specifying what to do to which entries: 
-  try(table_drop(x, get(x, 'name', 'pr')), silent=TRUE);
-  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 'pr')," ( ",
-                                   qs_get(x, 'procid', 'pr'),   switch(x$db_type,
+  try(table_drop(x, geta(x, 'name', 'pr')), silent=TRUE);
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_geta(x, 'name', 'pr')," ( ",
+                                   qs_geta(x, 'procid', 'pr'),   switch(x$db_type,
                                                                        "mssql"=" INT IDENTITY(1,1) PRIMARY KEY, ",
                                                                        "sqlite"=" INTEGER PRIMARY KEY AUTOINCREMENT, ",
                                                                        "mariadb"=,
                                                                        "mysql"=" INT NOT NULL AUTO_INCREMENT PRIMARY KEY, "),
-                                   qs_get(x, 'patid', 'pr'),    " VARCHAR(256) NOT NULL, ",
-                                   qs_get(x, 'category', 'pr'), " VARCHAR(256) NOT NULL, ",
-                                   qs_get(x, 'action', 'pr'),   " VARCHAR(256) NOT NULL",
+                                   qs_geta(x, 'patid', 'pr'),    " VARCHAR(256) NOT NULL, ",
+                                   qs_geta(x, 'category', 'pr'), " VARCHAR(256) NOT NULL, ",
+                                   qs_geta(x, 'action', 'pr'),   " VARCHAR(256) NOT NULL",
                                    ");"),
-                   err_msg=paste0("Error creating the processings table '",get(x, 'name', 'pr'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+                   err_msg=paste0("Error creating the processings table '",geta(x, 'name', 'pr'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one:
   tmp <- matrix(c(x$class_default, x$class_default, 'pCMA0', # the default actions (implicitely, '*', '*')
                   x$class_default, x$class_default, 'CMA9',
@@ -2274,68 +2359,69 @@ create_test_database.SQL_db <- function(x)
                   '6',             'else',          'CMA2', # for all other medications for patient 6
                   '7',             'A',             x$procs_default_action, # use the default actions (implicitely '*', and the default actions are those with ('*', '*'))
                   '8',             'A & !A',        'CMA2',
-                  '9',             x$class_default, 'CMA9'), 
+                  '9',             x$class_default, 'CMA9',
+                  '3',             'A | B > 2',     'CMA2'), # use dosage
                 ncol=3, byrow=TRUE);
-  colnames(tmp) <- c(qs_get(x, 'patid', 'pr'), qs_get(x, 'category', 'pr'), qs_get(x, 'action', 'pr'));
+  colnames(tmp) <- c(qs_geta(x, 'patid', 'pr'), qs_geta(x, 'category', 'pr'), qs_geta(x, 'action', 'pr'));
   for( i in 1:nrow(tmp) )
   {
-    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x, 'name', 'pr'),
+    if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x, 'name', 'pr'),
                                      "(",paste0(colnames(tmp),collapse=","),")",
                                      " VALUES (",paste0("'",tmp[i,],"'",collapse=", "),");"),
-                     err_msg=paste0("Error writing into the processings table '",get(x, 'name', 'pr'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+                     err_msg=paste0("Error writing into the processings table '",geta(x, 'name', 'pr'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   }
   
   # The main results table: 
-  try(table_drop(x, get(x, 'name', 're')), silent=TRUE);
-  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 're')," ( ",
-                                   qs_get(x, 'resid', 're'),      switch(x$db_type,
+  try(table_drop(x, geta(x, 'name', 're')), silent=TRUE);
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_geta(x, 'name', 're')," ( ",
+                                   qs_geta(x, 'resid', 're'),      switch(x$db_type,
                                                                          "mssql"=" INT IDENTITY(1,1) PRIMARY KEY, ",
                                                                          "sqlite"=" INTEGER PRIMARY KEY AUTOINCREMENT, ",
                                                                          "mariadb"=,
                                                                          "mysql"=" INT NOT NULL AUTO_INCREMENT PRIMARY KEY, "),
-                                   qs_get(x, 'patid', 'ev'),      " VARCHAR(256) NOT NULL, ",
-                                   qs_get(x, 'procid', 're'),     " INT NULL DEFAULT -1, ",
-                                   qs_get(x, 'estim', 're'),      " FLOAT NULL DEFAULT NULL, ",
-                                   qs_get(x, 'estim_type', 're'), " VARCHAR(256) NULL DEFAULT NULL, ",
-                                   qs_get(x, 'jpg', 're'),        ifelse(x$db_type == "mssql", " VARBINARY(MAX), " ," LONGBLOB NULL DEFAULT NULL, "),
-                                   qs_get(x, 'html', 're'),       ifelse(x$db_type == "mssql", " VARBINARY(MAX), " ," LONGBLOB NULL DEFAULT NULL "), 
+                                   qs_geta(x, 'patid', 'ev'),      " VARCHAR(256) NOT NULL, ",
+                                   qs_geta(x, 'procid', 're'),     " INT NULL DEFAULT -1, ",
+                                   qs_geta(x, 'estim', 're'),      " FLOAT NULL DEFAULT NULL, ",
+                                   qs_geta(x, 'estim_type', 're'), " VARCHAR(256) NULL DEFAULT NULL, ",
+                                   qs_geta(x, 'jpg', 're'),        ifelse(x$db_type == "mssql", " VARBINARY(MAX), " ," LONGBLOB NULL DEFAULT NULL, "),
+                                   qs_geta(x, 'html', 're'),       ifelse(x$db_type == "mssql", " VARBINARY(MAX), " ," LONGBLOB NULL DEFAULT NULL "), 
                                    " );"),
-                   err_msg=paste0("Error creating the main results table '",get(x, 'name', 're'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+                   err_msg=paste0("Error creating the main results table '",geta(x, 'name', 're'),"'!\n"), just_execute=TRUE)) ) return (NULL);
 
   # The sliding windows results table: 
-  try(table_drop(x, get(x, 'name', 'sw')), silent=TRUE);
-  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 'sw')," ( ",
-                                   qs_get(x, 'resid', 'sw'), " INT NULL DEFAULT NULL, ",
-                                   qs_get(x, 'patid', 'sw'), " VARCHAR(256) NOT NULL, ",
-                                   qs_get(x, 'wndid', 'sw'), " INT NOT NULL, ",
-                                   qs_get(x, 'start', 'sw'), " DATE NOT NULL, ",
-                                   qs_get(x, 'end', 'sw'),   " DATE NOT NULL, ",
-                                   qs_get(x, 'estim', 'sw'), " FLOAT NULL DEFAULT NULL );"),
-                   err_msg=paste0("Error creating the sliding windows results table '",get(x, 'name', 'sw'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+  try(table_drop(x, geta(x, 'name', 'sw')), silent=TRUE);
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_geta(x, 'name', 'sw')," ( ",
+                                   qs_geta(x, 'resid', 'sw'), " INT NULL DEFAULT NULL, ",
+                                   qs_geta(x, 'patid', 'sw'), " VARCHAR(256) NOT NULL, ",
+                                   qs_geta(x, 'wndid', 'sw'), " INT NOT NULL, ",
+                                   qs_geta(x, 'start', 'sw'), " DATE NOT NULL, ",
+                                   qs_geta(x, 'end', 'sw'),   " DATE NOT NULL, ",
+                                   qs_geta(x, 'estim', 'sw'), " FLOAT NULL DEFAULT NULL );"),
+                   err_msg=paste0("Error creating the sliding windows results table '",geta(x, 'name', 'sw'),"'!\n"), just_execute=TRUE)) ) return (NULL);
 
   # The per episode results table: 
-  try(table_drop(x, get(x, 'name', 'pe')), silent=TRUE);
-  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 'pe')," ( ",
-                                   qs_get(x, 'resid', 'pe'),    " INT NULL DEFAULT NULL, ",
-                                   qs_get(x, 'patid', 'pe'),    " VARCHAR(256) NOT NULL, ",
-                                   qs_get(x, 'epid', 'pe'),     " INT NOT NULL, ",
-                                   qs_get(x, 'start', 'pe'),    " DATE NOT NULL, ",
-                                   qs_get(x, 'gap', 'pe'),      " INT NULL DEFAULT NULL, ",
-                                   qs_get(x, 'duration', 'pe'), " INT NULL DEFAULT NULL, ",
-                                   qs_get(x, 'end', 'pe'),      " DATE NOT NULL, ",
-                                   qs_get(x, 'estim', 'pe'),    " FLOAT NULL DEFAULT NULL );"),
-                   err_msg=paste0("Error creating the per episode results table '",get(x, 'name', 'pe'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+  try(table_drop(x, geta(x, 'name', 'pe')), silent=TRUE);
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_geta(x, 'name', 'pe')," ( ",
+                                   qs_geta(x, 'resid', 'pe'),    " INT NULL DEFAULT NULL, ",
+                                   qs_geta(x, 'patid', 'pe'),    " VARCHAR(256) NOT NULL, ",
+                                   qs_geta(x, 'epid', 'pe'),     " INT NOT NULL, ",
+                                   qs_geta(x, 'start', 'pe'),    " DATE NOT NULL, ",
+                                   qs_geta(x, 'gap', 'pe'),      " INT NULL DEFAULT NULL, ",
+                                   qs_geta(x, 'duration', 'pe'), " INT NULL DEFAULT NULL, ",
+                                   qs_geta(x, 'end', 'pe'),      " DATE NOT NULL, ",
+                                   qs_geta(x, 'estim', 'pe'),    " FLOAT NULL DEFAULT NULL );"),
+                   err_msg=paste0("Error creating the per episode results table '",geta(x, 'name', 'pe'),"'!\n"), just_execute=TRUE)) ) return (NULL);
 
   # The updated info table: 
-  try(table_drop(x, get(x, 'name', 'up')), silent=TRUE);
-  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_get(x, 'name', 'up')," ( ",
-                                   qs_get(x, 'patid', 'up'), " VARCHAR(256) NOT NULL );"),
-                   err_msg=paste0("Error creating the updated info table '",get(x, 'name', 'up'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+  try(table_drop(x, geta(x, 'name', 'up')), silent=TRUE);
+  if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_geta(x, 'name', 'up')," ( ",
+                                   qs_geta(x, 'patid', 'up'), " VARCHAR(256) NOT NULL );"),
+                   err_msg=paste0("Error creating the updated info table '",geta(x, 'name', 'up'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in:
-  if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_get(x, 'name', 'up'),
-                                   " (",qs_get(x, 'patid', 'up'),") ",
+  if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x, 'name', 'up'),
+                                   " (",qs_geta(x, 'patid', 'up'),") ",
                                    " VALUES ",paste0("('",1:20,"')",collapse=", ")," ;"), # just the first 20 patients have updated info
-                   err_msg=paste0("Error writing into the updated info table '",get(x, 'name', 'up'),"'!\n"), just_execute=TRUE)) ) return (NULL);
+                   err_msg=paste0("Error writing into the updated info table '",geta(x, 'name', 'up'),"'!\n"), just_execute=TRUE)) ) return (NULL);
 
   .msg(paste0("Finished creating the test database...\n\n"), x$log_file, "m");
 }

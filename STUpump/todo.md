@@ -25,6 +25,8 @@
 ## Medication classes
 
   - use ^() for *dosage* and also add numeric comparisons
+  
+  - add ^(*) for dosage for any medication
 
 
 ## Processing table
