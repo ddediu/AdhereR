@@ -85,7 +85,7 @@ options(warn=1); # show warning as they occur (and allow their capture with capt
   getGroupMembers("Arith"),
   getGroupMembers("Logic"),
   getGroupMembers("Compare"),
-  "(", "["
+  "(", "[", "!"
 )
 
 # The safe environment (no parent) contaning only the needed variables:
@@ -185,121 +185,6 @@ SQL_db <- function(spec_file=NA,                                                
     
     .msg("\n", log_file, "m"); # aesthetic newline in the log file
 
-    
-    # The symbols with special meaning:
-    # The default values (in case they are not defined):
-      class_default          <- "*";
-      class_others           <- "?";
-      class_med_lquote       <- "["; class_med_rquote   <- "]";
-      class_ref_lquote       <- "{"; class_ref_rquote   <- "}";
-      class_med_dose         <- "@"; 
-      procs_default_action   <- class_default;
-
-    if( "special_symbols" %in% names(db_info) )
-    {
-      .msg(paste0("Parsing the special symbols...\n"), log_file, "m");
-      
-      # Explicitely defined:
-      if( "class_default" %in% names(db_info$special_symbols) && 
-          !is.null(db_info$special_symbols$class_default) && !is.na(db_info$special_symbols$class_default) && 
-          is.character(db_info$special_symbols$class_default) && length(db_info$special_symbols$class_default) == 1 &&
-          db_info$special_symbols$class_default != "" )
-      {
-        class_default <- db_info$special_symbols$class_default;
-      } else
-      {
-        .msg(paste0("Unrecognised special symbol 'class_default': using the default value.\n"), log_file, "w");
-      }
-
-      if( "class_others" %in% names(db_info$special_symbols) && 
-          !is.null(db_info$special_symbols$class_others) && !is.na(db_info$special_symbols$class_others) && 
-          is.character(db_info$special_symbols$class_others) && length(db_info$special_symbols$class_others) == 1 &&
-          db_info$special_symbols$class_others != "" )
-      {
-        class_others <- db_info$special_symbols$class_others;
-      } else
-      {
-        .msg(paste0("Unrecognised special symbol 'class_others': using the default value.\n"), log_file, "w");
-      }
-
-      if( "class_med_lquote" %in% names(db_info$special_symbols) && 
-          !is.null(db_info$special_symbols$class_med_lquote) && !is.na(db_info$special_symbols$class_med_lquote) && 
-          is.character(db_info$special_symbols$class_med_lquote) && length(db_info$special_symbols$class_med_lquote) == 1 &&
-          db_info$special_symbols$class_med_lquote != "" )
-      {
-        class_med_lquote <- db_info$special_symbols$class_med_lquote;
-      } else
-      {
-        .msg(paste0("Unrecognised special symbol 'class_med_lquote': using the default value.\n"), log_file, "w");
-      }
-
-      if( "class_med_rquote" %in% names(db_info$special_symbols) && 
-          !is.null(db_info$special_symbols$class_med_rquote) && !is.na(db_info$special_symbols$class_med_rquote) && 
-          is.character(db_info$special_symbols$class_med_rquote) && length(db_info$special_symbols$class_med_rquote) == 1 &&
-          db_info$special_symbols$class_med_rquote != "" )
-      {
-        class_med_rquote <- db_info$special_symbols$class_med_rquote;
-      } else
-      {
-        .msg(paste0("Unrecognised special symbol 'class_med_rquote': using the default value.\n"), log_file, "w");
-      }
-
-      if( "class_ref_lquote" %in% names(db_info$special_symbols) && 
-          !is.null(db_info$special_symbols$class_ref_lquote) && !is.na(db_info$special_symbols$class_ref_lquote) && 
-          is.character(db_info$special_symbols$class_ref_lquote) && length(db_info$special_symbols$class_ref_lquote) == 1 &&
-          db_info$special_symbols$class_ref_lquote != "" )
-      {
-        class_ref_lquote <- db_info$special_symbols$class_ref_lquote;
-      } else
-      {
-        .msg(paste0("Unrecognised special symbol 'class_ref_lquote': using the default value.\n"), log_file, "w");
-      }
-
-      if( "class_ref_rquote" %in% names(db_info$special_symbols) && 
-          !is.null(db_info$special_symbols$class_ref_rquote) && !is.na(db_info$special_symbols$class_ref_rquote) && 
-          is.character(db_info$special_symbols$class_ref_rquote) && length(db_info$special_symbols$class_ref_rquote) == 1 &&
-          db_info$special_symbols$class_ref_rquote != "" )
-      {
-        class_ref_rquote <- db_info$special_symbols$class_ref_rquote;
-      } else
-      {
-        .msg(paste0("Unrecognised special symbol 'class_ref_rquote': using the default value.\n"), log_file, "w");
-      }
-
-      if( "class_med_dose" %in% names(db_info$special_symbols) && 
-          !is.null(db_info$special_symbols$class_med_dose) && !is.na(db_info$special_symbols$class_med_dose) && 
-          is.character(db_info$special_symbols$class_med_dose) && length(db_info$special_symbols$class_med_dose) == 1 &&
-          db_info$special_symbols$class_med_dose != "" )
-      {
-        class_med_dose <- db_info$special_symbols$class_med_dose;
-      } else
-      {
-        .msg(paste0("Unrecognised special symbol 'class_med_dose': using the default value.\n"), log_file, "w");
-      }
-
-      if( "procs_default_action" %in% names(db_info$special_symbols) && 
-          !is.null(db_info$special_symbols$procs_default_action) && !is.na(db_info$special_symbols$procs_default_action) && 
-          is.character(db_info$special_symbols$procs_default_action) && length(db_info$special_symbols$procs_default_action) == 1 &&
-          db_info$special_symbols$procs_default_action != "" )
-      {
-        procs_default_action <- db_info$special_symbols$procs_default_action;
-      } else
-      {
-        .msg(paste0("Unrecognised special symbol 'class_med_dose': using the default value.\n"), log_file, "w");
-        procs_default_action <- class_default;
-      }
-
-      .msg(paste0("Ended parsing the special symbols.\n\n"), log_file, "m");
-    }
-    .msg(paste0("Using the special symbols:\n"), log_file, "m");
-    .msg(paste0("  - 'class_default':        '",class_default,"';\n"), log_file, "m");
-    .msg(paste0("  - 'class_others':         '",class_others,"';\n"), log_file, "m");
-    .msg(paste0("  - 'class_med_lquote':     '",class_med_lquote,"';\n"), log_file, "m");
-    .msg(paste0("  - 'class_med_rquote':     '",class_med_rquote,"';\n"), log_file, "m");
-    .msg(paste0("  - 'class_ref_lquote':     '",class_ref_lquote,"';\n"), log_file, "m");
-    .msg(paste0("  - 'class_med_dose':       '",class_med_dose,"';\n"), log_file, "m");
-    .msg(paste0("  - 'procs_default_action': '",procs_default_action,"'.\n\n"), log_file, "m");
-        
     
     # The tables:
     if( !("tables" %in% names(db_info)) ) 
@@ -580,16 +465,6 @@ SQL_db <- function(spec_file=NA,                                                
                                                            "mssql"=c("[","]"),
                                                            c("`","`")),
                               "db_table_prefix"=db_table_prefix,
-                              
-                              # special symbols:
-                              "class_default"         =class_default,
-                              "class_others"          =class_others,
-                              "class_med_lquote"      =class_med_lquote,
-                              "class_med_rquote"      =class_med_rquote,
-                              "class_ref_lquote"      =class_ref_lquote,
-                              "class_ref_rquote"      =class_ref_rquote,
-                              "class_med_dose"        =class_med_dose,
-                              "procs_default_action"  =procs_default_action,
                               
                               # the important tables:
                               "db_evtable_name"=db_evtable_name,
@@ -1070,9 +945,9 @@ preprocess.SQL_db <- function(x)
   # Do we need to do anything about this?
   default_actions <- sqlQ(x, query=paste0("SELECT COUNT(*)",
                                           " FROM ",qfq_geta(x, 'name', 'pr'),
-                                          " WHERE ",qs_geta(x, 'action', 'pr')," = '",x$procs_default_action,"'",
+                                          " WHERE ",qs_geta(x, 'action', 'pr')," = '*'",
                                           " ;"),
-                          err_msg=paste0("Error retreiving the number of default actions '",x$procs_default_action,"' from the processings table '",geta(x, 'name', 'pr'),"'!\n"), just_execute=FALSE);
+                          err_msg=paste0("Error retreiving the number of default actions '*' from the processings table '",geta(x, 'name', 'pr'),"'!\n"), just_execute=FALSE);
   if( is.null(default_actions) || nrow(default_actions) == 0 )
   {
     return (NULL);
@@ -1086,8 +961,8 @@ preprocess.SQL_db <- function(x)
     # Ok, are there defaults defined?
     default_actions_defined <- sqlQ(x, query=paste0("SELECT COUNT(*)",
                                                     " FROM ",qfq_geta(x, 'name', 'pr'),
-                                                    " WHERE ",qs_geta(x, 'patid', 'pr')," = '",x$class_default,"'",
-                                                    " AND ",qs_geta(x, 'category', 'pr')," = '",x$class_default,"'",
+                                                    " WHERE ",qs_geta(x, 'patid', 'pr')," = '*'",
+                                                    " AND ",qs_geta(x, 'category', 'pr')," = '*'",
                                                     " ;"),
                                     err_msg=paste0("Error retreiving the defaults for the processings table '",geta(x, 'name', 'pr'),"'!\n"), just_execute=FALSE);
     if( is.null(default_actions_defined) || nrow(default_actions_defined) == 0 )
@@ -1112,7 +987,7 @@ preprocess.SQL_db <- function(x)
                                        " (",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),")",
                                        " SELECT ",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),
                                        " FROM ",qfq_geta(x, 'name', 'pr'),
-                                       " WHERE ",qs_geta(x, 'action', 'pr')," <> '",x$procs_default_action,"'",
+                                       " WHERE ",qs_geta(x, 'action', 'pr')," <> '*'",
                                        " ;"),
                        err_msg=paste0("Error copying the non-defaults from the processings into the temporary database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
       
@@ -1124,9 +999,9 @@ preprocess.SQL_db <- function(x)
                                        qs(x,'a'),".",qs_geta(x, 'category', 'pr'),",",
                                        qs(x,'b'),".",qs_geta(x, 'action', 'pr'),
                                        " FROM ",qfq_geta(x, 'name', 'pr')," ",qs(x,'a'),", ",qfq_geta(x, 'name', 'pr')," ",qs(x,'b'),
-                                       " WHERE ",qs(x,'a'),".",qs_geta(x, 'action', 'pr')," = '",x$procs_default_action,"'",
-                                       " AND ",qs(x,'b'),".",qs_geta(x, 'patid', 'pr')," = '",x$class_default,"'",
-                                       " AND ",qs(x,'b'),".",qs_geta(x, 'category', 'pr')," = '",x$class_default,"'",
+                                       " WHERE ",qs(x,'a'),".",qs_geta(x, 'action', 'pr')," = '*'",
+                                       " AND ",qs(x,'b'),".",qs_geta(x, 'patid', 'pr')," = '*'",
+                                       " AND ",qs(x,'b'),".",qs_geta(x, 'category', 'pr')," = '*'",
                                        " ;"),
                        err_msg=paste0("Error solving the default actions in the temporary database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
       
@@ -1206,7 +1081,7 @@ preprocess.SQL_db <- function(x)
                 } else
                 {
                   # Replace the class reference {} by its actual definition:
-                  ref_classes$solved[i] <- gsub(paste0(x$class_ref_lquote,cn,x$class_ref_rquote), paste0("(",tmp[1,1],")"), ref_classes$solved[i], fixed=TRUE);
+                  ref_classes$solved[i] <- gsub(paste0('{',cn,'}'), paste0("(",tmp[1,1],")"), ref_classes$solved[i], fixed=TRUE);
                   updated_class <- TRUE;
                 }
               }
@@ -1755,7 +1630,7 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
                                    " ON ",qfq_geta(x, 'category', 'pr')," = ",qfq_geta(x, 'mcid', 'mc'),
                                    " INNER JOIN ",qfq_geta(x, 'name', 'ac'),
                                    " ON ",qfq_geta(x, 'action', 'pr')," = ",qfq_geta(x, 'actid', 'ac'),
-                                   " AND ",qfq_geta(x, 'patid', 'pr')," IN ('",x$class_default,"', ",paste0("'",patient_id,"'",collapse=","),")",
+                                   " AND ",qfq_geta(x, 'patid', 'pr')," IN ('*', ",paste0("'",patient_id,"'",collapse=","),")",
                                    ";"),
                    err_msg=paste0("Error retreiving the default processings for patient(s) ",paste0("'",patient_id,"'",collapse=", "),"!\n"), just_execute=FALSE);
   if( is.null(db_procs) || nrow(db_procs) == 0 ) return (NULL);
@@ -1766,7 +1641,7 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
   names(db_procs) <- c('procid', 'patid', 'mcid', 'actid', 'class', 'action', 'params');
   
   # If a specific processing is defined, discard the defaults:
-  if( any(s <- (db_procs$patid != x$class_default)) ) db_procs <- db_procs[s,];
+  if( any(s <- (db_procs$patid != '*')) ) db_procs <- db_procs[s,];
   
   # Parse the action into a process and its type:
   db_procs <- cbind(db_procs, 
@@ -1804,24 +1679,24 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
   }
   
   # Special case for full selection?
-  if( is.na(procs_class) || procs_class %in% c("", x$class_default) )
+  if( is.na(procs_class) || procs_class %in% c('', '*') )
   {
     # Select all!
     return (rep(TRUE, nrow(patient_info)));
   }
   
   # Special case for "all others" ('?')?
-  if( procs_class == x$class_others )
+  if( procs_class == '?' )
   {
     # All medications not otherwise selected by the other class definitions for this patient (or all, if not classes defined):
-    if( all(proc_classes_for_patient$class == x$class_others) )
+    if( all(proc_classes_for_patient$class == '?') )
     {
       # Select all!
       return (rep(TRUE, nrow(patient_info)));
     } else
     {
       # Put together all the other class definitions:
-      all_other_classes <- paste("(", proc_classes_for_patient$class[ !(proc_classes_for_patient$class %in% c(x$class_default, x$class_others)) ], ")", collapse=" | ");
+      all_other_classes <- paste("(", proc_classes_for_patient$class[ !(proc_classes_for_patient$class %in% c('*', '?')) ], ")", collapse=" | ");
       # and negate it:
       procs_class <- paste0("!(", all_other_classes, ")");
     }
@@ -1845,7 +1720,7 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
   
   # Do we also need the dosage?
   pat_doses <- rep(NA, nrow(patient_info));
-  if( any(grepl(x$class_med_dose, procs_class, fixed=TRUE)) )
+  if( any(grepl('@', procs_class, fixed=TRUE)) )
   {
     # Get the dosage for this patient:
     if( is.na(geta(x, 'perday', 'ev')) )
@@ -1867,14 +1742,14 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
   procs_class_expr <- NULL;
   procs_class2 <- procs_class;
   # Replace medication class "[ XX ]" by the actual R test "(pat_classes == 'XX')":
-  procs_class2 <- gsub(x$class_med_rquote, "')", 
-                       gsub(x$class_med_lquote, "(.c == '",
+  procs_class2 <- gsub(']', "')", 
+                       gsub('[', "(.c == '",
                             procs_class2,
                             fixed=TRUE), 
                        fixed=TRUE);
   
   # Replace the dosage "@" by the actual dosage aggregation function:
-  while( !is.null(dosage_symbols <- regexpr(x$class_med_dose, procs_class2, fixed=TRUE)) && 
+  while( !is.null(dosage_symbols <- regexpr('@', procs_class2, fixed=TRUE)) && 
          length(dosage_symbols) == 1 && 
          dosage_symbols != (-1) ) # find the first "@"
   {
@@ -2174,9 +2049,9 @@ check_tables.SQL_db <- function(x)
   default_class_defined <- function(x) 
   {
     tmp <- sqlQ(x, query=paste0("SELECT COUNT(*) FROM ",qfq_geta(x, 'name', 'mc'),
-                                          " WHERE ",qs_geta(x, 'mcid', 'mc')," = '",x$class_default,"' AND ",qs_geta(x, 'class', 'mc')," = '",x$class_default,"' ",
+                                          " WHERE ",qs_geta(x, 'mcid', 'mc')," = '*' AND ",qs_geta(x, 'class', 'mc')," = '*' ",
                                           ";"),
-                          err_msg=paste0("The default class ('",x$class_default,"','",x$class_default,"') is not defined in the classes table '",geta(x, 'name', 'mc'),"'!\n"), just_execute=FALSE);
+                          err_msg=paste0("The default class ('*','*') is not defined in the classes table '",geta(x, 'name', 'mc'),"'!\n"), just_execute=FALSE);
     return (!is.null(tmp) && tmp[1,1] > 0 );
   }
   
@@ -2306,17 +2181,14 @@ create_test_database.SQL_db <- function(x)
                                    "PRIMARY KEY (", qs_geta(x, 'mcid', 'mc'), ") );"),
                    err_msg=paste0("Error creating the medication classes table '",geta(x, 'name', 'mc'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one:
-  tmp <- matrix(c(x$class_default, x$class_default, # the special default rule must be defined (implicitely, '*', '*')
-                  'A',             paste0(x$class_med_lquote,'medA',x$class_med_rquote), # implictely [medA]
-                  'A | B',         paste0(x$class_med_lquote,'medA',x$class_med_rquote,' | ',x$class_med_lquote,'medB',x$class_med_rquote), # implictely [medA] | [medB]
-                  '!A',            paste0('!',x$class_med_lquote,'medA',x$class_med_rquote), # implicitely '![medA]'
-                  'B>2',           paste0(x$class_med_lquote,'medB',x$class_med_rquote," & ",
-                                          x$class_med_dose,x$class_med_lquote,'medB',x$class_med_rquote,' > 2'), # implicitely '[medB] & @[medB] > 2'
-                  'A | B > 2',     paste0(x$class_med_dose,"(",x$class_med_lquote,'medA',x$class_med_rquote," | ",
-                                          x$class_med_lquote,'medB',x$class_med_rquote,")",' > 2'), # implicitely '@([medA] | [medB]) > 2'
-                  'A & !A',        paste0(x$class_med_lquote,'medA',x$class_med_rquote,' & ',
-                                          x$class_ref_lquote,'!A',x$class_ref_rquote), # implicitely '[medA] & {!A}' (thus, with reference to !A)
-                  'else',          x$class_others), # class_others means all other not otherwise matched medications for a given patient
+  tmp <- matrix(c('*',         '*', # the special default rule ('*', '*') must be defined
+                  'A',         paste0('[medA]'),
+                  'A | B',     paste0('[medA] | [medB]'),
+                  '!A',        paste0('![medA]'),
+                  'B>2',       paste0('[medB] & @[medB] > 2'),
+                  'A | B > 2', paste0('@([medA] | [medB]) > 2'),
+                  'A & !A',    paste0('[medA] & {!A}'), # reference to !A
+                  'else',      '?'), # '?' means all other not otherwise matched medications for a given patient
                 ncol=2, byrow=TRUE);
   colnames(tmp) <- c(qs_geta(x, 'mcid', 'mc'), qs_geta(x, 'class', 'mc'));
   for( i in 1:nrow(tmp) )
@@ -2341,26 +2213,26 @@ create_test_database.SQL_db <- function(x)
                                    ");"),
                    err_msg=paste0("Error creating the processings table '",geta(x, 'name', 'pr'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one:
-  tmp <- matrix(c(x$class_default, x$class_default, 'pCMA0', # the default actions (implicitely, '*', '*')
-                  x$class_default, x$class_default, 'CMA9',
-                  '1',             'A',             'CMA2', # specific overrides
-                  '1',             'A',             'pCMA0',
-                  '1',             'A | B',         'pCMA7',
-                  '2',             x$class_default, 'pCMA0',
-                  '2',             x$class_default, 'pCMA9',
-                  '3',             x$class_default, 'pCMA0',
-                  '3',             x$class_default, 'CMA1',
-                  '3',             x$class_default, 'pSW(CMA1,d=90,n=5)',
-                  '4',             x$class_default, 'pCMA0',
-                  '4',             x$class_default, 'CMA1',
-                  '4',             x$class_default, 'pPE(CMA1,gap=90)',
-                  '5',             '!A',            'CMA2',
-                  '6',             'A',             'CMA9',
-                  '6',             'else',          'CMA2', # for all other medications for patient 6
-                  '7',             'A',             x$procs_default_action, # use the default actions (implicitely '*', and the default actions are those with ('*', '*'))
-                  '8',             'A & !A',        'CMA2',
-                  '9',             x$class_default, 'CMA9',
-                  '3',             'A | B > 2',     'CMA2'), # use dosage
+  tmp <- matrix(c('*', '*',         'pCMA0', # the default actions (implicitely, '*', '*')
+                  '*', '*',         'CMA9',
+                  '1', 'A',         'CMA2', # specific overrides
+                  '1', 'A',         'pCMA0',
+                  '1', 'A | B',     'pCMA7',
+                  '2', '*',         'pCMA0',
+                  '2', '*',         'pCMA9',
+                  '3', '*',         'pCMA0',
+                  '3', '*',         'CMA1',
+                  '3', '*',         'pSW(CMA1,d=90,n=5)',
+                  '4', '*',         'pCMA0',
+                  '4', '*',         'CMA1',
+                  '4', '*',         'pPE(CMA1,gap=90)',
+                  '5', '!A',        'CMA2',
+                  '6', 'A',         'CMA9',
+                  '6', 'else',      'CMA2', # for all other medications for patient 6
+                  '7', 'A',         '*', # use the default actions (implicitely '*', and the default actions are those with ('*', '*'))
+                  '8', 'A & !A',    'CMA2',
+                  '9', '*',         'CMA9',
+                  '3', 'A | B > 2', 'CMA2'), # use dosage
                 ncol=3, byrow=TRUE);
   colnames(tmp) <- c(qs_geta(x, 'patid', 'pr'), qs_geta(x, 'category', 'pr'), qs_geta(x, 'action', 'pr'));
   for( i in 1:nrow(tmp) )

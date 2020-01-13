@@ -1,5 +1,10 @@
 # TODO
   
+
+## Bugs
+
+  - make sure the proc_id used in the main results refer to the original in_procs table and not the tmp_in_procs (if any)!
+
   
 ## General
 
@@ -10,6 +15,8 @@
   - [*OK*] function for fully qualifed database and attribute name (to avoind long concatenations of specific calls)
   
   - [*OK*] function for checking package, installing and loading it
+  
+  - make sure the escape character \ works as intended
   
   
 ## Plotting
@@ -24,9 +31,9 @@
   
 ## Medication classes
 
-  - use ^() for *dosage* and also add numeric comparisons
+  - [*OK*] use @ for *dosage* and also add numeric comparisons
   
-  - add ^(*) for dosage for any medication
+  - add @(*) for dosage for any medication
 
 
 ## Processing table

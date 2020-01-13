@@ -23,19 +23,6 @@ database:
   psswd: null   # password; using double quotes to allow special characters (which must be escaped with a backslash)
   
 
-# Symbols with special meaning (all or part of it can be missing, in which case we'll use the defaults):
-special_symbols:
-  class_default:         "*"   # the symbol for the default class (must be same for both the class and the class id and must not be part of an expression!)
-  class_others:          "?"   # symbol for all the other medications not matched by any explicitely defined class (must not be part of an expression!)
-  class_med_lquote:      "["   # symbols for the quoting of the actual medication classes; these symbols must be different (e.g., [medA])
-  class_med_rquote:      "]"
-  class_ref_lquote:      "{"   # symbols for "calling" (= refering to) a previously defined class; these symbols must be different (e.g., {pain killers})
-  class_ref_rquote:      "}"
-  class_med_dose:        "@"   # symbol used to refering to the dose of a given medication or class (e.g., @[medA]); can be used with expressions, in which case it uses the dose of the first matching actual medication
-  procs_default_action:  "*"   # the symbol for the default action(s) (ideally it would be the same as class_default and must not be part of an expression!)
-  escape_char:           "\\"   # the escape character (used to allow the use of special symbols in text; e.g., medication [med \@pharma])
-
-
 # Parameters specific to the various tables (NB, not all columns can be changed by the user; e.g., table procs contains a patient ID but this uses the column name defined for table events):
 tables:
   # Is there a prefix required to access the tables?
