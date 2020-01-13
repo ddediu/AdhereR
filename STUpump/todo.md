@@ -20,6 +20,11 @@
 ## Error handling
 
   - [*DONE*] better error and messages handling and reporting
+  
+  
+## Medication classes
+
+  - use ^() for *dosage* and also add numeric comparisons
 
 
 ## Processing table

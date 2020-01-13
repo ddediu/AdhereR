@@ -1,7 +1,7 @@
 ################################################### 
 # 
 # STUpump v.0.1 log file 
-# generated on 2020-01-12 19:22:26
+# generated on 2020-01-13 15:45:55
 # using config file './STUpump-SQLite.yml' 
 # 
 ################################################### 
@@ -16,6 +16,19 @@ Config: read 'database:user' = ''.
 Config: read 'database:psswd' = '***'.
 Config: read 'database:name' = './STUpumpTests.sqlite'.
 
+Parsing the special symbols...
+Ended parsing the special symbols.
+
+Using the special symbols:
+  - 'class_default':        '*';
+  - 'class_others':         '@';
+  - 'class_med_lquote':     '[';
+  - 'class_med_rquote':     ']';
+  - 'class_ref_lquote':     '{';
+  - 'class_med_dose':       '^';
+  - 'med_dose_aggregate':   'first';
+  - 'procs_default_action': '*'.
+
 Config: read 'table:table_prefix' = ''.
 Config: read 'table:events:name' = 'in_events'.
 Config: read 'table:events:patient_id' = 'pat_id'.
@@ -26,7 +39,7 @@ Config: read 'table:events:duration' = 'duration'.
 
 Config: read 'table:actions:name' = 'in_actions'.
 Config: read 'table:actions:action_id' = 'action_id'.
-Config: read 'table:actions:action' = 'action!now'.
+Config: read 'table:actions:action' = 'action'.
 Config: read 'table:actions:params' = 'params'.
 
 Config: read 'table:med_classes:name' = 'in_classes'.
