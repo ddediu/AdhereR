@@ -13,6 +13,10 @@
 title: STUpump using a test SQLite database
 
 
+# Global parameters:
+globals:
+  use_defaults: true # if a patient has specific processings defined, do we also apply the defaults or nor (the default is yes)
+
 # Database-wide parameters:
 database:
   type:  SQLite # type of SQL database server; can be MariaDB, MySQL, SQLite or MSSQL

@@ -24,7 +24,7 @@
   
   - do the parsing and resolution of the classes and actions once during the preprocessing
   
-  - add in the config file a parameter specifying if the default processings * apply on top of more specific rules or not
+  - [*OK*] add in the config file a parameter specifying if the default processings * apply on top of more specific rules or not
   
   - [*OK*] also allow for:
   

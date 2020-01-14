@@ -148,6 +148,19 @@ SQL_db <- function(spec_file=NA,                                                
     if( is.null(db_info) ) .msg(paste0("Error reading the config file '",spec_file,"'!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
 
     
+    use_defaults_if_spec_procs_defined <- TRUE; # by default, also use the defaults
+    if( "globals" %in% names(db_info) )
+    {
+      if( "use_defaults" %in% names(db_info$globals) ) 
+      {
+        use_defaults_if_spec_procs_defined <- db_info$globals$use_defaults;
+        if( !is.logical(use_defaults_if_spec_procs_defined) )
+          .msg(paste0("Error in the config file '",spec_file,"': 'globals:use_defaults' should be a logical value!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
+      }
+    }
+    .msg(paste0("Config: using 'globals:use_defaults' = '",use_defaults_if_spec_procs_defined,"'.\n\n"), log_file, "m");
+    
+    
     if( !("database" %in% names(db_info)) ) 
       .msg(paste0("Error in the config file '",spec_file,"': 'database' section is not defined!\n"), log_file, ifelse(stop_on_database_errors,"e","w"));
     
@@ -492,7 +505,8 @@ SQL_db <- function(spec_file=NA,                                                
                               # other info:
                               "log_file"                 =log_file,
                               "stop_on_database_errors"  =stop_on_database_errors,
-                              "stop_on_processing_errors"=stop_on_processing_errors
+                              "stop_on_processing_errors"=stop_on_processing_errors,
+                              "use_defaults_if_spec_procs_defined"=use_defaults_if_spec_procs_defined
                               
                             ),
       class="SQL_db");
@@ -1968,8 +1982,19 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
                            geta(x, 'class', 'mc'), geta(x, 'action', 'ac'), geta(x, 'params', 'ac'))];
   names(db_procs) <- c('procid', 'patid', 'mcid', 'actid', 'class', 'action', 'params');
   
-  # If a specific processing is defined, discard the defaults:
-  if( any(s <- (db_procs$patid != '*')) ) db_procs <- db_procs[s,];
+  # If a specific processing is defined, what do we do with the defaults?
+  if( any(s <- (db_procs$patid != '*')) )
+  {
+    if( !x$use_defaults_if_spec_procs_defined )
+    {
+      # Don't use them because there are more specific processings defined:
+      db_procs <- db_procs[s,];
+    } else
+    {
+      # Use them (but make them last):
+      db_procs <- rbind(db_procs[s,], db_procs[!s,]);
+    }
+  }
   
   # Parse the action into a process and its type:
   db_procs <- cbind(db_procs, 
@@ -2025,14 +2050,15 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
   if( proc_class_parse$type == '?' )
   {
     # All medications not otherwise selected by the other class definitions for this patient (or all, if not classes defined):
-    if( all(else_classes <- vapply(proc_classes_for_patient$class, function(s) .check_special_class(x, s) == "?", logical(1))) )
+    all_procs_class <- vapply(proc_classes_for_patient$class, function(s) .check_special_class(x, s), character(1));
+    if( all(all_procs_class == "?") )
     {
       # Select all!
       return (rep(TRUE, nrow(patient_info)));
     } else
     {
-      # Put together all the other class definitions:
-      all_other_classes <- paste("(", proc_classes_for_patient$class[ !else_classes ], ")", collapse=" | ");
+      # Put together all the other non-default class definitions:
+      all_other_classes <- paste("(", proc_classes_for_patient$class[ !(all_procs_class %in% c("*", "?")) ], ")", collapse=" | ");
       # Negate it:
       procs_class <- paste0("!(", all_other_classes, ")");
       # And parse it again:
