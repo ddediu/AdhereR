@@ -796,11 +796,29 @@ qs.SQL_db <- function(x, s)
 ## Parser for the medication classes ####
 ##
 
+# Is this class definition a sepcial one?
+.check_special_class <- function(x, text) UseMethod(".check_special_class")
+.check_special_class.SQL_db <- function(x, text)
+{
+  # Check if it's a special class:
+  if( is.na(text) || text %in% c('', '*', "ALL", "all", "DEFAULT", "default") ) # *
+  {
+    return ("*");
+  } else if( text %in% c("?", "OTHERWISE", "otherwise", "ELSE", "else") ) # ?
+  {
+    return ("?");
+  } else
+  {
+    return ("normal"); # not special
+  }
+}
+
+# Parse the medication class definition:
 .parse_medication_class <- function(x, text) UseMethod(".parse_medication_class")
 .parse_medication_class.SQL_db <- function(x, text)
 {
   # DEBUG
-  text = "!((`aspir^i#[]{}   e\\`e23\"as''_  `) & #`medB B2` > 2) | (`medA` & `medB`) & # (`medA` & !`medB`) = 1";
+  # text = "NOT((`aspir^i#[]{}   e\\`e23\"as''_  `) & #`medB B2` > 2) | (`medA` AND `medB`) & # > 0 OR # (`medA` & !`medB`) = 1";
   # END DEBUG
   
   # Checks:
@@ -809,6 +827,23 @@ qs.SQL_db <- function(x, s)
     .msg(paste0("Error parsing the medication class definition: it must be a non-empty string!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
     return (NULL);
   }
+  
+  # Get rid os trailing spaces:
+  text <- trimws(text);
+  
+  # Various needs for this class:
+  needs_med_class <- needs_dose <- FALSE;
+  
+  
+  # Check if it's a special class:
+  if( (tmp <- .check_special_class(x, text) ) %in% c("*", "?") ) 
+  {
+    return (list(type=tmp, 
+                 needs_med_class=needs_med_class, 
+                 needs_dose=needs_dose, 
+                 parsed_expr=NULL));
+  }
+  
   
   # List containing the parsed literals with their types as the names:
   parsed_text <- c();
@@ -883,6 +918,7 @@ qs.SQL_db <- function(x, s)
       }
     }
   }
+  if( sum(names(parsed_text) == "literal") > 0 ) needs_med_class <- TRUE; # needs medication class (there's at least one literal defined)
   
   
   # Parse the parantheses ( and ) in the non-literals only:
@@ -917,7 +953,7 @@ qs.SQL_db <- function(x, s)
           # Any following non-literal?
           if( j < length(p) && p[j]+1 < p[j+1] )
           {
-            tmp <- c(tmp, substring(parsed_text[i], p[j], p[j+1]-1));
+            tmp <- c(tmp, substring(parsed_text[i], p[j]+1, p[j+1]-1));
           } else if( j == length(p) && p[j]+1 <= nchar(parsed_text[i]) )
           {
             tmp <- c(tmp, substring(parsed_text[i], p[j]+1));
@@ -940,6 +976,34 @@ qs.SQL_db <- function(x, s)
     .msg(paste0("Error parsing the medication class definition :'",text,"': parantheses '(' and ')' don't match!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
     return (NULL);
   }
+  
+  
+  # Check and normalise the non-literals, also doing the symbol replacements:
+  s <- (names(parsed_text) == "not_yet_parsed");
+  parsed_text[s] <- vapply(parsed_text[s], 
+                           function(ss)
+                             {
+                              #ss=" maka not equal(3) 2 && 2= 3 & == 4 || ~m != ¬4 GREATER THAN OR EQUAL 5" # test strig
+                              ss <- gsub("DOSE|dose", "#", ss); # #
+                              ss <- gsub("LESS THAN OR EQUAL|less than or equal|LEQ|leq|≤", "<=", ss); # <=
+                              ss <- gsub("LESS THAN|less than|LE|le", "<", ss); # <
+                              ss <- gsub("GREATER THAN OR EQUAL|greater than or equal|GEQ|geq|≥", ">=", ss); # >=
+                              ss <- gsub("GREATER THAN|greater than|GE|ge", ">", ss); # >
+                              ss <- gsub("IS NOT|is not|NOT EQUAL|not equal|<>|≠", "!=", ss); # !=
+                              ss <- gsub("AND|and|&&", "&", ss); # &
+                              ss <- gsub("OR|or|\\|\\|", "|", ss); # |
+                              ss <- gsub("NOT|not|\\^|~|¬", "!", ss); # !
+                              ss <- gsub("IS|is|EQUAL|equal", "==", ss); # ==
+                              # Special treatment for stand-alone = (needs disambiguation from composite symbols):
+                              while( !is.null(tt <- regexpr("[^=!<>\\s]=[^=]", ss)) && tt != (-1) )
+                              {
+                                ss <- paste0(substring(ss, 1, tt-1), 
+                                             gsub("=", "==", substring(ss, tt, tt + attr(tt,"match.length") - 1)), # substitute = in this substring and replace it in ss
+                                             substring(ss, tt + attr(tt,"match.length")));
+                              }
+                              return (ss);
+                             }, 
+                           character(1));
   
 
   # Parse the dosage "#":
@@ -971,7 +1035,7 @@ qs.SQL_db <- function(x, s)
           # Any following non-literal?
           if( j < length(dose_pos) && dose_pos[j]+1 < dose_pos[j+1] )
           {
-            tmp <- c(tmp, substring(parsed_text[i], dose_pos[j], dose_pos[j+1]-1));
+            tmp <- c(tmp, substring(parsed_text[i], dose_pos[j]+1, dose_pos[j+1]-1));
           } else if( j == length(dose_pos) && dose_pos[j]+1 <= nchar(parsed_text[i]) )
           {
             tmp <- c(tmp, substring(parsed_text[i], dose_pos[j]+1));
@@ -981,6 +1045,7 @@ qs.SQL_db <- function(x, s)
     }
   }
   parsed_text <- tmp; # we now have the dose functions (#) as well
+  if( sum(names(parsed_text) == "#") > 0 ) needs_dose <- TRUE; # at least one mention of dose (#), so per_day is needed
   # Remove empty white spaces (these might throw off the replacement of # by .d[ ]:
   parsed_text <- parsed_text[ trimws(parsed_text) != "" ];
   # Replace the dosage # by its actual R code:
@@ -1034,9 +1099,13 @@ qs.SQL_db <- function(x, s)
   parsed_text <- tmp; # we now have the dose functions (#) replaced by the R code as well
   
   
+  # Collapse it:
+  parsed_text_string <- paste0(parsed_text,collapse="");
+  
+  
   # Parse it:
   parsed_text_expr <- NULL;
-  try(parsed_text_expr <- parse(text=parsed_text), silent=TRUE);
+  try(parsed_text_expr <- parse(text=parsed_text_string), silent=TRUE);
   if( is.null(parsed_text_expr) )
   {
     .msg(paste0("Error parsing the medication class definition '",text,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
@@ -1044,7 +1113,10 @@ qs.SQL_db <- function(x, s)
   }
 
   # Return it:
-  return (parsed_text_expr);
+  return (list(type="normal", 
+               needs_med_class=needs_med_class, 
+               needs_dose=needs_dose, 
+               parsed_expr=parsed_text_expr));
 }
 
 
@@ -1934,51 +2006,70 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
     return (NULL);
   }
   
+  # Parse the class:
+  proc_class_parse <- .parse_medication_class(x, procs_class);
+  if( is.null(proc_class_parse) )
+  {
+    # Errors parsing the class definition!
+    return (NULL);
+  }
+  
   # Special case for full selection?
-  if( is.na(procs_class) || procs_class %in% c('', '*') )
+  if( proc_class_parse$type == "*" )
   {
     # Select all!
     return (rep(TRUE, nrow(patient_info)));
   }
   
   # Special case for "all others" ('?')?
-  if( procs_class == '?' )
+  if( proc_class_parse$type == '?' )
   {
     # All medications not otherwise selected by the other class definitions for this patient (or all, if not classes defined):
-    if( all(proc_classes_for_patient$class == '?') )
+    if( all(else_classes <- vapply(proc_classes_for_patient$class, function(s) .check_special_class(x, s) == "?", logical(1))) )
     {
       # Select all!
       return (rep(TRUE, nrow(patient_info)));
     } else
     {
       # Put together all the other class definitions:
-      all_other_classes <- paste("(", proc_classes_for_patient$class[ !(proc_classes_for_patient$class %in% c('*', '?')) ], ")", collapse=" | ");
-      # and negate it:
+      all_other_classes <- paste("(", proc_classes_for_patient$class[ !else_classes ], ")", collapse=" | ");
+      # Negate it:
       procs_class <- paste0("!(", all_other_classes, ")");
+      # And parse it again:
+      proc_class_parse <- .parse_medication_class(x, procs_class);
+      if( is.null(proc_class_parse) )
+      {
+        # Errors parsing the class definition!
+        return (NULL);
+      }
     }
   }
-  
-  # Do the specific selection:
-  # Get the medication classes for this patient:
-  if( is.na(geta(x, 'category', 'ev')) )
+
+  # What info we need:
+  pat_classes <- rep(NA, nrow(patient_info));
+  if( proc_class_parse$needs_med_class )
   {
-    # No medication classes:
-    .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
-    return (rep(TRUE, nrow(patient_info))); # select all
-  }
-  pat_classes <- patient_info[ , geta(x, 'category', 'ev') ]; 
-  if( is.null(pat_classes) )
-  {
-    # No medication classes:
-    .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
-    return (rep(TRUE, nrow(patient_info))); # select all
+    # Medication class is needed: try to get the medication classes for this patient:
+    if( is.na(geta(x, 'category', 'ev')) )
+    {
+      # No medication classes:
+      .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
+      return (rep(TRUE, nrow(patient_info))); # select all
+    }
+    pat_classes <- patient_info[ , geta(x, 'category', 'ev') ]; 
+    if( is.null(pat_classes) )
+    {
+      # No medication classes:
+      .msg(paste0("Warning: medication classes not defined: selecting all events...\n"), x$log_file, "w");
+      return (rep(TRUE, nrow(patient_info))); # select all
+    }
   }
   
   # Do we also need the dosage?
   pat_doses <- rep(NA, nrow(patient_info));
-  if( any(grepl('@', procs_class, fixed=TRUE)) )
+  if( proc_class_parse$needs_dose )
   {
-    # Get the dosage for this patient:
+    # Dosage is needed: try to get the dosage for this patient:
     if( is.na(geta(x, 'perday', 'ev')) )
     {
       # No dosage:
@@ -1994,84 +2085,16 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
     }
   }
   
-  # Transform the procs_class specification into a logical expression to be evaluated on pat_classes:
-  procs_class_expr <- NULL;
-  procs_class2 <- procs_class;
-  # Replace medication class "[ XX ]" by the actual R test "(pat_classes == 'XX')":
-  procs_class2 <- gsub(']', "')", 
-                       gsub('[', "(.c == '",
-                            procs_class2,
-                            fixed=TRUE), 
-                       fixed=TRUE);
-  
-  # Replace the dosage "@" by the actual dosage aggregation function:
-  while( !is.null(dosage_symbols <- regexpr('@', procs_class2, fixed=TRUE)) && 
-         length(dosage_symbols) == 1 && 
-         dosage_symbols != (-1) ) # find the first "@"
-  {
-    # See what's the next character:
-    cur_pos <- dosage_symbols + attr(dosage_symbols, "match.length");
-    if( cur_pos + 1 >= nchar(procs_class2) )
-    {
-      .msg(paste0("Error parsing the medication class definition '",procs_class2,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
-      return (NULL);
-    }
-    
-    # Skip all whitespaces:
-    next_op <- trimws(substring(procs_class2, cur_pos));
-    if( substring(next_op, 1, 1) != "(" )
-    {
-      # Must be a "("!
-      .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
-      return (NULL);
-    }
-    
-    # Find the matching ")": find all the "(" and ")", mark them as +1 and -1 respectively, order them by their position and select the first position with cumsum == 0:
-    pars_l <- gregexpr("(", next_op, fixed=TRUE); pars_r <- gregexpr(")", next_op, fixed=TRUE); 
-    if( is.null(pars_l) || length(pars_l) != 1 || pars_l[[1]][1] == (-1) ||
-        is.null(pars_r) || length(pars_r) != 1 || pars_r[[1]][1] == (-1) )
-    {
-      # Non-matching arantheses!
-      .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
-      return (NULL);
-    }
-    pars_lr <- data.frame(type=c(rep(+1, length(pars_l[[1]])), rep(-1, length(pars_r[[1]]))),
-                          pos= c(pars_l[[1]],                  pars_r[[1]])); 
-    pars_lr <- pars_lr[ pars_lr$pos > 0, ]; pars_lr <- pars_lr[ order(pars_lr$pos), ]; 
-    if( nrow(pars_lr) == 0 )
-    {
-      # Non-matching arantheses!
-      .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
-      return (NULL);
-    }
-    pars_lr$sum <- cumsum(pars_lr$type);
-    if( sum(pars_lr$sum == 0) == 0 )
-    {
-      # Non-matching arantheses!
-      .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
-      return (NULL);
-    }
-    
-    # The end of the operand:
-    next_op_end <- min(pars_lr$pos[ pars_lr$sum == 0 ], na.rm=TRUE) + dosage_symbols;
-      
-    procs_class2 <- gsub(substring(procs_class2, dosage_symbols, next_op_end), 
-                         paste0(".d[ ", substring(procs_class2, dosage_symbols+1, next_op_end), " ]"),
-                         procs_class2, fixed=TRUE);
-  }
-  
-  # Parse it:
-  try(procs_class_expr <- parse(text=procs_class2), silent=TRUE);
-  if( is.null(procs_class_expr) )
+
+  # Evaluate the expression in a safe environment (to avoid any nasties) as per https://stackoverflow.com/a/18391779:
+  if( is.null(proc_class_parse$parsed_expr) )
   {
     .msg(paste0("Error parsing the medication class definition '",procs_class,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
     return (NULL);
   }
-  
-  # Evaluate the expression in a safe environment (to avoid any nasties) as per https://stackoverflow.com/a/18391779:
   .reset_safe_env(); .safe_set(".c", pat_classes); .safe_set(".d", pat_doses); # put the pat_classes and pat_doses in the safe environment
   s <- NULL;
-  try(s <- .safe_eval(procs_class_expr), silent=TRUE); # evaluate the expression in the safe environment
+  try(s <- .safe_eval(proc_class_parse$parsed_expr), silent=TRUE); # evaluate the expression in the safe environment
   if( (!is.na(s) || !is.null(s)) && !is.logical(s) )
   {
     .msg(paste0("Error applying the medication class definition '",procs_class,"' to the data: make sure you are not using undefined functions!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
@@ -2439,12 +2462,12 @@ create_test_database.SQL_db <- function(x)
                    err_msg=paste0("Error creating the medication classes table '",geta(x, 'name', 'mc'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one:
   tmp <- matrix(c('*',         '*', # the special default rule ('*', '*') must be defined
-                  'A',         paste0('[medA]'),
-                  'A | B',     paste0('[medA] | [medB]'),
-                  '!A',        paste0('![medA]'),
-                  'B>2',       paste0('[medB] & @[medB] > 2'),
-                  'A | B > 2', paste0('@([medA] | [medB]) > 2'),
-                  'A & !A',    paste0('[medA] & {!A}'), # reference to !A
+                  'A',         paste0('`medA`'),
+                  'A | B',     paste0('`medA` | `medB`'),
+                  '!A',        paste0('!`medA`'),
+                  'B>2',       paste0('`medB` & #`medB` > 2'),
+                  'A | B > 2', paste0('#(`medA` | `medB`) > 2'),
+                  'A & !A',    paste0('`medA` & {!A}'), # reference to !A
                   'else',      '?'), # '?' means all other not otherwise matched medications for a given patient
                 ncol=2, byrow=TRUE);
   colnames(tmp) <- c(qs_geta(x, 'mcid', 'mc'), qs_geta(x, 'class', 'mc'));

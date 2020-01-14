@@ -16,9 +16,9 @@
   
   - [*OK*] function for checking package, installing and loading it
   
-  - make sure the escape character "\" works as intended
+  - [*OK*] make sure the escape character "\" works as intended
   
-  - use a proper parser for the medication classes
+  - [*NOT NECESSARY*] use a proper parser for the medication classes
   
   - do the preprocessing of the classes, actions and processings anyways and store them; make sure the id's used are those in the original tables!
   
@@ -26,7 +26,7 @@
   
   - add in the config file a parameter specifying if the default processings * apply on top of more specific rules or not
   
-  - also allow for:
+  - [*OK*] also allow for:
   
     - "==": "IS", "is", "EQUAL", "equal", "="
     - "!=": "IS NOT", "is not", "NOT EQUAL", "not equal", "DIFFERENT", "different", "<>", "≠"
@@ -39,7 +39,7 @@
     - ">": "GREATER THAN", "greater than", "GE", "ge"
     - ">=": "GREATER THAN OR EQUAL", "greater than or equal", "GEQ", "geq", "≥"
     - "{...}": "REF(...)"
-    - "?": "OTHERWISE", "oterwise", "ELSE", "else"
+    - "?": "OTHERWISE", "otherwise", "ELSE", "else"
     - "*": "ALL", "all", "NONE", "none", "DEFAULT", "default" (depending on its exact context, i.e., table and column)
   
   
@@ -55,9 +55,9 @@
   
 ## Medication classes
 
-  - [*OK*] use @ for *dosage* and also add numeric comparisons
+  - [*OK*] use # for *dosage* and also add numeric comparisons
   
-  - add @(*) for dosage for any medication
+  - [*OK*] add stand-alone # for dosage for any medication
 
 
 ## Processing table
