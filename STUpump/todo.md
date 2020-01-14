@@ -16,7 +16,31 @@
   
   - [*OK*] function for checking package, installing and loading it
   
-  - make sure the escape character \ works as intended
+  - make sure the escape character "\" works as intended
+  
+  - use a proper parser for the medication classes
+  
+  - do the preprocessing of the classes, actions and processings anyways and store them; make sure the id's used are those in the original tables!
+  
+  - do the parsing and resolution of the classes and actions once during the preprocessing
+  
+  - add in the config file a parameter specifying if the default processings * apply on top of more specific rules or not
+  
+  - also allow for:
+  
+    - "==": "IS", "is", "EQUAL", "equal", "="
+    - "!=": "IS NOT", "is not", "NOT EQUAL", "not equal", "DIFFERENT", "different", "<>", "≠"
+    - "&": "AND", "and", "&&"
+    - "|": "OR", "or", "||"
+    - "!": "NOT", "not", "^", "~", "¬"
+    - "#": "DOSE", "dose"
+    - "<": "LESS THAN", "less than", "LE", "le"
+    - "<=": "LESS THAN OR EQUAL", "less than or equal", "LEQ", "leq", "≤"
+    - ">": "GREATER THAN", "greater than", "GE", "ge"
+    - ">=": "GREATER THAN OR EQUAL", "greater than or equal", "GEQ", "geq", "≥"
+    - "{...}": "REF(...)"
+    - "?": "OTHERWISE", "oterwise", "ELSE", "else"
+    - "*": "ALL", "all", "NONE", "none", "DEFAULT", "default" (depending on its exact context, i.e., table and column)
   
   
 ## Plotting
@@ -59,5 +83,9 @@
   - [*OK*] test on MySQL, MS SQL and SQLite
 
   - allow "normal" (i.e. non-ODBC) MS SQL servers
-  
+
+
+## Testing
+
+  - write some simple unit tests
   

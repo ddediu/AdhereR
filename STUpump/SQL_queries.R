@@ -792,6 +792,262 @@ qs.SQL_db <- function(x, s)
 }
 
 
+##
+## Parser for the medication classes ####
+##
+
+.parse_medication_class <- function(x, text) UseMethod(".parse_medication_class")
+.parse_medication_class.SQL_db <- function(x, text)
+{
+  # DEBUG
+  text = "!((`aspir^i#[]{}   e\\`e23\"as''_  `) & #`medB B2` > 2) | (`medA` & `medB`) & # (`medA` & !`medB`) = 1";
+  # END DEBUG
+  
+  # Checks:
+  if( is.null(text) || !is.character(text) || is.na(text) || length(text) != 1 || text == '' )
+  {
+    .msg(paste0("Error parsing the medication class definition: it must be a non-empty string!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+    return (NULL);
+  }
+  
+  # List containing the parsed literals with their types as the names:
+  parsed_text <- c();
+  
+  
+  # Parse the class literals (i.e., the actual medication names included within ``; please note that no special escapes are needed within such a literal except for \`:
+  # Trick to deal with escaped backticks: text2 should be text with \` replaced by XX and pos_escaped_backticks the positions where this substitution happened (if any):
+  pos_escaped_backticks <- gregexpr('\\`', text, fixed=TRUE); # find any escaped backticks
+  if( is.null(pos_escaped_backticks) || length(pos_escaped_backticks) != 1 )
+  {
+    .msg(paste0("Error parsing the medication class definition :'",text,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+    return (NULL);
+  } else if( pos_escaped_backticks[[1]][1] != (-1) )
+  {
+    # Found escaped backticks: replace them by something else also two chars in length:
+    pos_escaped_backticks <- pos_escaped_backticks[[1]]; # make it easier to use
+    text2 <- gsub("\\`", 'XX', text, fixed=TRUE);
+  } else
+  {
+    # Nothing to replace:
+    text2 <- text;
+    pos_escaped_backticks <- NULL;
+  }
+  # Check if we have an even number of backticks:
+  if( is.null(tmp <- gregexpr("`", text2, fixed=TRUE)) || length(tmp) != 1 )
+  {
+    .msg(paste0("Error parsing the medication class definition :'",text,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+    return (NULL);
+  } else if( tmp[[1]] != (-1) && (length(tmp[[1]]) %%2 ) != 0 )
+  {
+    .msg(paste0("Error parsing the medication class definition :'",text,"': there should be even number of backticks '`' enclosing the medications!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+    return (NULL);
+  }
+  # Find the literals enclosed by backticks (these positions and length are obviously also valid for the orignal text because we replaced the escaped backticks by 2 characters):
+  pos_literals <- gregexpr("[`][^`]*[`]", text2, fixed=FALSE);
+  # Split these literals:
+  if( is.null(pos_literals) || length(pos_literals) != 1 )
+  {
+    .msg(paste0("Error parsing the medication class definition :'",text,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+    return (NULL);
+  } else if( pos_literals[[1]][1] == (-1) )
+  {
+    # No literals: could be just using refs:
+    parsed_text <- c("not_yet_parsed"=text);
+  } else
+  {
+    # Split the literals:
+    pos_literals <- pos_literals[[1]]; # easier to work with it
+    if( pos_literals[1] > 1 )
+    {
+      # Starts with a non-literal:
+      parsed_text <- c("not_yet_parsed"=substring(text, 1, pos_literals[1]-1));
+    }
+    for( i in seq_along(pos_literals) )
+    {
+      literal_start <- pos_literals[i]; literal_end <- pos_literals[i] + attr(pos_literals,"match.length")[i];
+      # Prepare the literal and embed it in the logical R expression ready for evaluation:
+      parsed_text <- c(parsed_text, "literal"=paste0("(.c == '", # embed it in the logical R expression (.c == 'literal')
+                                                     gsub("'", "\\'", # make sure we escape any single quotes ' (as we use them in the logical R expression
+                                                          gsub("\\`", "`",  # replace escaped backticks by simple backticks in literals
+                                                               substring(text, literal_start+1, literal_end-2), 
+                                                               fixed=TRUE),
+                                                          fixed=TRUE),
+                                                     "')"));
+      # Any following non-literal?
+      if( i < length(pos_literals) && literal_end < pos_literals[i+1] )
+      {
+        parsed_text <- c(parsed_text, "not_yet_parsed"=substring(text, literal_end, pos_literals[i+1]-1));
+      } else if( i == length(pos_literals) && literal_end <= nchar(text) )
+      {
+        parsed_text <- c(parsed_text, "not_yet_parsed"=substring(text, literal_end));
+      }
+    }
+  }
+  
+  
+  # Parse the parantheses ( and ) in the non-literals only:
+  tmp <- NULL;
+  for( i in seq_along(parsed_text) )
+  {
+    if( names(parsed_text)[i] == "literal" )
+    {
+      tmp <- c(tmp, parsed_text[i]);
+    } else
+    {
+      p1 <- gregexpr("(", parsed_text[i], fixed=TRUE); if( is.null(p1) || length(p1) != 1 || p1[[1]] == (-1) ) p1 <- NULL else p1 <- p1[[1]];
+      p2 <- gregexpr(")", parsed_text[i], fixed=TRUE); if( is.null(p2) || length(p2) != 1 || p2[[1]] == (-1) ) p2 <- NULL else p2 <- p2[[1]];
+      p <- c(p1, p2); 
+      if( is.null(p) || length(p) == 0 )
+      {
+        # No parantheses:
+        tmp <- c(tmp, parsed_text[i]);
+      } else
+      {
+        names(p)[seq_along(p1)] <- "("; names(p)[length(p1)+seq_along(p2)] <- ")"; p <- sort(p); # position and type of parantheses
+        
+        # Split by parantheses:
+        if( p[1] > 1 )
+        {
+          # Starts with a non-literal:
+          tmp <- c(tmp, substring(parsed_text[i], 1, p[1]-1));
+        }
+        for( j in seq_along(p) )
+        {
+          tmp <- c(tmp, "paranthesis"=names(p)[j]);
+          # Any following non-literal?
+          if( j < length(p) && p[j]+1 < p[j+1] )
+          {
+            tmp <- c(tmp, substring(parsed_text[i], p[j], p[j+1]-1));
+          } else if( j == length(p) && p[j]+1 <= nchar(parsed_text[i]) )
+          {
+            tmp <- c(tmp, substring(parsed_text[i], p[j]+1));
+          }
+        }
+      }
+    }
+  }
+  parsed_text <- tmp; # we now have the parantheses ( and ) as well
+  # Check parantheses:
+  if( sum(ifelse(names(parsed_text) == "paranthesis", 
+                 ifelse(parsed_text == "(", 
+                        +1, 
+                        ifelse(parsed_text == ")", 
+                               -1, 
+                               0)), 
+                 0), 
+          na.rm=TRUE) != 0 )
+  {
+    .msg(paste0("Error parsing the medication class definition :'",text,"': parantheses '(' and ')' don't match!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+    return (NULL);
+  }
+  
+
+  # Parse the dosage "#":
+  tmp <- NULL;
+  for( i in seq_along(parsed_text) )
+  {
+    if( names(parsed_text)[i] %in% c("literal", "paranthesis") )
+    {
+      tmp <- c(tmp, parsed_text[i]);
+    } else
+    {
+      dose_pos <- gregexpr("#", parsed_text[i], fixed=TRUE); 
+      if( is.null(dose_pos) || length(dose_pos) != 1 || dose_pos[[1]] == (-1) )
+      {
+        tmp <- c(tmp, parsed_text[i]);
+      } else
+      {
+        dose_pos <- dose_pos[[1]];
+        
+        # Split by #:
+        if( dose_pos[1] > 1 )
+        {
+          # Starts with a non-literal:
+          tmp <- c(tmp, substring(parsed_text[i], 1, dose_pos[1]-1));
+        }
+        for( j in seq_along(dose_pos) )
+        {
+          tmp <- c(tmp, "#"="#");
+          # Any following non-literal?
+          if( j < length(dose_pos) && dose_pos[j]+1 < dose_pos[j+1] )
+          {
+            tmp <- c(tmp, substring(parsed_text[i], dose_pos[j], dose_pos[j+1]-1));
+          } else if( j == length(dose_pos) && dose_pos[j]+1 <= nchar(parsed_text[i]) )
+          {
+            tmp <- c(tmp, substring(parsed_text[i], dose_pos[j]+1));
+          }
+        }
+      }
+    }
+  }
+  parsed_text <- tmp; # we now have the dose functions (#) as well
+  # Remove empty white spaces (these might throw off the replacement of # by .d[ ]:
+  parsed_text <- parsed_text[ trimws(parsed_text) != "" ];
+  # Replace the dosage # by its actual R code:
+  tmp <- NULL; i <- 1;
+  while( i <= length(parsed_text) )
+  {
+    if( names(parsed_text)[i] != "#" )
+    {
+      tmp <- c(tmp, parsed_text[i]);
+    } else
+    {
+      # Check its parameters (if any):
+      if( (i == length(parsed_text)) || # this # is the last thing in the expression
+          (names(parsed_text)[i+1] == "paranthesis" && parsed_text[i+1] == ")") || # is followed by )
+          (names(parsed_text)[i+1] == "#") || # is followed by another #
+          (names(parsed_text)[i+1] == "paranthesis" && parsed_text[i+1] == "(" && 
+           i+1 < length(parsed_text) && names(parsed_text)[i+2] == "paranthesis" && parsed_text[i+2] == ")") || # is followed by an empty call ()
+          (names(parsed_text)[i+1] == "not_yet_parsed") ) # followed by non-parsed stuff
+      {
+        # It probably does not have any parameters:
+        tmp <- c(tmp, "#"=" .d ");
+      } else if( (names(parsed_text)[i+1] == "literal") )
+      {
+        # Applies to single literal:
+        tmp <- c(tmp, "#"=" .d[ ", parsed_text[i+1], "#"=" ]");
+        i <- (i + 1); # skip the literal argument
+      } else if( (names(parsed_text)[i+1] == "paranthesis" && parsed_text[i+1] == "(") )
+      {
+        # Applies to the whole thing until the matching closing paranthesis ")":
+        s <- parsed_text[(i+1) : length(parsed_text)];
+        find_matching_para <- which.max(cumsum(ifelse(names(s) == "paranthesis", 
+                                                      ifelse(s == "(", 
+                                                             +1, 
+                                                             ifelse(s == ")", 
+                                                                    -1, 
+                                                                    0)), 
+                                                      0)) == 0);
+        if( is.na(find_matching_para) )
+        {
+          .msg(paste0("Error parsing the medication class definition :'",text,"': parantheses '(' and ')' don't match!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+          return (NULL);
+        }
+        tmp <- c(tmp, "#"=" .d[ ", parsed_text[i + (1:find_matching_para)], "#"=" ]");
+        i <- (i + find_matching_para); # skip the argument
+      }
+    }
+    
+    # Next:
+    i <- (i + 1);
+  }  
+  parsed_text <- tmp; # we now have the dose functions (#) replaced by the R code as well
+  
+  
+  # Parse it:
+  parsed_text_expr <- NULL;
+  try(parsed_text_expr <- parse(text=parsed_text), silent=TRUE);
+  if( is.null(parsed_text_expr) )
+  {
+    .msg(paste0("Error parsing the medication class definition '",text,"'!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+    return (NULL);
+  }
+
+  # Return it:
+  return (parsed_text_expr);
+}
+
+
 
 ##
 ## Connect/disconnect to/from database ####
@@ -1814,10 +2070,11 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
   
   # Evaluate the expression in a safe environment (to avoid any nasties) as per https://stackoverflow.com/a/18391779:
   .reset_safe_env(); .safe_set(".c", pat_classes); .safe_set(".d", pat_doses); # put the pat_classes and pat_doses in the safe environment
-  s <- .safe_eval(procs_class_expr); # evaluate the expression in the safe environment
+  s <- NULL;
+  try(s <- .safe_eval(procs_class_expr), silent=TRUE); # evaluate the expression in the safe environment
   if( (!is.na(s) || !is.null(s)) && !is.logical(s) )
   {
-    .msg(paste0("Error applying the medication class definition '",procs_class,"' to the data: the result should be logical!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
+    .msg(paste0("Error applying the medication class definition '",procs_class,"' to the data: make sure you are not using undefined functions!\n"), x$log_file, ifelse(x$stop_on_processing_errors,"e","w"));
     return (NULL);
   }
   .reset_safe_env(); # remove the values of the pat_classes and pat_doses from the safe environment
