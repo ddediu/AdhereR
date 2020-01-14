@@ -556,6 +556,29 @@ SQL_db <- function(spec_file=NA,                                                
 ## Get configurable attributes ####
 ##
 
+# Are we using the original or the temporary tables?
+is_table_temporary <- function(x, tbname) UseMethod("is_table_temporary")
+is_table_temporary.SQL_db <- function(x, tbname)
+{
+  if( tolower(tbname) %in% c("medication classes", "medclass", "classes", "medications", "mc") ) return (!is.null(x$db_mctable_use_temp_table));
+  if( tolower(tbname) %in% c("processings", "procs", "pr") ) return (!is.null(x$db_prtable_use_temp_table));
+  return (FALSE);
+  
+  return (switch(tolower(tbname),
+                 
+                 "medication classes"=,
+                 "medclass"          =,
+                 "classes"           =,
+                 "medications"       =,
+                 
+                 "mc"                =!is.null(x$db_mctable_use_temp_table),
+                 "processings"       =,
+                 "procs"             =,
+                 "pr"                =!is.null(x$db_prtable_use_temp_table),
+                 
+                 FALSE));
+}
+
 # Get various attributes either for the whole database (table=NULL) or for a specific table:
 geta <- function(x, variable, table=NULL, append_prefix_to_table_name=TRUE, df.compat=FALSE) UseMethod("geta")
 geta.SQL_db <- function(x, variable, 
@@ -617,7 +640,7 @@ geta.SQL_db <- function(x, variable,
                    "classes"           =,
                    "medications"       =,
                    "mc"=switch(tolower(variable),
-                               "name"        =ifelse(is.null(x$db_mctable_use_temp_table), 
+                               "name"        =ifelse(!is_table_temporary(x,"mc"), 
                                                      ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_mctable_name), x$db_mctable_name),
                                                      x$db_mctable_use_temp_table), # use the solved default temp table?,
                                "med_class_id"=,
@@ -631,12 +654,22 @@ geta.SQL_db <- function(x, variable,
                    "processings"=,
                    "procs"      =,
                    "pr"=switch(tolower(variable),
-                               "name"         =ifelse(is.null(x$db_prtable_use_temp_table), 
+                               "name"         =ifelse(!is_table_temporary(x,"pr"), 
                                                       ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_prtable_name), x$db_prtable_name), 
                                                       x$db_prtable_use_temp_table), # use the solved default temp table?
                                "processing_id"=,
                                "procid"       =,
                                "id"           =x$db_prtable_cols["ID"],
+                               "processing_id_orig"=,
+                               "procid_orig"  =,
+                               "id_orig"      =ifelse(!is_table_temporary(x,"pr"),
+                                                      NA,
+                                                      paste0(geta(x,"procid","pr"),"_original")), # if using a temporary table, this is the original procid
+                               "processing_id_def"=,
+                               "procid_def"   =,
+                               "id_def"       =ifelse(!is_table_temporary(x,"pr"),
+                                                      NA,
+                                                      paste0(geta(x,"procid","pr"),"_default")), # if using a temporary table, this is the disambiguating procid for the processings using the default processings
                                "patient_id"   =,
                                "patid"        =geta(x, "patid", "ev"),
                                "cat"          =,
@@ -655,6 +688,8 @@ geta.SQL_db <- function(x, variable,
                                "id"           =x$db_retable_cols["ID"],
                                "processing_id"=,
                                "procid"       =geta(x, "procid", "pr"),
+                               "processing_id_def"=,
+                               "procid_def"   =paste0(geta(x, "procid", "pr"),"_default"), # the procid of the default processing for those processings that use the defaults
                                "patient_id"   =,
                                "patid"        =geta(x, "patid", "ev"),
                                "estim"        =,
@@ -1194,9 +1229,9 @@ disconnect.SQL_db <- function(x)
   if( !is.null(x$db_connection) )
   {
     # Drop the temporary tables (if any):
-    if( !is.null(x$db_prtable_use_temp_table) &&
+    if( is_table_temporary(x,"pr") &&
         (x$db_prtable_use_temp_table %in% list_tables(x)) ) table_drop(x, x$db_prtable_use_temp_table);
-    if( !is.null(x$db_mctable_use_temp_table) &&
+    if( is_table_temporary(x,"mc") &&
         (x$db_mctable_use_temp_table %in% list_tables(x)) ) table_drop(x, x$db_mctable_use_temp_table);
     
     if( x$db_type %in% c("mariadb", "mysql", "sqlite") )
@@ -1323,23 +1358,39 @@ preprocess.SQL_db <- function(x)
       # Create the table (delete it first if it already existed):
       if( tmp_procs_table %in% list_tables(x) ) try(table_drop(x, tmp_procs_table), silent=TRUE);
       if( !table_create(x, tmp_procs_table, duplicate_from=geta(x, 'name', 'pr'), clear_if_exists=TRUE) ) return (NULL);
+      
+      # Add column containing the original and the supplementary procid's for the resolved default processings (*):
+      cols_info <- get_cols_info(x, tmp_procs_table); procid_col_info <- cols_info[ cols_info$column == geta(x, 'procid', 'pr'), ];
+      col_procid_orig <- paste0(geta(x, 'procid', 'pr'),"_original"); col_procid_def <- paste0(geta(x, 'procid', 'pr'),"_default");
+      if( is.null(sqlQ(x, query=paste0("ALTER TABLE ",qfq_geta(x,table_name=tmp_procs_table),
+                                       " ADD ",qs(x, col_procid_orig),
+                                       " ",ifelse(nrow(cols_info)==0,"",as.character(cols_info$type))," NULL DEFAULT NULL",
+                                       " ;"),
+                       err_msg=paste0("Error creating the the temporary processings database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
+      if( is.null(sqlQ(x, query=paste0("ALTER TABLE ",qfq_geta(x,table_name=tmp_procs_table),
+                                       " ADD ",qs(x, col_procid_def),
+                                       " ",ifelse(nrow(cols_info)==0,"",as.character(cols_info$type))," NULL DEFAULT NULL",
+                                       " ;"),
+                       err_msg=paste0("Error creating the the temporary processings database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
 
       # Copy the non-"*" entries from the processing table:
       if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x,table_name=tmp_procs_table),
-                                       " (",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),")",
-                                       " SELECT ",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),
+                                       " (",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),", ",qs(x,col_procid_orig),")",
+                                       " SELECT ",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),", ",qs_geta(x, 'procid', 'pr'),
                                        " FROM ",qfq_geta(x, 'name', 'pr'),
                                        " WHERE ",qs_geta(x, 'action', 'pr')," <> '*'",
                                        " ;"),
                        err_msg=paste0("Error copying the non-defaults from the processings into the temporary database '",tmp_procs_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
       
-      # Insert the defaults corresponsind to the "*" entries from the processing table:
+      # Insert the defaults corresponding to the "*" entries from the processing table:
       if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x,table_name=tmp_procs_table),
-                                       " (",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),")",
+                                       " (",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),", ",qs(x,col_procid_orig),", ",qs(x,col_procid_def),")",
                                        " SELECT ",
                                        qs(x,'a'),".",qs_geta(x, 'patid', 'pr'),",",
                                        qs(x,'a'),".",qs_geta(x, 'category', 'pr'),",",
-                                       qs(x,'b'),".",qs_geta(x, 'action', 'pr'),
+                                       qs(x,'b'),".",qs_geta(x, 'action', 'pr'),",",
+                                       qs(x,'a'),".",qs_geta(x, 'procid', 'pr'),",",
+                                       qs(x,'b'),".",qs_geta(x, 'procid', 'pr'),
                                        " FROM ",qfq_geta(x, 'name', 'pr')," ",qs(x,'a'),", ",qfq_geta(x, 'name', 'pr')," ",qs(x,'b'),
                                        " WHERE ",qs(x,'a'),".",qs_geta(x, 'action', 'pr')," = '*'",
                                        " AND ",qs(x,'b'),".",qs_geta(x, 'patid', 'pr')," = '*'",
@@ -1723,8 +1774,8 @@ get_col_names.SQL_db <- function(x, db_table)
 ## Results tables ####
 ##
 
-write_retable_entry <- function(x, id, procid, class="", type="", proc="", params="", estimate=NA, estimate_type=NA, plot_jpg="", plot_html="") UseMethod("write_retable_entry")
-write_retable_entry.SQL_db <- function(x, id, procid, class="", type="", proc="", params="", estimate=NA, estimate_type=NA, plot_jpg="", plot_html="")
+write_retable_entry <- function(x, id, procid, procid_def, class="", type="", proc="", params="", estimate=NA, estimate_type=NA, plot_jpg="", plot_html="") UseMethod("write_retable_entry")
+write_retable_entry.SQL_db <- function(x, id, procid, procid_def, class="", type="", proc="", params="", estimate=NA, estimate_type=NA, plot_jpg="", plot_html="")
 {
   # File to blob:
   file2blob <- function(x, file_name)
@@ -1752,6 +1803,7 @@ write_retable_entry.SQL_db <- function(x, id, procid, class="", type="", proc=""
                                  "(",
                                  qs_geta(x, 'patid', 'ev'),", ",
                                  qs_geta(x, 'procid', 're'),", ",
+                                 qs_geta(x, 'procid_def', 're'),", ",
                                  qs_geta(x, 'estim', 're'),", ",
                                  qs_geta(x, 'estim_type', 're'),", ",
                                  qs_geta(x, 'jpg', 're'),", ",
@@ -1760,12 +1812,13 @@ write_retable_entry.SQL_db <- function(x, id, procid, class="", type="", proc=""
                                  " VALUES (",
                                  "'",id,"', ", # id
                                  "'",procid,"', ", # reference to the processing key
+                                 ifelse(is.na(procid_def),"NULL",paste0("'",procid_def,"'")),", ", # reference to the default processing key (if any)
                                  ifelse(is.na(estimate),"NULL",paste0("'",estimate,"'")),", ", # estimate
                                  ifelse(is.na(estimate_type),"NULL",paste0("'",estimate_type,"'")),", ", # estimate type
                                  file2blob(x,plot_jpg),", ", # the JPEG file as a blob
                                  file2blob(x,plot_html), # the HTML+SVG file as a blob
                                  ");"),
-                 err_msg=paste0("Error writing into the events table '",geta(x, 'name', 'ev'),"'!\n"), just_execute=TRUE);
+                 err_msg=paste0("Error writing into the main results table '",geta(x, 'name', 're'),"'!\n"), just_execute=TRUE);
   if( is.null(result) )
   {
     .msg(paste0("Error writing row to the results table '",geta(x, 'name', 're'),"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
@@ -1978,9 +2031,18 @@ get_processings_for_patient.SQL_db <- function(x, patient_id)
   if( is.null(db_procs) || nrow(db_procs) == 0 ) return (NULL);
     
   # Re-arrange it in the "procid", "patid", "mcid", "actid", "class", "type", "action" & "params" format:
-  db_procs <- db_procs[, c(geta(x, 'procid', 'pr'), geta(x, 'patid', 'pr'), geta(x, 'category', 'pr'), geta(x, 'action', 'pr'),
-                           geta(x, 'class', 'mc'), geta(x, 'action', 'ac'), geta(x, 'params', 'ac'))];
-  names(db_procs) <- c('procid', 'patid', 'mcid', 'actid', 'class', 'action', 'params');
+  if( is_table_temporary(x,"pr") )
+  {
+    db_procs <- db_procs[, c(geta(x, 'procid', 'pr'), geta(x, 'patid', 'pr'), geta(x, 'category', 'pr'), geta(x, 'action', 'pr'),
+                             geta(x, 'class', 'mc'), geta(x, 'action', 'ac'), geta(x, 'params', 'ac'),
+                             geta(x, 'procid_orig', 'pr'), geta(x, 'procid_def', 'pr'))];
+  } else
+  {
+    db_procs <- cbind(db_procs[, c(geta(x, 'procid', 'pr'), geta(x, 'patid', 'pr'), geta(x, 'category', 'pr'), geta(x, 'action', 'pr'),
+                             geta(x, 'class', 'mc'), geta(x, 'action', 'ac'), geta(x, 'params', 'ac'))],
+                      NA, NA);
+  }
+  names(db_procs) <- c('procid', 'patid', 'mcid', 'actid', 'class', 'action', 'params', 'procid_orig', 'procid_def');
   
   # If a specific processing is defined, what do we do with the defaults?
   if( any(s <- (db_procs$patid != '*')) )
@@ -2227,7 +2289,8 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
   
   # Return the results:
   return (list("id"=patient_info[ 1, geta(x, 'patid', 'ev') ],
-               "procid"=procs_action$procid[1], "class"=procs_action$class[1], "type"=procs_action$type[1], "proc"=procs_action$proc[1], "params"=procs_action$params[1], 
+               "procid"=procs_action$procid[1], "procid_orig"=procs_action$procid_orig[1], "procid_def"=procs_action$procid_def[1], 
+               "class"=procs_action$class[1], "type"=procs_action$type[1], "proc"=procs_action$proc[1], "params"=procs_action$params[1], 
                "cma"=cma, 
                "plots"=cma_plots));
 }
@@ -2236,7 +2299,7 @@ apply_procs_action_for_class.SQL_db <- function(x, patient_info, procs_action)
 upload_procs_results <- function(x, procs_results) UseMethod("upload_procs_results")
 upload_procs_results.SQL_db <- function(x, procs_results)
 {
-  if( is.null(procs_results) || length(procs_results) != 8 )
+  if( is.null(procs_results) || length(procs_results) != 10 )
   {
     # Nothing to do:
     return (FALSE);
@@ -2257,15 +2320,16 @@ upload_procs_results.SQL_db <- function(x, procs_results)
                                  )
                           ));
   ret_val <- write_retable_entry(x, 
-                                 id        =id, 
-                                 procid    =procid,
-                                 class     =ifelse(is.na(procs_results$class),      "", as.character(procs_results$class)), 
-                                 type      =ifelse(is.na(procs_results$type),       "", as.character(procs_results$type)), 
-                                 proc      =ifelse(is.na(procs_results$proc),       "", as.character(procs_results$proc)), 
-                                 params    =ifelse(is.na(procs_results$params),     "", as.character(procs_results$params)),
-                                 estimate  =ifelse(is.null(procs_results$cma) || is.null(getCMA(procs_results$cma)) || !inherits(procs_results$cma, "CMA0"), 
-                                                   NA, # not estimated or not a simple CMA -> mark it as NULL
-                                                   round(getCMA(procs_results$cma)$CMA[1],4) # simple CMA -> use the first numeric value
+                                 id         =id, 
+                                 procid     =ifelse(is.na(procs_results$procid_orig), procid, procs_results$procid_orig),
+                                 procid_def =procs_results$procid_def,
+                                 class      =ifelse(is.na(procs_results$class),      "", as.character(procs_results$class)), 
+                                 type       =ifelse(is.na(procs_results$type),       "", as.character(procs_results$type)), 
+                                 proc       =ifelse(is.na(procs_results$proc),       "", as.character(procs_results$proc)), 
+                                 params     =ifelse(is.na(procs_results$params),     "", as.character(procs_results$params)),
+                                 estimate   =ifelse(is.null(procs_results$cma) || is.null(getCMA(procs_results$cma)) || !inherits(procs_results$cma, "CMA0"), 
+                                                    NA, # not estimated or not a simple CMA -> mark it as NULL
+                                                    round(getCMA(procs_results$cma)$CMA[1],4) # simple CMA -> use the first numeric value
                                                    ),
                                  estimate_type=estimate_type,
                                  plot_jpg  =if(!is.null(procs_results$plots)) procs_results$plots$jpg  else NA,
@@ -2559,6 +2623,7 @@ create_test_database.SQL_db <- function(x)
                                                                          "mysql"=" INT NOT NULL AUTO_INCREMENT PRIMARY KEY, "),
                                    qs_geta(x, 'patid', 'ev'),      " VARCHAR(256) NOT NULL, ",
                                    qs_geta(x, 'procid', 're'),     " INT NULL DEFAULT -1, ",
+                                   qs_geta(x, 'procid_def', 're'), " INT NULL DEFAULT NULL, ",
                                    qs_geta(x, 'estim', 're'),      " FLOAT NULL DEFAULT NULL, ",
                                    qs_geta(x, 'estim_type', 're'), " VARCHAR(256) NULL DEFAULT NULL, ",
                                    qs_geta(x, 'jpg', 're'),        ifelse(x$db_type == "mssql", " VARBINARY(MAX), " ," LONGBLOB NULL DEFAULT NULL, "),

@@ -3,7 +3,7 @@
 
 ## Bugs
 
-  - make sure the proc_id used in the main results refer to the original in_procs table and not the tmp_in_procs (if any)!
+  - [*OK*] make sure the proc_id used in the main results refer to the original in_procs table and not the tmp_in_procs (if any)!
 
   
 ## General
@@ -38,9 +38,9 @@
     - "<=": "LESS THAN OR EQUAL", "less than or equal", "LEQ", "leq", "≤"
     - ">": "GREATER THAN", "greater than", "GE", "ge"
     - ">=": "GREATER THAN OR EQUAL", "greater than or equal", "GEQ", "geq", "≥"
-    - "{...}": "REF(...)"
+    - [*TODO* for mc] "{...}": "REF(...)"
     - "?": "OTHERWISE", "otherwise", "ELSE", "else"
-    - "*": "ALL", "all", "NONE", "none", "DEFAULT", "default" (depending on its exact context, i.e., table and column)
+    - [*TODO* for pr]"*": "ALL", "all", "NONE", "none", "DEFAULT", "default" (depending on its exact context, i.e., table and column)
   
   
 ## Plotting
