@@ -20,9 +20,9 @@
   
   - [*NOT NECESSARY*] use a proper parser for the medication classes
   
-  - do the preprocessing of the classes, actions and processings anyways and store them; make sure the id's used are those in the original tables!
+  - [*OK*] do the preprocessing of the classes, actions and processings anyways and store them; make sure the id's used are those in the original tables!
   
-  - do the parsing and resolution of the classes and actions once during the preprocessing
+  - [*OK*] do the parsing and resolution of the classes and actions once during the preprocessing
   
   - [*OK*] add in the config file a parameter specifying if the default processings * apply on top of more specific rules or not
   
@@ -40,12 +40,14 @@
     - ">=": "GREATER THAN OR EQUAL", "greater than or equal", "GEQ", "geq", "≥"
     - [*TODO* for mc] "{...}": "REF(...)"
     - "?": "OTHERWISE", "otherwise", "ELSE", "else"
-    - [*TODO* for pr]"*": "ALL", "all", "NONE", "none", "DEFAULT", "default" (depending on its exact context, i.e., table and column)
+    - [*TODO* for pr] "*": "ALL", "all", "NONE", "none", "DEFAULT", "default" (depending on its exact context, i.e., table and column)
   
   
 ## Plotting
 
   - better vertical size especially for a small number of events
+  
+  - check weird size issues in Alexandra's plot
 
   
 ## Error handling
