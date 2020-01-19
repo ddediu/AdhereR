@@ -1,12 +1,12 @@
 ---
-title: 'The STUpump: specification, description and examples'
+title: 'The STUpump (v0.1): specification, description and examples'
 author: "Dan Dediu, ddediu@gmail.com"
 date: "`r Sys.time()`"
 output: 
   html_document: 
     df_print: kable
     highlight: textmate
-    theme: flatly
+    theme: spacelab
     toc: yes
 editor_options: 
   chunk_output_type: console
@@ -16,22 +16,467 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Introduction
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+This is a proof-of-concept implementation of an off-line mechanism for computing and plotting various types of CMAs for groups of patients and medications/events for downstream use and display.
 
-```{r cars}
-summary(cars)
+
+## The input tables
+
+The input tables are (the table columns are required unless specified otherwise):
+
+  - the table of events (denoted as `events`) which contains all the events in the format expected by `AdhereR`, namely:
+  
+    - `pat_id`: the patient's unique ID
+    - `event_id`: (optional) the event's unique ID (either within a given patient or globally)
+    - `date`: the event date (in the yyyy-mm-dd format)
+    - `perday`: (optional) the dosage per day
+    - `category`: (optional) the medication name
+    - `duration`: the duration in days
+
+  - the table of actions (denoted as `actions`) which contains the definitions of all the possible actions to be performed:
+  
+    - `action_id`: the actions's unique ID
+    - `action`: the actual action to be performed as the name of an `AdhereR` CMA function (e.g., `CMA1` or `CMA_per_episode`), possibly preceded by `plot.` (e.g., `plot.CMA0`)
+    - `params`: the (optional) extra parameters allowing the customisation of the action, as meaningful parameters to the corresponding `AdhereR` function (e.g., for `plot.CMA_per_episode` one can pass `CMA.to.apply="CMA1", maximum.permissible.gap=90`)
+    
+  - the table of medication classes (denoted as `classes`) which contains the definitions of all the combinations of medications that may be used to trigger actions:
+  
+    - `medclass_id`: the class unique ID
+    - `class`: the actual definition of the class using a language described below
+    
+  - the table of processingss (denoted as `procs`) which contains the action(s) that are to be done for a particular patient and type of events:
+  
+    - `proc_id`: the processing's unique ID
+    - `pat_id`: the ID of the patient (in table `events`) for which this applies (the special symbol `*` means "any patient")
+    - `medclass_id`: the ID of the class (in table `classes`) for which this applies (the special symbol `*` means "any class")
+    - `action_id`: the ID of the action (in table `actions`) to be done (the special symbol `*` means "the default action" -- i.e., the action(s) corresponding to `pat_id` = `*` and `medclass_id` = `*`)
+    
+  - the table of updates (denoted as `updated`) which contains list of patient IDs which do have updated info (i.e., those for which a re-computation should be done) or all (if empty):
+  
+    - `pat_id`: the IDs of the patients for which updated info requires re-evaluation and plotting
+
+
+## The output tables
+
+As a result of the processing, there are the following output tables:
+
+  - the table contaning the main results (denoted as `res_main`) which contains the simple CMAs (if any) and the plots (if any):
+  
+    - `result_id`: the unique ID identifying one row in this table
+    - `pat_id`: the ID of the patient (in table `events`) to which this result applies
+    - `proc_id`: the unique ID of the processing (in table `procs`) that has been applied 
+    - `proc_id_default`: for the "default" processings, these might be resolved to more than one processing, and this column holds the ID of the default processing applied (see below for details)
+    - `estimate`: the actual numeric estimate of the simple CMA (if any) or NULL for complex CMAs, plots and for failures
+    - `estimate_type`: the type of the CMA: `simple`, `sliding window` and `per episode`
+    - `plot_jpg`: a "BLOB" column containing the plot (if any) as an actual JPEG image (or NULL if no plot)
+    - `plot_html`: a "BLOB" column containing the plot (if any) as a self-contained HTML/CSS/JavaScript/SVG page + fall-back JPEG image as a single ZIP archive (or NULL if no plot)
+
+  - the table contaning the results for the sliding window CMAs (denoted as `res_slid_wnd`):
+  
+    - `result_id`: the unique ID identifying the results (= row) in the main results table `res_main` to which these estimates correspond
+    - `pat_id`: the ID of the patient (in table `events`) to which this result applies
+    - `window_id`: the unique ID (within this estimate) of the sliding window
+    - `window_start`: the start date (in the yyyy-mm-dd format) of the sliding window
+    - `window_end`: the end date (in the yyyy-mm-dd format) of the sliding window
+    - `estimate`: the actual numeric estimate of the simple CMA for this particular sliding window
+
+  - the table contaning the results for the per episode CMAs (denoted as `res_per_epi`):
+  
+    - `result_id`: the unique ID identifying the results (= row) in the main results table `res_main` to which these estimates correspond
+    - `pat_id`: the ID of the patient (in table `events`) to which this result applies
+    - `episode_id`: the unique ID (within this estimate) of the episode
+    - `episode_start`: the start date (in the yyyy-mm-dd format) of the episode
+    - `gap_days`: the episode's gap days
+    - `episode_duration`: the episode's duration in days
+    - `episode_end`: the end date (in the yyyy-mm-dd format) of the episode
+    - `estimate`: the actual numeric estimate of the simple CMA for this particular episode
+
+
+## The configration file
+
+There is an [YAML](https://yaml.org/) configuration file which specifies various user-customisable things, such as:
+
+  - the details of the database to be used (e.g., name, type, host, username, password...)
+  - the actual names of the tables (e.g., table `events` migh be called "prescriptions_db") and of their columns (e.g., `pat_id` in `events` migh be called "PID") 
+
+as well as global parameters such as `use_defaults` (for patients that have specific actions defined, should we also apply the default actions?) and `table_prefix` (some databases might need to prefix the table names with a short string such as "dbo.").
+
+The configuration file is read once and used throughout the processing.
+And example using `SQLite` is available [here](./STUpump-SQLite-inRAM.yml).
+
+
+## How it works
+
+Here we describe the conceptual process (i.e., it is possible that in practice this is optimised or slightly different).
+For each patient in the `updated` table:
+
+  1. retreive any *specific* processing(s) that may apply (i.e., select those rows from `procs` that match the `pat_id`)
+  2. if `use_defaults` = `TRUE`, also retreive the *default* processings (i.e., those that specify `*` as `pat_id`)
+  3. if there are processings to be applied, retreive the patient's full data from the `events` table (i.e., those rows with matching `pat_id`)
+  4. for each processing, select the *events* that fit it (see below how that works)
+  5. if there are such events, feed them to the defined *action*:
+  
+        a. if the action is `CMA0`, nothing is to be done
+        b. if the action is any other simple CMA, then estimate it and save the resulting numeric estimate in the main results table `res_main`
+        c. if the action is a complex CMA, then estimate it and save the resulting numeric estimates in the sliding window (`res_slid_wnd`) and per episode (`res_per_epi`) results tables, respectively, making sure the `result_id` points back to the appropriate `res_main` row
+        d. if the action is a plot, save the JPEG and HTML plots as BLOBs in the `res_main` table and the resulting numeric estimates (except for `CMA0`) as described above (points b and c)
+
+
+## The medication classes
+
+One mechanism for matching individual events/prescriptions/dispensations to specific actions is represented by *medication classes*.
+A medication class (or simply "class") is a logical expression defining a combination of medication names and doses.
+
+For example, we may define a simple class of painkillers (in the `classes` table) as:
+
+| medclass_id | class |
+|-------------|-------|
+| simple painkillers | \`aspirin\` \| \`paracetamol\` |
+
+and we want that for all patients which have this class to compute `CMA2` (in the `procs` table):
+
+| proc_id | pat_id | medclass_id | action_id |
+|---------|--------|-------------|-----------|
+| 77      | *      | simple painkillers | CMA2 |
+
+Please note that the actual name of the medication must be included between backticks `...`!
+
+However, we might want to also have a larger class of painkillers, so we could add a new entry to the `classes` table:
+
+| medclass_id | class |
+|-------------|-------|
+| simple painkillers | \`aspirin\` \| \`paracetamol\` |
+| all painkillers | {simple painkillers} \| \`nurofen\` |
+
+where we re-use (i.e., refer to) the defintion of "simple painkillers" using the {...} construction.
+And for this we want to do `CMA3`, so we add a new processing:
+
+| proc_id | pat_id | medclass_id | action_id |
+|---------|--------|-------------|-----------|
+| 77      | *      | simple painkillers | CMA2 |
+| 78      | *      | all painkillers | CMA3 |
+
+But aspirine can have other uses and we want to make a distinction based on its dose, so we change the defintion of the "simple painkillers" to apply only to high doses of aspirin only:
+
+| medclass_id | class |
+|-------------|-------|
+| simple painkillers | #\`aspirin\` > 200 \| \`paracetamol\` |
+| all painkillers | {simple painkillers} \| \`nurofen\` |
+
+and add a new use in hypertension:
+
+| medclass_id | class |
+|-------------|-------|
+| simple painkillers | #\`aspirin\` > 200 \| \`paracetamol\` |
+| all painkillers | {simple painkillers} \| \`nurofen\` |
+| hypertension | #\`aspirin\` <= 100 |
+
+The special symbol # means the dose of the following medication (or combination thereof -- thus we can also say something like #{simple painkillers} >= 300).
+
+Finally, for a given patient, we may want to define an action for all other medications not matched by any specific class: in this case we must add a line containing the special symbol ?:
+
+| proc_id | pat_id | medclass_id | action_id |
+|---------|--------|-------------|-----------|
+| 77      | *      | simple painkillers | CMA2 |
+| 78      | *      | all painkillers | CMA3 |
+| 79      | *      | ? | pCMA0 |
+
+The actions refered to by their `action_id` are of course defined in the `actions` table:
+
+| action_id | action | params |
+|---------|--------|----------|
+| CMA2      | CMA2      | |
+| CMA3      | CMA3      | |
+| pCMA0     | plot.CMA0  | show.legend=FALSE |
+
+The special class:
+
+| medclass_id | class |
+|-------------|-------|
+| * | * |
+
+must always be defined and refers to the default class (i.e., anything).
+
+The classes can use the full power of logical and arithmetic expressions, with the following conventions:
+
+  - *equal* can be any of: "==", "IS", "is", "EQUAL", "equal", "="
+  - *different* can be any of: "!=", "IS NOT", "is not", "NOT EQUAL", "not equal", "DIFFERENT", "different", "<>", "≠"
+  - *and* can be any of: "&", "AND", "and", "&&"
+  - *or* can be any of: "|", "OR", "or", "||"
+  - *not* can be any of: "!", "NOT", "not", "^", "~", "¬"
+  - *dose of* can be any of: "#", "DOSE", "dose"
+  - *less than* can be any of: "<", "LESS THAN", "less than", "LE", "le"
+  - *less or equal than* can be any of: "<=", "LESS THAN OR EQUAL", "less than or equal", "LEQ", "leq", "≤"
+  - *greater than* can be any of: ">", "GREATER THAN", "greater than", "GE", "ge"
+  - *greater or equal than* can be any of: ">=", "GREATER THAN OR EQUAL", "greater than or equal", "GEQ", "geq", "≥"
+  - *not otherwise covered* can be: "?", "OTHERWISE", "otherwise", "ELSE", "else"
+  - *parantheses*: "(" and ")"
+  - *arithmetic operators*: "+", "-", "\*", "/", "%%", "^"
+
+In fact, these expressions are transformed into `R` expressions and evaluated in a safe environment which has access only to logical, arithmetic and mathematical functions and operators.
+
+
+## An example
+
+We will use here the built-in dataset `med.events` to construct a database in `SQLite`:
+
+### Set-up
+
+```{r }
+spec_file <- "./STUpump-SQLite-inRAM.yml"; # the YAML pec file
+STUpump_version <- "0.1"; # the version
+
+source("./SQL_queries.R", echo=FALSE); # load the SQL-specific stuff
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+### The YAML config file
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+Let's see the YAML config file:
+```{r comment=''}
+cat(readLines(spec_file), sep = '\n')
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+### Create the demo database
+
+```{r }
+# Create the test database:
+stu_db <- SQL_db(spec_file, check_db=FALSE, preprocess_db=FALSE);
+create_test_database(stu_db);
+```
+
+
+### View the input tables
+
+Let' see how this demo database looks like, and in particular the *input* ("in_") tables:
+
+```{r }
+# Display the tables it contains:
+list_tables(stu_db);
+
+# Look at the `events` table (here called "in_events", as per the YAML config file)
+# "in" means "input":
+get_cols_info(stu_db, "in_events"); # column names, types and number of rows
+sqlQ(stu_db, "SELECT * FROM in_events LIMIT 50;"); # first N entries
+
+# Look at the `actions` table (here called "in_actions", as per the YAML config file):
+get_cols_info(stu_db, "in_actions");
+sqlQ(stu_db, "SELECT * FROM in_actions;");
+
+# Look at the `classes` table (here called "in_classes", as per the YAML config file):
+get_cols_info(stu_db, "in_classes");
+d <- sqlQ(stu_db, "SELECT * FROM in_classes;"); 
+d$class <- gsub("`","&grave;", d$class); d; # trick to get the bactick ` displayed in Rmarkdown
+
+# Look at the `procs` table (here called "in_procs", as per the YAML config file):
+get_cols_info(stu_db, "in_procs");
+sqlQ(stu_db, "SELECT * FROM in_procs;");
+
+# Look at the `updated` table (here called "in_updated", as per the YAML config file):
+get_cols_info(stu_db, "in_updated");
+sqlQ(stu_db, "SELECT * FROM in_updated;");
+```
+
+
+### View the output tables
+
+Obviously,the  *output* ("out_") *results* tables ("res_") are empty:
+
+```{r }
+# Look at the main results `res_main` table (here called "out_res_main", as per the YAML config file):
+get_cols_info(stu_db, "out_res_main"); # column names, types and number of rows
+sqlQ(stu_db, "SELECT * FROM out_res_main LIMIT 15;");
+
+# Look at the sliding windows results `res_slid_wnd` table (here called "out_res_slid_wnd", as per the YAML config file):
+get_cols_info(stu_db, "out_res_slid_wnd"); # column names, types and number of rows
+sqlQ(stu_db, "SELECT * FROM out_res_slid_wnd LIMIT 15;");
+
+# Look at the per episode results `res_per_epi` table (here called "out_res_per_epi", as per the YAML config file):
+get_cols_info(stu_db, "out_res_per_epi"); # column names, types and number of rows
+sqlQ(stu_db, "SELECT * FROM out_res_per_epi LIMIT 15;");
+```
+
+
+### Let's pre-process the database
+
+```{r }
+# Pre-process the database:
+stu_db <- preprocess(stu_db);
+
+# List the tables again:
+list_tables(stu_db);
+```
+
+It can be seen that some new *temporary* tables ("tmp_") have been created, containing various pre-processed info, but they will be deleted at the end and should not be relevant to the end user.
+Normally, this pre-processing is hidden in the opening of an already-created persistent database and so this function is not explicitelly called by the user.
+
+
+### Let' process all the patients
+
+The basic idea is to list all patients that need updating, and for each to apply a version of the algortihm described above:
+
+```{r }
+# Get the list of all patients:
+patient_ids <- list_patients(stu_db, with_updated_info_only=TRUE);
+
+# Process them individually:
+for( i in seq_along(patient_ids) )
+{
+  # The patient ID:
+  pat_id <- patient_ids[i];
+  
+  # Get the patient's info:
+  pat_info <- get_evtable_patients_info(stu_db, pat_id);
+  if( is.null(pat_info) || !inherits(pat_info, "data.frame") || nrow(pat_info) < 1 )
+  {
+    # Empty patient:
+  } else
+  {
+    # Get the processing(s) and plotting(s) for this patient:
+    pat_procs <- get_processings_for_patient(stu_db, pat_id);
+    
+    pat_procs_classes <- as.character(unique(pat_procs$class)); # the classes of medication
+    for( procs_class in pat_procs_classes )
+    {
+      # The actions for this class:
+      pat_procs_actions <- unique(pat_procs[ pat_procs$class == procs_class, ]);
+
+      # Select the events corresponding to this class:
+      s <- select_events_for_procs_class(stu_db, pat_info, procs_class, pat_procs);
+      
+      if( !is.na(s) && !is.null(s) && length(s) > 0 && is.logical(s) && any(s) )
+      {
+        # Apply the specified processing(s) to this selection:
+        if( !is.null(pat_procs_actions) && nrow(pat_procs_actions) > 0 )
+        {
+          # Ok, there's actions to apply:
+          for( j in 1:nrow(pat_procs_actions) )
+          {
+            # Apply the action:
+            pat_procs_results <- apply_procs_action_for_class(stu_db, pat_info[s,], pat_procs_actions[j,]);
+            
+            # Upload the results:
+            if( !upload_procs_results(stu_db, pat_procs_results) )
+            {
+              # Oops: error writing these results to the database
+              stop("Error writing results to the database!\n");
+            }
+          }
+        }
+      }
+    }
+  }   
+}
+```
+
+
+### The main results table
+
+```{r }
+# Look at the main results `res_main` table (here called "out_res_main", as per the YAML config file):
+d <- sqlQ(stu_db, "SELECT * FROM out_res_main LIMIT 15;");
+d1 <- d; d1$plot_jpg <- ifelse(is.na(d$plot_jpg),NA,"**BLOB**"); d1$plot_html <- ifelse(is.na(d$plot_html),NA,"**BLOB**"); d1; # Rmarkdown can't display BLOBs....
+```
+
+Each row contains one result.
+
+For example, row 1, with `result_id` = 1, contains the result of applying the processing with `procid` = 3 to patient with `pat_id` = 1.
+This processing is (joining all the info dispersed in three input tables):
+
+```{r }
+d2 <- sqlQ(stu_db, "SELECT * FROM in_procs INNER JOIN in_actions INNER JOIN in_classes ON in_procs.procid = 3 AND in_procs.action_id = in_actions.action_id AND in_procs.medclass_id = in_classes.medclass_id ;");
+d2$class <- gsub("`","&grave;",d2$class); # trick to show the backtick
+d2[,c("procid", "pat_id", "medclass_id", "class", "action_id", "action", "params")]; # show the whole thing
+```
+
+so, it is about comouting `CMA2` to all events with medication `medA` for patient `1`.
+For these, we obtain indeed a numeric `estimate` of `r d$estimate[1]`, classified as of `estimate_type` "`r d$estimate_type[1]`" CMA and without any plots (both `plot_jpg` and `plot_html` are empty).
+
+By contrast, row 3 does contain both numeric estimates and plots:
+
+```{r }
+d2 <- sqlQ(stu_db, "SELECT * FROM in_procs INNER JOIN in_actions INNER JOIN in_classes ON in_procs.procid = 5 AND in_procs.action_id = in_actions.action_id AND in_procs.medclass_id = in_classes.medclass_id ;");
+d2$class <- gsub("`","&grave;",d2$class); # trick to show the backtick
+d2[,c("procid", "pat_id", "medclass_id", "class", "action_id", "action", "params")]; # show the whole thing
+```
+
+which plots (and estimates) `CMA7` to all events with medication `medA` or `medB` (so, here, all events) for patient `1`.
+The numeric `estimate` is `r d$estimate[3]`, classified as of `estimate_type` "`r d$estimate_type[3]`" CMA and the plots are given as **BLOB**s.
+The JPEG one is shown below:
+
+```{r }
+# Save the JPEG stored as a BLOB to a temporary file and show it:
+file_jpeg <- tempfile(pattern = "plot_blob_", tmpdir = tempdir(), fileext = ".jpg");
+writeBin(d$plot_jpg[3][[1]], file_jpeg);
+library(jpeg);
+plot.new(); rasterImage(readJPEG(file_jpeg,native=TRUE),0,0,1,1);
+```
+
+while the (semi-)interactive HTML/CSS/JavaScript/SVG is saved as a ZIP archive which must be unpacked first (not shown here).
+
+Finally, the row with `result_id` = 12 contains the results for a `sliding window`:
+
+```{r }
+d3 <- sqlQ(stu_db, "SELECT * FROM in_procs INNER JOIN in_actions INNER JOIN in_classes ON in_procs.procid = 10 AND in_procs.action_id = in_actions.action_id AND in_procs.medclass_id = in_classes.medclass_id ;");
+d3$class <- gsub("`","&grave;",d3$class); # trick to show the backtick
+d3[,c("procid", "pat_id", "medclass_id", "class", "action_id", "action", "params")]; # show the whole thing
+```
+
+applied to all medications (`*`) for patient with id 3 (more precisely, we apply `CMA1` with the sliding window attributes defined in the `params` columns).
+Here we have the plots as well: 
+
+```{r }
+file_jpeg <- tempfile(pattern = "plot_blob_", tmpdir = tempdir(), fileext = ".jpg");
+writeBin(d$plot_jpg[12][[1]], file_jpeg);
+plot.new(); rasterImage(readJPEG(file_jpeg,native=TRUE),0,0,1,1);
+```
+
+but the most interesting is the `estimate_type` "`r d$estimate_type[3]`", which means that we should look in the sliding windows results table.
+
+
+### The sliding windows results table
+
+```{r }
+# Look at the main results `res_slid_wnd` table (here called "out_res_slid_wnd", as per the YAML config file):
+d4 <- sqlQ(stu_db, "SELECT * FROM out_res_slid_wnd LIMIT 15;");
+d4;
+```
+
+It can be seen that we have `r sum(d4$result_id == 12)` rows pointing back to the main results `result_id` = 12, each describing one individual sliding window (including the corresponding estimate of the simple CMA).
+
+
+### The per episode results table
+
+This is interpreted just as the sliding windows results table decribed above, but for the per episode.
+
+
+```{r }
+# Look at the main results `res_per_epi` table (here called "out_res_per_epi", as per the YAML config file):
+sqlQ(stu_db, "SELECT * FROM out_res_per_epi LIMIT 15;");
+```
+
+
+## Conclusions
+
+This proof-of-concept works decently fast for `MySQL`/`MariaDB`, Microsoft `SQL Server` and `SQLite`.
+
+```{r }
+# Disconnect from the database:
+disconnect(stu_db);
+```
+
+
+## Extensions
+
+There are several extensions and optimisations possible:
+
+  - a different mechanism for specifying which actions are to be applied to which events, using, for example, an extra table giving this info for each individual event
+  - now each patient is processed individually, which increases the number of interactions with the SQL server
+  - parallel processing of several patients
+  - ...
+
+
+

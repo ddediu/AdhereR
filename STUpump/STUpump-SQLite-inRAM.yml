@@ -1,0 +1,94 @@
+##################################################################################
+#
+# YAML configuration file to be used by the STUpump
+#
+# Specifies not only the database and the credentials needed to acces it,
+# but also various attributes of the database (mostly table and column names).
+#
+# (c) 2020, Dan Dediu, ddediu@gmail.com
+#
+##################################################################################
+
+
+title: STUpump using a test SQLite database
+
+
+# Global parameters:
+globals:
+  use_defaults: true # if a patient has specific processings defined, do we also apply the defaults or nor (the default is yes)
+
+# Database-wide parameters:
+database:
+  type:  SQLite # type of SQL database server; can be MariaDB, MySQL, SQLite or MSSQL
+  host:  null   # host name or IP (for SQLite this is the path to the file)
+  DSN:   null   # server DSN (normally used with MSSQL) 
+  name:  ":memory:" # database's name (for SQLite this is the path to the file or :memory: for an in-RAM database)
+  user:  null   # username
+  psswd: null   # password; using double quotes to allow special characters (which must be escaped with a backslash)
+  
+
+# Parameters specific to the various tables (NB, not all columns can be changed by the user; e.g., table procs contains a patient ID but this uses the column name defined for table events):
+tables:
+  # Is there a prefix required to access the tables?
+  table_prefix: null # sometimes the table name must be preceded by a prefix (if not, this is simply null)
+
+  # The table contaning the actual events in the format needed by AdhereR:
+  events:
+    name:       in_events  # table name
+    patient_id: pat_id     # name of the column containing the patient's unique id
+    date:       date       # name of the column containing the prescription dates
+    perday:     perday     # name of the column containing the dosage
+    category:   category   # name of the column containing the medication type (can be null)
+    duration:   duration   # name of the column containing the duration (can be null)
+
+  # The table specifying what to do (the actions):
+  actions:
+    name:      in_actions # table name
+    action_id: action_id  # name of the column containing the unique id of the action
+    action:    action     # name of the column containing the actions to be done ("CMA7" or "plot.CMA0"); "plot." automatically estimates the CMA (except for CMA0)
+    params:    params     # name of the column containing the parameters (e.g., the start of the observation window, hiding the legend...)
+
+  # The table specifying the groups of medications (the classes):
+  med_classes:
+    name:        in_classes  # table name
+    medclass_id: medclass_id # name of the column containing the unique id of the class
+    class:       class       # name of the column containing the (logical expression defining the) class of medications (e.g., "[medA]" or "[medA] & [medB]"; the medication names are between [])
+
+  # The table specifying what to do to whom (the processes):
+  processes:
+    name:   in_procs # table name
+    procid: procid   # name of the column containing the unique id of the process
+
+  # The table contaning the main results:
+  results:
+    name:          out_res_main  # table name
+    result_id:     result_id     # name of the column containing the unique id of the result
+    estimate:      estimate      # name of the column containing the numeric estimate
+    estimate_type: estimate_type # the name of the column containing type of the CMA estimate (e.g., "simple" or "sliding windows")
+    plot_jpg:      plot_jpg      # the name of the column containing actual JPEG plot as a BLOB
+    plot_html:     plot_html     # the name of the column containing actual HTML/SVG plot as a BLOB
+
+  # The table contaning the sliding windows results:
+  sliding_windows_results:
+    name:         out_res_slid_wnd # table name
+    window_id:    window_id        # the name of the column containing the window's unique is
+    window_start: window_start     # the name of the column containing the window's start date
+    window_end:   window_end       # the name of the column containing the window's end date
+    estimate:     estimate         # the name of the column containing the window's estimated CMA
+
+  # The table contaning the per episode results:
+  per_episode_results:
+    name:             out_res_per_epi  # table name
+    episode_id:       episode_id       # the name of the column containing the episode's unique is
+    episode_start:    episode_start    # the name of the column containing the episode's start date
+    gap_days:         gap_days         # the name of the column containing the episode's gap days
+    episode_duration: episode_duration # the name of the column containing the episode's duration
+    episode_end:      episode_end      # the name of the column containing the episode's duration
+    estimate:         estimate         # the name of the column containing the episode's estimated CMA
+
+  # The table specifying which patients have updated info (i.e., which patients to process) -- can be missing if all the patients have to be processed:
+  updated_info:
+    name:       in_updated # table name
+
+
+
