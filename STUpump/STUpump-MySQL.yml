@@ -9,7 +9,13 @@
 #
 ##################################################################################
 
+
 title: STUpump using a local test MySQL database
+
+
+# Global parameters:
+globals:
+  use_defaults: true # if a patient has specific processings defined, do we also apply the defaults or nor (the default is yes)
 
 # Database-wide parameters:
 database:
@@ -19,6 +25,7 @@ database:
   name:  STUpumpTests   # database's name (for SQLite this is the path to the file)
   user:  adherentuser   # username
   psswd: "AdhereR123!"  # password; using double quotes to allow special characters (which must be escaped with a backslash)
+
 
 # Parameters specific to the various tables (NB, not all columns can be changed by the user; e.g., table procs contains a patient ID but this uses the column name defined for table events):
 tables:

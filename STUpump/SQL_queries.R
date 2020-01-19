@@ -556,6 +556,7 @@ SQL_db <- function(spec_file=NA,                                                
 ## Get configurable attributes ####
 ##
 
+
 # Are we using the original or the temporary tables?
 is_table_temporary <- function(x, tbname) UseMethod("is_table_temporary")
 is_table_temporary.SQL_db <- function(x, tbname)
@@ -578,6 +579,7 @@ is_table_temporary.SQL_db <- function(x, tbname)
                  
                  FALSE));
 }
+
 
 # Get various attributes either for the whole database (table=NULL) or for a specific table:
 geta <- function(x, variable, table=NULL, append_prefix_to_table_name=TRUE, df.compat=FALSE) UseMethod("geta")
@@ -640,25 +642,13 @@ geta.SQL_db <- function(x, variable,
                    "classes"           =,
                    "medications"       =,
                    "mc"=switch(tolower(variable),
-                               "name"            =ifelse(!is_table_temporary(x,"mc"), 
-                                                         ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_mctable_name), x$db_mctable_name),
-                                                         x$db_mctable_use_temp_table), # use the solved default temp table?,
-                               "med_class_id"    =,
-                               "mcid"            =,
-                               "id"              =x$db_mctable_cols["ID"],
-                               "class"           =x$db_mctable_cols["CLASS"],
-                               "class_parsed"    =ifelse(!is_table_temporary(x,"mc"),
-                                                         NA,
-                                                         paste0(geta(x,"class","mc"),"_parsed")), # if using a temporary table, this is the parsed class
-                               "class_type"      =ifelse(!is_table_temporary(x,"mc"),
-                                                         NA,
-                                                         paste0(geta(x,"class","mc"),"_type")), # if using a temporary table, this is the parsed class type
-                               "class_needs_dose"=ifelse(!is_table_temporary(x,"mc"),
-                                                         NA,
-                                                         paste0(geta(x,"class","mc"),"_needs_dose")), # if using a temporary table, this is the parsed class needs dose
-                               "class_needs_med" =ifelse(!is_table_temporary(x,"mc"),
-                                                         NA,
-                                                         paste0(geta(x,"class","mc"),"_needs_med")), # if using a temporary table, this is the parsed class needs medication class
+                               "name"        =ifelse(!is_table_temporary(x,"mc"), 
+                                                     ifelse(append_prefix_to_table_name && geta(x,"pre") != "", paste0(geta(x,"pre"),x$db_mctable_name), x$db_mctable_name),
+                                                     x$db_mctable_use_temp_table), # use the solved default temp table?,
+                               "med_class_id"=,
+                               "mcid"        =,
+                               "id"          =x$db_mctable_cols["ID"],
+                               "class"       =x$db_mctable_cols["CLASS"],
                                .msg(paste0("Undefined attribute '",variable,"' for table '",table,"'.\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"))
                    ),
                    
@@ -1180,38 +1170,6 @@ qs.SQL_db <- function(x, s)
                parsed_expr=parsed_text_expr));
 }
 
-# Retreive an already parsed medication class (or, if not already parsed, attempt to parse it!)
-.retreive_parsed_medication_class <- function(x, text) UseMethod(".retreive_parsed_medication_class")
-.retreive_parsed_medication_class.SQL_db <- function(x, text)
-{
-  already_parsed <- NULL;
-  if( is.null(already_parsed <- sqlQ(x, query=paste0("SELECT *",
-                                          " FROM ",qfq_geta(x,'name','mc'),
-                                          " WHERE ",qs_geta(x,'class','mc')," = '",text,"'",
-                                          " ;"),
-                   err_msg=paste0("Error retreiving finding medication class '",text,"'!\n"), just_execute=FALSE)) ) return (NULL);
-  if( nrow(already_parsed) != 1 )
-  {
-    .msg(paste0("Error retreiving finding medication class '",text,"'!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
-    return (NULL);
-  } else
-  {
-    # Ok: we did find it:
-    if( is.na(already_parsed$class_type[1]) )
-    {
-      # Seems to not have been parsed or of a special class:
-      return (.parse_medication_class(x, text));
-    } else
-    {
-      # Return the already stored info:
-      return (list(type           =already_parsed$class_type[1], 
-                   needs_med_class=(toupper(already_parsed$class_needs_med[1]) == "TRUE"), 
-                   needs_dose     =(toupper(already_parsed$class_needs_dose[1]) == "TRUE"), 
-                   parsed_expr    =parse(text=already_parsed$class_parsed[1])));
-    }
-  }
-}
-
 
 ##
 ## Connect/disconnect to/from database ####
@@ -1419,7 +1377,7 @@ preprocess.SQL_db <- function(x)
       # Copy the non-"*" entries from the processing table:
       if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x,table_name=tmp_procs_table),
                                        " (",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),", ",qs(x,col_procid_orig),")",
-                                       " SELECT ",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),", ",qs_geta(x, 'procid', 'pr'),
+                                       " SELECT ",qs_geta(x, 'patid', 'pr'),", ",qs_geta(x, 'category', 'pr'),", ",qs_geta(x, 'action', 'pr'),", ",qs_geta(x, 'procid', 'pr'),                    
                                        " FROM ",qfq_geta(x, 'name', 'pr'),
                                        " WHERE ",qs_geta(x, 'action', 'pr')," NOT IN ('*','DEFAULT','default')",
                                        " ;"),
@@ -1458,36 +1416,13 @@ preprocess.SQL_db <- function(x)
   if( tmp_class_table %in% list_tables(x) ) try(table_drop(x, tmp_class_table), silent=TRUE);
   if( !table_create(x, tmp_class_table, duplicate_from=geta(x, 'name', 'mc'), clear_if_exists=TRUE) ) return (NULL);
   
-  # Add a new column that will contain the parsed and processed class definition:
-  cols_info <- get_cols_info(x, tmp_class_table); class_col_info <- cols_info[ cols_info$column == geta(x, 'class', 'mc'), ];
-  col_class_parsed <- paste0(geta(x, 'class', 'mc'),"_parsed"); col_class_type <- paste0(geta(x, 'class', 'mc'),"_type"); 
-  col_class_needs_dose <- paste0(geta(x, 'class', 'mc'),"_needs_dose"); col_class_needs_med <- paste0(geta(x, 'class', 'mc'),"_needs_med"); 
-  if( is.null(sqlQ(x, query=paste0("ALTER TABLE ",qfq_geta(x,table_name=tmp_class_table),
-                                   " ADD ",qs(x, col_class_parsed),
-                                   " ",ifelse(nrow(cols_info)==0,"",as.character(cols_info$type))," NULL DEFAULT NULL",
-                                   " ;"),
-                   err_msg=paste0("Error creating the the temporary medication classes database '",tmp_class_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
-  if( is.null(sqlQ(x, query=paste0("ALTER TABLE ",qfq_geta(x,table_name=tmp_class_table),
-                                   " ADD ",qs(x, col_class_type)," CHAR(100) NULL DEFAULT NULL",
-                                   " ;"),
-                   err_msg=paste0("Error creating the the temporary medication classes database '",tmp_class_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
-  if( is.null(sqlQ(x, query=paste0("ALTER TABLE ",qfq_geta(x,table_name=tmp_class_table),
-                                   " ADD ",qs(x, col_class_needs_dose)," CHAR(100) NULL DEFAULT NULL",
-                                   " ;"),
-                   err_msg=paste0("Error creating the the temporary medication classes database '",tmp_class_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
-  if( is.null(sqlQ(x, query=paste0("ALTER TABLE ",qfq_geta(x,table_name=tmp_class_table),
-                                   " ADD ",qs(x, col_class_needs_med)," CHAR(100) NULL DEFAULT NULL",
-                                   " ;"),
-                   err_msg=paste0("Error creating the the temporary medication classes database '",tmp_class_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
-  
   # Copy everything from the classes table:
   if( is.null(sqlQ(x, query=paste0("INSERT INTO ",qfq_geta(x,table_name=tmp_class_table),
                                    " (",qs_geta(x, 'mcid', 'mc'),", ",qs_geta(x, 'class', 'mc'),")",
                                    "SELECT * FROM ",qfq_geta(x, 'name', 'mc'),
                                    " ;"),
                    err_msg=paste0("Error compying the non-defaults from the classes table into the temporary database '",tmp_class_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
-  
-  
+
   # Are there {} references?
   ref_classes <- sqlQ(x, query=paste0("SELECT *",
                                       " FROM ",qfq_geta(x, 'name', 'mc'),
@@ -1576,46 +1511,6 @@ preprocess.SQL_db <- function(x)
     {
       .msg(paste0("Too deep medication class references {}: not all have been solved, please reduce this referencing depth!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w"));
       return (NULL);
-    }
-  }
-  
-  # Parse the class definitions (do it 1-by-1):
-  while(TRUE)
-  {
-    cur_def <- NULL;
-    # Select one row with unparsed class definition:
-    if( is.null(cur_def <- sqlQ(x, query=paste0("SELECT ",ifelse(x$db_type == "mssql","TOP 1",""),
-                                                " * FROM ",qfq_geta(x,table_name=tmp_class_table),
-                                                " WHERE ",qs_geta(x, 'class', 'mc')," NOT IN ('*', '?', 'OTHERWISE', 'otherwise', 'ELSE', 'else')",
-                                                " AND ",qs(x,col_class_parsed)," IS NULL OR ",qs(x,col_class_parsed)," = ''",
-                                                ifelse(x$db_type %in% c("mariadb", "mysql", "sqlite")," LIMIT 1",""),
-                                                " ;"),
-                                err_msg=paste0("Error updating the temporary database '",tmp_class_table,"'!\n"), just_execute=FALSE)) ) return (NULL);
-    if( nrow(cur_def) == 0 )
-    {
-      # Finished!
-      break;
-    } else if( nrow(cur_def) != 1 )
-    {
-      # Error: limit seems not to have worked!
-      .msg(paste0("Errors parsing the medication classes!\n"), x$log_file, ifelse(x$stop_on_database_errors,"e","w")); 
-    } else
-    {
-      # Ok, so we have one row to parse:
-      tmp <- .parse_medication_class(x, as.character(cur_def$class[1]));
-      if( !is.null(tmp) && tmp$type == "normal" )
-      {
-        # Write it to the database:
-        if( is.null(sqlQ(x, query=paste0("UPDATE ",qfq_geta(x,table_name=tmp_class_table),
-                                         " SET ",qs(x,col_class_parsed)," = '",as.character(tmp$parsed_expr),"'",", ",
-                                         " ",qs(x,col_class_type)," = '",as.character(tmp$type),"'",", ",
-                                         " ",qs(x,col_class_needs_med)," = '",as.character(tmp$needs_med_class),"'",", ",
-                                         " ",qs(x,col_class_needs_dose)," = '",as.character(tmp$needs_dose),"'",
-                                         " WHERE ",qs_geta(x, 'mcid', 'mc')," = '",cur_def[1,geta(x, 'mcid', 'mc')],"'",
-                                         " AND ",qs_geta(x, 'class', 'mc')," = '",cur_def[1,geta(x, 'class', 'mc')],"'",
-                                         " ;"),
-                         err_msg=paste0("Error updating the temporary database '",tmp_class_table,"'!\n"), just_execute=TRUE)) ) return (NULL);
-      }
     }
   }
   
@@ -2203,8 +2098,7 @@ select_events_for_procs_class.SQL_db <- function(x, patient_info, procs_class, p
   }
   
   # Parse the class:
-  #proc_class_parse <- .parse_medication_class(x, procs_class);
-  proc_class_parse <- .retreive_parsed_medication_class(x, procs_class);
+  proc_class_parse <- .parse_medication_class(x, procs_class);
   if( is.null(proc_class_parse) )
   {
     # Errors parsing the class definition!

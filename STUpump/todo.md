@@ -38,10 +38,10 @@
     - "<=": "LESS THAN OR EQUAL", "less than or equal", "LEQ", "leq", "≤"
     - ">": "GREATER THAN", "greater than", "GE", "ge"
     - ">=": "GREATER THAN OR EQUAL", "greater than or equal", "GEQ", "geq", "≥"
-    - [*TODO* for mc] "{...}": "REF(...)"
+    - "{...}": "REF(...)"
     - "?": "OTHERWISE", "otherwise", "ELSE", "else"
-    - [*TODO* for pr] "*": "ALL", "all", "NONE", "none", "DEFAULT", "default" (depending on its exact context, i.e., table and column)
-  
+    - "*": "ALL", "all", "NONE", "none", "DEFAULT", "default" (depending on its exact context, i.e., table and column)
+
   
 ## Plotting
 
