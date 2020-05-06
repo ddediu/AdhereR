@@ -378,14 +378,14 @@ CMA_polypharmacy <- function(data = data,
 
         episode.dates <- sort(unique(c(episode.start,episode.end)))
 
-        episodes <- data.table(episode.dates[1:(length(episode.dates)-1)],
-                               episode.dates[2:length(episode.dates)])
+        episodes <- data.table::data.table(episode.dates[1:(length(episode.dates)-1)],
+                                           episode.dates[2:length(episode.dates)])
 
         intersect.start.name <- paste0(intersect.name,".start")
         intersect.end.name <- paste0(intersect.name, ".end")
         intersect.duration.name <- paste0(intersect.name, ".duration")
 
-        setnames(episodes, c(intersect.start.name, intersect.end.name))
+        data.table::setnames(episodes, c(intersect.start.name, intersect.end.name))
 
         episodes[,(intersect.duration.name) := as.numeric(get(intersect.end.name) - get(intersect.start.name))]
 
@@ -397,7 +397,7 @@ CMA_polypharmacy <- function(data = data,
 
         if(is.list(thresholds)) {
 
-          medication.groups <- first(medication.groups)
+          medication.groups <- data.table::first(medication.groups)
 
           if(medication.groups %in% names(thresholds)) {
 
@@ -432,7 +432,7 @@ CMA_polypharmacy <- function(data = data,
       }
 
       # cache data and various parameters
-      data.2 <- copy(data)
+      data.2 <- data.table::copy(data)
 
       ID.colname.2 <- ID.colname
       followup.window.start.2 <- followup.window.start
@@ -441,7 +441,7 @@ CMA_polypharmacy <- function(data = data,
       observation.window.duration.2 <- observation.window.duration
       observation.window.duration.unit.2 <- observation.window.duration.unit
 
-      setnames(data.2, old = .orig.ID.colname, new = "PATIENT_ID")
+      data.table::setnames(data.2, old = .orig.ID.colname, new = "PATIENT_ID")
 
       # # Add back the patient and episode IDs:
       # tmp <- as.data.table(merge(cma$CMA, treat.epi)[,c(ID.colname, "episode.ID", "episode.start", "end.episode.gap.days", "episode.duration", "episode.end", "CMA")]);
@@ -486,11 +486,11 @@ CMA_polypharmacy <- function(data = data,
                                   date.format=date.format,parallel.backend="none")
 
       # get CMA values
-      CMA_per_group <- as.data.table(getCMA(CMA_all_by_group))
+      CMA_per_group <- data.table::as.data.table(getCMA(CMA_all_by_group))
 
       # merge back original ID and group and sort by original ID
       CMA_per_group <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), CMA_per_group)
-      setkeyv(CMA_per_group, "PATIENT_ID")
+      data.table::setkeyv(CMA_per_group, "PATIENT_ID")
 
       # CMA_per_group <- lapply(CMA_all_by_group, FUN = function(x){
       #   cbind(group = first(x$data[["group"]]), x$CMA)
@@ -502,10 +502,10 @@ CMA_polypharmacy <- function(data = data,
       # construct intermediate CMA object
 
       CMA_intermediate <- CMA_per_group[,c("PATIENT_ID", "group", "CMA"), with = FALSE]
-      setkeyv(CMA_intermediate, "PATIENT_ID")
+      data.table::setkeyv(CMA_intermediate, "PATIENT_ID")
 
       # get event information
-      event_info <- as.data.table(CMA_all_by_group$event.info)
+      event_info <- data.table::as.data.table(CMA_all_by_group$event.info)
 
       # event_info <- lapply(CMA_all_by_group, FUN = function(x){
       #   x$event.info
@@ -513,11 +513,11 @@ CMA_polypharmacy <- function(data = data,
       # event_info <- rbindlist(event_info)
 
       # merge back original ID and group and sort by original ID
-      setkeyv(event_info, "PATIENT_ID")
+      data.table::setkeyv(event_info, "PATIENT_ID")
 
       # aggregate CMAs
 
-      CMA <- copy(CMA_per_group)
+      CMA <- data.table::copy(CMA_per_group)
 
       # if thresholds are provided
       if(length(thresholds) >= 1 && !is.na(thresholds)){
@@ -579,11 +579,11 @@ CMA_polypharmacy <- function(data = data,
       # ifelse(ID.colname == ID.colname.2, ID.colnames <- ID.colname, ID.colnames <- c(ID.colname, ID.colname.2))
 
       # get CMA values
-      CMA_per_day <- as.data.table(getCMA(CMA_full_per_day))
+      CMA_per_day <- data.table::as.data.table(getCMA(CMA_full_per_day))
 
       # merge back original ID and group and sort by original ID
       CMA_per_day <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), CMA_per_day)
-      setkeyv(CMA_per_day, "PATIENT_ID")
+      data.table::setkeyv(CMA_per_day, "PATIENT_ID")
 
       if(CMA.to.apply == "CMA9") {
 
@@ -596,11 +596,11 @@ CMA_polypharmacy <- function(data = data,
       }
 
       # get event information
-      event_info <- as.data.table(CMA_full_per_day$event.info)
+      event_info <- data.table::as.data.table(CMA_full_per_day$event.info)
 
       # merge back original ID and group and sort by original ID
       event_info <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), event_info)
-      setkeyv(event_info, "PATIENT_ID")
+      data.table::setkeyv(event_info, "PATIENT_ID")
 
       #setkeyv(event_info, ID.colname)
 
@@ -653,7 +653,7 @@ CMA_polypharmacy <- function(data = data,
                                  "CMA",
                                  "prop.trt.groups.available"), with = FALSE]
 
-      CMA_intermediate <- dcast(CMA, PATIENT_ID + intersect.start + intersect.end + intersect.ID + intersect.duration + prop.trt.groups.available ~ group, value.var = "CMA")
+      CMA_intermediate <- data.table::dcast(CMA, PATIENT_ID + intersect.start + intersect.end + intersect.ID + intersect.duration + prop.trt.groups.available ~ group, value.var = "CMA")
 
       # if thresholds are provided
       if(!is.na(thresholds)){
@@ -678,9 +678,9 @@ CMA_polypharmacy <- function(data = data,
 
       CMA_ret <- unique(CMA[,list(CMA = summarize_longitudinal(data = .SD, ID = PATIENT_ID)), by = c("PATIENT_ID")])
 
-      setnames(CMA_ret, old = "PATIENT_ID", .orig.ID.colname)
-      setnames(CMA_intermediate, old = "PATIENT_ID", .orig.ID.colname)
-      setnames(event_info, old = "PATIENT_ID", .orig.ID.colname)
+      data.table::setnames(CMA_ret, old = "PATIENT_ID", .orig.ID.colname)
+      data.table::setnames(CMA_intermediate, old = "PATIENT_ID", .orig.ID.colname)
+      data.table::setnames(event_info, old = "PATIENT_ID", .orig.ID.colname)
 
       tmp <- list(CMA = CMA_ret, CMA.intermediate = CMA_intermediate, event.info = event_info)
 
@@ -692,7 +692,7 @@ CMA_polypharmacy <- function(data = data,
   # Construct the return object:
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  data.copy <- data.table::data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
 
   # if medication.groups is a named list, merge medication.groups into data
@@ -700,7 +700,7 @@ CMA_polypharmacy <- function(data = data,
 
     if(medication.groups %in% names(data.copy)){
       med.groups.dt <- unique(data.copy[,c(medication.groups, medication.class.colname), with = FALSE])
-      setnames(data.copy, old = medication.groups, new = "group")
+      data.table::setnames(data.copy, old = medication.groups, new = "group")
 
     } else {
 
@@ -718,11 +718,11 @@ CMA_polypharmacy <- function(data = data,
       medication.groups <- unique(data[[medication.class.colname]])
     }
 
-    med.groups.dt <- as.data.table(.fill.medication.groups(medication.groups,
-                                                                     list.of.medication.classes = unique(data[[medication.class.colname]]),
-                                                                     already.checked = TRUE))
+    med.groups.dt <- data.table::as.data.table(.fill.medication.groups(medication.groups,
+                                                                       list.of.medication.classes = unique(data[[medication.class.colname]]),
+                                                                       already.checked = TRUE))
 
-    setnames(med.groups.dt, old = "class", new = medication.class.colname)
+    data.table::setnames(med.groups.dt, old = "class", new = medication.class.colname)
 
     data.copy <- merge(data.copy, med.groups.dt, by = medication.class.colname)
 
@@ -816,11 +816,11 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
   compute.treat.epi <- function(treat.epi = treat.epi){
 
     # Convert treat.epi to data.table, cache event dat as Date objects, and key by patient ID and event date
-    treat.epi <- as.data.table(treat.epi);
+    treat.epi <- data.table::as.data.table(treat.epi);
     treat.epi[, `:=` (episode.start = as.Date(episode.start,format=date.format),
                       episode.end = as.Date(episode.end,format=date.format)
     )]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-    setkeyv(treat.epi, c(ID.colname, group, "episode.ID")); # key (and sorting) by patient and episode ID
+    data.table::setkeyv(treat.epi, c(ID.colname, group, "episode.ID")); # key (and sorting) by patient and episode ID
 
     # Compute the real observation windows (might differ per patient) only once per patient (speed things up & the observation window is the same for all events within a patient):
     tmp <- data[!duplicated(data[,c(ID.colname,group), with = FALSE]),]; # the reduced dataset for computing the actual OW:
@@ -858,7 +858,7 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
     treat.epi <- merge(treat.epi, event.info2[,c(ID.colname, "group", ".OBS.START.DATE", ".OBS.END.DATE"),with=FALSE],
                        all.x=TRUE,
                        by = c(ID.colname, "group"));
-    setnames(treat.epi, ncol(treat.epi)-c(1,0), c(".OBS.START.DATE.PRECOMPUTED", ".OBS.END.DATE.PRECOMPUTED"));
+    data.table::setnames(treat.epi, ncol(treat.epi)-c(1,0), c(".OBS.START.DATE.PRECOMPUTED", ".OBS.END.DATE.PRECOMPUTED"));
     # Get the intersection between the episode and the observation window:
     treat.epi[, c(".INTERSECT.EPISODE.OBS.WIN.START",
                   ".INTERSECT.EPISODE.OBS.WIN.END")
@@ -875,7 +875,7 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
 
     # Merge the data and the treatment episodes info:
     data.epi <- merge(treat.epi, data, allow.cartesian=TRUE);
-    setkeyv(data.epi, c(".PATIENT.MED.EPISODE.ID", ".DATE.as.Date"));
+    data.table::setkeyv(data.epi, c(".PATIENT.MED.EPISODE.ID", ".DATE.as.Date"));
 
     # compute end.episode.gap.days
 
@@ -906,7 +906,7 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
 
 
     episode.gap.days <- data.epi2[which(.EVENT.WITHIN.FU.WINDOW), c(ID.colname, medication.group, "episode.ID", "gap.days"), by = c(ID.colname, "episode.ID", "group"), with = FALSE]; # gap days during the follow-up window
-    end.episode.gap.days <- episode.gap.days[,list(end.episode.gap.days = last(gap.days)), by = c(ID.colname, "episode.ID", "group")]; # gap days during the last event
+    end.episode.gap.days <- episode.gap.days[,list(end.episode.gap.days = data.table::last(gap.days)), by = c(ID.colname, "episode.ID", "group")]; # gap days during the last event
 
     treat.epi <- merge(treat.epi, end.episode.gap.days, all.x = TRUE, by = c(ID.colname, "episode.ID", "group")); # merge end.episode.gap.days back to data.epi
 
@@ -925,17 +925,17 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
                                  ".INTERSECT.EPISODE.OBS.WIN.DURATION",
                                  ".INTERSECT.EPISODE.OBS.WIN.END"), with = FALSE]
 
-    setnames(data.epi.ret,
-             old = c("episode.start",
-                     "episode.duration",
-                     ".INTERSECT.EPISODE.OBS.WIN.START",
-                     ".INTERSECT.EPISODE.OBS.WIN.DURATION",
-                     ".INTERSECT.EPISODE.OBS.WIN.END"),
-             new = c("med.episode.start",
-                     "med.episode.duration",
-                     ".MED.INTERSECT.EPISODE.OBS.WIN.START",
-                     ".MED.INTERSECT.EPISODE.OBS.WIN.DURATION",
-                     ".MED.INTERSECT.EPISODE.OBS.WIN.END"))
+    data.table::setnames(data.epi.ret,
+                         old = c("episode.start",
+                                 "episode.duration",
+                                 ".INTERSECT.EPISODE.OBS.WIN.START",
+                                 ".INTERSECT.EPISODE.OBS.WIN.DURATION",
+                                 ".INTERSECT.EPISODE.OBS.WIN.END"),
+                         new = c("med.episode.start",
+                                 "med.episode.duration",
+                                 ".MED.INTERSECT.EPISODE.OBS.WIN.START",
+                                 ".MED.INTERSECT.EPISODE.OBS.WIN.DURATION",
+                                 ".MED.INTERSECT.EPISODE.OBS.WIN.END"))
 
     treat.epi.ret <- treat.epi[,c(ID.colname,
                                   ".PATIENT.MED.EPISODE.ID",

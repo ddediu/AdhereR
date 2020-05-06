@@ -166,13 +166,13 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
   #  return (FALSE);
   #}
 
-  if( !all(vapply(medication.groups, function(x) (inherits(x,"character") || inherits(x,"factor")), logical(1))) )
+  if( !base::all(vapply(medication.groups, function(x) (inherits(x,"character") || inherits(x,"factor")), logical(1))) )
   {
     if( !suppress.warnings ) .report.ewms("The members of the medication groups must vectors of charcters (or factors)!\n", "error", ".check.medication.groups", "AdhereR");
     return (FALSE);
   }
 
-  if( any(is.na(v <- unlist(medication.groups))) || any(duplicated(v)) )
+  if( base::any(is.na(v <- unlist(medication.groups))) || base::any(duplicated(v)) )
   {
     if( !suppress.warnings ) .report.ewms("The vectors in the medication groups must not contain NAs and their values must appear only once!\n", "error", ".check.medication.groups", "AdhereR");
     return (FALSE);
@@ -562,7 +562,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
       # Get the actual list of arguments (including in the ...); the first is the function's own name:
       args.list <- as.list(match.call(expand.dots = TRUE));
       args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
-      if( any(args.mathing) )
+      if( base::any(args.mathing) )
       {
         for( i in which(args.mathing) )
         {
@@ -1070,7 +1070,7 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
     if( !suppress.warnings ) .report.ewms("start.date to '.add.time.interval.to.date' must be a Date() object.\n", "error", ".add.time.interval.to.date", "AdhereR");
     return (NA);
   }
-  if( !is.numeric(time.interval) || any(time.interval < 0) )
+  if( !is.numeric(time.interval) || base::any(time.interval < 0) )
   {
     if( !suppress.warnings ) .report.ewms("time.interval to '.add.time.interval.to.date' must be a positive integer.\n", "error", ".add.time.interval.to.date", "AdhereR");
     return (NA);
@@ -1700,7 +1700,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
 
   # Check the patient IDs:
-  if( anyNA(data[,ID.colname]) )
+  if( base::anyNA(data[,ID.colname]) )
   {
     if( !suppress.warnings ) .report.ewms(paste0("The patient unique identifiers in the \"",ID.colname,"\" column must not contain NAs; the first occurs on row ",min(which(is.na(data[,ID.colname]))),"!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
@@ -1712,7 +1712,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     if( !suppress.warnings ) .report.ewms(paste0("The date format must be a single string!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
-  if( anyNA(Date.converted.to.DATE <- as.Date(data[,event.date.colname],format=date.format)) )
+  if( base::anyNA(Date.converted.to.DATE <- as.Date(data[,event.date.colname],format=date.format)) )
   {
     if( !suppress.warnings ) .report.ewms(paste0("Not all entries in the event date \"",event.date.colname,"\" column are valid dates or conform to the date format \"",date.format,"\"; first issue occurs on row ",min(which(is.na(Date.converted.to.DATE))),"!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
@@ -1720,7 +1720,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 
   # Check the duration:
   tmp <- data[,event.duration.colname]; # caching for speed
-  if( !is.numeric(tmp) || any(is.na(tmp) | tmp <= 0) )
+  if( !is.numeric(tmp) || base::any(is.na(tmp) | tmp <= 0) )
   {
     if( !suppress.warnings ) .report.ewms(paste0("The event durations in the \"",event.duration.colname,"\" column must be non-missing strictly positive numbers!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
@@ -1728,7 +1728,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 
   # Check the event daily dose:
   if( !is.na(event.daily.dose.colname) && !is.null(event.daily.dose.colname) &&             # if actually given:
-      (!is.numeric(tmp <- data[,event.daily.dose.colname]) || any(is.na(tmp) | tmp <= 0)) ) # must be a non-missing strictly positive number (and cache it for speed)
+      (!is.numeric(tmp <- data[,event.daily.dose.colname]) || base::any(is.na(tmp) | tmp <= 0)) ) # must be a non-missing strictly positive number (and cache it for speed)
   {
     if( !suppress.warnings ) .report.ewms(paste0("If given, the event daily dose in the \"",event.daily.dose.colname,"\" column must be a non-missing strictly positive numbers!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
@@ -1747,7 +1747,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
 
   # Make a data.table copy of data so we can alter it without altering the original input data:
-  ret.val <- data.table(data);
+  ret.val <- data.table::data.table(data);
 
   event.date2.colname <- ".DATE.as.Date"; # name of column caching the event dates
   ret.val[,c(event.interval.colname,            # output column event.interval.colname
@@ -1799,7 +1799,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                                  4)); # a Date object
   observation.window.duration.is.number <- is.numeric(observation.window.duration)
 
-  setkeyv(ret.val, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(ret.val, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -2158,7 +2158,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     if( !suppress.warnings ) .report.ewms("Computing event intervals and gap days failed!\n", "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
   }
-  if( any(!ret.val$.OBS.WITHIN.FU) )
+  if( base::any(!ret.val$.OBS.WITHIN.FU) )
   {
     if( !suppress.warnings ) .report.ewms(paste0("The observation window is not within the follow-up window for participant(s) ",paste0(unique(ret.val[!ret.val$.OBS.WITHIN.FU,get(ID.colname)]),collapse=", ")," !\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);
@@ -2203,10 +2203,10 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   {
     if( ".DATE.as.Date" %in% names(ret.val) )
     {
-      setkeyv(ret.val, c(ID.colname, ".DATE.as.Date")); # make sure it is keyed by patient ID and event date
+      data.table::setkeyv(ret.val, c(ID.colname, ".DATE.as.Date")); # make sure it is keyed by patient ID and event date
     } else
     {
-      setkeyv(ret.val, c(ID.colname)); # make sure it is keyed by patient ID (as event date was removed)
+      data.table::setkeyv(ret.val, c(ID.colname)); # make sure it is keyed by patient ID (as event date was removed)
     }
     return (ret.val);
   }
@@ -2493,9 +2493,9 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       if( n.events == 1 || s.len == 0 || (s.len==1 && s==n.events) )
       {
         # One single treatment episode starting with the first event within the follow-up window and the end of the follow-up window:
-        treatment.episodes <- data.table("episode.ID"=as.numeric(1),
-                                         "episode.start"=data4ID$.DATE.as.Date[1],
-                                         "end.episode.gap.days"=gap.days.column[last.event]);
+        treatment.episodes <- data.table::data.table("episode.ID"=as.numeric(1),
+                                                     "episode.start"=data4ID$.DATE.as.Date[1],
+                                                     "end.episode.gap.days"=gap.days.column[last.event]);
         n.episodes <- nrow(treatment.episodes);
         treatment.episodes[, episode.duration := as.numeric(data4ID$.FU.END.DATE[1] - episode.start[n.episodes]) -
           ifelse(end.episode.gap.days[n.episodes] < MAX.PERMISSIBLE.GAP[last.event], # duration of the last event of the last episode
@@ -2508,18 +2508,18 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         if( s[s.len] != n.events )
         {
           # The last event with gap > maximum permissible is not the last event for this patient:
-          treatment.episodes <- data.table("episode.ID"=as.numeric(1:(s.len+1)),
-                                           "episode.start"=c(data4ID$.DATE.as.Date[1],               # the 1st event in the follow-up window
-                                                             data4ID$.DATE.as.Date[s+1]),            # the next event
-                                           "end.episode.gap.days"=c(gap.days.column[s],              # the corresponding gap.days of the last event in this episode
-                                                                    gap.days.column[last.event]));   # the corresponding gap.days of the last event in this follow-up window
+          treatment.episodes <- data.table::data.table("episode.ID"=as.numeric(1:(s.len+1)),
+                                                       "episode.start"=c(data4ID$.DATE.as.Date[1],               # the 1st event in the follow-up window
+                                                                         data4ID$.DATE.as.Date[s+1]),            # the next event
+                                                       "end.episode.gap.days"=c(gap.days.column[s],              # the corresponding gap.days of the last event in this episode
+                                                                                gap.days.column[last.event]));   # the corresponding gap.days of the last event in this follow-up window
         } else
         {
           # The last event with gap > maximum permissible is the last event for this patient:
-          treatment.episodes <- data.table("episode.ID"=as.numeric(1:s.len),
-                                           "episode.start"=c(data4ID$.DATE.as.Date[1],                # the 1st event in the follow-up window
-                                                             data4ID$.DATE.as.Date[s[-s.len]+1]), # the next event
-                                           "end.episode.gap.days"=c(gap.days.column[s]));             # the corresponding gap.days of the last event in this follow-up window
+          treatment.episodes <- data.table::data.table("episode.ID"=as.numeric(1:s.len),
+                                                       "episode.start"=c(data4ID$.DATE.as.Date[1],                # the 1st event in the follow-up window
+                                                                         data4ID$.DATE.as.Date[s[-s.len]+1]), # the next event
+                                                       "end.episode.gap.days"=c(gap.days.column[s]));             # the corresponding gap.days of the last event in this follow-up window
         }
         n.episodes <- nrow(treatment.episodes);
         treatment.episodes[, episode.duration := c(as.numeric(episode.start[2:n.episodes] - episode.start[1:(n.episodes-1)]) - end.episode.gap.days[1:(n.episodes-1)], # the episode duration is the start date of the next episode minus the start date of the current episode minus the gap after the current episode
@@ -2564,14 +2564,14 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     episodes <- event.info[!is.na(get(event.interval.colname)) & !is.na(get(gap.days.colname)), # only for those events that have non-NA interval and gap estimates
                            .process.patient(.SD),
                            by=ID.colname];
-    setnames(episodes, 1, ID.colname);
+    data.table::setnames(episodes, 1, ID.colname);
     return (episodes);
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  data.copy <- data.table::data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- .compute.function(.workhorse.function,
@@ -2941,7 +2941,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
     args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
-    if( any(args.mathing) )
+    if( base::any(args.mathing) )
     {
       for( i in which(args.mathing) )
       {
@@ -3056,9 +3056,9 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  data.copy <- data.table::data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
@@ -3095,10 +3095,10 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
     patids <- unique(data.copy[,get(ID.colname)]);
     if( length(patids) > nrow(tmp$CMA) )
     {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+      data.table::setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table::data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
     }
   }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
+  data.table::setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
   ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
   class(ret.val) <- c("CMA1", class(ret.val));
   return (ret.val);
@@ -3577,7 +3577,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
     args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
-    if( any(args.mathing) )
+    if( base::any(args.mathing) )
     {
       for( i in which(args.mathing) )
       {
@@ -3680,9 +3680,9 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  data.copy <- data.table::data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
@@ -3719,10 +3719,10 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
     patids <- unique(data.copy[,get(ID.colname)]);
     if( length(patids) > nrow(tmp$CMA) )
     {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+      data.table::setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table::data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
     }
   }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
+  data.table::setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
   ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
   class(ret.val) <- c("CMA2","CMA1", class(ret.val));
   return (ret.val);
@@ -3789,7 +3789,7 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
     args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
-    if( any(args.mathing) )
+    if( base::any(args.mathing) )
     {
       for( i in which(args.mathing) )
       {
@@ -3889,7 +3889,7 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
     args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
-    if( any(args.mathing) )
+    if( base::any(args.mathing) )
     {
       for( i in which(args.mathing) )
       {
@@ -4183,7 +4183,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
     args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
-    if( any(args.mathing) )
+    if( base::any(args.mathing) )
     {
       for( i in which(args.mathing) )
       {
@@ -4290,9 +4290,9 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  data.copy <- data.table::data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
@@ -4329,10 +4329,10 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
     patids <- unique(data.copy[,get(ID.colname)]);
     if( length(patids) > nrow(tmp$CMA) )
     {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+      data.table::setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table::data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
     }
   }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
+  data.table::setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
   ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
   class(ret.val) <- c("CMA5","CMA1", class(ret.val));
   return (ret.val);
@@ -4591,7 +4591,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
     args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
-    if( any(args.mathing) )
+    if( base::any(args.mathing) )
     {
       for( i in which(args.mathing) )
       {
@@ -4699,9 +4699,9 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  data.copy <- data.table::data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
@@ -4738,10 +4738,10 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
     patids <- unique(data.copy[,get(ID.colname)]);
     if( length(patids) > nrow(tmp$CMA) )
     {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+      data.table::setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table::data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
     }
   }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
+  data.table::setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
   ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
   class(ret.val) <- c("CMA6","CMA1", class(ret.val));
   return (ret.val);
@@ -4997,7 +4997,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
     args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
-    if( any(args.mathing) )
+    if( base::any(args.mathing) )
     {
       for( i in which(args.mathing) )
       {
@@ -5149,9 +5149,9 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  data.copy <- data.table::data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
@@ -5188,10 +5188,10 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
     patids <- unique(data.copy[,get(ID.colname)]);
     if( length(patids) > nrow(tmp$CMA) )
     {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+      data.table::setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table::data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
     }
   }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
+  data.table::setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
   ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
   class(ret.val) <- c("CMA7","CMA1", class(ret.val));
   return (ret.val);
@@ -5464,7 +5464,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
     args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
-    if( any(args.mathing) )
+    if( base::any(args.mathing) )
     {
       for( i in which(args.mathing) )
       {
@@ -5594,9 +5594,9 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  data.copy <- data.table::data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
@@ -5633,12 +5633,12 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
     patids <- unique(data.copy[,get(ID.colname)]);
     if( length(patids) > nrow(tmp$CMA) )
     {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE); setnames(tmp$CMA, 1, ID.colname);
+      data.table::setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table::data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE); data.table::setnames(tmp$CMA, 1, ID.colname);
     }
   }
   ret.val[["CMA"]] <- as.data.frame(tmp$CMA); # names are fine cause this come directly from CMA7
   ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  ret.val[["real.obs.windows"]] <- unique(data.frame( ret.val$event.info[, ID.colname], "window.start"=ret.val$event.info$.OBS.START.DATE.UPDATED, "window.end"=NA)); setnames(ret.val$real.obs.windows, 1, ID.colname);
+  ret.val[["real.obs.windows"]] <- unique(data.frame( ret.val$event.info[, ID.colname], "window.start"=ret.val$event.info$.OBS.START.DATE.UPDATED, "window.end"=NA)); data.table::setnames(ret.val$real.obs.windows, 1, ID.colname);
   class(ret.val) <- c("CMA8","CMA1", class(ret.val));
   return (ret.val);
 }
@@ -5903,7 +5903,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
     # Get the actual list of arguments (including in the ...); the first is the function's own name:
     args.list <- as.list(match.call(expand.dots = TRUE));
     args.mathing <- (names(arguments.that.should.not.be.defined) %in% names(args.list)[-1]);
-    if( any(args.mathing) )
+    if( base::any(args.mathing) )
     {
       for( i in which(args.mathing) )
       {
@@ -6048,8 +6048,8 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
 
     # Add the actual OW dates to event.info:
     actual.obs.win <- actual.obs.win[,c(ID.colname,".OBS.START.DATE",".OBS.END.DATE"),with=FALSE]
-    setkeyv(actual.obs.win, ID.colname);
-    event.info <- merge(event.info, actual.obs.win, all.x=TRUE); setnames(event.info, ncol(event.info)-c(1,0), c(".OBS.START.DATE.ACTUAL", ".OBS.END.DATE.ACTUAL"));
+    data.table::setkeyv(actual.obs.win, ID.colname);
+    event.info <- merge(event.info, actual.obs.win, all.x=TRUE); data.table::setnames(event.info, ncol(event.info)-c(1,0), c(".OBS.START.DATE.ACTUAL", ".OBS.END.DATE.ACTUAL"));
 
     CMA <- event.info[, .process.patient(.SD), by=ID.colname];
 
@@ -6086,9 +6086,9 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  data.copy <- data.table::data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
@@ -6125,10 +6125,10 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
     patids <- unique(data.copy[,get(ID.colname)]);
     if( length(patids) > nrow(tmp$CMA) )
     {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+      data.table::setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table::data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
     }
   }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
+  data.table::setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
   ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
   class(ret.val) <- c("CMA9","CMA1", class(ret.val));
   return (ret.val);
@@ -6547,11 +6547,11 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
       # various checks
 
       # Convert treat.epi to data.table, cache event dat as Date objects, and key by patient ID and event date
-      treat.epi <- as.data.table(treat.epi);
+      treat.epi <- data.table::as.data.table(treat.epi);
       treat.epi[, `:=` (episode.start = as.Date(episode.start,format=date.format),
                         episode.end = as.Date(episode.end,format=date.format)
                         )]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-      setkeyv(treat.epi, c(ID.colname, "episode.ID")); # key (and sorting) by patient and episode ID
+      data.table::setkeyv(treat.epi, c(ID.colname, "episode.ID")); # key (and sorting) by patient and episode ID
 
     }
 
@@ -6592,7 +6592,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     treat.epi <- merge(treat.epi, event.info2[,c(ID.colname, ".OBS.START.DATE", ".OBS.END.DATE"),with=FALSE],
                        all.x=TRUE,
                        by = c(ID.colname));
-    setnames(treat.epi, ncol(treat.epi)-c(1,0), c(".OBS.START.DATE.PRECOMPUTED", ".OBS.END.DATE.PRECOMPUTED"));
+    data.table::setnames(treat.epi, ncol(treat.epi)-c(1,0), c(".OBS.START.DATE.PRECOMPUTED", ".OBS.END.DATE.PRECOMPUTED"));
     # Get the intersection between the episode and the observation window:
     treat.epi[, c(".INTERSECT.EPISODE.OBS.WIN.START",
                   ".INTERSECT.EPISODE.OBS.WIN.END")
@@ -6609,7 +6609,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
 
     # Merge the data and the treatment episodes info:
     data.epi <- merge(treat.epi, data, allow.cartesian=TRUE);
-    setkeyv(data.epi, c(".PATIENT.EPISODE.ID", ".DATE.as.Date"));
+    data.table::setkeyv(data.epi, c(".PATIENT.EPISODE.ID", ".DATE.as.Date"));
 
     # compute end.episode.gap.days, if treat.epi are supplied
     if(!"end.episode.gap.days" %in% colnames(treat.epi)) {
@@ -6639,9 +6639,9 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                           return.data.table=TRUE);
 
       episode.gap.days <- data.epi2[which(.EVENT.WITHIN.FU.WINDOW), c(ID.colname, "episode.ID", gap.days.colname), by = c(ID.colname, "episode.ID"), with = FALSE]; # gap days during the follow-up window
-      end.episode.gap.days <- episode.gap.days[,last(get(gap.days.colname)), by = c(ID.colname, "episode.ID")]; # gap days during the last event
+      end.episode.gap.days <- episode.gap.days[,data.table::last(get(gap.days.colname)), by = c(ID.colname, "episode.ID")]; # gap days during the last event
 
-      setnames(end.episode.gap.days, old = "V1", new = "end.episode.gap.days")
+      data.table::setnames(end.episode.gap.days, old = "V1", new = "end.episode.gap.days")
 
       treat.epi <- merge(treat.epi, end.episode.gap.days, all.x = TRUE, by = c(ID.colname, "episode.ID")); # merge end.episode.gap.days back to data.epi
 
@@ -6677,15 +6677,15 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                       episode.end = .INTERSECT.EPISODE.OBS.WIN.END)]
 
     # Add back the patient and episode IDs:
-    tmp <- as.data.table(merge(cma$CMA, treat.epi)[,c(ID.colname, "episode.ID", "episode.start", "end.episode.gap.days", "episode.duration", "episode.end", "CMA")]);
-    setkeyv(tmp, c(ID.colname,"episode.ID"));
+    tmp <- data.table::as.data.table(merge(cma$CMA, treat.epi)[,c(ID.colname, "episode.ID", "episode.start", "end.episode.gap.days", "episode.duration", "episode.end", "CMA")]);
+    data.table::setkeyv(tmp, c(ID.colname,"episode.ID"));
     return (list("CMA"=as.data.frame(tmp), "event.info"=as.data.frame(event.info2)[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]));
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
   data.copy <- data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
@@ -6721,7 +6721,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
   ret.val$computed.CMA <- CMA.to.apply;
   ret.val$summary <- summary;
   ret.val$CMA <- as.data.frame(tmp$CMA);
-  setnames(ret.val$CMA, 1, ID.colname);
+  data.table::setnames(ret.val$CMA, 1, ID.colname);
 
   return (ret.val);
 }
@@ -7600,7 +7600,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                                           origin=lubridate::origin),
                                                       each=n.events),
                             ".WND.DURATION"  =sliding.window.duration.in.days);
-      setkeyv(data4ID.wnds, ".WND.ID");
+      data.table::setkeyv(data4ID.wnds, ".WND.ID");
 
       # Apply the desired CMA to all the windows:
       cma <- CMA.FNC(data=as.data.frame(data4ID.wnds),
@@ -7632,7 +7632,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                by=.WND.ID]; # for each window
       wnd.info <- cbind(merge(wnd.info, cma$CMA, by=".WND.ID", all=TRUE),
                         "CMA.to.apply"=class(cma)[1]);
-      setnames(wnd.info, c("window.ID", "window.start", "window.end", "CMA", "CMA.to.apply"));
+      data.table::setnames(wnd.info, c("window.ID", "window.start", "window.end", "CMA", "CMA.to.apply"));
       return (as.data.frame(wnd.info));
     }
 
@@ -7670,7 +7670,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
     if( is.null(event.info2) ) return (NULL);
     # Merge the observation window start and end dates back into the data:
     data <- merge(data, event.info2[,c(ID.colname, ".OBS.START.DATE", ".OBS.END.DATE"),with=FALSE], all.x=TRUE);
-    setnames(data, ncol(data)-c(1,0), c(".OBS.START.DATE.PRECOMPUTED", ".OBS.END.DATE.PRECOMPUTED"));
+    data.table::setnames(data, ncol(data)-c(1,0), c(".OBS.START.DATE.PRECOMPUTED", ".OBS.END.DATE.PRECOMPUTED"));
 
     CMA <- data[, .process.patient(.SD), by=ID.colname ];
     return (list("CMA"=CMA, "event.info"=event.info2[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE"), with=FALSE]));
@@ -7691,9 +7691,9 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                                  sliding.window.step.duration);
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  data.copy <- data.table::data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  data.table::setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Compute the workhorse function:
   tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
@@ -7735,7 +7735,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
   ret.val$sliding.window.step.unit <- sliding.window.step.unit;
   ret.val$sliding.window.no.steps <- sliding.window.no.steps;
   ret.val$summary <- summary;
-  ret.val$CMA <- as.data.frame(tmp$CMA); setnames(ret.val$CMA, 1, ID.colname); ret.val$CMA <- ret.val$CMA[,-ncol(ret.val$CMA)];
+  ret.val$CMA <- as.data.frame(tmp$CMA); data.table::setnames(ret.val$CMA, 1, ID.colname); ret.val$CMA <- ret.val$CMA[,-ncol(ret.val$CMA)];
   return (ret.val);
 }
 
@@ -7813,7 +7813,7 @@ plot_interactive_cma <- function(...)
     .report.ewms("Package 'AdhereRViz' must be installed for the interactive plotting to work! Please either install it or use the 'normal' plotting functions provided by 'AdhereR'...\n", "error", "plot_interactive_cma", "AdhereR");
     if( interactive() )
     {
-      if( menu(c("Yes", "No"), graphics=FALSE, title="Do you want to install 'AdhereRViz' now?") == 1 )
+      if( utils::menu(c("Yes", "No"), graphics=FALSE, title="Do you want to install 'AdhereRViz' now?") == 1 )
       {
         # Try to install AdhereRViz:
         install.packages("AdhereRViz", dependencies=TRUE);
