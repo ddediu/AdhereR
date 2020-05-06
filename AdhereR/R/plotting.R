@@ -1036,6 +1036,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
    export.formats.directory <- "~/Temp/tmp";
    generate.R.plot <- TRUE;
   }
+  # END DEBUG
 
 
   # What sorts of plots to generate (use short names for short if statements):

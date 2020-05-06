@@ -2789,9 +2789,9 @@ server <- function(input, output, session)
     x <- names(.GlobalEnv$.plotting.params$.inmemory.dataset);
     x.info <- vapply(1:ncol(.GlobalEnv$.plotting.params$.inmemory.dataset),
                      function(i) paste0("(",
-                                        class(.GlobalEnv$.plotting.params$.inmemory.dataset[,i]),
+                                        class(as.data.frame(.GlobalEnv$.plotting.params$.inmemory.dataset)[,i]),
                                         ": ",
-                                        paste0(.GlobalEnv$.plotting.params$.inmemory.dataset[1:min(n.vals.to.show,nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)),i],collapse=", "),
+                                        paste0(as.data.frame(.GlobalEnv$.plotting.params$.inmemory.dataset)[1:min(n.vals.to.show,nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)),i],collapse=", "),
                                         if(nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)>n.vals.to.show) "...",
                                         ")"),
                      character(1));
@@ -2992,13 +2992,14 @@ server <- function(input, output, session)
     # More advanced checks of the column types:
     if( inherits(d, "data.frame") ) # for data.frame's
     {
-      if( inherits(d[,event.date.colname], "Date") )
+      d_df <- as.data.frame(d); # make sure we deal gracefully with data.table's...
+      if( inherits(d_df[,event.date.colname], "Date") )
       {
         # It's a column of Dates: perfect!
-      } else if( is.factor(d[,event.date.colname]) || is.character(d[,event.date.colname]) )
+      } else if( is.factor(d_df[,event.date.colname]) || is.character(d_df[,event.date.colname]) )
       {
         # It's a factor or string: check if it conforms to the given date.format:
-        s <- na.omit(as.character(d[,event.date.colname]));
+        s <- na.omit(as.character(d_df[,event.date.colname]));
         if( length(s) == 0 )
         {
           showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
@@ -3028,7 +3029,7 @@ server <- function(input, output, session)
         return (invisible(NULL));
       }
 
-      if( !is.na(event.duration.colname) && (!is.numeric(d[,event.duration.colname]) || any(d[,event.duration.colname] < 0, na.rm=TRUE)) )
+      if( !is.na(event.duration.colname) && (!is.numeric(d_df[,event.duration.colname]) || any(d_df[,event.duration.colname] < 0, na.rm=TRUE)) )
       {
         showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
                               div(paste0("If given, the event duration column '",event.duration.colname,"' must contain non-negative numbers!"), style="color: red;"),
@@ -3036,7 +3037,7 @@ server <- function(input, output, session)
         return (invisible(NULL));
       }
 
-      if( !is.na(event.daily.dose.colname) && (!is.numeric(d[,event.daily.dose.colname]) || any(d[,event.daily.dose.colname] < 0, na.rm=TRUE)) )
+      if( !is.na(event.daily.dose.colname) && (!is.numeric(d_df[,event.daily.dose.colname]) || any(d_df[,event.daily.dose.colname] < 0, na.rm=TRUE)) )
       {
         showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
                               div(paste0("If given, the daily dose column '",event.daily.dose.colname,"' must contain non-negative numbers!"), style="color: red;"),
