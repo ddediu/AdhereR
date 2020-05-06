@@ -18,6 +18,21 @@
 #
 ###############################################################################################
 
+# Declare some variables as global to avoid NOTEs during package building:
+globalVariables(c("group", "intersect.duration", "prop.trt.groups.available", ".obs.duration",
+                  "intersect.ID", "intersect.start", "intersect.end",
+                  "PATIENT_ID", ".new.ID", "event.interval.colname", "gap.days.colname",
+                  "date.format", "ID.colname", ".PATIENT.MED.ID", "event.date.colname",
+                  "event.duration.colname", "event.daily.dose.colname", "medication.class.colname",
+                  "followup.window.start", "followup.window.start.unit",
+                  "followup.window.duration", "followup.window.duration.unit",
+                  "observation.window.start", "observation.window.start.unit",
+                  "observation.window.duration", "observation.window.duration.unit",
+                  "suppress.warnings", "carryover.within.obs.window", "carryover.into.obs.window",
+                  "carry.only.for.same.medication", "consider.dosage.change", "medication.group",
+                  "gap.days", "EVENT.ID",
+                  "process.seq", "process.seq.num", "carryover.from.last", "carryover.total"));
+
 
 ################ function to calculate simple CMA for polypharmacy
 
@@ -27,14 +42,14 @@
 #' availability/gaps) object for polypharmacy.
 #'
 #'
-#'#' @param data A \emph{\code{data.frame}} containing the events (prescribing or
+#' @param data A \emph{\code{data.frame}} containing the events (prescribing or
 #' dispensing) used to compute the CMA. Must contain, at a minimum, the patient
 #' unique ID, the event date and duration, medication type, and might also contain the daily
 #' dosage (the actual column names are defined in the
 #' following four parameters).
-#' @param medication.groups A \emph{string} with the name of the column containing the medication 
+#' @param medication.groups A \emph{string} with the name of the column containing the medication
 #' groups, or a *list of vectors* with medication class names (from \code{medication.class.colname})
-#'  belonging to the same treatment groupf multiple medication classes should belong to the same 
+#'  belonging to the same treatment groupf multiple medication classes should belong to the same
 #'  treatment group, they can be differentiated here (important to investigate treatment switches)
 #' @param CMA.to.apply A \emph{string} giving the name of the CMA function (1 to
 #' 9) that will be computed for each treatment group.
@@ -42,8 +57,8 @@
 #' summarizing over time during OW.
 #' @param aggregation.method A \emph{string} giving the name of the function to
 #' aggregate CMA values of medication group, or \code{NA} to return only raw CMA estimates
-#' per medication group. Accepts summary functions such as "mean", "sd", "var", "min", "max", 
-#' and "median". Custom functions are possible as long as they take a numeric vector as input 
+#' per medication group. Accepts summary functions such as "mean", "sd", "var", "min", "max",
+#' and "median". Custom functions are possible as long as they take a numeric vector as input
 #' and return a single numeric value.
 #' @param aggregation.method.arguments optional, A \emph{named list} of additional arguments to the
 #' function given in \code{aggregation method}, e.g. \code{na.rm = TRUE}.
@@ -178,8 +193,8 @@
 #'  \item \code{aggregation.method} the aggregation method to combine CMA values
 #'  from different groups.
 #'  \item \code{computed.CMA} the class name of the computed CMA.
-#'  \item \code{medication.groups} a \code{data.frame} with medication groups and 
-#'  classes 
+#'  \item \code{medication.groups} a \code{data.frame} with medication groups and
+#'  classes
 #'  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
 #'  estimates for each participant (the \code{ID.colname} column) and
 #'  sometimes treatment group, with columns:
@@ -196,7 +211,7 @@
 #' \dontrun{
 #' CMA_PP <- CMA_polypharmacy(data = med.events.pp,
 #' medication.groups = med.groups,
-#' CMA.to.apply = "CMA7", 
+#' CMA.to.apply = "CMA7",
 #' aggregate.first = TRUE, # aggregate before summarizing
 #' aggregation.method = "mean", # compute mean of CMAs
 #' aggregation.method.arguments = list(na.rm = TRUE), # remove NA's during calculation
@@ -268,14 +283,14 @@ CMA_polypharmacy <- function(data = data,
                     {if( !suppress.warnings ) warning(paste0("Unknown 'CMA.to.apply' '",CMA.to.apply,"': defaulting to CMA0!\n)")); CMA0;}); # by default, fall back to CMA0
 
   # get aggregation function
-  
+
   if(exists(aggregation.method, mode='function')) { # check if aggregation method exists as a function
     POLY.FNC <- get(aggregation.method);
   } else {
     POLY.FNC <- mean; # by default, fall back to mean
     if( !suppress.warnings ) warning(paste0("Unknown 'aggregation.method' '",aggregation.method,"': defaulting to mean!\n)"));
   }
-  
+
   # # Get the CMA class corresponding to the name
   # if( !(is.character(CMA.class) || is.factor(CMA.class)) )
   # {
@@ -357,7 +372,7 @@ CMA_polypharmacy <- function(data = data,
                                   date.format=NULL,
                                   suppress.warnings=NULL
   )
-  {    
+  {
     # auxiliary function to compute intersection of episodes (when aggregate.first = TRUE)
       episodes.intersections <- function(episode.start, episode.end, intersect.name = "intersect"){
 
@@ -375,27 +390,27 @@ CMA_polypharmacy <- function(data = data,
         episodes[,(intersect.duration.name) := as.numeric(get(intersect.end.name) - get(intersect.start.name))]
 
       }
-      
+
     # auxiliary function to apply thresholds
-      
+
       apply.thresholds <- function(x, thresholds, medication.groups){
 
         if(is.list(thresholds)) {
-          
+
           medication.groups <- first(medication.groups)
-          
+
           if(medication.groups %in% names(thresholds)) {
-            
+
             thresholds <- thresholds[[medication.groups]]
-            
+
           } else {
-            
+
             if( !suppress.warnings ) warning(paste0("No thresholds specified for treatment group '",medication.groups,"'!\n"));
             return (x);
-            
+
           }
         }
-        
+
       # if thresholds is numeric, cut and scale between 0 and 1
         if(is.numeric(thresholds)){
           breaks <- sort(unique(c(ifelse(min(x, na.rm = TRUE) >= min(thresholds), min(thresholds)+0.00001, 0),
@@ -411,11 +426,11 @@ CMA_polypharmacy <- function(data = data,
           if( !suppress.warnings ) warning("Thresholds must be either numeric or a named list of numeric thresholds per treatment group!\n");
           return (x);
         }
-        
+
         return(ret)
-        
+
       }
-      
+
       # cache data and various parameters
       data.2 <- copy(data)
 
@@ -425,17 +440,17 @@ CMA_polypharmacy <- function(data = data,
       observation.window.start.2 <- observation.window.start
       observation.window.duration.2 <- observation.window.duration
       observation.window.duration.unit.2 <- observation.window.duration.unit
-      
+
       setnames(data.2, old = .orig.ID.colname, new = "PATIENT_ID")
 
       # # Add back the patient and episode IDs:
       # tmp <- as.data.table(merge(cma$CMA, treat.epi)[,c(ID.colname, "episode.ID", "episode.start", "end.episode.gap.days", "episode.duration", "episode.end", "CMA")]);
       # setkeyv(tmp, c(ID.colname,"episode.ID"));
-      
+
     # When aggregate.first = FALSE
-      
+
       if(aggregate.first == FALSE){
-        
+
       # compute CMAs by medication group
       # CMA_all_by_group <- by(data.2, data.2[["group"]], CMA.FNC,
       #                        CMA.to.apply = CMA.to.apply,
@@ -453,7 +468,7 @@ CMA_polypharmacy <- function(data = data,
       #                        observation.window.duration=observation.window.duration.2,
       #                        observation.window.duration.unit=observation.window.duration.unit.2,
       #                        date.format=date.format,parallel.backend="none")
-      
+
       CMA_all_by_group <- CMA.FNC(data.2,
                                   ID.colname = ID.colname.2,
                                   event.date.colname = event.date.colname,
@@ -469,37 +484,37 @@ CMA_polypharmacy <- function(data = data,
                                   observation.window.duration=observation.window.duration.2,
                                   observation.window.duration.unit=observation.window.duration.unit.2,
                                   date.format=date.format,parallel.backend="none")
-      
+
       # get CMA values
       CMA_per_group <- as.data.table(getCMA(CMA_all_by_group))
-      
+
       # merge back original ID and group and sort by original ID
       CMA_per_group <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), CMA_per_group)
       setkeyv(CMA_per_group, "PATIENT_ID")
-      
+
       # CMA_per_group <- lapply(CMA_all_by_group, FUN = function(x){
       #   cbind(group = first(x$data[["group"]]), x$CMA)
       # })
       # CMA_per_group <- rbindlist(CMA_per_group)
-      # 
+      #
       # setkeyv(CMA_per_group, ID.colname)
-      
+
       # construct intermediate CMA object
 
       CMA_intermediate <- CMA_per_group[,c("PATIENT_ID", "group", "CMA"), with = FALSE]
       setkeyv(CMA_intermediate, "PATIENT_ID")
-      
+
       # get event information
       event_info <- as.data.table(CMA_all_by_group$event.info)
-      
+
       # event_info <- lapply(CMA_all_by_group, FUN = function(x){
       #   x$event.info
       # })
       # event_info <- rbindlist(event_info)
-      
+
       # merge back original ID and group and sort by original ID
       setkeyv(event_info, "PATIENT_ID")
-      
+
       # aggregate CMAs
 
       CMA <- copy(CMA_per_group)
@@ -518,26 +533,26 @@ CMA_polypharmacy <- function(data = data,
       tmp <- list(CMA = unique(CMA), CMA.intermediate = CMA_intermediate, event.info = event_info[,c(ID.colname) := NULL])
 
       return(tmp)
-      
+
     } else { # compute CMA if aggregate.first = TRUE
-      
+
       # auxiliary function to summarize over time
       summarize_longitudinal <- function(data, ID){
-        
+
         # if(anyNA(data$prop.trt.groups.available)){
-        #   
+        #
         #     if( !suppress.warnings ) warning(paste0("Aggregation of availability returns NA for patient with ID '",first(ID), "' for some intervals, only considering other intervals for final results!\n"));
         # }
-        
+
         #rep(unique(na.omit(data, cols = "prop.trt.groups.available")
                    data[,sum(intersect.duration*prop.trt.groups.available)/.obs.duration]
         #          ), nrow(data))
-        
+
       }
-      
+
       # calculate CMA_per_episode with maximum permissible gap of 0 days
 
-      CMA_full_per_day <- CMA_per_episode(data.2, 
+      CMA_full_per_day <- CMA_per_episode(data.2,
                                           treat.epi = NULL,
                                           maximum.permissible.gap = 0,
                                           maximum.permissible.gap.unit = "days",
@@ -565,28 +580,28 @@ CMA_polypharmacy <- function(data = data,
 
       # get CMA values
       CMA_per_day <- as.data.table(getCMA(CMA_full_per_day))
-      
+
       # merge back original ID and group and sort by original ID
       CMA_per_day <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), CMA_per_day)
       setkeyv(CMA_per_day, "PATIENT_ID")
-      
+
       if(CMA.to.apply == "CMA9") {
-      
+
         CMA_per_day[,`:=` (episode.end = episode.end + end.episode.gap.days,
                            CMA = episode.duration / (episode.duration + end.episode.gap.days),
                            episode.duration = episode.duration + end.episode.gap.days
                            )
-                    ]  
-        
+                    ]
+
       }
 
       # get event information
       event_info <- as.data.table(CMA_full_per_day$event.info)
-      
+
       # merge back original ID and group and sort by original ID
       event_info <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), event_info)
       setkeyv(event_info, "PATIENT_ID")
-      
+
       #setkeyv(event_info, ID.colname)
 
       # create intersections of availability episodes
@@ -603,26 +618,26 @@ CMA_polypharmacy <- function(data = data,
                                      episodes, by = "PATIENT_ID", allow.cartesian=TRUE)
 
       CMA_per_day_intersect <- merge(CMA_per_day_intersect, event_info, by = c("PATIENT_ID", "group"))
-      
+
       # CMA_per_day_intersect[,CMA := 0] # set availability to 0
-      
+
       # if intersection is not covered by an episode, set CMA to 0
       CMA_per_day_intersect[intersect.start >= episode.end | intersect.end <= episode.start, CMA := 0]
-        
+
 
       # if the OW starts after the end of the intersection or ends before the start of an intersection, set CMA to NA
       CMA_per_day_intersect[intersect.end <= .OBS.START.DATE | intersect.start >= .OBS.END.DATE, CMA := NA]
-      
+
       # keep only one row per intersection
-      CMA <- CMA_per_day_intersect[, .(CMA = max(CMA)), by = c("PATIENT_ID",
-                                                               "group",
-                                                               "intersect.start",
-                                                               "intersect.end",
-                                                               "intersect.ID",
-                                                               "intersect.duration",
-                                                               ".OBS.START.DATE",
-                                                               ".OBS.END.DATE")]
-      
+      CMA <- CMA_per_day_intersect[, list(CMA = max(CMA)), by = c("PATIENT_ID",
+                                                                  "group",
+                                                                  "intersect.start",
+                                                                  "intersect.end",
+                                                                  "intersect.ID",
+                                                                  "intersect.duration",
+                                                                  ".OBS.START.DATE",
+                                                                  ".OBS.END.DATE")]
+
       # # add number of medication groups per patient
       # CMA[!is.na(CMA),med.groups := length(unique(medication.groups)), by = c(ID.colname, "intersect.ID")]
 
@@ -637,14 +652,14 @@ CMA_polypharmacy <- function(data = data,
                                  "intersect.duration",
                                  "CMA",
                                  "prop.trt.groups.available"), with = FALSE]
-      
+
       CMA_intermediate <- dcast(CMA, PATIENT_ID + intersect.start + intersect.end + intersect.ID + intersect.duration + prop.trt.groups.available ~ group, value.var = "CMA")
-      
+
       # if thresholds are provided
       if(!is.na(thresholds)){
         CMA[,prop.trt.groups.available := apply.thresholds(prop.trt.groups.available, thresholds, as.character(group)), by = group]
       }
-    
+
       # select unique episodes per patient
       CMA <- unique(na.omit(CMA, cols = "CMA"), by = c("PATIENT_ID", "intersect.ID"))
       CMA[, `:=` (.OBS.START.DATE = min(.OBS.START.DATE),
@@ -661,19 +676,19 @@ CMA_polypharmacy <- function(data = data,
       #               "any" = unique(CMA[prop.med.groups.available > 0,.(CMA = sum(intersect.duration)/.obs.duration), by = ID.colname]),
       #               "all" = unique(CMA[round(prop.med.groups.available,0) == 1,.(CMA = sum(intersect.duration)/.obs.duration), by = ID.colname]));
 
-      CMA_ret <- unique(CMA[,.(CMA = summarize_longitudinal(data = .SD, ID = PATIENT_ID)), by = c("PATIENT_ID")])
-      
+      CMA_ret <- unique(CMA[,list(CMA = summarize_longitudinal(data = .SD, ID = PATIENT_ID)), by = c("PATIENT_ID")])
+
       setnames(CMA_ret, old = "PATIENT_ID", .orig.ID.colname)
       setnames(CMA_intermediate, old = "PATIENT_ID", .orig.ID.colname)
       setnames(event_info, old = "PATIENT_ID", .orig.ID.colname)
-  
+
       tmp <- list(CMA = CMA_ret, CMA.intermediate = CMA_intermediate, event.info = event_info)
 
       return(tmp)
     }
 
   }
-  
+
   # Construct the return object:
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
@@ -682,35 +697,35 @@ CMA_polypharmacy <- function(data = data,
 
   # if medication.groups is a named list, merge medication.groups into data
   if(is.character(medication.groups)){
-    
+
     if(medication.groups %in% names(data.copy)){
       med.groups.dt <- unique(data.copy[,c(medication.groups, medication.class.colname), with = FALSE])
-      setnames(data.copy, old = medication.groups, new = "group") 
-      
+      setnames(data.copy, old = medication.groups, new = "group")
+
     } else {
-      
+
       if( !suppress.warnings ) warning(paste0("Column medication.groups = '",medication.groups,"' must appear in the data!\n)"));
       return (NULL);
     }
-    
-  } else if(AdhereR:::.check.medication.groups(medication.groups,
+
+  } else if(.check.medication.groups(medication.groups,
                                         list.of.medication.classes = unique(data[[medication.class.colname]])
                                         )
             )
     {
-    
+
     if(is.null(medication.groups)){
       medication.groups <- unique(data[[medication.class.colname]])
     }
-    
-    med.groups.dt <- as.data.table(AdhereR:::.fill.medication.groups(medication.groups,
+
+    med.groups.dt <- as.data.table(.fill.medication.groups(medication.groups,
                                                                      list.of.medication.classes = unique(data[[medication.class.colname]]),
                                                                      already.checked = TRUE))
-    
+
     setnames(med.groups.dt, old = "class", new = medication.class.colname)
-    
+
     data.copy <- merge(data.copy, med.groups.dt, by = medication.class.colname)
-    
+
   } else {
     return (NULL);
   }
@@ -719,35 +734,35 @@ CMA_polypharmacy <- function(data = data,
   data.copy[,.new.ID := paste(get(ID.colname), group, sep = "_")]
 
   .orig.ID.colname = ID.colname
-  
+
   # Compute the workhorse function:
-  tmp <- AdhereR:::.compute.function(.workhorse.function, fnc.ret.vals=3,
-                                    parallel.backend=parallel.backend,
-                                    parallel.threads=parallel.threads,
-                                    data=data.copy,
-                                    ID.colname=".new.ID",
-                                    event.date.colname=event.date.colname,
-                                    event.duration.colname=event.duration.colname,
-                                    event.daily.dose.colname=event.daily.dose.colname,
-                                    medication.class.colname=medication.class.colname,
-                                    event.interval.colname=event.interval.colname,
-                                    gap.days.colname=gap.days.colname,
-                                    carryover.within.obs.window=carryover.within.obs.window,
-                                    carryover.into.obs.window=carryover.into.obs.window,
-                                    carry.only.for.same.medication=carry.only.for.same.medication,
-                                    consider.dosage.change=consider.dosage.change,
-                                    followup.window.start=followup.window.start,
-                                    followup.window.start.unit=followup.window.start.unit,
-                                    followup.window.duration=followup.window.duration,
-                                    followup.window.duration.unit=followup.window.duration.unit,
-                                    observation.window.start=observation.window.start,
-                                    observation.window.start.unit=observation.window.start.unit,
-                                    observation.window.duration=observation.window.duration,
-                                    observation.window.duration.unit=observation.window.duration.unit,
-                                    date.format=date.format,
-                                    suppress.warnings=suppress.warnings);
+  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=3,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           data=data.copy,
+                           ID.colname=".new.ID",
+                           event.date.colname=event.date.colname,
+                           event.duration.colname=event.duration.colname,
+                           event.daily.dose.colname=event.daily.dose.colname,
+                           medication.class.colname=medication.class.colname,
+                           event.interval.colname=event.interval.colname,
+                           gap.days.colname=gap.days.colname,
+                           carryover.within.obs.window=carryover.within.obs.window,
+                           carryover.into.obs.window=carryover.into.obs.window,
+                           carry.only.for.same.medication=carry.only.for.same.medication,
+                           consider.dosage.change=consider.dosage.change,
+                           followup.window.start=followup.window.start,
+                           followup.window.start.unit=followup.window.start.unit,
+                           followup.window.duration=followup.window.duration,
+                           followup.window.duration.unit=followup.window.duration.unit,
+                           observation.window.start=observation.window.start,
+                           observation.window.start.unit=observation.window.start.unit,
+                           observation.window.duration=observation.window.duration,
+                           observation.window.duration.unit=observation.window.duration.unit,
+                           date.format=date.format,
+                           suppress.warnings=suppress.warnings);
   if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) || is.null(tmp$CMA.intermediate)) return (NULL);
-  
+
   # Construct the return object:
   class(ret.val) <- "CMA_polypharmacy";
   ret.val$event.info <- as.data.frame(tmp$event.info);
@@ -785,7 +800,7 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
     return (NULL);
   }
   if( length(patients.to.keep) < length(patients) && !suppress.warnings ) warning("Some patients in the subsetting set are not in the CMA itsefl and are ignored!\n");
-  
+
   ret.val <- cma;
   ret.val$data <- ret.val$data[ ret.val$data[,ret.val$ID.colname] %in% patients.to.keep, ];
   if( !is.null(ret.val$event.info) ) ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ];
@@ -799,14 +814,14 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
 {
   # auxiliary function to handle precomputed treatment episodes
   compute.treat.epi <- function(treat.epi = treat.epi){
-    
+
     # Convert treat.epi to data.table, cache event dat as Date objects, and key by patient ID and event date
     treat.epi <- as.data.table(treat.epi);
     treat.epi[, `:=` (episode.start = as.Date(episode.start,format=date.format),
                       episode.end = as.Date(episode.end,format=date.format)
     )]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
     setkeyv(treat.epi, c(ID.colname, group, "episode.ID")); # key (and sorting) by patient and episode ID
-    
+
     # Compute the real observation windows (might differ per patient) only once per patient (speed things up & the observation window is the same for all events within a patient):
     tmp <- data[!duplicated(data[,c(ID.colname,group), with = FALSE]),]; # the reduced dataset for computing the actual OW:
     tmp[,.PATIENT.MED.ID := paste(get(ID.colname),get(group),sep="*")]
@@ -838,7 +853,7 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
                                           suppress.warnings=suppress.warnings,
                                           return.data.table=TRUE);
     if( is.null(event.info2) ) return (NULL);
-    
+
     # Merge the observation window start and end dates back into the treatment episodes:
     treat.epi <- merge(treat.epi, event.info2[,c(ID.colname, "group", ".OBS.START.DATE", ".OBS.END.DATE"),with=FALSE],
                        all.x=TRUE,
@@ -857,13 +872,13 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
               := list(as.numeric(episode.end - episode.start),
                       as.numeric(.INTERSECT.EPISODE.OBS.WIN.END - .INTERSECT.EPISODE.OBS.WIN.START),
                       paste(get(ID.colname),group,episode.ID,sep="*"))];
-    
+
     # Merge the data and the treatment episodes info:
     data.epi <- merge(treat.epi, data, allow.cartesian=TRUE);
     setkeyv(data.epi, c(".PATIENT.MED.EPISODE.ID", ".DATE.as.Date"));
-    
+
     # compute end.episode.gap.days
-    
+
     data.epi2 <- compute.event.int.gaps(data=as.data.frame(data.epi),
                                         ID.colname=".PATIENT.MED.EPISODE.ID",
                                         event.date.colname=event.date.colname,
@@ -888,15 +903,15 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
                                         parallel.threads=1,
                                         suppress.warnings=suppress.warnings,
                                         return.data.table=TRUE);
-    
-    
+
+
     episode.gap.days <- data.epi2[which(.EVENT.WITHIN.FU.WINDOW), c(ID.colname, medication.group, "episode.ID", "gap.days"), by = c(ID.colname, "episode.ID", "group"), with = FALSE]; # gap days during the follow-up window
-    end.episode.gap.days <- episode.gap.days[,.(end.episode.gap.days = last(gap.days)), by = c(ID.colname, "episode.ID", "group")]; # gap days during the last event
-    
+    end.episode.gap.days <- episode.gap.days[,list(end.episode.gap.days = last(gap.days)), by = c(ID.colname, "episode.ID", "group")]; # gap days during the last event
+
     treat.epi <- merge(treat.epi, end.episode.gap.days, all.x = TRUE, by = c(ID.colname, "episode.ID", "group")); # merge end.episode.gap.days back to data.epi
-    
+
     treat.epi[, episode.duration := as.numeric(.INTERSECT.EPISODE.OBS.WIN.END-.INTERSECT.EPISODE.OBS.WIN.START)];
-    
+
     data.epi.ret <- data.epi[, c(ID.colname,
                                  "groups",
                                  event.date.colname,
@@ -909,7 +924,7 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
                                  ".INTERSECT.EPISODE.OBS.WIN.START",
                                  ".INTERSECT.EPISODE.OBS.WIN.DURATION",
                                  ".INTERSECT.EPISODE.OBS.WIN.END"), with = FALSE]
-    
+
     setnames(data.epi.ret,
              old = c("episode.start",
                      "episode.duration",
@@ -921,7 +936,7 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
                      ".MED.INTERSECT.EPISODE.OBS.WIN.START",
                      ".MED.INTERSECT.EPISODE.OBS.WIN.DURATION",
                      ".MED.INTERSECT.EPISODE.OBS.WIN.END"))
-    
+
     treat.epi.ret <- treat.epi[,c(ID.colname,
                                   ".PATIENT.MED.EPISODE.ID",
                                   "group",
@@ -931,30 +946,30 @@ subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
                                   "episode.duration",
                                   "end.episode.gap.days"),
                                with = FALSE]
-    
+
     # construct return object
     ret <- list(data.epi = data.epi.ret, treat.epi = treat.epi.ret)
-    
+
     return(ret)
-    
+
   }
-  
+
   # adjust parameters if treat.epi is defined
   # if(!is.null(treat.epi)){
-  #   
+  #
   #   data.epi <- compute.treat.epi(treat.epi)
-  #   
+  #
   #   data.2 <- copy(data.epi$data.epi)
-  #   
+  #
   #   ID.colname.2 <- ".PATIENT.MED.EPISODE.ID"
   #   followup.window.start.2 <- "med.episode.start"
   #   followup.window.duration.2 <- "med.episode.duration"
   #   observation.window.start.2 <- ".MED.INTERSECT.EPISODE.OBS.WIN.START"
   #   observation.window.duration.2 <- ".MED.INTERSECT.EPISODE.OBS.WIN.DURATION"
   #   observation.window.duration.unit.2 <- "days"
-  #   
+  #
   # }
-  
+
 }
 
 

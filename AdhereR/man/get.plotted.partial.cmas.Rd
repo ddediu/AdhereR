@@ -4,8 +4,10 @@
 \alias{get.plotted.partial.cmas}
 \title{Get info about the plotted partial CMAs.}
 \usage{
-get.plotted.partial.cmas(plot.type = c("baseR", "SVG")[1],
-  suppress.warnings = FALSE)
+get.plotted.partial.cmas(
+  plot.type = c("baseR", "SVG")[1],
+  suppress.warnings = FALSE
+)
 }
 \arguments{
 \item{plot.type}{Can be either "baseR" or "SVG" and specifies to which type of plotting

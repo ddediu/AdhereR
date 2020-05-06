@@ -4,33 +4,68 @@
 \alias{plot.CMA0}
 \title{Plot CMA0 objects.}
 \usage{
-\method{plot}{CMA0}(x, ..., patients.to.plot = NULL, duration = NA,
-  align.all.patients = FALSE, align.first.event.at.zero = TRUE,
-  show.period = c("dates", "days")[2], period.in.days = 90,
-  show.legend = TRUE, legend.x = "right", legend.y = "bottom",
-  legend.bkg.opacity = 0.5, legend.cex = 0.75, legend.cex.title = 1,
-  cex = 1, cex.axis = 0.75, cex.lab = 1, xlab = c(dates = "Date",
-  days = "Days"), ylab = c(withoutCMA = "patient", withCMA =
-  "patient (& CMA)"), title = c(aligned =
-  "Event patterns (all patients aligned)", notaligned = "Event patterns"),
-  col.cats = rainbow, unspecified.category.label = "drug",
-  medication.groups = NULL, lty.event = "solid", lwd.event = 2,
-  pch.start.event = 15, pch.end.event = 16,
-  plot.events.vertically.displaced = TRUE, print.dose = FALSE,
-  cex.dose = 0.75, print.dose.outline.col = "white",
-  print.dose.centered = FALSE, plot.dose = FALSE,
+\method{plot}{CMA0}(
+  x,
+  ...,
+  patients.to.plot = NULL,
+  duration = NA,
+  align.all.patients = FALSE,
+  align.first.event.at.zero = TRUE,
+  show.period = c("dates", "days")[2],
+  period.in.days = 90,
+  show.legend = TRUE,
+  legend.x = "right",
+  legend.y = "bottom",
+  legend.bkg.opacity = 0.5,
+  legend.cex = 0.75,
+  legend.cex.title = 1,
+  cex = 1,
+  cex.axis = 0.75,
+  cex.lab = 1,
+  xlab = c(dates = "Date", days = "Days"),
+  ylab = c(withoutCMA = "patient", withCMA = "patient (& CMA)"),
+  title = c(aligned = "Event patterns (all patients aligned)", notaligned =
+    "Event patterns"),
+  col.cats = rainbow,
+  unspecified.category.label = "drug",
+  medication.groups = NULL,
+  lty.event = "solid",
+  lwd.event = 2,
+  pch.start.event = 15,
+  pch.end.event = 16,
+  plot.events.vertically.displaced = TRUE,
+  print.dose = FALSE,
+  cex.dose = 0.75,
+  print.dose.outline.col = "white",
+  print.dose.centered = FALSE,
+  plot.dose = FALSE,
   lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
-  col.continuation = "black", lty.continuation = "dotted",
-  lwd.continuation = 1, col.na = "lightgray",
-  highlight.followup.window = TRUE, followup.window.col = "green",
+  col.continuation = "black",
+  lty.continuation = "dotted",
+  lwd.continuation = 1,
+  col.na = "lightgray",
+  highlight.followup.window = TRUE,
+  followup.window.col = "green",
   highlight.observation.window = TRUE,
-  observation.window.col = "yellow", observation.window.density = 35,
-  observation.window.angle = -30, observation.window.opacity = 0.3,
-  alternating.bands.cols = c("white", "gray95"), bw.plot = FALSE,
+  observation.window.col = "yellow",
+  observation.window.density = 35,
+  observation.window.angle = -30,
+  observation.window.opacity = 0.3,
+  alternating.bands.cols = c("white", "gray95"),
+  bw.plot = FALSE,
   min.plot.size.in.characters.horiz = 10,
-  min.plot.size.in.characters.vert = 0.5, suppress.warnings = FALSE,
-  max.patients.to.plot = 100)
+  min.plot.size.in.characters.vert = 0.5,
+  suppress.warnings = FALSE,
+  max.patients.to.plot = 100,
+  export.formats = NULL,
+  export.formats.fileprefix = "AdhereR-plot",
+  export.formats.height = NA,
+  export.formats.width = NA,
+  export.formats.save.svg.placeholder = TRUE,
+  export.formats.directory = NA,
+  generate.R.plot = TRUE
+)
 }
 \arguments{
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
@@ -160,6 +195,28 @@ referes to a single event.}
 
 \item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
 to plot.}
+
+\item{export.formats}{What formats should the plot be exported to? It can be
+any subset of "svg" (an SVG file), "html" (a self-contained HTML document
+including an embedded SVG image, CSS and the needed JavaScript for some limited
+user interactions, plus an external placeholder JPEG image for those browsers
+not supporting SVGs), "jpg", "png", "webp", "ps" and "pdf". Default to NULL
+(i.e., no plot is exported).}
+
+\item{export.formats.fileprefix}{The file name prefix for the exported
+formats (defaults to "AdhereR-plot").}
+
+\item{export.formats.height, export.formats.width}{The desired dimensions
+of the exported figure (defaults to sane values).}
+
+\item{export.formats.save.svg.placeholder}{\emph{Logical}: if TRUE (the
+default), save a JPG placeholder for the SVG image.}
+
+\item{export.formats.directory}{If exporting the plot, which directory to
+export to (if not given, uses a temporary directory).}
+
+\item{generate.R.plot}{\emph{Logical}: should it generate a standard
+(base R) plot for plotting within R?}
 }
 \description{
 Plots the events (prescribing or dispensing) data encapsulated in a basic

@@ -4,21 +4,32 @@
 \alias{CMA0}
 \title{CMA0 constructor.}
 \usage{
-CMA0(data = NULL, ID.colname = NA, event.date.colname = NA,
-  event.duration.colname = NA, event.daily.dose.colname = NA,
-  medication.class.colname = NA, medication.groups = NULL,
-  carryover.within.obs.window = NA, carryover.into.obs.window = NA,
-  carry.only.for.same.medication = NA, consider.dosage.change = NA,
-  followup.window.start = 0, followup.window.start.unit = c("days",
-  "weeks", "months", "years")[1], followup.window.duration = 365 * 2,
-  followup.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.start = 0,
-  observation.window.start.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.duration = 365 * 2,
-  observation.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], date.format = "\%m/\%d/\%Y",
-  summary = "Base CMA object", suppress.warnings = FALSE,
-  arguments.that.should.not.be.defined = NULL, ...)
+CMA0(
+  data = NULL,
+  ID.colname = NA,
+  event.date.colname = NA,
+  event.duration.colname = NA,
+  event.daily.dose.colname = NA,
+  medication.class.colname = NA,
+  medication.groups = NULL,
+  carryover.within.obs.window = NA,
+  carryover.into.obs.window = NA,
+  carry.only.for.same.medication = NA,
+  consider.dosage.change = NA,
+  followup.window.start = 0,
+  followup.window.start.unit = c("days", "weeks", "months", "years")[1],
+  followup.window.duration = 365 * 2,
+  followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.start = 0,
+  observation.window.start.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.duration = 365 * 2,
+  observation.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  date.format = "\%m/\%d/\%Y",
+  summary = "Base CMA object",
+  suppress.warnings = FALSE,
+  arguments.that.should.not.be.defined = NULL,
+  ...
+)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the medication events

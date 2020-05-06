@@ -208,9 +208,9 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #' at the beginning of a special period and a new event with the remaining duration
 #' is created after the end of the end of the special period. With \emph{custom}, the
 #' mapping has to be included in \emph{\code{special.periods.data}}.
-# @param carryover \emph{Logical}, if \code{TRUE} apply carry-over to medications of the
-# same type (according to \code{medication.class.colnames}). Can only be used together with
-# CMA7 and above in combination with \code{carry.only.for.same.medication = TRUE}.
+#' @param carryover \emph{Logical}, if \code{TRUE} apply carry-over to medications of the
+#' same type (according to \code{medication.class.colnames}). Can only be used together with
+#' CMA7 and above in combination with \code{carry.only.for.same.medication = TRUE}.
 #' @param date.format A \emph{string} giving the format of the dates used in
 #' the \code{data} and the other parameters; see the \code{format} parameters
 #' of the \code{\link[base]{as.Date}} function for details (NB, this concerns

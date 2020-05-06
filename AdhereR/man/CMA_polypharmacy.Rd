@@ -4,31 +4,49 @@
 \alias{CMA_polypharmacy}
 \title{CMA constructor for polypharmacy.}
 \usage{
-CMA_polypharmacy(data = data,
-  medication.groups = medication.class.colname, CMA.to.apply = NA,
-  aggregate.first = TRUE, aggregation.method = NA,
-  aggregation.method.arguments = NA, thresholds = NA,
-  ID.colname = NA, event.date.colname = NA,
-  event.duration.colname = NA, event.daily.dose.colname = NA,
-  medication.class.colname = NA, carry.only.for.same.medication = NA,
-  consider.dosage.change = NA, followup.window.start = 0,
+CMA_polypharmacy(
+  data = data,
+  medication.groups = medication.class.colname,
+  CMA.to.apply = NA,
+  aggregate.first = TRUE,
+  aggregation.method = NA,
+  aggregation.method.arguments = NA,
+  thresholds = NA,
+  ID.colname = NA,
+  event.date.colname = NA,
+  event.duration.colname = NA,
+  event.daily.dose.colname = NA,
+  medication.class.colname = NA,
+  carry.only.for.same.medication = NA,
+  consider.dosage.change = NA,
+  followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
   followup.window.duration = 365 * 2,
-  followup.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.start = 0,
-  observation.window.start.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.duration = 365 * 2,
-  observation.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], date.format = "\%m/\%d/\%Y",
+  followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.start = 0,
+  observation.window.start.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.duration = 365 * 2,
+  observation.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  date.format = "\%m/\%d/\%Y",
   summary = "CMA for polypharmacy",
-  force.NA.CMA.for.failed.patients = TRUE, parallel.backend = c("none",
-  "multicore", "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)")[1],
-  parallel.threads = "auto", suppress.warnings = FALSE, ...)
+  force.NA.CMA.for.failed.patients = TRUE,
+  parallel.backend = c("none", "multicore", "snow", "snow(SOCK)", "snow(MPI)",
+    "snow(NWS)")[1],
+  parallel.threads = "auto",
+  suppress.warnings = FALSE,
+  ...
+)
 }
 \arguments{
-\item{medication.groups}{A \emph{string} with the name of the column containing the medication 
+\item{data}{A \emph{\code{data.frame}} containing the events (prescribing or
+dispensing) used to compute the CMA. Must contain, at a minimum, the patient
+unique ID, the event date and duration, medication type, and might also contain the daily
+dosage (the actual column names are defined in the
+following four parameters).}
+
+\item{medication.groups}{A \emph{string} with the name of the column containing the medication
 groups, or a *list of vectors* with medication class names (from \code{medication.class.colname})
- belonging to the same treatment groupf multiple medication classes should belong to the same 
+ belonging to the same treatment groupf multiple medication classes should belong to the same
  treatment group, they can be differentiated here (important to investigate treatment switches)}
 
 \item{CMA.to.apply}{A \emph{string} giving the name of the CMA function (1 to
@@ -39,8 +57,8 @@ summarizing over time during OW.}
 
 \item{aggregation.method}{A \emph{string} giving the name of the function to
 aggregate CMA values of medication group, or \code{NA} to return only raw CMA estimates
-per medication group. Accepts summary functions such as "mean", "sd", "var", "min", "max", 
-and "median". Custom functions are possible as long as they take a numeric vector as input 
+per medication group. Accepts summary functions such as "mean", "sd", "var", "min", "max",
+and "median". Custom functions are possible as long as they take a numeric vector as input
 and return a single numeric value.}
 
 \item{aggregation.method.arguments}{optional, A \emph{named list} of additional arguments to the
@@ -198,8 +216,8 @@ following fields:
  \item \code{aggregation.method} the aggregation method to combine CMA values
  from different groups.
  \item \code{computed.CMA} the class name of the computed CMA.
- \item \code{medication.groups} a \code{data.frame} with medication groups and 
- classes 
+ \item \code{medication.groups} a \code{data.frame} with medication groups and
+ classes
  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
  estimates for each participant (the \code{ID.colname} column) and
  sometimes treatment group, with columns:
@@ -217,18 +235,11 @@ following fields:
 Constructs a CMA (continuous multiple-interval measures of medication
 availability/gaps) object for polypharmacy.
 }
-\details{
-#' @param data A \emph{\code{data.frame}} containing the events (prescribing or
-dispensing) used to compute the CMA. Must contain, at a minimum, the patient
-unique ID, the event date and duration, medication type, and might also contain the daily
-dosage (the actual column names are defined in the
-following four parameters).
-}
 \examples{
 \dontrun{
 CMA_PP <- CMA_polypharmacy(data = med.events.pp,
 medication.groups = med.groups,
-CMA.to.apply = "CMA7", 
+CMA.to.apply = "CMA7",
 aggregate.first = TRUE, # aggregate before summarizing
 aggregation.method = "mean", # compute mean of CMAs
 aggregation.method.arguments = list(na.rm = TRUE), # remove NA's during calculation

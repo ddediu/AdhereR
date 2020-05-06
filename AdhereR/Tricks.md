@@ -1,5 +1,9 @@
 # This document contains various tricks, including for building the package for `CRAN`
 
+## Remote checking
+
+Use `devtools::check_win_devel()`, `devtools::check_win_release()` and `devtools::check_win_oldrelease()`, as per https://rdrr.io/cran/devtools/man/check_win.html.
+
 ## Create source package and copy it to the shared Google Drive for testing
 
 For testing before release on CRAN we decided to use a shared Google Drive folder (`./AdhereR/lates-package-for-testing`) which contains a *source* version of the package for testing; this should be done also for pre-pre-release versions (i.e., late "devel" versions) as well.

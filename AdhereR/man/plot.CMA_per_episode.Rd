@@ -5,28 +5,51 @@
 \alias{plot.CMA_sliding_window}
 \title{Plot CMA_per_episode and CMA_sliding_window objects.}
 \usage{
-\method{plot}{CMA_per_episode}(x, patients.to.plot = NULL,
-  duration = NA, align.all.patients = FALSE,
-  align.first.event.at.zero = TRUE, show.period = c("dates",
-  "days")[2], period.in.days = 90, show.legend = TRUE,
-  legend.x = "right", legend.y = "bottom", legend.bkg.opacity = 0.5,
-  legend.cex = 0.75, legend.cex.title = 1, cex = 1,
-  cex.axis = 0.75, cex.lab = 1, show.cma = TRUE, xlab = c(dates =
-  "Date", days = "Days"), ylab = c(withoutCMA = "patient", withCMA =
-  "patient (& CMA)"), title = c(aligned =
-  "Event patterns (all patients aligned)", notaligned = "Event patterns"),
-  col.cats = rainbow, unspecified.category.label = "drug",
-  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
-  pch.end.event = 16, plot.events.vertically.displaced = TRUE,
-  print.dose = FALSE, cex.dose = 0.75,
-  print.dose.outline.col = "white", print.dose.centered = FALSE,
-  plot.dose = FALSE, lwd.event.max.dose = 8,
+\method{plot}{CMA_per_episode}(
+  x,
+  patients.to.plot = NULL,
+  duration = NA,
+  align.all.patients = FALSE,
+  align.first.event.at.zero = TRUE,
+  show.period = c("dates", "days")[2],
+  period.in.days = 90,
+  show.legend = TRUE,
+  legend.x = "right",
+  legend.y = "bottom",
+  legend.bkg.opacity = 0.5,
+  legend.cex = 0.75,
+  legend.cex.title = 1,
+  cex = 1,
+  cex.axis = 0.75,
+  cex.lab = 1,
+  show.cma = TRUE,
+  xlab = c(dates = "Date", days = "Days"),
+  ylab = c(withoutCMA = "patient", withCMA = "patient (& CMA)"),
+  title = c(aligned = "Event patterns (all patients aligned)", notaligned =
+    "Event patterns"),
+  col.cats = rainbow,
+  unspecified.category.label = "drug",
+  lty.event = "solid",
+  lwd.event = 2,
+  pch.start.event = 15,
+  pch.end.event = 16,
+  plot.events.vertically.displaced = TRUE,
+  print.dose = FALSE,
+  cex.dose = 0.75,
+  print.dose.outline.col = "white",
+  print.dose.centered = FALSE,
+  plot.dose = FALSE,
+  lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
-  col.na = "lightgray", col.continuation = "black",
-  lty.continuation = "dotted", lwd.continuation = 1,
-  print.CMA = TRUE, CMA.cex = 0.5, plot.CMA = TRUE,
-  plot.CMA.as.histogram = TRUE, plot.partial.CMAs.as = c("stacked",
-  "overlapping", "timeseries")[1],
+  col.na = "lightgray",
+  col.continuation = "black",
+  lty.continuation = "dotted",
+  lwd.continuation = 1,
+  print.CMA = TRUE,
+  CMA.cex = 0.5,
+  plot.CMA = TRUE,
+  plot.CMA.as.histogram = TRUE,
+  plot.partial.CMAs.as = c("stacked", "overlapping", "timeseries")[1],
   plot.partial.CMAs.as.stacked.col.bars = "gray90",
   plot.partial.CMAs.as.stacked.col.border = "gray30",
   plot.partial.CMAs.as.stacked.col.text = "black",
@@ -35,8 +58,8 @@
   plot.partial.CMAs.as.timeseries.col.dot = "darkblue",
   plot.partial.CMAs.as.timeseries.col.interval = "gray70",
   plot.partial.CMAs.as.timeseries.col.text = "firebrick",
-  plot.partial.CMAs.as.timeseries.interval.type = c("none", "segments",
-  "arrows", "lines", "rectangles")[2],
+  plot.partial.CMAs.as.timeseries.interval.type = c("none", "segments", "arrows",
+    "lines", "rectangles")[2],
   plot.partial.CMAs.as.timeseries.lwd.interval = 1,
   plot.partial.CMAs.as.timeseries.alpha.interval = 0.25,
   plot.partial.CMAs.as.timeseries.show.0perc = TRUE,
@@ -44,38 +67,77 @@
   plot.partial.CMAs.as.overlapping.alternate = TRUE,
   plot.partial.CMAs.as.overlapping.col.interval = "gray70",
   plot.partial.CMAs.as.overlapping.col.text = "firebrick",
-  CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
-  CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
-  CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
-  followup.window.col = "green", highlight.observation.window = TRUE,
-  observation.window.col = "yellow", observation.window.opacity = 0.3,
-  alternating.bands.cols = c("white", "gray95"), bw.plot = FALSE,
+  CMA.plot.ratio = 0.1,
+  CMA.plot.col = "lightgreen",
+  CMA.plot.border = "darkgreen",
+  CMA.plot.bkg = "aquamarine",
+  CMA.plot.text = CMA.plot.border,
+  highlight.followup.window = TRUE,
+  followup.window.col = "green",
+  highlight.observation.window = TRUE,
+  observation.window.col = "yellow",
+  observation.window.opacity = 0.3,
+  alternating.bands.cols = c("white", "gray95"),
+  bw.plot = FALSE,
   min.plot.size.in.characters.horiz = 10,
-  min.plot.size.in.characters.vert = 0.25, max.patients.to.plot = 100,
-  suppress.warnings = FALSE, ...)
+  min.plot.size.in.characters.vert = 0.25,
+  max.patients.to.plot = 100,
+  suppress.warnings = FALSE,
+  export.formats = NULL,
+  export.formats.fileprefix = "AdhereR-plot",
+  export.formats.height = NA,
+  export.formats.width = NA,
+  export.formats.save.svg.placeholder = TRUE,
+  export.formats.directory = NA,
+  generate.R.plot = TRUE,
+  ...
+)
 
-\method{plot}{CMA_sliding_window}(x, patients.to.plot = NULL,
-  duration = NA, align.all.patients = FALSE,
-  align.first.event.at.zero = TRUE, show.period = c("dates",
-  "days")[2], period.in.days = 90, show.legend = TRUE,
-  legend.x = "right", legend.y = "bottom", legend.bkg.opacity = 0.5,
-  legend.cex = 0.75, legend.cex.title = 1, cex = 1,
-  cex.axis = 0.75, cex.lab = 1, show.cma = TRUE, xlab = c(dates =
-  "Date", days = "Days"), ylab = c(withoutCMA = "patient", withCMA =
-  "patient (& CMA)"), title = c(aligned =
-  "Event patterns (all patients aligned)", notaligned = "Event patterns"),
-  col.cats = rainbow, unspecified.category.label = "drug",
-  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
-  pch.end.event = 16, plot.events.vertically.displaced = TRUE,
-  print.dose = FALSE, cex.dose = 0.75,
-  print.dose.outline.col = "white", print.dose.centered = FALSE,
-  plot.dose = FALSE, lwd.event.max.dose = 8,
+\method{plot}{CMA_sliding_window}(
+  x,
+  patients.to.plot = NULL,
+  duration = NA,
+  align.all.patients = FALSE,
+  align.first.event.at.zero = TRUE,
+  show.period = c("dates", "days")[2],
+  period.in.days = 90,
+  show.legend = TRUE,
+  legend.x = "right",
+  legend.y = "bottom",
+  legend.bkg.opacity = 0.5,
+  legend.cex = 0.75,
+  legend.cex.title = 1,
+  cex = 1,
+  cex.axis = 0.75,
+  cex.lab = 1,
+  show.cma = TRUE,
+  xlab = c(dates = "Date", days = "Days"),
+  ylab = c(withoutCMA = "patient", withCMA = "patient (& CMA)"),
+  title = c(aligned = "Event patterns (all patients aligned)", notaligned =
+    "Event patterns"),
+  col.cats = rainbow,
+  unspecified.category.label = "drug",
+  lty.event = "solid",
+  lwd.event = 2,
+  pch.start.event = 15,
+  pch.end.event = 16,
+  plot.events.vertically.displaced = TRUE,
+  print.dose = FALSE,
+  cex.dose = 0.75,
+  print.dose.outline.col = "white",
+  print.dose.centered = FALSE,
+  plot.dose = FALSE,
+  lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
-  col.na = "lightgray", col.continuation = "black",
-  lty.continuation = "dotted", lwd.continuation = 1,
-  print.CMA = TRUE, CMA.cex = 0.5, plot.CMA = TRUE,
-  plot.CMA.as.histogram = TRUE, plot.partial.CMAs.as = c("stacked",
-  "overlapping", "timeseries")[1],
+  col.na = "lightgray",
+  col.continuation = "black",
+  lty.continuation = "dotted",
+  lwd.continuation = 1,
+  print.CMA = TRUE,
+  CMA.cex = 0.5,
+  plot.CMA = TRUE,
+  plot.CMA.as.histogram = TRUE,
+  plot.partial.CMAs.as = c("stacked", "overlapping", "timeseries")[1],
   plot.partial.CMAs.as.stacked.col.bars = "gray90",
   plot.partial.CMAs.as.stacked.col.border = "gray30",
   plot.partial.CMAs.as.stacked.col.text = "black",
@@ -84,8 +146,8 @@
   plot.partial.CMAs.as.timeseries.col.dot = "darkblue",
   plot.partial.CMAs.as.timeseries.col.interval = "gray70",
   plot.partial.CMAs.as.timeseries.col.text = "firebrick",
-  plot.partial.CMAs.as.timeseries.interval.type = c("none", "segments",
-  "arrows", "lines", "rectangles")[2],
+  plot.partial.CMAs.as.timeseries.interval.type = c("none", "segments", "arrows",
+    "lines", "rectangles")[2],
   plot.partial.CMAs.as.timeseries.lwd.interval = 1,
   plot.partial.CMAs.as.timeseries.alpha.interval = 0.25,
   plot.partial.CMAs.as.timeseries.show.0perc = TRUE,
@@ -93,15 +155,31 @@
   plot.partial.CMAs.as.overlapping.alternate = TRUE,
   plot.partial.CMAs.as.overlapping.col.interval = "gray70",
   plot.partial.CMAs.as.overlapping.col.text = "firebrick",
-  CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
-  CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
-  CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
-  followup.window.col = "green", highlight.observation.window = TRUE,
-  observation.window.col = "yellow", observation.window.opacity = 0.3,
-  alternating.bands.cols = c("white", "gray95"), bw.plot = FALSE,
+  CMA.plot.ratio = 0.1,
+  CMA.plot.col = "lightgreen",
+  CMA.plot.border = "darkgreen",
+  CMA.plot.bkg = "aquamarine",
+  CMA.plot.text = CMA.plot.border,
+  highlight.followup.window = TRUE,
+  followup.window.col = "green",
+  highlight.observation.window = TRUE,
+  observation.window.col = "yellow",
+  observation.window.opacity = 0.3,
+  alternating.bands.cols = c("white", "gray95"),
+  bw.plot = FALSE,
   min.plot.size.in.characters.horiz = 10,
-  min.plot.size.in.characters.vert = 0.25, max.patients.to.plot = 100,
-  suppress.warnings = FALSE, ...)
+  min.plot.size.in.characters.vert = 0.25,
+  max.patients.to.plot = 100,
+  suppress.warnings = FALSE,
+  export.formats = NULL,
+  export.formats.fileprefix = "AdhereR-plot",
+  export.formats.height = NA,
+  export.formats.width = NA,
+  export.formats.save.svg.placeholder = TRUE,
+  export.formats.directory = NA,
+  generate.R.plot = TRUE,
+  ...
+)
 }
 \arguments{
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
@@ -238,6 +316,28 @@ to plot.}
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{export.formats}{What formats should the plot be exported to? It can be
+any subset of "svg" (an SVG file), "html" (a self-contained HTML document
+including an embedded SVG image, CSS and the needed JavaScript for some limited
+user interactions, plus an external placeholder JPEG image for those browsers
+not supporting SVGs), "jpg", "png", "webp", "ps" and "pdf". Default to NULL
+(i.e., no plot is exported).}
+
+\item{export.formats.fileprefix}{The file name prefix for the exported
+formats (defaults to "AdhereR-plot").}
+
+\item{export.formats.height, export.formats.width}{The desired dimensions
+of the exported figure (defaults to sane values).}
+
+\item{export.formats.save.svg.placeholder}{\emph{Logical}: if TRUE (the
+default), save a JPG placeholder for the SVG image.}
+
+\item{export.formats.directory}{If exporting the plot, which directory to
+export to (if not given, uses a temporary directory).}
+
+\item{generate.R.plot}{\emph{Logical}: should it generate a standard
+(base R) plot for plotting within R?}
 
 \item{...}{other parameters (to be passed to the estimation and plotting of
 the simple CMA)}
