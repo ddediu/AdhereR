@@ -978,6 +978,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                        period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                        show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
+                       legend.medication.truncate=15, legend.medication.truncate.side=c("left", "center", "right")[2], # truncate medication classes (NA=no)?
                        cex=1.0, cex.axis=0.75, cex.lab=1.0, cex.title=1.5,   # various graphical params
                        show.cma=TRUE,                         # show the CMA type
                        xlab=c("dates"="Date", "days"="Days"), # Vector of x labels to show for the two types of periods, or a single value for both, or NULL for nothing
@@ -3789,6 +3790,25 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   ## The legend ####
   ##
 
+  # Function to shorten string
+  # adapted from string_r's str_trunc() to reduce dependencies on other packages...
+  .truncate_string <- function (s, width, side = c("right", "left", "center"), ellipsis = "...")
+  {
+    side <- match.arg(side);
+    too_long <- !is.na(s) & (nchar(s) > width);
+    width... <- (width - nchar(ellipsis));
+    if (width... < 0) return ("?");
+
+    s[too_long] <- switch(side,
+                          "right"  = paste0(substring(s[too_long], 1, width...), ellipsis),
+                          "left"   = paste0(ellipsis, substring(s[too_long], nchar(s[too_long]) - width... + 1)),
+                          "center" = paste0(substring(s[too_long], 1, ceiling(width.../2)),
+                                            ellipsis,
+                                            substring(s[too_long], nchar(s[too_long]) - floor(width.../2) + 1)));
+
+    return (s);
+  }
+
   if( .do.R ) # Rplot:
   {
     .legend.R <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
@@ -3910,18 +3930,22 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       for( i in 1:length(cols) )
       {
         med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+        if( !is.na(legend.medication.truncate) )
+        {
+          med.class.name <- .truncate_string(med.class.name, width=legend.medication.truncate, side=legend.medication.truncate.side);
+        }
+        if( !is.na(names(cols)[i]) && (print.dose || plot.dose) )
+        {
+          dose.for.cat <- (dose.range$category == names(cols)[i]);
+          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+          {
+            med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+          }
+        }
         if( do.plot )
         {
           rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor(cols[i],alpha.f=0.5));
-          med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
-          if( print.dose || plot.dose )
-          {
-            dose.for.cat <- (dose.range$category == med.class.name);
-            if( sum(dose.for.cat,na.rm=TRUE) == 1 )
-            {
-              med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
-            }
-          }
+          #med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
           text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, med.class.name, col="black", cex=legend.cex, pos=4);
           # Save the info:
           .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
@@ -3931,7 +3955,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                            "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
                                                                            "cex"=legend.cex));
         }
-        cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth(names(cols)[i], cex=legend.cex));
+        cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth(med.class.name, cex=legend.cex));
       }
       cur.y <- cur.y - 0.5*legend.char.height;
 
@@ -4224,6 +4248,13 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       for( i in 1:length(cols) )
       {
         med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+        if( !is.na(legend.medication.truncate) )
+        {
+          med.class.name.toplot <- .truncate_string(med.class.name, width=legend.medication.truncate, side=legend.medication.truncate.side);
+        } else
+        {
+          med.class.name.toplot <- med.class.name;
+        }
         med.class.name.svg <- .map.category.to.class(med.class.name);
         if( do.plot )
         {
@@ -4238,24 +4269,24 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           dose.for.cat <- (dose.range$category == med.class.name);
           if( sum(dose.for.cat,na.rm=TRUE) == 1 )
           {
-            med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+            med.class.name.toplot <- paste0(med.class.name.toplot," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
           }
         }
         if( do.plot )
         {
           l2 <- c(l2,
-                  .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text=med.class.name,
+                  .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text=med.class.name.toplot,
                             col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
                             class=paste0("legend-medication-class-label", if(med.class.name != "<missing>") paste0("-",med.class.name.svg) ), suppress.warnings=suppress.warnings));
           # Save the info:
           .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                              data.frame("string"=med.class.name,
+                                                              data.frame("string"=med.class.name.toplot,
                                                                          "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
                                                                          "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
                                                                          "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
                                                                          "font.size"=dims.chr.legend));
           }
-        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims(med.class.name, font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims(med.class.name.toplot, font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
       }
       lh <- lh + lnp*dims.chr.legend.title; # new para
 

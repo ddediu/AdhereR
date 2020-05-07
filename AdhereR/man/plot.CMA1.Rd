@@ -27,6 +27,8 @@
   legend.bkg.opacity = 0.5,
   legend.cex = 0.75,
   legend.cex.title = 1,
+  legend.medication.truncate = 15,
+  legend.medication.truncate.side = c("left", "center", "right")[2],
   cex = 1,
   cex.axis = 0.75,
   cex.lab = 1,
@@ -132,6 +134,14 @@ drawn (or 0 for no grid).}
 
 \item{legend.bkg.opacity}{A \emph{number} between 0.0 and 1.0 specifying the
 opacity of the legend background.}
+
+\item{legend.medication.truncate}{A \emph{number} specifying the maximum length
+(in character) of the medication class showin in the legend (or \code{NA} for
+no truncation).}
+
+\item{legend.medication.truncate.side}{A \emph{string} specifying how the medication
+truncation is done (if \code{legend.medication.truncate} is not \code{NA}); can
+be "left", "right" or "center".}
 
 \item{cex, cex.axis, cex.lab, legend.cex, legend.cex.title, CMA.cex}{\emph{numeric}
 values specifying the \code{cex} of the various types of text.}

@@ -785,6 +785,12 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' (default), "top", or a \emph{numeric} value.
 #' @param legend.bkg.opacity A \emph{number} between 0.0 and 1.0 specifying the
 #' opacity of the legend background.
+#' @param legend.medication.truncate A \emph{number} specifying the maximum length
+#' (in character) of the medication class showin in the legend (or \code{NA} for
+#' no truncation).
+#' @param legend.medication.truncate.side A \emph{string} specifying how the medication
+#' truncation is done (if \code{legend.medication.truncate} is not \code{NA}); can
+#' be "left", "right" or "center".
 #' @param cex,cex.axis,cex.lab,legend.cex,legend.cex.title \emph{numeric} values
 #' specifying the cex of the various types of text.
 #' @param xlab Named vector of x-axis labels to show for the two types of periods
@@ -893,6 +899,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                       period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                       show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
+                      legend.medication.truncate=15, legend.medication.truncate.side=c("left", "center", "right")[2], # truncate medication classes (NA=no)?
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       xlab=c("dates"="Date", "days"="Days"), # Vector of x labels to show for the two types of periods, or a single value for both, or NULL for nothing
                       ylab=c("withoutCMA"="patient", "withCMA"="patient (& CMA)"), # Vector of y labels to show without and with CMA estimates, or a single value for both, or NULL ofr nonthing
@@ -3175,6 +3182,12 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' (default), "top", or a \emph{numeric} value.
 #' @param legend.bkg.opacity A \emph{number} between 0.0 and 1.0 specifying the
 #' opacity of the legend background.
+#' @param legend.medication.truncate A \emph{number} specifying the maximum length
+#' (in character) of the medication class showin in the legend (or \code{NA} for
+#' no truncation).
+#' @param legend.medication.truncate.side A \emph{string} specifying how the medication
+#' truncation is done (if \code{legend.medication.truncate} is not \code{NA}); can
+#' be "left", "right" or "center".
 #' @param cex,cex.axis,cex.lab,legend.cex,legend.cex.title,CMA.cex \emph{numeric}
 #' values specifying the \code{cex} of the various types of text.
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
@@ -3267,6 +3280,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                       period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                       show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
+                      legend.medication.truncate=15, legend.medication.truncate.side=c("left", "center", "right")[2], # truncate medication classes (NA=no)?
                       cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                       show.cma=TRUE,                         # show the CMA type
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
@@ -6909,6 +6923,12 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' @param legend.bkg.opacity A \emph{number} between 0.0 and 1.0 specifying the
 #' opacity of the legend background.
 #' @param legend.cex,legend.cex.title The legend and legend title font sizes.
+#' @param legend.medication.truncate A \emph{number} specifying the maximum length
+#' (in character) of the medication class showin in the legend (or \code{NA} for
+#' no truncation).
+#' @param legend.medication.truncate.side A \emph{string} specifying how the medication
+#' truncation is done (if \code{legend.medication.truncate} is not \code{NA}); can
+#' be "left", "right" or "center".
 #' @param cex,cex.axis,cex.lab \emph{numeric} values specifying the cex of the
 #' various types of text.
 #' @param show.cma \emph{Logical}, should the CMA type be shown in the title?
@@ -7049,6 +7069,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                                  period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                                  show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
+                                 legend.medication.truncate=15, legend.medication.truncate.side=c("left", "center", "right")[2], # truncate medication classes (NA=no)?
                                  cex=1.0, cex.axis=0.75, cex.lab=1.0,   # various graphical params
                                  show.cma=TRUE,                         # show the CMA type
                                  xlab=c("dates"="Date", "days"="Days"), # Vector of x labels to show for the two types of periods, or a single value for both, or NULL for nothing
