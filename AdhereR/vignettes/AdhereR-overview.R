@@ -1,9 +1,9 @@
-## ---- echo=FALSE, message=FALSE, warning=FALSE, results='hide'-----------
+## ---- echo=FALSE, message=FALSE, warning=FALSE, results='hide'----------------
 # Various Rmarkdown output options:
 # center figures and reduce their file size:
 knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg"); 
 
-## ---- echo=TRUE, results='asis'------------------------------------------
+## ---- echo=TRUE, results='asis'-----------------------------------------------
 # Load the AdhereR library:
 library(AdhereR);
 
@@ -34,7 +34,7 @@ plot(cma0, # the object to plot
      print.dose=TRUE, plot.dose=TRUE,
      align.all.patients=TRUE); # align all patients for easier comparison
 
-## ---- echo=TRUE, results='asis'------------------------------------------
+## ---- echo=TRUE, results='asis'-----------------------------------------------
 # Compute the treatment episodes for the two patients:
 TEs3<- compute.treatment.episodes(ExamplePats,
                                   ID.colname="PATIENT_ID",
@@ -56,7 +56,7 @@ TEs3<- compute.treatment.episodes(ExamplePats,
 knitr::kable(TEs3, 
              caption = "<a name=\"Table-2\"></a>**Table 2.** Example output `compute.treatment.episodes()` function");
 
-## ---- echo=TRUE, results='asis'------------------------------------------
+## ---- echo=TRUE, results='asis'-----------------------------------------------
 # Compute the treatment episodes for the two patients
 # but now a change in medication type does not start a new episode:
 TEs4<- compute.treatment.episodes(ExamplePats,
@@ -307,7 +307,7 @@ cmaW1 <- CMA_sliding_window(CMA.to.apply="CMA9",
 # Plot:
 plot(cmaW1, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ----eval=FALSE----------------------------------------------------------
+## ----eval=FALSE---------------------------------------------------------------
 #  cmaW3 <- CMA_sliding_window(CMA="CMA1",
 #                              data=med.events,
 #                              ID.colname="PATIENT_ID",

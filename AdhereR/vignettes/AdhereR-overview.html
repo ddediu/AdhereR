@@ -1,19 +1,18 @@
 <!DOCTYPE html>
 
-<html xmlns="http://www.w3.org/1999/xhtml">
+<html>
 
 <head>
 
 <meta charset="utf-8" />
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <meta name="generator" content="pandoc" />
 <meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 
 <meta name="author" content="Alexandra L. Dima, Dan Dediu &amp; Samuel Allemann" />
 
-<meta name="date" content="2019-12-20" />
+<meta name="date" content="2020-05-07" />
 
 <title>AdhereR: Adherence to Medications</title>
 
@@ -118,9 +117,6 @@ padding-right: 2em;
 font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
 font-size: 14px;
 line-height: 1.35;
-}
-#header {
-text-align: center;
 }
 #TOC {
 clear: both;
@@ -289,7 +285,8 @@ code > span.st { color: #d14; }
 code > span.co { color: #888888; font-style: italic; } 
 code > span.ot { color: #007020; } 
 code > span.al { color: #ff0000; font-weight: bold; } 
-code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61717; background-color: #e3d2d2; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
 </style>
 
 
@@ -304,7 +301,7 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 
 <h1 class="title toc-ignore">AdhereR: Adherence to Medications</h1>
 <h4 class="author">Alexandra L. Dima, Dan Dediu &amp; Samuel Allemann</h4>
-<h4 class="date">2019-12-20</h4>
+<h4 class="date">2020-05-07</h4>
 
 
 <div id="TOC">
@@ -1078,31 +1075,31 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 ##   DATA: 19 (rows) x 5 (columns) [2 patients].</code></pre>
 <div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb30-1" data-line-number="1"><span class="co"># The CMA estimates table:</span></a>
 <a class="sourceLine" id="cb30-2" data-line-number="2">cmaE<span class="op">$</span>CMA</a></code></pre></div>
-<pre><code>##   PATIENT_ID episode.ID episode.start end.episode.gap.days
-## 1         37          1    2036-04-10                   56
-## 2         37          2    2037-01-02                  122
-## 3         76          1    2035-12-13                    0
-## 4         76          2    2036-12-21                   60
-## 5         76          3    2037-10-11                   32
-##   episode.duration episode.end       CMA
-## 1              211  2036-11-07 0.7109005
-## 2              463  2038-04-10 0.3239741
-## 3              374  2036-12-21 0.8422460
-## 4              234  2037-08-12 0.3846154
-## 5               62  2037-12-12 0.4838710</code></pre>
+<pre><code>##   PATIENT_ID episode.ID episode.start end.episode.gap.days episode.duration
+## 1         37          1    2036-04-10                   56              211
+## 2         37          2    2037-01-02                  122              463
+## 3         76          1    2035-12-13                    0              374
+## 4         76          2    2036-12-21                   60              234
+## 5         76          3    2037-10-11                   32               62
+##   episode.end       CMA
+## 1  2036-11-07 0.7109005
+## 2  2038-04-10 0.3239741
+## 3  2036-12-21 0.8422460
+## 4  2037-08-12 0.3846154
+## 5  2037-12-12 0.4838710</code></pre>
 <div class="sourceCode" id="cb32"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb32-1" data-line-number="1"><span class="kw">getCMA</span>(cmaE); <span class="co"># as above but using accessor function</span></a></code></pre></div>
-<pre><code>##   PATIENT_ID episode.ID episode.start end.episode.gap.days
-## 1         37          1    2036-04-10                   56
-## 2         37          2    2037-01-02                  122
-## 3         76          1    2035-12-13                    0
-## 4         76          2    2036-12-21                   60
-## 5         76          3    2037-10-11                   32
-##   episode.duration episode.end       CMA
-## 1              211  2036-11-07 0.7109005
-## 2              463  2038-04-10 0.3239741
-## 3              374  2036-12-21 0.8422460
-## 4              234  2037-08-12 0.3846154
-## 5               62  2037-12-12 0.4838710</code></pre>
+<pre><code>##   PATIENT_ID episode.ID episode.start end.episode.gap.days episode.duration
+## 1         37          1    2036-04-10                   56              211
+## 2         37          2    2037-01-02                  122              463
+## 3         76          1    2035-12-13                    0              374
+## 4         76          2    2036-12-21                   60              234
+## 5         76          3    2037-10-11                   32               62
+##   episode.end       CMA
+## 1  2036-11-07 0.7109005
+## 2  2038-04-10 0.3239741
+## 3  2036-12-21 0.8422460
+## 4  2037-08-12 0.3846154
+## 5  2037-12-12 0.4838710</code></pre>
 <div class="sourceCode" id="cb34"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb34-1" data-line-number="1"><span class="co"># The values for patient 76 only, rounded at 2 digits:</span></a>
 <a class="sourceLine" id="cb34-2" data-line-number="2"><span class="kw">round</span>(cmaE<span class="op">$</span>CMA[cmaE<span class="op">$</span>CMA<span class="op">$</span>PATIENT_ID<span class="op">==</span><span class="st"> </span><span class="dv">76</span>, <span class="dv">7</span>]<span class="op">*</span><span class="dv">100</span>, <span class="dv">2</span>);</a></code></pre></div>
 <pre><code>## [1] 84.22 38.46 48.39</code></pre>
@@ -1226,7 +1223,7 @@ code > span.fu { color: #900; font-weight: bold; }  code > span.er { color: #a61
 <h2>Interactive plotting</h2>
 <p><a name="Section-interactive-plotting"></a></p>
 <p>During the exploratory phases of data analysis, it is sometimes extremely useful to be able to plot interactively various views of the data using different parameter settings. We have implemented such interactive plotting of medication histories and (simple and iterative) CMA estimates within <a href="https://www.rstudio.com"><code>RStudio</code></a> and outside it (using <a href="https://shiny.rstudio.com/"><code>Shiny</code></a>; this is the default as it very flexible and independent of running <code>AdhereR</code> within <code>RStudio</code>) through the <code>plot_interactive_cma()</code> function. This function is generic and interactive, and can be given a large set of parameters (including the dataset on which to work) or it can interactively acquire these parameters directly from the user.</p>
-<p>Please note that this interactive plotting is actually implemented in a different package, <code>AdhereRViz</code> (which extends <code>AdhereR</code>); for more info, please see the vignette <a href="https://cran.r-project.org/package=AdhereRViz/vignettes/adherer_interctive_plots.html">AdhereR: Interactive plotting (and more) with Shiny</a> from package <code>AdhereRViz</code>.</p>
+<p>Please note that this interactive plotting is actually implemented in a different package, <code>AdhereRViz</code> (which extends <code>AdhereR</code>); for more info, please see the vignette <em>AdhereR: Interactive plotting (and more) with Shiny</em> from package <code>AdhereRViz</code>.</p>
 </div>
 <div id="computing-event-duration-from-prescription-dispensing-and-hospitalization-data" class="section level2">
 <h2>Computing event duration from prescription, dispensing, and hospitalization data</h2>

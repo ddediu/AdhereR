@@ -4,8 +4,8 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
 ^ReadMe\.md$
-^NEWS\.md$
 ^Tricks\.md$
 ^tests$
 ^docs$
+^cran-comments\.md$
 

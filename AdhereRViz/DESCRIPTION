@@ -1,7 +1,7 @@
 Package: AdhereRViz
 Type: Package
-Title: Adherence to Medications
-Version: 0.1
+Title: Interactive vizualisation of medication adherence patterns
+Version: 0.1.0
 Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
                      email = "ddediu@gmail.com"),
              person("Alexandra", "Dima", role = "aut",
@@ -13,7 +13,7 @@ Author: Dan Dediu [aut, cre],
         Samuel Allemann [aut]
 Maintainer: Dan Dediu <ddediu@gmail.com>
 Description: Interactive graphical user interface (GUI) for the package 
-    AdhereR, allowing the user to access different data sources, to explore 
+    'AdhereR', allowing the user to access different data sources, to explore 
     the patterns of medication use therein, and the computation of various  
     measures of adherence. It is implemented using Shiny and HTML/CSS/JavaScript. 
 URL: https://github.com/ddediu/AdhereR 
