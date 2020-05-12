@@ -27,6 +27,7 @@ Description: Computation of adherence to medications from Electronic Health care
     laptops to parallel processing on large heterogeneous computing clusters.
     It exposes a standardized interface allowing it to be used from other
     programming languages and platforms, such as Python.
+    For more info, please see Dima & Dediu (2017) <doi:10.1371/journal.pone.0174426>.
 URL: https://github.com/ddediu/AdhereR 
 License: GPL (>= 2)
 LazyData: TRUE
