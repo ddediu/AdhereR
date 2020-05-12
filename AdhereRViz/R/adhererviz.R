@@ -141,14 +141,15 @@ globalVariables(c("patientID", "selectedCMA", "carry.only.for.same.medication", 
 #'
 #' @return Nothing
 #' @examples
-#' \dontrun{
-#' library(AdhereR);
-#' plot_interactive_cma(med.events,
-#'                      ID.colname="PATIENT_ID",
-#'                      event.date.colname="DATE",
-#'                      event.duration.colname="DURATION",
-#'                      event.daily.dose.colname="PERDAY",
-#'                      medication.class.colname="CATEGORY");}
+#' if(interactive()) {
+#'   library(AdhereR);
+#'   plot_interactive_cma(med.events,
+#'                        ID.colname="PATIENT_ID",
+#'                        event.date.colname="DATE",
+#'                        event.duration.colname="DURATION",
+#'                        event.daily.dose.colname="PERDAY",
+#'                        medication.class.colname="CATEGORY");
+#' }
 #' @export
 plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA on
                                   ID=NULL, # the ID of the patient to be plotted (automatically taken to be the first)

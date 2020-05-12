@@ -153,14 +153,15 @@ patient information.
 For more info please see the vignette.
 }
 \examples{
-\dontrun{
-library(AdhereR);
-plot_interactive_cma(med.events,
-                     ID.colname="PATIENT_ID",
-                     event.date.colname="DATE",
-                     event.duration.colname="DURATION",
-                     event.daily.dose.colname="PERDAY",
-                     medication.class.colname="CATEGORY");}
+if(interactive()) {
+  library(AdhereR);
+  plot_interactive_cma(med.events,
+                       ID.colname="PATIENT_ID",
+                       event.date.colname="DATE",
+                       event.duration.colname="DURATION",
+                       event.daily.dose.colname="PERDAY",
+                       medication.class.colname="CATEGORY");
+}
 }
 \seealso{
 The vignette *AdhereR: Interactive plotting (and more) with Shiny*.
