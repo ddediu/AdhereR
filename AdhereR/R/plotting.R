@@ -4572,26 +4572,99 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           any(c("jpg", "png", "ps", "pdf", "webp") %in% export.formats) )
       {
         ## Export to flat file formats (PNG, JPG, PS, PDF or WEBP) ####
-        # Need to covert the SVG to one of these, so we need to export it (if not already exported):
-        if( is.null(file.svg) )
-        {
-          file.svg <- tempfile(export.formats.fileprefix, fileext=".svg");
-          writeLines(c(svg.header, svg.str), file.svg, sep="");
-        }
 
-        if( export.formats.save.svg.placeholder ||
-            any(c("jpg", "png","webp") %in% export.formats) )
+        if( requireNamespace("rsvg", quietly=TRUE) )
         {
-          # For the bitmapped formats, render it once:
-          bitmap <- rsvg::rsvg(file.svg,
-                               height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
-                               width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
+          # rsvg (and the extra packages that might be needed fro converion) seems available, so use it (them) for exporting:
+          # Need to covert the SVG to one of these, so we need to export it (if not already exported):
+          if( is.null(file.svg) )
+          {
+            file.svg <- tempfile(export.formats.fileprefix, fileext=".svg");
+            writeLines(c(svg.header, svg.str), file.svg, sep="");
+          }
 
+          if( export.formats.save.svg.placeholder ||
+              any(c("jpg", "png","webp") %in% export.formats) )
+          {
+            # For the bitmapped formats, render it once:
+            bitmap <- rsvg::rsvg(file.svg,
+                                 height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                                 width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
+
+            if( export.formats.save.svg.placeholder )
+            {
+              # The JPG placeholder:
+              exported.file.names <- c(exported.file.names, svg.placeholder.filename); names(exported.file.names)[length(exported.file.names)] <- "jpg-placeholder";
+              jpeg::writeJPEG(bitmap, svg.placeholder.filename, quality=0.90);
+            }
+
+            if( "jpg" %in% export.formats )
+            {
+              # JPG file:
+              file.jpg <- ifelse( is.na(export.formats.directory),
+                                  tempfile(export.formats.fileprefix, fileext=".jpg"),
+                                  file.path(export.formats.directory, paste0(export.formats.fileprefix,".jpg")) );
+              exported.file.names <- c(exported.file.names, file.jpg); names(exported.file.names)[length(exported.file.names)] <- "jpg";
+              jpeg::writeJPEG(bitmap, file.jpg, quality=0.90);
+            }
+
+            if( "png" %in% export.formats )
+            {
+              # PNG file:
+              file.png <- ifelse( is.na(export.formats.directory),
+                                  tempfile(export.formats.fileprefix, fileext=".png"),
+                                  file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
+              exported.file.names <- c(exported.file.names, file.png); names(exported.file.names)[length(exported.file.names)] <- "png";
+              #rsvg::rsvg_png(file.svg, file=file.png);
+              png::writePNG(bitmap, file.png, dpi=150);
+            }
+
+            if( "webp" %in% export.formats )
+            {
+              # WEBP file:
+              file.webp <- ifelse( is.na(export.formats.directory),
+                                   tempfile(export.formats.fileprefix, fileext=".webp"),
+                                   file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
+              exported.file.names <- c(exported.file.names, file.webp); names(exported.file.names)[length(exported.file.names)] <- "webp";
+              #rsvg::rsvg_webp(file.svg, file=file.webp);
+              webp::write_webp(bitmap, file.webp, quality=90);
+            }
+          }
+
+          if( "ps" %in% export.formats )
+          {
+            # PS file:
+            file.ps <- ifelse( is.na(export.formats.directory),
+                               tempfile(export.formats.fileprefix, fileext=".ps"),
+                               file.path(export.formats.directory, paste0(export.formats.fileprefix,".ps")) );
+            exported.file.names <- c(exported.file.names, file.ps); names(exported.file.names)[length(exported.file.names)] <- "ps";
+            rsvg::rsvg_ps(file.svg, file=file.ps);
+          }
+
+          if( "pdf" %in% export.formats )
+          {
+            # PDF file:
+            file.pdf <- ifelse( is.na(export.formats.directory),
+                                tempfile(export.formats.fileprefix, fileext=".pdf"),
+                                file.path(export.formats.directory, paste0(export.formats.fileprefix,".pdf")) );
+            exported.file.names <- c(exported.file.names, file.pdf); names(exported.file.names)[length(exported.file.names)] <- "pdf";
+            rsvg::rsvg_pdf(file.svg, file=file.pdf);
+          }
+        } else
+        {
+          # No rsvg: fall back to using the base R plotting for exports:
+
+          # First open the plotting device:
+          .plotting_device_created <- FALSE;
           if( export.formats.save.svg.placeholder )
           {
             # The JPG placeholder:
             exported.file.names <- c(exported.file.names, svg.placeholder.filename); names(exported.file.names)[length(exported.file.names)] <- "jpg-placeholder";
-            jpeg::writeJPEG(bitmap, svg.placeholder.filename, quality=0.90);
+            jpeg(filename=svg.placeholder.filename,
+                 width= if(!is.na(export.formats.width))  export.formats.width  else 480,
+                 height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2,
+                 units="px", quality=90);
+            .plotting_device_created <- TRUE;
           }
 
           if( "jpg" %in% export.formats )
@@ -4601,7 +4674,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                 tempfile(export.formats.fileprefix, fileext=".jpg"),
                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".jpg")) );
             exported.file.names <- c(exported.file.names, file.jpg); names(exported.file.names)[length(exported.file.names)] <- "jpg";
-            jpeg::writeJPEG(bitmap, file.jpg, quality=0.90);
+            jpeg(filename=file.jpg,
+                 width= if(!is.na(export.formats.width))  export.formats.width  else 480,
+                 height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2,
+                 units="px", quality=90);
+            .plotting_device_created <- TRUE;
           }
 
           if( "png" %in% export.formats )
@@ -4611,40 +4688,157 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                 tempfile(export.formats.fileprefix, fileext=".png"),
                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
             exported.file.names <- c(exported.file.names, file.png); names(exported.file.names)[length(exported.file.names)] <- "png";
-            #rsvg::rsvg_png(file.svg, file=file.png);
-            png::writePNG(bitmap, file.png, dpi=150);
+            png(filename=file.png,
+                width= if(!is.na(export.formats.width))  export.formats.width  else 480,
+                height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2,
+                units="px", res=150);
+            .plotting_device_created <- TRUE;
           }
 
           if( "webp" %in% export.formats )
           {
             # WEBP file:
-            file.webp <- ifelse( is.na(export.formats.directory),
-                                 tempfile(export.formats.fileprefix, fileext=".webp"),
-                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
-            exported.file.names <- c(exported.file.names, file.webp); names(exported.file.names)[length(exported.file.names)] <- "webp";
-            #rsvg::rsvg_webp(file.svg, file=file.webp);
-            webp::write_webp(bitmap, file.webp, quality=90);
+            warning("Exporting to WEBP is not yet implemented without SVG.\n");
+            .plotting_device_created <- FALSE;
           }
-        }
 
-        if( "ps" %in% export.formats )
-        {
-          # PS file:
-          file.ps <- ifelse( is.na(export.formats.directory),
-                             tempfile(export.formats.fileprefix, fileext=".ps"),
-                             file.path(export.formats.directory, paste0(export.formats.fileprefix,".ps")) );
-          exported.file.names <- c(exported.file.names, file.ps); names(exported.file.names)[length(exported.file.names)] <- "ps";
-          rsvg::rsvg_ps(file.svg, file=file.ps);
-        }
+          if( "ps" %in% export.formats )
+          {
+            # PS file:
+            file.ps <- ifelse( is.na(export.formats.directory),
+                               tempfile(export.formats.fileprefix, fileext=".ps"),
+                               file.path(export.formats.directory, paste0(export.formats.fileprefix,".ps")) );
+            exported.file.names <- c(exported.file.names, file.ps); names(exported.file.names)[length(exported.file.names)] <- "ps";
+            setEPS();
+            postscript(file=file.ps,
+                       width= (if(!is.na(export.formats.width))  export.formats.width  else 480) / 150,
+                       height=(if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2) / 150, # 150 DPI
+                       paper="special");
+            .plotting_device_created <- TRUE;
+          }
 
-        if( "pdf" %in% export.formats )
-        {
-          # PDF file:
-          file.pdf <- ifelse( is.na(export.formats.directory),
-                              tempfile(export.formats.fileprefix, fileext=".pdf"),
-                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".pdf")) );
-          exported.file.names <- c(exported.file.names, file.pdf); names(exported.file.names)[length(exported.file.names)] <- "pdf";
-          rsvg::rsvg_pdf(file.svg, file=file.pdf);
+          if( "pdf" %in% export.formats )
+          {
+            # PDF file:
+            file.pdf <- ifelse( is.na(export.formats.directory),
+                                tempfile(export.formats.fileprefix, fileext=".pdf"),
+                                file.path(export.formats.directory, paste0(export.formats.fileprefix,".pdf")) );
+            exported.file.names <- c(exported.file.names, file.pdf); names(exported.file.names)[length(exported.file.names)] <- "pdf";
+            pdf(file=file.pdf,
+                width= (if(!is.na(export.formats.width))  export.formats.width  else 480) / 150,
+                height=(if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2) / 150, # 150 DPI
+                paper="special");
+            .plotting_device_created <- TRUE;
+          }
+
+          # Do the actual plotting:
+          if( .plotting_device_created )
+          {
+            # Call the base R plotting:
+            .plot.CMAs(cma                              = cma,
+                       patients.to.plot                 = patients.to.plot,
+                       duration                         = duration,
+                       align.all.patients               = align.all.patients,
+                       align.first.event.at.zero        = align.first.event.at.zero,
+                       show.period                      = show.period,
+                       period.in.days                   = period.in.days,
+                       show.legend                      = show.legend,
+                       legend.x                         = legend.x,
+                       legend.y                         = legend.y,
+                       legend.bkg.opacity               = legend.bkg.opacity,
+                       legend.cex                       = legend.cex,
+                       legend.cex.title                 = legend.cex.title,
+                       legend.medication.truncate       = legend.medication.truncate,
+                       legend.medication.truncate.side  = legend.medication.truncate.side,
+                       cex                              = cex,
+                       cex.axis                         = cex.axis,
+                       cex.lab                          = cex.lab,
+                       cex.title                        = cex.title,
+                       show.cma                         = show.cma,
+                       xlab                             = xlab,
+                       ylab                             = ylab,
+                       title                            = title,
+                       col.cats                         = col.cats,
+                       unspecified.category.label       = unspecified.category.label,
+                       medication.groups                = medication.groups,
+                       lty.event                        = lty.event,
+                       lwd.event                        = lwd.event,
+                       pch.start.event                  = pch.start.event,
+                       pch.end.event                    = pch.end.event,
+                       show.event.intervals             = show.event.intervals,
+                       plot.events.vertically.displaced = plot.events.vertically.displaced,
+                       print.dose                       = print.dose,
+                       cex.dose                         = cex.dose,
+                       print.dose.col                   = print.dose.col,
+                       print.dose.outline.col           = print.dose.outline.col,
+                       print.dose.centered              = print.dose.centered,
+                       plot.dose                        = plot.dose,
+                       lwd.event.max.dose               = lwd.event.max.dose,
+                       plot.dose.lwd.across.medication.classes = plot.dose.lwd.across.medication.classes,
+                       col.na                           = col.na,
+                       col.continuation                 = col.continuation,
+                       lty.continuation                 = lty.continuation,
+                       lwd.continuation                 = lwd.continuation,
+                       print.CMA                        = print.CMA,
+                       CMA.cex                          = CMA.cex,
+                       plot.CMA                         = plot.CMA,
+                       plot.CMA.as.histogram            = plot.CMA.as.histogram,
+                       plot.partial.CMAs.as             = plot.partial.CMAs.as,
+                       plot.partial.CMAs.as.stacked.col.bars           = plot.partial.CMAs.as.stacked.col.bars,
+                       plot.partial.CMAs.as.stacked.col.border         = plot.partial.CMAs.as.stacked.col.border,
+                       plot.partial.CMAs.as.stacked.col.text           = plot.partial.CMAs.as.stacked.col.text,
+                       plot.partial.CMAs.as.timeseries.vspace          = plot.partial.CMAs.as.timeseries.vspace,
+                       plot.partial.CMAs.as.timeseries.start.from.zero = plot.partial.CMAs.as.timeseries.start.from.zero,
+                       plot.partial.CMAs.as.timeseries.col.dot         = plot.partial.CMAs.as.timeseries.col.dot,
+                       plot.partial.CMAs.as.timeseries.col.interval    = plot.partial.CMAs.as.timeseries.col.interval,
+                       plot.partial.CMAs.as.timeseries.col.text        = plot.partial.CMAs.as.timeseries.col.text,
+                       plot.partial.CMAs.as.timeseries.interval.type   = plot.partial.CMAs.as.timeseries.interval.type,
+                       plot.partial.CMAs.as.timeseries.lwd.interval    = plot.partial.CMAs.as.timeseries.lwd.interval,
+                       plot.partial.CMAs.as.timeseries.alpha.interval  = plot.partial.CMAs.as.timeseries.alpha.interval,
+                       plot.partial.CMAs.as.timeseries.show.0perc      = plot.partial.CMAs.as.timeseries.show.0perc,
+                       plot.partial.CMAs.as.timeseries.show.100perc    = plot.partial.CMAs.as.timeseries.show.100perc,
+                       plot.partial.CMAs.as.overlapping.alternate      = plot.partial.CMAs.as.overlapping.alternate,
+                       plot.partial.CMAs.as.overlapping.col.interval   = plot.partial.CMAs.as.overlapping.col.interval,
+                       plot.partial.CMAs.as.overlapping.col.text       = plot.partial.CMAs.as.overlapping.col.text,
+                       CMA.plot.ratio                   = CMA.plot.ratio,
+                       CMA.plot.col                     = CMA.plot.col,
+                       CMA.plot.border                  = CMA.plot.border,
+                       CMA.plot.bkg                     = CMA.plot.bkg,
+                       CMA.plot.text                    = CMA.plot.text,
+                       highlight.followup.window        = highlight.followup.window,
+                       followup.window.col              = followup.window.col,
+                       highlight.observation.window     = highlight.observation.window,
+                       observation.window.col           = observation.window.col,
+                       observation.window.density       = observation.window.density,
+                       observation.window.angle         = observation.window.angle,
+                       observation.window.opacity       = observation.window.opacity,
+                       show.real.obs.window.start       = show.real.obs.window.start,
+                       real.obs.window.density          = real.obs.window.density,
+                       real.obs.window.angle            = real.obs.window.angle,
+                       alternating.bands.cols           = alternating.bands.cols,
+                       rotate.text                      = rotate.text,
+                       bw.plot                          = bw.plot,
+                       min.plot.size.in.characters.horiz= min.plot.size.in.characters.horiz,
+                       min.plot.size.in.characters.vert = min.plot.size.in.characters.vert,
+                       max.patients.to.plot             = max.patients.to.plot,
+                       suppress.warnings                = suppress.warnings,
+                       export.formats                   = NULL, # force just the base R plotting
+                       export.formats.fileprefix        = NA,
+                       export.formats.height            = NA,
+                       export.formats.width             = NA,
+                       export.formats.save.svg.placeholder = FALSE,
+                       export.formats.directory         = NA,
+                       generate.R.plot                  = TRUE, # force the base R plotting
+                       ...
+            );
+          }
+
+          # Close the device:
+          if( .plotting_device_created )
+          {
+            dev.off();
+            .plotting_device_created <- FALSE;
+          }
         }
       }
     }

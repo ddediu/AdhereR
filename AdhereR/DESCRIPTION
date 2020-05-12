@@ -1,7 +1,7 @@
 Package: AdhereR
 Type: Package
 Title: Adherence to Medications
-Version: 0.6.0
+Version: 0.6.1
 Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
                      email = "ddediu@gmail.com"),
              person("Alexandra", "Dima", role = "aut",
@@ -34,7 +34,6 @@ RoxygenNote: 7.1.0
 Imports: lubridate (>= 1.5),
     parallel (>= 3.0),
     data.table (>= 1.9),
-	rsvg (>= 1.3),
 	jpeg (>= 0.1),
 	png (>= 0.1),
 	webp (>= 1.0)
@@ -42,6 +41,7 @@ Depends: R (>= 3.0)
 Suggests: rmarkdown (>= 1.1),
     knitr (>= 1.20),
     R.rsp (>= 0.40),
+	rsvg (>= 1.3),
     AdhereRViz (>= 0.1)
 VignetteBuilder: knitr, R.rsp
 Encoding: UTF-8

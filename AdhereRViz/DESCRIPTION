@@ -1,6 +1,6 @@
 Package: AdhereRViz
 Type: Package
-Title: Interactive vizualisation of medication adherence patterns
+Title: Interactive Visualisation of Medication Adherence Patterns
 Version: 0.1.0
 Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
                      email = "ddediu@gmail.com"),

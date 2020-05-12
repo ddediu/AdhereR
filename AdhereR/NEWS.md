@@ -1,3 +1,8 @@
+# AdhereR 0.6.1
+
+Moves the dependency on the `rsvg` package from being required to suggested, as apparently it is not available on all platforms; now, if `rsvg` is not available, exporting the plot falls back on the base R plotting system.
+  
+
 # AdhereR 0.6
   
 ## New features
