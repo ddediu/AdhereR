@@ -1426,20 +1426,34 @@ compute_event_durations <- function(disp.data = NULL,
 
     # apply process_medication() function to each medication present in both databses
     patient_events <- NULL;
+    patient_events[[1]] <- list(DURATIONS = NULL,
+                           PRESCRITPION_EPISODES = NULL);
     if( nrow(disp_presc) != 0 )
     {
       patient_events <- lapply(1:nrow(disp_presc), FUN = function(i) process_medication(med = i));
 
       # patient_events <- do.call(rbindlist, list(l = lapply(1:nrow(disp_presc), FUN = function(i) process_medication(med = i)),
       #                                           fill = TRUE));
+    } else {
+
+    patient_events[[1]][[1]] <- data.table(EVENT.ID = integer(),
+                                           DISP.START = as.Date(character()),
+                                           DURATION = numeric(),
+                                           episode.start = as.Date(character()),
+                                           episode.end = as.Date(character()))
     }
 
     setkeyv(pat_disp, cols = medication.class.colnames);
     setkeyv(pat_presc, cols = medication.class.colnames);
-    #
+
+
+    # add dispensing events without matching prescription and vice versa
     patient_events[[1]][[1]] <- rbind(pat_disp[list(disp_no_presc[,medication.class.colnames, with = FALSE]), c("ID", "DISP.DATE", medication.class.colnames, "TOTAL.DOSE"), with = FALSE],
                                       pat_presc[list(presc_no_disp[,medication.class.colnames, with = FALSE]), c("ID", medication.class.colnames, "DAILY.DOSE"), with = FALSE],
                                       patient_events[[1]][[1]],
+                                      fill = TRUE);
+    patient_events[[1]][[2]] <- rbind(pat_presc[list(presc_no_disp[,medication.class.colnames, with = FALSE]), c("ID", medication.class.colnames, "DAILY.DOSE"), with = FALSE],
+                                      patient_events[[1]][[2]],
                                       fill = TRUE);
 
     # update progress bar
