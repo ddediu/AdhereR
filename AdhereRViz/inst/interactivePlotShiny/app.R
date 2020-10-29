@@ -75,7 +75,8 @@ ui <- fluidPage(
 
   # JavaScript ----
   shinyjs::useShinyjs(),
-  shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}"),
+  shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}",
+                         functions=c("shinyjs.scroll_cma_compute_log")),
   #shinyjs::extendShinyjs(text="shinyjs.show_hide_sections = function() {$('#follow_up_folding_bits').toggle();"),
 
   # APP TITLE ----
@@ -2738,7 +2739,7 @@ server <- function(input, output, session)
     }
   })
 
-  # In-memory dataset: list the columns and upate the selections ----
+  # In-memory dataset: list the columns and update the selections ----
   observeEvent(input$dataset_from_memory,
   {
     # Disconnect any pre-existing database connections:
@@ -2786,13 +2787,14 @@ server <- function(input, output, session)
     }
 
     n.vals.to.show <-3;
-    x <- names(.GlobalEnv$.plotting.params$.inmemory.dataset);
-    x.info <- vapply(1:ncol(.GlobalEnv$.plotting.params$.inmemory.dataset),
+    d <- as.data.frame(.GlobalEnv$.plotting.params$.inmemory.dataset);
+    x <- names(d);
+    x.info <- vapply(1:ncol(d),
                      function(i) paste0("(",
-                                        class(.GlobalEnv$.plotting.params$.inmemory.dataset[,i]),
+                                        class(d[,i]),
                                         ": ",
-                                        paste0(.GlobalEnv$.plotting.params$.inmemory.dataset[1:min(n.vals.to.show,nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)),i],collapse=", "),
-                                        if(nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)>n.vals.to.show) "...",
+                                        paste0(d[1:min(n.vals.to.show,nrow(d)),i],collapse=", "),
+                                        if(nrow(d)>n.vals.to.show) "...",
                                         ")"),
                      character(1));
 
@@ -2992,6 +2994,7 @@ server <- function(input, output, session)
     # More advanced checks of the column types:
     if( inherits(d, "data.frame") ) # for data.frame's
     {
+      d <- as.data.frame(d); # force it to a data.frame to avoid unexpected behaviours from derived classes
       if( inherits(d[,event.date.colname], "Date") )
       {
         # It's a column of Dates: perfect!
