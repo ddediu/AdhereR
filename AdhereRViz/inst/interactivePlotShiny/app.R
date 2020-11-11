@@ -543,7 +543,7 @@ ui <- fluidPage(
                                                                                                    value=TRUE, status="primary", right=TRUE)),
 
                                                                   conditionalPanel(
-                                                                    condition="input.cma_class != 'simple' && input.plot_cma",
+                                                                    condition="input.cma_class != 'simple'",
 
                                                                     div(title='Show the "partial" CMA estimates as stacked bars?',
                                                                         shinyWidgets::materialSwitch(inputId="plot_cma_stacked",
