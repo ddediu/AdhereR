@@ -5,43 +5,61 @@
 \alias{CMA4}
 \title{CMA2 and CMA4 constructors.}
 \usage{
-CMA2(data = NULL, ID.colname = NA, event.date.colname = NA,
-  event.duration.colname = NA, followup.window.start = 0,
+CMA2(
+  data = NULL,
+  ID.colname = NA,
+  event.date.colname = NA,
+  event.duration.colname = NA,
+  followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
   followup.window.duration = 365 * 2,
-  followup.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.start = 0,
-  observation.window.start.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.duration = 365 * 2,
-  observation.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], date.format = "\%m/\%d/\%Y", summary = NA,
+  followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.start = 0,
+  observation.window.start.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.duration = 365 * 2,
+  observation.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  date.format = "\%m/\%d/\%Y",
+  summary = NA,
   event.interval.colname = "event.interval",
   gap.days.colname = "gap.days",
-  force.NA.CMA.for.failed.patients = TRUE, parallel.backend = c("none",
-  "multicore", "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)")[1],
-  parallel.threads = "auto", suppress.warnings = FALSE,
-  arguments.that.should.not.be.defined = c(carryover.within.obs.window =
-  FALSE, carryover.into.obs.window = FALSE, carry.only.for.same.medication
-  = FALSE, consider.dosage.change = FALSE), ...)
+  force.NA.CMA.for.failed.patients = TRUE,
+  parallel.backend = c("none", "multicore", "snow", "snow(SOCK)", "snow(MPI)",
+    "snow(NWS)")[1],
+  parallel.threads = "auto",
+  suppress.warnings = FALSE,
+  arguments.that.should.not.be.defined = c(carryover.within.obs.window = FALSE,
+    carryover.into.obs.window = FALSE, carry.only.for.same.medication = FALSE,
+    consider.dosage.change = FALSE),
+  ...
+)
 
-CMA4(data = NULL, ID.colname = NA, event.date.colname = NA,
-  event.duration.colname = NA, followup.window.start = 0,
+CMA4(
+  data = NULL,
+  ID.colname = NA,
+  event.date.colname = NA,
+  event.duration.colname = NA,
+  followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
   followup.window.duration = 365 * 2,
-  followup.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.start = 0,
-  observation.window.start.unit = c("days", "weeks", "months",
-  "years")[1], observation.window.duration = 365 * 2,
-  observation.window.duration.unit = c("days", "weeks", "months",
-  "years")[1], date.format = "\%m/\%d/\%Y", summary = NA,
+  followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.start = 0,
+  observation.window.start.unit = c("days", "weeks", "months", "years")[1],
+  observation.window.duration = 365 * 2,
+  observation.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  date.format = "\%m/\%d/\%Y",
+  summary = NA,
   event.interval.colname = "event.interval",
   gap.days.colname = "gap.days",
-  force.NA.CMA.for.failed.patients = TRUE, parallel.backend = c("none",
-  "multicore", "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)")[1],
-  parallel.threads = "auto", suppress.warnings = FALSE,
-  arguments.that.should.not.be.defined = c(carryover.within.obs.window =
-  FALSE, carryover.into.obs.window = FALSE, carry.only.for.same.medication
-  = FALSE, consider.dosage.change = FALSE), ...)
+  force.NA.CMA.for.failed.patients = TRUE,
+  parallel.backend = c("none", "multicore", "snow", "snow(SOCK)", "snow(MPI)",
+    "snow(NWS)")[1],
+  parallel.threads = "auto",
+  suppress.warnings = FALSE,
+  arguments.that.should.not.be.defined = c(carryover.within.obs.window = FALSE,
+    carryover.into.obs.window = FALSE, carry.only.for.same.medication = FALSE,
+    consider.dosage.change = FALSE),
+  ...
+)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the events used to compute

@@ -4,3 +4,6 @@ doc
 .Rhistory
 .RData
 .Ruserdata
+*.Rd
+
+AdhereR/NAMESPACE

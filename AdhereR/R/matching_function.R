@@ -199,7 +199,7 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #' treatment interruptions (see \code{special.periods.method}).
 #' If \emph{string}, the name of the (\emph{character}) column in \emph{disp.data}
 #' containing the information (\emph{"continue"}, \emph{"discard"}, or \emph{"carryover"})
-#' for each medication class separatly.
+#' for each medication class separately.
 #' @param special.periods.method can be either of \emph{continue}, \emph{discard},
 #' \emph{carryover}, or \emph{custom}. It indicates how to handle durations during special periods.
 #' With \emph{continue}, special periods have no effect on durations and event start dates.
@@ -208,9 +208,10 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #' at the beginning of a special period and a new event with the remaining duration
 #' is created after the end of the end of the special period. With \emph{custom}, the
 #' mapping has to be included in \emph{\code{special.periods.data}}.
-# @param carryover \emph{Logical}, if \code{TRUE} apply carry-over to medications of the
-# same type (according to \code{medication.class.colnames}). Can only be used together with
-# CMA7 and above in combination with \code{carry.only.for.same.medication = TRUE}.
+#' @param carryover \emph{Logical}, if \code{TRUE} apply carry-over to medications of the
+#' same type (according to \code{medication.class.colnames}). Can only be used together with
+#' CMA7 and above in combination with \code{carry.only.for.same.medication = TRUE}.
+#' Currently \emph{not} implemented.
 #' @param date.format A \emph{string} giving the format of the dates used in
 #' the \code{data} and the other parameters; see the \code{format} parameters
 #' of the \code{\link[base]{as.Date}} function for details (NB, this concerns

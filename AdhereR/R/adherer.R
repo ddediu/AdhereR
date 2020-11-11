@@ -6875,15 +6875,18 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' \code{\link[grDevices]{gray.colors}} function)?
 #' @param print.CMA \emph{Logical}, should the CMA values be printed?
 #' @param CMA.cex ... and, if printed, what cex (\emph{numeric}) to use?
-#' @param plot.CMA \emph{Logical}, should the CMA values be represented
-#' graphically?
+#' @param plot.CMA \emph{Logical}, should the distribution of the CMA values
+#' across episodes/sliding windows be plotted? If \code{TRUE} (the default), the
+#' distribution is shown on the left-hand side of the plot, otherwise it is not.
 #' @param plot.CMA.as.histogram \emph{Logical}, should the CMA plot be a
 #' histogram or a (truncated) density plot? Please note that it is TRUE by
 #' deafult for CMA_per_episode and FALSE for CMA_sliding_window, because
 #' usually there are more sliding windows than episodes. Also, the density
-#' estimate canot be estimated for less than three different values.
-#' @param plot.partial.CMAs.as Plot the partial CMAs at all (\code{NULL}), and
-#' if so, how (can be "stacked", "overlapping" or "timeseries").
+#' estimate cannot be estimated for less than three different values.
+#' @param plot.partial.CMAs.as Should the partial CMAs be plotted? Possible values
+#' are "stacked", "overlapping" or "timeseries", or \code{NULL} for no partial
+#' CMA plots. Please note that \code{plot.CMA} and \code{plot.partial.CMAs.as}
+#' are independent of each other.
 #' @param plot.partial.CMAs.as.stacked.col.bars,plot.partial.CMAs.as.stacked.col.border,plot.partial.CMAs.as.stacked.col.text
 #' If plotting the partial CMAs as stacked bars, define their graphical attributes.
 #' @param plot.partial.CMAs.as.timeseries.vspace,plot.partial.CMAs.as.timeseries.start.from.zero,plot.partial.CMAs.as.timeseries.col.dot,plot.partial.CMAs.as.timeseries.col.interval,plot.partial.CMAs.as.timeseries.col.text,plot.partial.CMAs.as.timeseries.interval.type,plot.partial.CMAs.as.timeseries.lwd.interval,plot.partial.CMAs.as.timeseries.alpha.interval,plot.partial.CMAs.as.timeseries.show.0perc,plot.partial.CMAs.as.timeseries.show.100perc

@@ -4,9 +4,15 @@
 \alias{map.event.coords.to.plot}
 \title{Map from event to plot coordinates.}
 \usage{
-map.event.coords.to.plot(x = NA, y = NA, x.is.Date = FALSE,
-  x.date.format = "\%m/\%d/\%Y", adjust.for.earliest.date = TRUE,
-  plot.type = c("baseR", "SVG")[1], suppress.warnings = FALSE)
+map.event.coords.to.plot(
+  x = NA,
+  y = NA,
+  x.is.Date = FALSE,
+  x.date.format = "\%m/\%d/\%Y",
+  adjust.for.earliest.date = TRUE,
+  plot.type = c("baseR", "SVG")[1],
+  suppress.warnings = FALSE
+)
 }
 \arguments{
 \item{x}{The \emph{x} coordinate in the event space, either a \code{number} giving the

@@ -4,7 +4,8 @@
 \name{med.events}
 \alias{med.events}
 \title{Example medication events records for 100 patients.}
-\format{A data frame with 1080 rows and 5 variables:
+\format{
+A data frame with 1080 rows and 5 variables:
 \describe{
   \item{PATIENT_ID}{\emph{integer} here; patient unique identifier. Can also
   be \emph{string}}.
@@ -26,7 +27,8 @@
   may be available in the extraction or computed based on quantity supplied
   (the number of doses prescribed or dispensed on that occasion) and daily
   dosage. All values should be > 0.}
-}}
+}
+}
 \usage{
 med.events
 }

@@ -4,8 +4,7 @@
 \alias{getCallerWrapperLocation}
 \title{getCallerWrapperLocation.}
 \usage{
-getCallerWrapperLocation(callig.platform = c("python3")[1],
-  full.path = FALSE)
+getCallerWrapperLocation(callig.platform = c("python3")[1], full.path = FALSE)
 }
 \arguments{
 \item{callig.platform}{A \emph{string} specifying the desired wrapper.
