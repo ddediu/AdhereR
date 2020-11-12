@@ -813,7 +813,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   # (all the relevant stuff is stored in .GlobalEnv$.plotting.params$.recompute.CMA.old.params (which can be NULL or not defined the first time):
   if( compute.cma.only )
   {
-    # Explicit computation of CMAs (not not for plotting): don't alter the saved parameter values or the cached CMA:
+    # Explicit computation of CMAs (not for plotting): don't alter the saved parameter values or the cached CMA:
     recompute.CMA <- TRUE;
   } else if( # if not defined at all:
              is.null(pp <- .GlobalEnv$.plotting.params$.recompute.CMA.old.params) || # (and cache .GlobalEnv$.plotting.params$.recompute.CMA.old.params as "pp" for later use)

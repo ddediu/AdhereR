@@ -7,3 +7,4 @@ doc
 *.Rd
 
 AdhereR/NAMESPACE
+AdhereR/man/*.Rd

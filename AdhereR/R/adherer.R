@@ -284,7 +284,8 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 #' name of the column in \code{data} containing the start date of the follow-up
 #' window either as the numbers of \code{followup.window.start.unit} units
 #' after the first event (the column must be of type \code{numeric}) or as
-#' actual dates (in which case the column must be of type \code{Date}); if a
+#' actual dates (in which case the column must be of type \code{Date} or a string
+#' that conforms to the format specified in \code{date.format}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
 #' participant's first event; or \code{NA} if not defined.
@@ -498,10 +499,17 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
       return (NULL);
     } else if( !is.na(followup.window.start) && !inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) && !(followup.window.start %in% names(data)) )
     {
-      if( !suppress.warnings ) .report.ewms("The follow-up window start must be either a positive number, a Date, or a valid column name in 'data'!\n", "error", "CMA0", "AdhereR")
-      return (NULL);
+      # See if it can be forced to a valid Date:
+      if( !is.na(followup.window.start) && (is.character(followup.window.start) || is.factor(followup.window.start)) && !is.na(followup.window.start <- as.Date(followup.window.start, format=date.format, optional=TRUE)) )
+      {
+        # Ok, it was apparently successfully converted to Date: nothing else to do...
+      } else
+      {
+        if( !suppress.warnings ) .report.ewms("The follow-up window start must be either a positive number, a Date, or a valid column name in 'data'!\n", "error", "CMA0", "AdhereR")
+        return (NULL);
+      }
     }
-    if( !is.na(followup.window.start.unit) && !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
+    if( !inherits(followup.window.start,"Date") && !is.na(followup.window.start.unit) && !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
     {
       if( !suppress.warnings ) .report.ewms("The follow-up window start unit is not recognized!\n", "error", "CMA0", "AdhereR")
       return (NULL);
@@ -527,10 +535,17 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
       return (NULL);
     } else if( !is.na(observation.window.start) && !inherits(observation.window.start,"Date") && !is.numeric(observation.window.start) && !(observation.window.start %in% names(data)) )
     {
-      if( !suppress.warnings ) .report.ewms("The observation window start must be either a positive number, a Date, or a valid column name in 'data'!\n", "error", "CMA0", "AdhereR")
-      return (NULL);
+      # See if it can be forced to a valid Date:
+      if( !is.na(observation.window.start) && (is.character(observation.window.start) || is.factor(observation.window.start)) && !is.na(observation.window.start <- as.Date(observation.window.start, format=date.format, optional=TRUE)) )
+      {
+        # Ok, it was apparently successfully converted to Date: nothing else to do...
+      } else
+      {
+        if( !suppress.warnings ) .report.ewms("The observation window start must be either a positive number, a Date, or a valid column name in 'data'!\n", "error", "CMA0", "AdhereR")
+        return (NULL);
+      }
     }
-    if( !is.na(observation.window.start.unit) && !(observation.window.start.unit %in% c("days", "weeks", "months", "years") ) )
+    if( !inherits(observation.window.start,"Date") && !is.na(observation.window.start.unit) && !(observation.window.start.unit %in% c("days", "weeks", "months", "years") ) )
     {
       if( !suppress.warnings ) .report.ewms("The observation window start unit is not recognized!\n", "error", "CMA0", "AdhereR")
       return (NULL);
@@ -2718,7 +2733,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' name of the column in \code{data} containing the start date of the follow-up
 #' window either as the numbers of \code{followup.window.start.unit} units after
 #' the first event (the column must be of type \code{numeric}) or as actual
-#' dates (in which case the column must be of type \code{Date}); if a
+#' dates (in which case the column must be of type \code{Date} or a string
+#' that conforms to the format specified in \code{date.format}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
 #' participant's first event; or \code{NA} if not defined.
@@ -2927,6 +2943,8 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   summary=summary,
                   suppress.warnings=suppress.warnings);
   if( is.null(ret.val) ) return (NULL); # some serious error upstream
+  # The followup.window.start and observation.window.start might have been converted to Date:
+  followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -3326,7 +3344,8 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' name of the column in \code{data} containing the start date of the follow-up
 #' window either as the numbers of \code{followup.window.start.unit} units after
 #' the first event (the column must be of type \code{numeric}) or as actual
-#' dates (in which case the column must be of type \code{Date}); if a
+#' dates (in which case the column must be of type \code{Date} or a string
+#' that conforms to the format specified in \code{date.format}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
 #' participant's first event; or \code{NA} if not defined.
@@ -3535,6 +3554,8 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   summary=summary,
                   suppress.warnings=suppress.warnings);
   if( is.null(ret.val) ) return (NULL); # some error upstream
+  # The followup.window.start and observation.window.start might have been converted to Date:
+  followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -3929,7 +3950,8 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' name of the column in \code{data} containing the start date of the follow-up
 #' window either as the numbers of \code{followup.window.start.unit} units after
 #' the first event (the column must be of type \code{numeric}) or as actual
-#' dates (in which case the column must be of type \code{Date}); if a
+#' dates (in which case the column must be of type \code{Date} or a string
+#' that conforms to the format specified in \code{date.format}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
 #' participant's first event; or \code{NA} if not defined.
@@ -4145,6 +4167,8 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   summary=summary,
                   suppress.warnings=suppress.warnings);
   if( is.null(ret.val) ) return (NULL); # some error upstream
+  # The followup.window.start and observation.window.start might have been converted to Date:
+  followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -4337,7 +4361,8 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' name of the column in \code{data} containing the start date of the follow-up
 #' window either as the numbers of \code{followup.window.start.unit} units after
 #' the first event (the column must be of type \code{numeric}) or as actual
-#' dates (in which case the column must be of type \code{Date}); if a
+#' dates (in which case the column must be of type \code{Date} or a string
+#' that conforms to the format specified in \code{date.format}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
 #' participant's first event; or \code{NA} if not defined.
@@ -4553,7 +4578,8 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   summary=summary,
                   suppress.warnings=suppress.warnings);
   if( is.null(ret.val) ) return (NULL); # some error upstream
-
+  # The followup.window.start and observation.window.start might have been converted to Date:
+  followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -4750,7 +4776,8 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' name of the column in \code{data} containing the start date of the follow-up
 #' window either as the numbers of \code{followup.window.start.unit} units after
 #' the first event (the column must be of type \code{numeric}) or as actual
-#' dates (in which case the column must be of type \code{Date}); if a
+#' dates (in which case the column must be of type \code{Date} or a string
+#' that conforms to the format specified in \code{date.format}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
 #' participant's first event; or \code{NA} if not defined.
@@ -4959,7 +4986,8 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   summary=summary,
                   suppress.warnings=suppress.warnings);
   if( is.null(ret.val) ) return (NULL); # some error upstream
-
+  # The followup.window.start and observation.window.start might have been converted to Date:
+  followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -5210,7 +5238,8 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' name of the column in \code{data} containing the start date of the follow-up
 #' window either as the numbers of \code{followup.window.start.unit} units after
 #' the first event (the column must be of type \code{numeric}) or as actual
-#' dates (in which case the column must be of type \code{Date}); if a
+#' dates (in which case the column must be of type \code{Date} or a string
+#' that conforms to the format specified in \code{date.format}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
 #' participant's first event; or \code{NA} if not defined.
@@ -5426,6 +5455,8 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   summary=summary,
                   suppress.warnings=suppress.warnings);
   if( is.null(ret.val) ) return (NULL); # some error upstream
+  # The followup.window.start and observation.window.start might have been converted to Date:
+  followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -5656,7 +5687,8 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' name of the column in \code{data} containing the start date of the follow-up
 #' window either as the numbers of \code{followup.window.start.unit} units after
 #' the first event (the column must be of type \code{numeric}) or as actual
-#' dates (in which case the column must be of type \code{Date}); if a
+#' dates (in which case the column must be of type \code{Date} or a string
+#' that conforms to the format specified in \code{date.format}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
 #' participant's first event; or \code{NA} if not defined.
@@ -5865,6 +5897,8 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   summary=summary,
                   suppress.warnings=suppress.warnings);
   if( is.null(ret.val) ) return (NULL); # some error upstream
+  # The followup.window.start and observation.window.start might have been converted to Date:
+  followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -6145,7 +6179,8 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' name of the column in \code{data} containing the start date of the follow-up
 #' window either as the numbers of \code{followup.window.start.unit} units after
 #' the first event (the column must be of type \code{numeric}) or as actual
-#' dates (in which case the column must be of type \code{Date}); if a
+#' dates (in which case the column must be of type \code{Date} or a string
+#' that conforms to the format specified in \code{date.format}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
 #' participant's first event; or \code{NA} if not defined.
@@ -6414,6 +6449,8 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                   suppress.warnings=suppress.warnings,
                   summary=NA);
   if( is.null(ret.val) ) return (NULL);
+  # The followup.window.start and observation.window.start might have been converted to Date:
+  followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
   ## retain only necessary columns of data
   #data <- data[,c(ID.colname,
@@ -7126,7 +7163,8 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' name of the column in \code{data} containing the start date of the follow-up
 #' window either as the numbers of \code{followup.window.start.unit} units after
 #' the first event (the column must be of type \code{numeric}) or as actual
-#' dates (in which case the column must be of type \code{Date}); if a
+#' dates (in which case the column must be of type \code{Date} or a string
+#' that conforms to the format specified in \code{date.format}); if a
 #' \emph{number} it is the number of time units defined in the
 #' \code{followup.window.start.unit} parameter after the begin of the
 #' participant's first event; or \code{NA} if not defined.
@@ -7445,7 +7483,8 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                   suppress.warnings=suppress.warnings,
                   summary=NA);
   if( is.null(ret.val) ) return (NULL);
-
+  # The followup.window.start and observation.window.start might have been converted to Date:
+  followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,

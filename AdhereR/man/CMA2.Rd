@@ -82,7 +82,8 @@ the actual start date of the follow-up window; if a \emph{string} it is the
 name of the column in \code{data} containing the start date of the follow-up
 window either as the numbers of \code{followup.window.start.unit} units after
 the first event (the column must be of type \code{numeric}) or as actual
-dates (in which case the column must be of type \code{Date}); if a
+dates (in which case the column must be of type \code{Date} or a string
+that conforms to the format specified in \code{date.format}); if a
 \emph{number} it is the number of time units defined in the
 \code{followup.window.start.unit} parameter after the begin of the
 participant's first event; or \code{NA} if not defined.}

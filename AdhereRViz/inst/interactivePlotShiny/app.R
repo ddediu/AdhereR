@@ -194,10 +194,10 @@ ui <- fluidPage(
                                                                 conditionalPanel(
                                                                   condition = "(input.followup_window_start_unit == 'calendar date')",
                                                                   # Select an actual date
-                                                                  div(title='Select the actual start date of the follow-up window (possibly using a calendar widget)',
+                                                                  div(title='Select the actual start date of the follow-up window (possibly using a calendar widget in the format year-month-day)',
                                                                       dateInput(inputId="followup_window_start_date",
                                                                                 label="FUW start",
-                                                                                value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
+                                                                                value=NULL, format="yyyy-mm-dd", startview="month", weekstart=1))
                                                                 ),
 
                                                                 ## If follow-up window unit is "column in dataset"
@@ -252,10 +252,10 @@ ui <- fluidPage(
                                                                 conditionalPanel(
                                                                   condition = "(input.observation_window_start_unit == 'calendar date')",
                                                                   # Select an actual date
-                                                                  div(title='Select the actual start date of the observation window (possibly using a calendar widget)',
+                                                                  div(title='Select the actual start date of the observation window (possibly using a calendar widget in the format year-month-day)',
                                                                       dateInput(inputId="observation_window_start_date",
                                                                                 label="OW start",
-                                                                                value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
+                                                                                value=NULL, format="yyyy-mm-dd", startview="month", weekstart=1))
                                                                 ),
 
                                                                 # If observation window unit is not "calendar date"
@@ -2020,18 +2020,18 @@ server <- function(input, output, session)
                                                          #carryover.into.obs.window=FALSE,
                                                          carry.only.for.same.medication=input$carry_only_for_same_medication,
                                                          consider.dosage.change=input$consider_dosage_change,
-                                                         followup.window.start=ifelse(input$followup_window_start_unit== "calendar date",
+                                                         followup.window.start=ifelse(input$followup_window_start_unit == "calendar date",
                                                                                       as.Date(input$followup_window_start_date, format="%Y-%m-%d"),
                                                                                       as.numeric(input$followup_window_start_no_units)),
-                                                         followup.window.start.unit=ifelse(input$followup_window_start_unit== "calendar date",
+                                                         followup.window.start.unit=ifelse(input$followup_window_start_unit == "calendar date",
                                                                                            "days",
                                                                                            input$followup_window_start_unit),
                                                          followup.window.duration=as.numeric(input$followup_window_duration),
                                                          followup.window.duration.unit=input$followup_window_duration_unit,
-                                                         observation.window.start=ifelse(input$observation_window_start_unit== "calendar date",
+                                                         observation.window.start=ifelse(input$observation_window_start_unit == "calendar date",
                                                                                          as.Date(input$observation_window_start_date, format="%Y-%m-%d"),
                                                                                          as.numeric(input$observation_window_start_no_units)),
-                                                         observation.window.start.unit=ifelse(input$observation_window_start_unit== "calendar date",
+                                                         observation.window.start.unit=ifelse(input$observation_window_start_unit == "calendar date",
                                                                                               "days",
                                                                                               input$observation_window_start_unit),
                                                          observation.window.duration=as.numeric(input$observation_window_duration),
