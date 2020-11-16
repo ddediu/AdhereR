@@ -2552,7 +2552,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             {
               # Events are vertically displaced:
               adh.y <- mean(s.events);
-              adh.h <- 1;
+              adh.h <- ifelse(length(s.events) < 2, 0.5, ifelse(length(s.events) == 2, 0.75, 1.0));
             } else
             {
               # Events are all on a single line:
