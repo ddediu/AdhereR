@@ -2493,7 +2493,7 @@ server <- function(input, output, session)
 
     # The parameters:
     r_code <<- paste0(r_code, "data=.data.for.selected.patients.,\n");
-    if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", "CMA=",input$cma_to_compute_within_complex,",\n");
+    if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", 'CMA="',input$cma_to_compute_within_complex,'",\n');
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # not relevant for a particular CMA type, we\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # nevertheless pass them as they will be ignored)\n");
@@ -2621,7 +2621,7 @@ server <- function(input, output, session)
                                                                           output=NULL),
                                                      fixed=TRUE)),
                                        #div(HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
-                                           style="max-height: 50vh; overflow: auto;")),
+                                           style="max-height: 50vh; overflow-x: scroll; overflow-y: scroll;")), # overflow: auto;
                                    title=HTML("The <code>R</code> code for the current plot..."),
                                    footer = tagList(actionButton("copy_code", "Copy to clipboard", icon=icon("copy", lib="glyphicon")),
                                                     modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
