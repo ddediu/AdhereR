@@ -4,8 +4,10 @@
 \alias{get.legend.plotting.area}
 \title{Get the legend plotting area.}
 \usage{
-get.legend.plotting.area(plot.type = c("baseR", "SVG")[1],
-  suppress.warnings = FALSE)
+get.legend.plotting.area(
+  plot.type = c("baseR", "SVG")[1],
+  suppress.warnings = FALSE
+)
 }
 \arguments{
 \item{plot.type}{Can be either "baseR" or "SVG" and specifies to which type of plotting

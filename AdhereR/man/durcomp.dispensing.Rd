@@ -4,7 +4,8 @@
 \name{durcomp.dispensing}
 \alias{durcomp.dispensing}
 \title{Example dispensing events for 16 patients.}
-\format{A data frame with 1794 rows and 6 variables:
+\format{
+A data frame with 1794 rows and 6 variables:
 \describe{
   \item{ID}{\emph{integer} here; patient unique identifier. Can also
   be \emph{string}.}
@@ -22,7 +23,8 @@
   dispensing events.}
   \item{TOTAL.DOSE}{\emph{numeric}; the total dispensed dose supplied at this
   medication event (e.g., \code{5000} for 10 tables of 500 mg).}
-}}
+}
+}
 \usage{
 durcomp.dispensing
 }

@@ -4,8 +4,7 @@
 \alias{get.plotted.events}
 \title{Get info about the plotted events.}
 \usage{
-get.plotted.events(plot.type = c("baseR", "SVG")[1],
-  suppress.warnings = FALSE)
+get.plotted.events(plot.type = c("baseR", "SVG")[1], suppress.warnings = FALSE)
 }
 \arguments{
 \item{plot.type}{Can be either "baseR" or "SVG" and specifies to which type of plotting

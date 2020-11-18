@@ -75,7 +75,8 @@ ui <- fluidPage(
 
   # JavaScript ----
   shinyjs::useShinyjs(),
-  shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}"),
+  shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}",
+                         functions=c("shinyjs.scroll_cma_compute_log")),
   #shinyjs::extendShinyjs(text="shinyjs.show_hide_sections = function() {$('#follow_up_folding_bits').toggle();"),
 
   # APP TITLE ----
@@ -193,10 +194,10 @@ ui <- fluidPage(
                                                                 conditionalPanel(
                                                                   condition = "(input.followup_window_start_unit == 'calendar date')",
                                                                   # Select an actual date
-                                                                  div(title='Select the actual start date of the follow-up window (possibly using a calendar widget)',
+                                                                  div(title='Select the actual start date of the follow-up window (possibly using a calendar widget in the format year-month-day)',
                                                                       dateInput(inputId="followup_window_start_date",
                                                                                 label="FUW start",
-                                                                                value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
+                                                                                value=NULL, format="yyyy-mm-dd", startview="month", weekstart=1))
                                                                 ),
 
                                                                 ## If follow-up window unit is "column in dataset"
@@ -251,10 +252,10 @@ ui <- fluidPage(
                                                                 conditionalPanel(
                                                                   condition = "(input.observation_window_start_unit == 'calendar date')",
                                                                   # Select an actual date
-                                                                  div(title='Select the actual start date of the observation window (possibly using a calendar widget)',
+                                                                  div(title='Select the actual start date of the observation window (possibly using a calendar widget in the format year-month-day)',
                                                                       dateInput(inputId="observation_window_start_date",
                                                                                 label="OW start",
-                                                                                value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
+                                                                                value=NULL, format="yyyy-mm-dd", startview="month", weekstart=1))
                                                                 ),
 
                                                                 # If observation window unit is not "calendar date"
@@ -542,7 +543,7 @@ ui <- fluidPage(
                                                                                                    value=TRUE, status="primary", right=TRUE)),
 
                                                                   conditionalPanel(
-                                                                    condition="input.cma_class != 'simple' && input.plot_cma",
+                                                                    condition="input.cma_class != 'simple'",
 
                                                                     div(title='Show the "partial" CMA estimates as stacked bars?',
                                                                         shinyWidgets::materialSwitch(inputId="plot_cma_stacked",
@@ -2019,18 +2020,14 @@ server <- function(input, output, session)
                                                          #carryover.into.obs.window=FALSE,
                                                          carry.only.for.same.medication=input$carry_only_for_same_medication,
                                                          consider.dosage.change=input$consider_dosage_change,
-                                                         followup.window.start=ifelse(input$followup_window_start_unit== "calendar date",
-                                                                                      as.Date(input$followup_window_start_date, format="%Y-%m-%d"),
-                                                                                      as.numeric(input$followup_window_start_no_units)),
-                                                         followup.window.start.unit=ifelse(input$followup_window_start_unit== "calendar date",
+                                                         followup.window.start=if(input$followup_window_start_unit == "calendar date"){as.Date(input$followup_window_start_date, format="%Y-%m-%d")} else {as.numeric(input$followup_window_start_no_units)},
+                                                         followup.window.start.unit=ifelse(input$followup_window_start_unit == "calendar date",
                                                                                            "days",
                                                                                            input$followup_window_start_unit),
                                                          followup.window.duration=as.numeric(input$followup_window_duration),
                                                          followup.window.duration.unit=input$followup_window_duration_unit,
-                                                         observation.window.start=ifelse(input$observation_window_start_unit== "calendar date",
-                                                                                         as.Date(input$observation_window_start_date, format="%Y-%m-%d"),
-                                                                                         as.numeric(input$observation_window_start_no_units)),
-                                                         observation.window.start.unit=ifelse(input$observation_window_start_unit== "calendar date",
+                                                         observation.window.start=if(input$observation_window_start_unit == "calendar date"){as.Date(input$observation_window_start_date, format="%Y-%m-%d")} else {as.numeric(input$observation_window_start_no_units)},
+                                                         observation.window.start.unit=ifelse(input$observation_window_start_unit == "calendar date",
                                                                                               "days",
                                                                                               input$observation_window_start_unit),
                                                          observation.window.duration=as.numeric(input$observation_window_duration),
@@ -2496,7 +2493,7 @@ server <- function(input, output, session)
 
     # The parameters:
     r_code <<- paste0(r_code, "data=.data.for.selected.patients.,\n");
-    if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", "CMA=",input$cma_to_compute_within_complex,",\n");
+    if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", 'CMA="',input$cma_to_compute_within_complex,'",\n');
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # not relevant for a particular CMA type, we\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # nevertheless pass them as they will be ignored)\n");
@@ -2624,7 +2621,7 @@ server <- function(input, output, session)
                                                                           output=NULL),
                                                      fixed=TRUE)),
                                        #div(HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
-                                           style="max-height: 50vh; overflow: auto;")),
+                                           style="max-height: 50vh; overflow-x: scroll; overflow-y: scroll;")), # overflow: auto;
                                    title=HTML("The <code>R</code> code for the current plot..."),
                                    footer = tagList(actionButton("copy_code", "Copy to clipboard", icon=icon("copy", lib="glyphicon")),
                                                     modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
@@ -2738,7 +2735,7 @@ server <- function(input, output, session)
     }
   })
 
-  # In-memory dataset: list the columns and upate the selections ----
+  # In-memory dataset: list the columns and update the selections ----
   observeEvent(input$dataset_from_memory,
   {
     # Disconnect any pre-existing database connections:
@@ -2786,13 +2783,14 @@ server <- function(input, output, session)
     }
 
     n.vals.to.show <-3;
-    x <- names(.GlobalEnv$.plotting.params$.inmemory.dataset);
-    x.info <- vapply(1:ncol(.GlobalEnv$.plotting.params$.inmemory.dataset),
+    d <- as.data.frame(.GlobalEnv$.plotting.params$.inmemory.dataset);
+    x <- names(d);
+    x.info <- vapply(1:ncol(d),
                      function(i) paste0("(",
-                                        class(.GlobalEnv$.plotting.params$.inmemory.dataset[,i]),
+                                        class(d[,i]),
                                         ": ",
-                                        paste0(.GlobalEnv$.plotting.params$.inmemory.dataset[1:min(n.vals.to.show,nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)),i],collapse=", "),
-                                        if(nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)>n.vals.to.show) "...",
+                                        paste0(d[1:min(n.vals.to.show,nrow(d)),i],collapse=", "),
+                                        if(nrow(d)>n.vals.to.show) "...",
                                         ")"),
                      character(1));
 
@@ -2992,6 +2990,7 @@ server <- function(input, output, session)
     # More advanced checks of the column types:
     if( inherits(d, "data.frame") ) # for data.frame's
     {
+      d <- as.data.frame(d); # force it to a data.frame to avoid unexpected behaviours from derived classes
       if( inherits(d[,event.date.colname], "Date") )
       {
         # It's a column of Dates: perfect!

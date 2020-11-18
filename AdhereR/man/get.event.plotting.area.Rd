@@ -4,8 +4,10 @@
 \alias{get.event.plotting.area}
 \title{Get the actual plotting area.}
 \usage{
-get.event.plotting.area(plot.type = c("baseR", "SVG")[1],
-  suppress.warnings = FALSE)
+get.event.plotting.area(
+  plot.type = c("baseR", "SVG")[1],
+  suppress.warnings = FALSE
+)
 }
 \arguments{
 \item{plot.type}{Can be either "baseR" or "SVG" and specifies to which type of plotting

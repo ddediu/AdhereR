@@ -63,6 +63,7 @@ test_that("output format is correct", {
                                       "DATE.DISP",
                                       "TOTAL.DOSE",
                                       "DAILY.DOSE",
+                                      "EVENT.ID",
                                       "DISP.START",
                                       "DURATION",
                                       "episode.start",
@@ -86,6 +87,7 @@ test_that("output format is correct", {
   expect_is(test_results$tot.presc.interruptions, "integer") # number of treatment interruptions are numeric
   expect_is(test_results$tot.dosage.changes, "numeric") # number of dosage changes are numeric
   expect_is(test_results$CARRYOVER.DURATION, "numeric") # carryover duration numeric
+  expect_is(test_results$EVENT.ID, "numeric") # carryover duration numeric
 })
 
 # Test process_patient function
@@ -107,6 +109,7 @@ test_that("all patients are processed", {
                                                force.presc.renew = TRUE,
                                                split.on.dosage.change = TRUE,
                                                trt.interruption = "continue",
+                                               carryover = FALSE,
                                                suppress.warnings = FALSE,
                                                return.data.table = TRUE,
                                                progress.bar = FALSE)
@@ -279,7 +282,7 @@ test_that("all dispensing events for one patient are processed", {
 
   test_results <- test_results_list$event_durations
 
-  expect_equal(dim(test_results), c(104,15)) #correct number of lines
+  expect_equal(dim(test_results), c(104,16)) #correct number of lines
   expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 3), 3274.548) #correct sum of durations
   expect_equal(round(min(test_results$DURATION, na.rm=TRUE), 0), 7) #correct minimum of durations
   expect_equal(round(mean(test_results$DURATION, na.rm=TRUE), 4), 32.1034) #correct mean of durations
@@ -371,7 +374,7 @@ test_that("enforcing of prescription reneval can be turned off", {
   test_results <- test_results_list$event_durations
 
   expect_equal(as.character(mean(test_results$episode.start, na.rm = T)), "2056-09-03")
-  expect_equal(dim(test_results), c(104,13))
+  expect_equal(dim(test_results), c(104,14))
 })
 
 # Test with split.on.dosage.change = FALSE
@@ -398,7 +401,7 @@ test_that("consideration of dosage changes can be turned off", {
 
   test_results <- test_results_list$event_durations
 
-  expect_equal(dim(test_results), c(221,13))
+  expect_equal(dim(test_results), c(231,14))
   expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 6854) #correct sum of durations
 })
 
@@ -457,10 +460,10 @@ test_that("events are processed correctly with trt.interrupttion = carryover", {
 })
 
 test_that("events are processed correctly with carryover = TRUE", {
-disp.data = data.table(ID = c(1,1),
-                       ATC = c("A01", "A01"),
-                       DATE.DISP = c("2000-01-01", "2000-02-01"),
-                       TOTAL.DOSE = c(60, 60))
+disp.data = data.table(ID = c(1,1,1,1),
+                       ATC = c("A01", "A01", "A01", "A01"),
+                       DATE.DISP = c("2000-01-01", "2000-02-01", "2000-03-01", "2000-04-01"),
+                       TOTAL.DOSE = c(60, 30, 60, 60))
 
 presc.data = data.table(ID = c(1),
                         ATC = c("A01"),
@@ -469,14 +472,14 @@ presc.data = data.table(ID = c(1),
                         PRESC.DURATION = c(NA))
 
 special_episodes <- data.table(ID = c(1,1,1,1),
-                               DATE.IN = c("2000-01-15",
-                                           "2000-01-25",
-                                           "2000-03-01",
-                                           "2000-03-05"),
-                               DATE.OUT = c("2000-02-20",
-                                            "2000-02-05",
-                                            "2000-03-15",
-                                            "2000-03-10"),
+                               DATE.IN = c("2000-03-15",
+                                           "2000-03-25",
+                                           "2000-05-01",
+                                           "2000-05-05"),
+                               DATE.OUT = c("2000-04-20",
+                                            "2000-04-05",
+                                            "2000-05-15",
+                                            "2000-05-10"),
                                TYPE = c("HOSP",
                                         "REHAB",
                                         "HOLIDAY",
@@ -489,8 +492,8 @@ special_episodes <- data.table(ID = c(1,1,1,1),
 # compute event durations
 event_durations_list <- compute_event_durations(disp.data = disp.data,
                                                 presc.data = presc.data,
-                                                # special.periods.data = special_episodes,
-                                                # special.periods.method = "CUSTOM",
+                                                special.periods.data = special_episodes,
+                                                special.periods.method = "CUSTOM",
                                                 ID.colname = "ID",
                                                 presc.date.colname = "DATE.PRESC",
                                                 disp.date.colname = "DATE.DISP",
@@ -504,12 +507,21 @@ event_durations_list <- compute_event_durations(disp.data = disp.data,
                                                 force.presc.renew = TRUE,
                                                 split.on.dosage.change = TRUE,
                                                 trt.interruption = "carryover",
-                                                #carryover = TRUE,
+                                                carryover = TRUE,
                                                 suppress.warnings = FALSE,
                                                 return.data.table = TRUE,
                                                 progress.bar = FALSE)
 
-expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 3286) #correct sum of durations
+test_results <- event_durations_list$event_durations
+
+expect_equal(round(sum(test_results$DURATION, na.rm=TRUE),0), 210) #correct sum of durations
+expect_equal(as.character(test_results$DISP.START), c("2000-01-01", #correct start dates
+                                                      "2000-03-01",
+                                                      "2000-03-25",
+                                                      "2000-04-20",
+                                                      "2000-04-25",
+                                                      "2000-05-10",
+                                                      "2000-06-29"))
 })
 
 #########################################################################################
@@ -565,7 +577,8 @@ test_that("output format for prune_event_durations is correct", {
                                       "tot.presc.interruptions",
                                       "tot.dosage.changes",
                                       "CARRYOVER.DURATION",
-                                      ".prune.event") )
+                                      ".prune.event",
+                                      "EVENT.ID") )
   expect_is(test_results$ID, "numeric") # ID's are integers
   expect_is(test_results$ATC.CODE, "character") # DCIs are characters
   expect_is(test_results$UNIT, "character") # Units are characters
@@ -582,6 +595,7 @@ test_that("output format for prune_event_durations is correct", {
   expect_is(test_results$tot.dosage.changes, "numeric") # number of dosage changes are numeric
   expect_is(test_results$CARRYOVER.DURATION, "numeric") # carryover duration numeric
   expect_is(test_results$.prune.event, "numeric") # .prune.event is numeric
+  expect_is(test_results$EVENT.ID, "numeric") # EVENT.ID is numeric
 })
 
 # correct handling
@@ -614,7 +628,7 @@ test_that("prune_event_durations correctly flags for pruning", {
                                         days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods
                                         keep.all = TRUE)
 
-  expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 166) #correct sum of pruned events
+  expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 216) #correct sum of pruned events
 })
 
 # only dosage changes
@@ -647,7 +661,7 @@ test_results <- prune_event_durations(test_results_list,
                                       days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods
                                       keep.all = TRUE)
 
-expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 3) #correct sum of pruned events
+expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 1) #correct sum of pruned events
 
 })
 
@@ -681,7 +695,7 @@ test_results <- prune_event_durations(test_results_list,
                                        days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods
                                        keep.all = TRUE)
 
-expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 5) #correct sum of pruned events
+expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 10) #correct sum of pruned events
 })
 
 # only treatment interruptions
@@ -714,7 +728,7 @@ test_results <- prune_event_durations(test_results_list,
                                       days.within.out.date.2 = 30, # flag carryover durations if there are no new events within 30 days after the end of special periods
                                       keep.all = TRUE)
 
-expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 2) #correct sum of pruned events
+expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 4) #correct sum of pruned events
 })
 
 #########################################################################################
@@ -766,6 +780,7 @@ test_that("output format for cover_special_periods is correct", {
                                       "DATE.DISP",
                                       "TOTAL.DOSE",
                                       "DAILY.DOSE",
+                                      "EVENT.ID",
                                       "DISP.START",
                                       "DURATION",
                                       "episode.start",
@@ -789,6 +804,7 @@ test_that("output format for cover_special_periods is correct", {
   expect_is(test_results$tot.presc.interruptions, "integer") # number of treatment interruptions are numeric
   expect_is(test_results$tot.dosage.changes, "numeric") # number of dosage changes are numeric
   expect_is(test_results$CARRYOVER.DURATION, "numeric") # carryover duration numeric
+  expect_is(test_results$EVENT.ID, "numeric") # EVENT.ID is numeric
 })
 
 test_that("dimensions for cover_special_periods is correct", {
@@ -825,7 +841,7 @@ test_that("dimensions for cover_special_periods is correct", {
                                         date.format = "%Y-%m-%d",
                                         return.data.table = TRUE)
 
-  expect_equal(dim(test_results), c(23,15))
+  expect_equal(dim(test_results), c(23,16))
   expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 0), 439) #correct sum of durations
   expect_equal(round(min(test_results$DURATION, na.rm=TRUE), 0), 1) #correct minimum of durations
   expect_equal(round(mean(test_results$DURATION, na.rm=TRUE), 3), 19.087) #correct mean of durations
@@ -911,6 +927,8 @@ test_that("dimensions for time_to_initiation is correct", {
   # get event durations and prescription episodes
   event_durations <- copy(event_durations_list$event_durations)
   prescription_episodes <- copy(event_durations_list$prescription_episodes)
+
+  event_durations <- event_durations[!is.na(DURATION)]
 
   test_results <- time_to_initiation(presc.data = prescription_episodes,
                                      disp.data = event_durations,

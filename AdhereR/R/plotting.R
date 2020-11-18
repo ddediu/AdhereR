@@ -981,17 +981,17 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        cex=1.0, cex.axis=0.75, cex.lab=1.0, cex.title=1.5,   # various graphical params
                        show.cma=TRUE,                         # show the CMA type
                        xlab=c("dates"="Date", "days"="Days"), # Vector of x labels to show for the two types of periods, or a single value for both, or NULL for nothing
-                       ylab=c("withoutCMA"="patient", "withCMA"="patient (& CMA)"), # Vector of y labels to show without and with CMA estimates, or a single value for both, or NULL ofr nonthing
-                       title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nonthing
+                       ylab=c("withoutCMA"="patient", "withCMA"="patient (& CMA)"), # Vector of y labels to show without and with CMA estimates, or a single value for both, or NULL for nothing
+                       title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nothing
                        col.cats=rainbow,                      # single color or a function mapping the categories to colors
                        unspecified.category.label="drug",     # the label of the unspecified category of medication
-                       medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
+                       medication.groups=NULL,                # optionally, the groups of medications (implicitly all are part of the same group)
                        lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                        show.event.intervals=TRUE,             # show the actual prescription intervals
                        plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                        print.dose=FALSE, cex.dose=0.75, print.dose.col="black", print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                        plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
-                       col.na="lightgray",                    # color for mising data
+                       col.na="lightgray",                    # color for missing data
                        col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
                        print.CMA=TRUE, CMA.cex=0.50, # print CMA next to the participant's ID?
                        plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
@@ -1700,7 +1700,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
 
     vert.space.cmas <- vert.space.cmas +
-      ifelse(plot.CMA && has.estimated.CMA,
+      ifelse(has.estimated.CMA,
              (nrow(cmas)+length(patids)) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
                3 * length(patids) * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
                plot.partial.CMAs.as.timeseries.vspace * length(patids) * as.numeric("timeseries" %in% plot.partial.CMAs.as),
@@ -1928,7 +1928,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
     # Minimum plot dimensions:
     if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
-        abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * (vert.space.events + ifelse(is.cma.TS.or.SW && plot.CMA && has.estimated.CMA, nrow(cmas), 0)) )
+        abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * (vert.space.events + ifelse(is.cma.TS.or.SW && has.estimated.CMA, nrow(cmas), 0)) )
     {
       .report.ewms(paste0("Plotting area is too small (it must be at least ",
                      min.plot.size.in.characters.horiz,
@@ -1937,7 +1937,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                      " characters per patient, but now it is only ",
                      round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
                      " x ",
-                     round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (vert.space.events + ifelse(is.cma.TS.or.SW && plot.CMA && has.estimated.CMA, nrow(cmas), 0))),1),
+                     round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (vert.space.events + ifelse(is.cma.TS.or.SW && has.estimated.CMA, nrow(cmas), 0))),1),
                      ")!\n"), "error", ".plot.CMAs", "AdhereR");
       par(old.par); # restore graphical params
       #assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
@@ -2245,7 +2245,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       # Vertical space needed by this patient for the events and overall:
       vspace.needed.events <- ifelse(plot.events.vertically.displaced, length(s.events), 1);
       vspace.needed.total  <- vspace.needed.events +
-        ifelse(plot.CMA && has.estimated.CMA && adh.plot.space[2] > 0,
+        ifelse(has.estimated.CMA && adh.plot.space[2] > 0,
                (length(s.cmas)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
                  3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
                  plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
@@ -2505,7 +2505,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           # The non-missing CMA values:
           adh <- na.omit(cmas[s.cmas,"CMA"]);
 
-          # Scale the CMA (itself or density) in such a way that if within 0..1 stays within 0..1 but scales if it goes outside this interval to accomodate it
+          # Scale the CMA (itself or density) in such a way that if within 0..1 stays within 0..1 but scales if it goes outside this interval to accommodate it
           if( plot.CMA.as.histogram )
           {
             # Plot CMA as histogram (or nothing, if too little data):
@@ -2552,7 +2552,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             {
               # Events are vertically displaced:
               adh.y <- mean(s.events);
-              adh.h <- 1;
+              adh.h <- ifelse(length(s.events) < 2, 0.5, ifelse(length(s.events) == 2, 0.75, 1.0));
             } else
             {
               # Events are all on a single line:
@@ -2938,7 +2938,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       ##
 
       # Draw its subperiods (if so requested, meaningful and possible):
-      if( is.cma.TS.or.SW && plot.CMA && has.estimated.CMA && adh.plot.space[2] > 0 )
+      if( is.cma.TS.or.SW && has.estimated.CMA )
       {
         if( length(s.cmas) > 0 && !all(is.na(cmas$CMA[s.cmas])) )
         {
@@ -3545,7 +3545,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   ##
 
   # Mark the drawing area for the CMAs:
-  if( plot.CMA && has.estimated.CMA && adh.plot.space[2] > 0 )
+  if( has.estimated.CMA && adh.plot.space[2] > 0 )
   {
     if( is.cma.TS.or.SW )
     {
