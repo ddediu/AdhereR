@@ -2508,9 +2508,9 @@ create_test_database.SQL_db <- function(x)
   if( is.null(sqlQ(x, query=paste0("CREATE TABLE ",qfq_geta(x, 'name', 'ev')," ( ",
                                    qs_geta(x, 'patid', 'ev'),    " VARCHAR(256) NOT NULL, ",
                                    qs_geta(x, 'date', 'ev'),     " DATE NOT NULL, ",
-                                   qs_geta(x, 'perday', 'ev'),   " INT NOT NULL, ",
+                                   qs_geta(x, 'perday', 'ev'),   " FLOAT NOT NULL, ",
                                    qs_geta(x, 'category', 'ev'), " VARCHAR(1024) NULL DEFAULT NULL, ",
-                                   qs_geta(x, 'duration', 'ev'), " INT NULL DEFAULT NULL );"),
+                                   qs_geta(x, 'duration', 'ev'), " FLOAT NULL DEFAULT NULL );"),
                    err_msg=paste0("Error creating the events table '",geta(x, 'name', 'ev'),"'!\n"), just_execute=TRUE)) ) return (NULL);
   # Fill it in one by one (for some reason, saving the whole data.frame doesn't seems to be working):
   for( i in 1:nrow(d) )
@@ -2653,8 +2653,8 @@ create_test_database.SQL_db <- function(x)
                                    qs_geta(x, 'patid', 'pe'),    " VARCHAR(256) NOT NULL, ",
                                    qs_geta(x, 'epid', 'pe'),     " INT NOT NULL, ",
                                    qs_geta(x, 'start', 'pe'),    " DATE NOT NULL, ",
-                                   qs_geta(x, 'gap', 'pe'),      " INT NULL DEFAULT NULL, ",
-                                   qs_geta(x, 'duration', 'pe'), " INT NULL DEFAULT NULL, ",
+                                   qs_geta(x, 'gap', 'pe'),      " FLOAT NULL DEFAULT NULL, ",
+                                   qs_geta(x, 'duration', 'pe'), " FLOAT NULL DEFAULT NULL, ",
                                    qs_geta(x, 'end', 'pe'),      " DATE NOT NULL, ",
                                    qs_geta(x, 'estim', 'pe'),    " FLOAT NULL DEFAULT NULL );"),
                    err_msg=paste0("Error creating the per episode results table '",geta(x, 'name', 'pe'),"'!\n"), just_execute=TRUE)) ) return (NULL);

@@ -28,7 +28,7 @@ spec_file <- switch(c("MSSQL", "MySQL", "SQLite")[3],
                     "MySQL" ="./STUpump-MySQL.yml",
                     "SQLite"="./STUpump-SQLite.yml");
 
-STUpump_version <- "0.1";
+STUpump_version <- "0.1.1";
 
 # Load the SQL-specific stuff:
 source("./SQL_queries.R", echo=FALSE);
