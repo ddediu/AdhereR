@@ -10,3 +10,4 @@ AdhereR/NAMESPACE
 AdhereR/man/*.Rd
 AdhereRViz/DESCRIPTION
 AdhereRViz/man/plot_interactive_cma.Rd
+STUpump/STUpumpTests.sqlite
