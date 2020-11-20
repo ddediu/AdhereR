@@ -2695,7 +2695,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
-             suppress.warnings=suppress.warnings);
+             suppress.warnings=suppress.warnings,
+             ...);
 }
 
 
@@ -7117,7 +7118,8 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
-             suppress.warnings=suppress.warnings);
+             suppress.warnings=suppress.warnings,
+             ...);
 }
 
 
