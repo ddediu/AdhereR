@@ -1274,6 +1274,589 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   }
 
 
+  ## Legend plotting auxiliary functions ####
+  if( show.legend )
+  {
+    if( .do.R )
+    {
+      .legend.R <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
+      {
+        # Legend rectangle:
+        if( do.plot )
+        {
+          rect(x, y, x + width, y + height, border=gray(0.6), lwd=2, col=rgb(0.99,0.99,0.99,legend.bkg.opacity));
+          # Save the info:
+          .last.cma.plot.info$baseR$legend <<- list("box"=data.frame("x.start"=x, "y.start"=y, "x.end"=x+width, "y.end"=y+height));
+          .last.cma.plot.info$baseR$legend$components <<- NULL;
+        }
+
+        cur.y <- y + height; # current y
+        max.width <- width; # maximum width
+
+        # Legend title:
+        if( do.plot )
+        {
+          text(x + width/2, cur.y, "Legend", pos=1, col=gray(0.3), cex=legend.cex.title);
+          # Save the info:
+          .last.cma.plot.info$baseR$legend$title <<- data.frame("string"="Legend", "x"=x+width/2, "y"=cur.y, "cex"=legend.cex.title);
+        }
+        cur.y <- cur.y - strheight("Legend", cex=legend.cex.title) - 3*legend.char.height; max.width <- max(max.width, strwidth("Legend", cex=legend.cex.title));
+
+        # Event:
+        if( do.plot )
+        {
+          segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event, col="black");
+          points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
+          points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
+        }
+
+        if( !plot.dose )
+        {
+          if( do.plot )
+          {
+            text(x + 5.0*legend.char.width, cur.y, "duration", col="black", cex=legend.cex, pos=4);
+            # Save the info:
+            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
+                                                                  data.frame("string"="duration",
+                                                                             "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
+                                                                             "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y,
+                                                                             "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y,
+                                                                             "cex"=legend.cex));
+          }
+          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration", cex=legend.cex));
+        } else
+        {
+          if( do.plot )
+          {
+            text(x + 5.0*legend.char.width, cur.y, "duration (min. dose)", col="black", cex=legend.cex, pos=4);
+          }
+          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration (min. dose)", cex=legend.cex));
+          if( do.plot )
+          {
+            segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event.max.dose, col="black");
+            points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
+            points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
+            text(x + 5.0*legend.char.width, cur.y, "duration (max. dose)", col="black", cex=legend.cex, pos=4);
+            # Save the info:
+            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
+                                                                  data.frame("string"=c("duration (min. dose)", "duration (max. dose)"),
+                                                                             "x.start"=rep(x + 1.0*legend.char.width,2), "y.start"=c(cur.y + 1.5*legend.char.height, cur.y),
+                                                                             "x.end"=rep(x + 4.0*legend.char.width,2), "y.end"=c(cur.y + 1.5*legend.char.height, cur.y),
+                                                                             "x.string"=rep(x + 5.0*legend.char.width,2), "y.string"=c(cur.y + 1.5*legend.char.height, cur.y),
+                                                                             "cex"=legend.cex));
+          }
+          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration (max. dose)", cex=legend.cex));
+        }
+
+        # No event:
+        if( do.plot )
+        {
+          segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.continuation, lwd=lwd.continuation, col=col.continuation);
+          text(x + 5.0*legend.char.width, cur.y, "no event/connector", col="black", cex=legend.cex, pos=4);
+          # Save the info:
+          .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
+                                                                data.frame("string"="no event/connector",
+                                                                           "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
+                                                                           "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y,
+                                                                           "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y,
+                                                                           "cex"=legend.cex));
+        }
+        cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("no event/connector", cex=legend.cex));
+
+        # Event intervals:
+        if( show.event.intervals )
+        {
+          if( do.plot )
+          {
+            rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor("black",alpha.f=0.5));
+            text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "days covered", col="black", cex=legend.cex, pos=4);
+            # Save the info:
+            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
+                                                                  data.frame("string"="days covered",
+                                                                             "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
+                                                                             "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
+                                                                             "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
+                                                                             "cex"=legend.cex));
+          }
+          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("days covered", cex=legend.cex));
+          if( do.plot )
+          {
+            rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=NA); #, col="black", density=25);
+            text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "gap days", col="black", cex=legend.cex, pos=4);
+            # Save the info:
+            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
+                                                                  data.frame("string"="gap days",
+                                                                             "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
+                                                                             "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
+                                                                             "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
+                                                                             "cex"=legend.cex));
+          }
+          cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("gap days", cex=legend.cex));
+        }
+
+        # medication classes:
+        for( i in 1:length(cols) )
+        {
+          med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+          if( do.plot )
+          {
+            rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor(cols[i],alpha.f=0.5));
+            med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+            if( print.dose || plot.dose )
+            {
+              dose.for.cat <- (dose.range$category == med.class.name);
+              if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+              {
+                med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+              }
+            }
+            text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, med.class.name, col="black", cex=legend.cex, pos=4);
+            # Save the info:
+            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
+                                                                  data.frame("string"=med.class.name,
+                                                                             "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
+                                                                             "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
+                                                                             "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
+                                                                             "cex"=legend.cex));
+          }
+          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth(names(cols)[i], cex=legend.cex));
+        }
+        cur.y <- cur.y - 0.5*legend.char.height;
+
+        # Follow-up window:
+        if( highlight.followup.window )
+        {
+          if( do.plot )
+          {
+            rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=followup.window.col, lty="dotted", lwd=2, col=rgb(1,1,1,0.0));
+            text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "follow-up wnd.", col="black", cex=legend.cex, pos=4);
+            # Save the info:
+            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
+                                                                  data.frame("string"="follow-up wnd.",
+                                                                             "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
+                                                                             "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
+                                                                             "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
+                                                                             "cex"=legend.cex));
+          }
+          cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("follow-up wnd.", cex=legend.cex));
+        }
+
+        # Observation window:
+        if( highlight.observation.window )
+        {
+          if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
+          {
+            # CMA8 also has a "real" OW:
+            if( do.plot )
+            {
+              rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height,
+                   border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity)); #, density=observation.window.density, angle=observation.window.angle);
+              text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "theor. obs. wnd.", col="black", cex=legend.cex, pos=4);
+              # Save the info:
+              .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
+                                                                    data.frame("string"="theor. obs. wnd.",
+                                                                               "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
+                                                                               "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
+                                                                               "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
+                                                                               "cex"=legend.cex));
+            }
+            cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("theor. obs. wnd.", cex=legend.cex));
+            if( do.plot )
+            {
+              rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height,
+                   border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity)); #, density=real.obs.window.density, angle=real.obs.window.angle);
+              text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "real obs. wnd.", col="black", cex=legend.cex, pos=4);
+              # Save the info:
+              .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
+                                                                    data.frame("string"="real obs. wnd.",
+                                                                               "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
+                                                                               "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
+                                                                               "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
+                                                                               "cex"=legend.cex));
+            }
+            cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("real obs.wnd.", cex=legend.cex));
+          } else
+          {
+            if( do.plot )
+            {
+              rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height,
+                   border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity)) #, density=observation.window.density, angle=observation.window.angle);
+              text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "observation wnd.", col="black", cex=legend.cex, pos=4);
+              # Save the info:
+              .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
+                                                                    data.frame("string"="observation wnd.",
+                                                                               "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
+                                                                               "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
+                                                                               "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
+                                                                               "cex"=legend.cex));
+            }
+            cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("observation wnd.", cex=legend.cex));
+          }
+        }
+
+        # Required size:
+        return (c("width" =max.width + 5.0*legend.char.width,
+                  "height"=(y + height - cur.y) + 1.0*legend.char.height));
+      }
+    }
+
+    if( .do.SVG )
+    {
+      .legend.SVG <- function(x=0, y=0, do.plot=TRUE)
+      {
+        if( do.plot )
+        {
+          # The legend is an object that we can move around, scale, etc:
+          l1 <- c(.SVG.comment("The legend", newpara=TRUE, newline=TRUE),
+                  '<g id="legend">\n');
+        }
+
+        # The legend origins:
+        x.origin <- ifelse(!do.plot || is.numeric(x), x, 0.0); y.origin <- ifelse(!do.plot || is.numeric(y), y, 0.0);
+
+        # Save the info:
+        .last.cma.plot.info$SVG$legend <<- list();
+        .last.cma.plot.info$SVG$legend$components <<- NULL;
+
+        # The legend dimensions and other aesthetics:
+        lw <- lh <- 0; # width and height
+        lmx <- dims.chr.legend; lmy <- 2 # margins
+        lnl <- 1.25; lnp <- 0.25; # the vertical size of a newline and newpara (in dims.chr.legend)
+
+        # The actual legend content:
+        # The legend title:
+        if( do.plot )
+        {
+          l2 <- c(.SVG.text(x=x.origin + lmx, y=y.origin + lmy+lh+dims.chr.legend.title*2/3, text="Legend",
+                            font_size=dims.chr.legend.title, font="Arial", h.align="left", v.align="center", col="gray30",
+                            class="legend-title", suppress.warnings=suppress.warnings));
+          # Save the info:
+          .last.cma.plot.info$SVG$legend$title <<- data.frame("string"="Legend", "x"=x.origin + lmx, "y"=y.origin + lmy+lh+dims.chr.legend.title*2/3, "font.size"=dims.chr.legend.title);
+        }
+        lh <- lh + dims.chr.legend.title + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("Legend", font_size=dims.chr.legend.title)["width"]);
+        lh <- lh + lnp*dims.chr.legend.title; # new para
+
+        # The event:
+        if( do.plot )
+        {
+          l2 <- c(l2,
+                  .SVG.lines(x=x.origin + c(lmx, lmx + 3*dims.chr.legend), y=y.origin + c(lmy+lh, lmy+lh),
+                             connected=FALSE, stroke="black", stroke_width=lwd.event, lty=lty.event,
+                             class="legend-events", suppress.warnings=suppress.warnings),
+                  .SVG.points(x=x.origin + c(lmx, lmx + 3*dims.chr.legend), y=y.origin + c(lmy+lh, lmy+lh),
+                              pch=c(pch.start.event, pch.end.event), col="black", cex=legend.cex,
+                              class="legend-events", suppress.warnings=suppress.warnings));
+        }
+
+        if( !plot.dose )
+        {
+          if( do.plot )
+          {
+            l2 <- c(l2,
+                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="duration",
+                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                              class="legend-events", suppress.warnings=suppress.warnings));
+            # Save the info:
+            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                                data.frame("string"="duration",
+                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
+                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
+                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                           "font.size"=dims.chr.legend));
+          }
+          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+        } else
+        {
+          # Min dose:
+          if( do.plot )
+          {
+            l2 <- c(l2,
+                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="duration (min. dose)",
+                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                              class="legend-events", suppress.warnings=suppress.warnings));
+            # Save the info:
+            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                                data.frame("string"="duration (min. dose)",
+                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
+                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
+                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                           "font.size"=dims.chr.legend));
+          }
+          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration (min. dose)", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+
+          # Max dose:
+          if( do.plot )
+          {
+            l2 <- c(l2,
+                    .SVG.lines(x=x.origin + c(lmx, lmx + 3*dims.chr.legend), y=y.origin + c(lmy+lh, lmy+lh),
+                               connected=FALSE, stroke="black", stroke_width=lwd.event.max.dose, lty=lty.event,
+                               class="legend-events", suppress.warnings=suppress.warnings),
+                    .SVG.points(x=x.origin + c(lmx, lmx + 3*dims.chr.legend), y=y.origin + c(lmy+lh, lmy+lh),
+                                pch=c(pch.start.event, pch.end.event),col="black", cex=legend.cex,
+                                class="legend-events", suppress.warnings=suppress.warnings),
+                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="duration (max. dose)",
+                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                              class="legend-events", suppress.warnings=suppress.warnings));
+            # Save the info:
+            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                                data.frame("string"="duration (max. dose)",
+                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
+                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
+                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                           "font.size"=dims.chr.legend));
+          }
+          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration (max. dose)", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+        }
+
+        # No event:
+        if( do.plot )
+        {
+          l2 <- c(l2,
+                  .SVG.lines(x=x.origin + c(lmx, lmx + 3*dims.chr.legend), y=y.origin + c(lmy+lh, lmy+lh),
+                             connected=FALSE, stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
+                             class="legend-no-event", suppress.warnings=suppress.warnings),
+                  .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="no event/connector",
+                            col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                            class="legend-no-event", suppress.warnings=suppress.warnings));
+          # Save the info:
+          .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                              data.frame("string"="no event/connector",
+                                                                         "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
+                                                                         "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
+                                                                         "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                         "font.size"=dims.chr.legend));
+        }
+        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("no event/connector", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+        lh <- lh + lnp*dims.chr.legend.title; # new para
+
+        # Event intervals:
+        if( show.event.intervals )
+        {
+          if( do.plot )
+          {
+            l2 <- c(l2,
+                    .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                              stroke="black", fill="black", fill_opacity=0.5,
+                              class="legend-interval"),
+                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="days covered",
+                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                              class="legend-interval", suppress.warnings=suppress.warnings));
+            # Save the info:
+            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                                data.frame("string"="days covered",
+                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
+                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
+                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                           "font.size"=dims.chr.legend));
+          }
+          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("days covered", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+          if( do.plot )
+          {
+            l2 <- c(l2,
+                    .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                              stroke="black", fill="none",
+                              class="legend-interval"),
+                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="gap days",
+                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                              class="legend-interval", suppress.warnings=suppress.warnings));
+            # Save the info:
+            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                                data.frame("string"="gap days",
+                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
+                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
+                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                           "font.size"=dims.chr.legend));
+          }
+          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("gap days", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+          lh <- lh + lnp*dims.chr.legend.title; # new para
+        }
+
+        # Medication classes:
+        for( i in 1:length(cols) )
+        {
+          med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+          med.class.name.svg <- .map.category.to.class(med.class.name);
+          if( do.plot )
+          {
+            l2 <- c(l2,
+                    .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                              stroke="black", fill=cols[i], fill_opacity=0.5,
+                              class=paste0("legend-medication-class-rect", if(med.class.name != "<missing>") paste0("-",med.class.name.svg) )));
+          }
+          #med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
+          if( print.dose || plot.dose )
+          {
+            dose.for.cat <- (dose.range$category == med.class.name);
+            if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+            {
+              med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
+            }
+          }
+          if( do.plot )
+          {
+            l2 <- c(l2,
+                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text=med.class.name,
+                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                              class=paste0("legend-medication-class-label", if(med.class.name != "<missing>") paste0("-",med.class.name.svg) ), suppress.warnings=suppress.warnings));
+            # Save the info:
+            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                                data.frame("string"=med.class.name,
+                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
+                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
+                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                           "font.size"=dims.chr.legend));
+          }
+          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims(med.class.name, font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+        }
+        lh <- lh + lnp*dims.chr.legend.title; # new para
+
+        # Follow-up window:
+        if( highlight.followup.window )
+        {
+          if( do.plot )
+          {
+            l2 <- c(l2,
+                    .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                              stroke=followup.window.col, fill="none", stroke_width=2, lty="dashed",
+                              class="legend-fuw-rect"),
+                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="follow-up wnd.",
+                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                              class="legend-fuw-label", suppress.warnings=suppress.warnings));
+            # Save the info:
+            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                                data.frame("string"="follow-up wnd.",
+                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
+                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
+                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                           "font.size"=dims.chr.legend));
+          }
+          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("follow-up wnd", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+        }
+
+        # Observation window:
+        if( highlight.observation.window )
+        {
+          if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
+          {
+            # CMA8 also has a "real" OW:
+            if( do.plot )
+            {
+              l2 <- c(l2,
+                      .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                                stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
+                                class="legend-ow-rect"),
+                      .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="theor. obs. wnd.",
+                                col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                                class="legend-ow-label", suppress.warnings=suppress.warnings));
+              # Save the info:
+              .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                                  data.frame("string"="theor. obs. wnd.",
+                                                                             "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
+                                                                             "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
+                                                                             "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                             "font.size"=dims.chr.legend));
+            }
+            lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("theor. obs. wnd", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+            if( do.plot )
+            {
+              l2 <- c(l2,
+                      .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                                stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
+                                class="legend-ow-real"),
+                      .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="real obs. wnd.",
+                                col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                                class="legend-ow-real", suppress.warnings=suppress.warnings));
+              # Save the info:
+              .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                                  data.frame("string"="real obs. wnd.",
+                                                                             "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
+                                                                             "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
+                                                                             "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                             "font.size"=dims.chr.legend));
+            }
+            lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("real obs. wnd.", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+          } else
+          {
+            if( do.plot )
+            {
+              l2 <- c(l2,
+                      .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
+                                stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
+                                class="legend-ow-rect"),
+                      .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="observation wnd.",
+                                col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
+                                class="legend-ow-label", suppress.warnings=suppress.warnings));
+              # Save the info:
+              .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
+                                                                  data.frame("string"="observation wnd.",
+                                                                             "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
+                                                                             "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
+                                                                             "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
+                                                                             "font.size"=dims.chr.legend));
+            }
+            lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
+          }
+        }
+
+        # The legend background:
+        lbox <- .SVG.rect(x=x.origin, y=y.origin, width=lw+2*lmx, height=lh+2*lmy, stroke="gray60", stroke_width=2, fill="gray99", fill_opacity=legend.bkg.opacity, class="legend-background");
+
+        if( !do.plot )
+        {
+          # The legend position:
+          if( is.null(x) || length(x) > 1 || is.na(x) || !(x %in% c("left", "center", "right") || is.numeric(x)) ) x <- "right";
+          if( is.na(x) || x == "right" )
+          {
+            x <- (dims.plot.x + dims.plot.width - lw - 3*lmx);
+          } else if( x == "center" )
+          {
+            x <- (dims.plot.x + lmx + (dims.plot.width - lmx - lw)/2);
+          } else if( x == "left" )
+          {
+            x <- (dims.plot.x + lmx);
+          } else
+          {
+            x <- .scale.x.to.SVG.plot(x);
+          }
+          if( is.null(y) || length(y) > 1 || is.na(y) || !(y %in% c("top", "center", "bottom") || is.numeric(y)) ) y <- "bottom";
+          if( is.na(y) || y == "bottom" )
+          {
+            y <- (dims.plot.y + dims.plot.height - lh - 3*lmy);
+          } else if( y == "center" )
+          {
+            y <- (dims.plot.y + (dims.plot.height - lh - 2*lmy)/2);
+          } else if( y == "top" )
+          {
+            y <- (dims.plot.y + lmy);
+          } else
+          {
+            y <- .scale.y.to.SVG.plot(y);
+          }
+        }
+
+        if( do.plot )
+        {
+          # Close the legend:
+          l2 <- c(l2,
+                  '</g>\n');
+        }
+
+        # Save the info:
+        .last.cma.plot.info$SVG$legend$box <<- data.frame("x.start"=x, "y.start"=y, "x.end"=x+lw+2*lmx, "y.end"=y+lh+2*lmy);
+
+        if( do.plot )
+        {
+          # Insert the legend background where it should be:
+          return (c(l1, lbox, l2));
+        } else
+        {
+          return (NULL);
+        }
+      }
+    }
+  }
+
+
   # Is the cma a time series or per episodes?
   is.cma.TS.or.SW <- (inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window"));
   # Does the cma contains estimated CMAs?
@@ -1769,10 +2352,26 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     dims.plot.y           <- (dims.chr.title + dims.chr.std);
     dims.plot.width       <- (dims.event.x * (duration.total + 10)/dims.day);
     dims.plot.height      <- (dims.event.y * (vert.space.events+vert.space.cmas+1));
-    dims.legend.width     <- ifelse(!show.legend, 0, 0); # TODO: get a rough but decent estimate of legend dimensions!
-    dims.legend.height    <- ifelse(!show.legend, 0, 0);
+
+    # For the legend, we force a call to the .legend.SVG() to get the legend needed size:
+    if( !show.legend )
+    {
+      dims.legend.width     <- 0; # no legend to show
+      dims.legend.height    <- 0;
+    } else
+    {
+      .last.cma.plot.info <- list(); # create a fake .last.cma.plot.info because .legend.SVG() stores the results in it (it will be re-created later)
+      .legend.SVG(legend.x, legend.y, do.plot=FALSE); # estimate the needed spaces
+      dims.legend.width     <- (.last.cma.plot.info$SVG$legend$box$x.end + dims.chr.std); # retrieve the right-most and top-most corner of the legend
+      dims.legend.height    <- (.last.cma.plot.info$SVG$legend$box$y.end - .last.cma.plot.info$SVG$legend$box$y.start + dims.chr.std);
+    }
+
+    # Total size needed:
     dims.total.width      <- (dims.plot.x + max(dims.plot.width,  dims.legend.width));
     dims.total.height     <- (dims.plot.y + max(dims.plot.height, dims.legend.height) + dims.axis.x);
+
+    # Do we need to adjust for an extra large legend?
+    dims.adjust.for.tall.legend <- max(0, dims.legend.height - dims.plot.height);
 
     # Scaling functions for plotting within the SVG:
     .scale.width.to.SVG.plot <- function(w)
@@ -1792,7 +2391,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
     .scale.y.to.SVG.plot <- function(y)
     {
-      return (dims.plot.y + dims.plot.height - .scale.height.to.SVG.plot(y));
+      return (dims.plot.y + dims.plot.height + dims.adjust.for.tall.legend - .scale.height.to.SVG.plot(y));
     }
 
     # Stroke dash-arrays for line types (lty):
@@ -2112,6 +2711,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       "dims.plot.y"=dims.plot.y,
       "dims.plot.width"=dims.plot.width,
       "dims.plot.height"=dims.plot.height,
+      "dims.legend.width"=dims.legend.width,
+      "dims.legend.height"=dims.legend.height,
       "dims.total.width"=dims.total.width,
       "dims.total.height"=dims.total.height,
       ".scale.width.to.SVG.plot"=.scale.width.to.SVG.plot,
@@ -2594,13 +3195,13 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                            .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
                                      y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
                                      width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(min(adh,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)),
-                                     height=.scale.height.to.SVG.plot(2),
+                                     height=.scale.height.to.SVG.plot(2*adh.h),
                                      stroke="none", fill=CMA.plot.col,
                                      class="cma-estimate-bkg", comment="The CMA estimate backgound"),
                            .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
                                      y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
                                      width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)),
-                                     height=.scale.height.to.SVG.plot(2),
+                                     height=.scale.height.to.SVG.plot(2*adh.h),
                                      stroke=CMA.plot.border, stroke_width=1, fill="none",
                                      class="cma-estimate-bkg")
               );
@@ -2619,7 +3220,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
               { # vertical writing of the CMA:
                 text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
                      labels=cma.string, col=CMA.plot.text, cex=CMA.cex, srt=90);
-              } # otherwise, theres' no space for showing the CMA here
+              } # otherwise, there's no space for showing the CMA here
             }
 
             if( .do.SVG ) # SVG:
@@ -3549,7 +4150,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   # Mark the drawing area for the CMAs:
   if( has.estimated.CMA && adh.plot.space[2] > 0 )
   {
-    if( is.cma.TS.or.SW )
+    if( is.cma.TS.or.SW ) # NEEDS FIXING!!!
     {
       if( .do.R ) # Rplot:
       {
@@ -3561,7 +4162,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         svg.str <- c(svg.str,
                      # Background:
                      .SVG.rect(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
-                               y=dims.plot.y,
+                               y=dims.plot.y + dims.adjust.for.tall.legend,
                                width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)),
                                height=dims.plot.height,
                                stroke="none", fill=CMA.plot.bkg, fill_opacity=0.25,
@@ -3570,7 +4171,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                      # Vertical guides:
                      .SVG.comment("The vertical guides for the CMA drawing area"),
                      .SVG.lines(x=rep(c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0))), each=2),
-                                y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=2),
+                                y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=2) + dims.adjust.for.tall.legend,
                                 connected=FALSE,
                                 stroke=CMA.plot.border, stroke_width=1, lty=c("solid", "dotted"),
                                 class="cma-drawing-area-guides-lines", suppress.warnings=suppress.warnings)
@@ -3602,7 +4203,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         svg.str <- c(svg.str,
                      # Background:
                      .SVG.rect(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
-                               y=dims.plot.y,
+                               y=dims.plot.y + dims.adjust.for.tall.legend,
                                width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)),
                                height=dims.plot.height,
                                stroke="none", fill=CMA.plot.bkg, fill_opacity=0.25,
@@ -3613,32 +4214,32 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                         .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)),
                                         if(adh.max > 1.0) .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max))),
                                       each=2),
-                                y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=ifelse(adh.max > 1.0, 3, 2)),
+                                y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=ifelse(adh.max > 1.0, 3, 2)) + dims.adjust.for.tall.legend,
                                 connected=FALSE,
                                 stroke=CMA.plot.border, stroke_width=1, lty=if(adh.max > 1.0) c("solid", "dotted", "solid") else "solid",
                                 class="cma-drawing-area-guides-lines", suppress.warnings=suppress.warnings),
 
                      # Text guides:
-                     .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), y=(dims.plot.y - dims.chr.axis/2),
+                     .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
                                text="0%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
                                class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings),
                      if(adh.max > 1.0)
                      {
                        c(
-                         .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)), y=(dims.plot.y - dims.chr.axis/2),
+                         .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
                                    text=sprintf("%.1f%%",adh.max*100), col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
                                    class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings),
                          if(dims.event.x*(.rescale.xcoord.for.CMA.plot(adh.max) - .rescale.xcoord.for.CMA.plot(1.0))/dims.day > 2.0*dims.chr.axis)
                          {
                            # Don't overcrowd the 100% and maximum CMA
-                           .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y - dims.chr.axis/2),
+                           .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
                                      text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
                                      class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings)
                          }
                        )
                      } else
                      {
-                       .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y - dims.chr.axis/2),
+                       .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
                                  text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
                                  class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings)
                      }
@@ -3692,7 +4293,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                  .SVG.rect(x=dims.plot.x,
                            y=dims.plot.y,
                            width=dims.plot.width,
-                           height=dims.plot.height,
+                           height=dims.plot.height + dims.adjust.for.tall.legend,
                            stroke="black", stroke_width=1, fill="none",
                            class="bounding-box", comment="The bounding box"),
 
@@ -3758,7 +4359,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( !is.null(date.labels) )
     {
       xs <- (dims.plot.x + dims.event.x * date.labels$position/dims.day);
-      ys <- (dims.plot.y + dims.plot.height + dims.chr.axis);
+      ys <- (dims.plot.y + dims.plot.height + dims.chr.axis + dims.adjust.for.tall.legend);
       svg.str <- c(svg.str,
                    # Axis labels:
                    .SVG.text(x=xs, y=rep(ys, length(xs)),
@@ -3767,14 +4368,14 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
                    # Axis ticks:
                    .SVG.lines(x=rep(xs,each=2),
-                              y=dims.plot.y + dims.plot.height + rep(c(0, dims.chr.axis/2), times=length(xs)),
+                              y=dims.plot.y + dims.plot.height + dims.adjust.for.tall.legend + rep(c(0, dims.chr.axis/2), times=length(xs)),
                               connected=FALSE,
                               stroke="black", stroke_width=1,
                               class="axis-ticks-x", suppress.warnings=suppress.warnings),
 
                    # Vertical dotted lines:
                    .SVG.lines(x=rep(xs,each=2),
-                              y=dims.plot.y + rep(c(dims.plot.height, 0), times=length(xs)),
+                              y=dims.plot.y + rep(c(dims.plot.height + dims.adjust.for.tall.legend, 0), times=length(xs)),
                               connected=FALSE,
                               stroke="gray50", stroke_width=1, lty="dotted",
                               class="vertical-date-lines", suppress.warnings=suppress.warnings)
@@ -3794,226 +4395,6 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   {
     if( .do.R ) # Rplot:
     {
-      .legend.R <- function(x=0, y=0, width=1, height=1, do.plot=TRUE)
-      {
-        # Legend rectangle:
-        if( do.plot )
-        {
-          rect(x, y, x + width, y + height, border=gray(0.6), lwd=2, col=rgb(0.99,0.99,0.99,legend.bkg.opacity));
-          # Save the info:
-          .last.cma.plot.info$baseR$legend <<- list("box"=data.frame("x.start"=x, "y.start"=y, "x.end"=x+width, "y.end"=y+height));
-          .last.cma.plot.info$baseR$legend$components <<- NULL;
-        }
-
-        cur.y <- y + height; # current y
-        max.width <- width; # maximum width
-
-        # Legend title:
-        if( do.plot )
-        {
-          text(x + width/2, cur.y, "Legend", pos=1, col=gray(0.3), cex=legend.cex.title);
-          # Save the info:
-          .last.cma.plot.info$baseR$legend$title <<- data.frame("string"="Legend", "x"=x+width/2, "y"=cur.y, "cex"=legend.cex.title);
-        }
-        cur.y <- cur.y - strheight("Legend", cex=legend.cex.title) - 3*legend.char.height; max.width <- max(max.width, strwidth("Legend", cex=legend.cex.title));
-
-        # Event:
-        if( do.plot )
-        {
-          segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event, col="black");
-          points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
-          points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
-        }
-
-        if( !plot.dose )
-        {
-          if( do.plot )
-          {
-            text(x + 5.0*legend.char.width, cur.y, "duration", col="black", cex=legend.cex, pos=4);
-            # Save the info:
-            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
-                                                                  data.frame("string"="duration",
-                                                                             "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
-                                                                             "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y,
-                                                                             "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y,
-                                                                             "cex"=legend.cex));
-          }
-          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration", cex=legend.cex));
-        } else
-        {
-          if( do.plot )
-          {
-            text(x + 5.0*legend.char.width, cur.y, "duration (min. dose)", col="black", cex=legend.cex, pos=4);
-          }
-          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration (min. dose)", cex=legend.cex));
-          if( do.plot )
-          {
-            segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.event, lwd=lwd.event.max.dose, col="black");
-            points(x + 1.0*legend.char.width, cur.y, pch=pch.start.event, cex=legend.cex, col="black");
-            points(x + 4.0*legend.char.width, cur.y, pch=pch.end.event, cex=legend.cex, col="black");
-            text(x + 5.0*legend.char.width, cur.y, "duration (max. dose)", col="black", cex=legend.cex, pos=4);
-            # Save the info:
-            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
-                                                                  data.frame("string"=c("duration (min. dose)", "duration (max. dose)"),
-                                                                             "x.start"=rep(x + 1.0*legend.char.width,2), "y.start"=c(cur.y + 1.5*legend.char.height, cur.y),
-                                                                             "x.end"=rep(x + 4.0*legend.char.width,2), "y.end"=c(cur.y + 1.5*legend.char.height, cur.y),
-                                                                             "x.string"=rep(x + 5.0*legend.char.width,2), "y.string"=c(cur.y + 1.5*legend.char.height, cur.y),
-                                                                             "cex"=legend.cex));
-          }
-          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("duration (max. dose)", cex=legend.cex));
-        }
-
-        # No event:
-        if( do.plot )
-        {
-          segments(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y, lty=lty.continuation, lwd=lwd.continuation, col=col.continuation);
-          text(x + 5.0*legend.char.width, cur.y, "no event/connector", col="black", cex=legend.cex, pos=4);
-          # Save the info:
-          .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
-                                                                data.frame("string"="no event/connector",
-                                                                           "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
-                                                                           "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y,
-                                                                           "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y,
-                                                                           "cex"=legend.cex));
-        }
-        cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("no event/connector", cex=legend.cex));
-
-        # Event intervals:
-        if( show.event.intervals )
-        {
-          if( do.plot )
-          {
-            rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor("black",alpha.f=0.5));
-            text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "days covered", col="black", cex=legend.cex, pos=4);
-            # Save the info:
-            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
-                                                                  data.frame("string"="days covered",
-                                                                             "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
-                                                                             "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
-                                                                             "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
-                                                                             "cex"=legend.cex));
-          }
-          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("days covered", cex=legend.cex));
-          if( do.plot )
-          {
-            rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=NA); #, col="black", density=25);
-            text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "gap days", col="black", cex=legend.cex, pos=4);
-            # Save the info:
-            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
-                                                                  data.frame("string"="gap days",
-                                                                             "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
-                                                                             "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
-                                                                             "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
-                                                                             "cex"=legend.cex));
-          }
-          cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("gap days", cex=legend.cex));
-        }
-
-        # medication classes:
-        for( i in 1:length(cols) )
-        {
-          med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
-          if( do.plot )
-          {
-            rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border="black", col=adjustcolor(cols[i],alpha.f=0.5));
-            med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
-            if( print.dose || plot.dose )
-            {
-              dose.for.cat <- (dose.range$category == med.class.name);
-              if( sum(dose.for.cat,na.rm=TRUE) == 1 )
-              {
-                med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
-              }
-            }
-            text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, med.class.name, col="black", cex=legend.cex, pos=4);
-            # Save the info:
-            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
-                                                                  data.frame("string"=med.class.name,
-                                                                             "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
-                                                                             "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
-                                                                             "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
-                                                                             "cex"=legend.cex));
-          }
-          cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth(names(cols)[i], cex=legend.cex));
-        }
-        cur.y <- cur.y - 0.5*legend.char.height;
-
-        # Follow-up window:
-        if( highlight.followup.window )
-        {
-          if( do.plot )
-          {
-            rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height, border=followup.window.col, lty="dotted", lwd=2, col=rgb(1,1,1,0.0));
-            text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "follow-up wnd.", col="black", cex=legend.cex, pos=4);
-            # Save the info:
-            .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
-                                                                  data.frame("string"="follow-up wnd.",
-                                                                             "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
-                                                                             "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
-                                                                             "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
-                                                                             "cex"=legend.cex));
-          }
-          cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("follow-up wnd.", cex=legend.cex));
-        }
-
-        # Observation window:
-        if( highlight.observation.window )
-        {
-          if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
-          {
-            # CMA8 also has a "real" OW:
-            if( do.plot )
-            {
-              rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height,
-                   border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity)); #, density=observation.window.density, angle=observation.window.angle);
-              text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "theor. obs. wnd.", col="black", cex=legend.cex, pos=4);
-              # Save the info:
-              .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
-                                                                    data.frame("string"="theor. obs. wnd.",
-                                                                               "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
-                                                                               "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
-                                                                               "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
-                                                                               "cex"=legend.cex));
-            }
-            cur.y <- cur.y - 1.5*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("theor. obs. wnd.", cex=legend.cex));
-            if( do.plot )
-            {
-              rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height,
-                   border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity)); #, density=real.obs.window.density, angle=real.obs.window.angle);
-              text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "real obs. wnd.", col="black", cex=legend.cex, pos=4);
-              # Save the info:
-              .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
-                                                                    data.frame("string"="real obs. wnd.",
-                                                                               "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
-                                                                               "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
-                                                                               "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
-                                                                               "cex"=legend.cex));
-            }
-            cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("real obs.wnd.", cex=legend.cex));
-          } else
-          {
-            if( do.plot )
-            {
-              rect(x + 1.0*legend.char.width, cur.y, x + 4.0*legend.char.width, cur.y - 1.0*legend.char.height,
-                   border=rgb(1,1,1,0.0), col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity)) #, density=observation.window.density, angle=observation.window.angle);
-              text(x + 5.0*legend.char.width, cur.y - 0.5*legend.char.height, "observation wnd.", col="black", cex=legend.cex, pos=4);
-              # Save the info:
-              .last.cma.plot.info$baseR$legend$components <<- rbind(.last.cma.plot.info$baseR$legend$components,
-                                                                    data.frame("string"="observation wnd.",
-                                                                               "x.start"=x + 1.0*legend.char.width, "y.start"=cur.y,
-                                                                               "x.end"=x + 4.0*legend.char.width, "y.end"=cur.y - 1.0*legend.char.height,
-                                                                               "x.string"=x + 5.0*legend.char.width, "y.string"=cur.y - 0.5*legend.char.height,
-                                                                               "cex"=legend.cex));
-            }
-            cur.y <- cur.y - 2.0*legend.char.height; max.width <- max(max.width, 5.0*legend.char.width + strwidth("observation wnd.", cex=legend.cex));
-          }
-        }
-
-        # Required size:
-        return (c("width" =max.width + 5.0*legend.char.width,
-                  "height"=(y + height - cur.y) + 1.0*legend.char.height));
-      }
-
       # Character size for the legend:
       legend.char.width <- strwidth("O",cex=legend.cex); legend.char.height <- strheight("O",cex=legend.cex);
 
@@ -4048,365 +4429,13 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
     if( .do.SVG ) # SVG:
     {
-      .legend.SVG <- function(x=0, y=0, do.plot=TRUE)
-      {
-        if( do.plot )
-        {
-          # The legend is an object that we can move around, scale, etc:
-          l1 <- c(.SVG.comment("The legend", newpara=TRUE, newline=TRUE),
-                  '<g id="legend">\n');
-        }
-
-        # The legend origins:
-        x.origin <- ifelse(!do.plot || is.numeric(x), x, 0.0); y.origin <- ifelse(!do.plot || is.numeric(y), y, 0.0);
-
-        # Save the info:
-        .last.cma.plot.info$SVG$legend <<- list();
-        .last.cma.plot.info$SVG$legend$components <<- NULL;
-
-        # The legend dimensions and other aesthetics:
-        lw <- lh <- 0; # width and height
-        lmx <- dims.chr.legend; lmy <- 2 # margins
-        lnl <- 1.25; lnp <- 0.25; # the vertical size of a newline and newpara (in dims.chr.legend)
-
-        # The actual legend content:
-        # The legend title:
-        if( do.plot )
-        {
-          l2 <- c(.SVG.text(x=x.origin + lmx, y=y.origin + lmy+lh+dims.chr.legend.title*2/3, text="Legend",
-                            font_size=dims.chr.legend.title, font="Arial", h.align="left", v.align="center", col="gray30",
-                            class="legend-title", suppress.warnings=suppress.warnings));
-          # Save the info:
-          .last.cma.plot.info$SVG$legend$title <<- data.frame("string"="Legend", "x"=x.origin + lmx, "y"=y.origin + lmy+lh+dims.chr.legend.title*2/3, "font.size"=dims.chr.legend.title);
-        }
-        lh <- lh + dims.chr.legend.title + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("Legend", font_size=dims.chr.legend.title)["width"]);
-        lh <- lh + lnp*dims.chr.legend.title; # new para
-
-        # The event:
-        if( do.plot )
-        {
-          l2 <- c(l2,
-                  .SVG.lines(x=x.origin + c(lmx, lmx + 3*dims.chr.legend), y=y.origin + c(lmy+lh, lmy+lh),
-                             connected=FALSE, stroke="black", stroke_width=lwd.event, lty=lty.event,
-                             class="legend-events", suppress.warnings=suppress.warnings),
-                  .SVG.points(x=x.origin + c(lmx, lmx + 3*dims.chr.legend), y=y.origin + c(lmy+lh, lmy+lh),
-                              pch=c(pch.start.event, pch.end.event), col="black", cex=legend.cex,
-                              class="legend-events", suppress.warnings=suppress.warnings));
-        }
-
-        if( !plot.dose )
-        {
-          if( do.plot )
-          {
-            l2 <- c(l2,
-                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="duration",
-                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                              class="legend-events", suppress.warnings=suppress.warnings));
-            # Save the info:
-            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                                data.frame("string"="duration",
-                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
-                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
-                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                           "font.size"=dims.chr.legend));
-          }
-          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-        } else
-        {
-          # Min dose:
-          if( do.plot )
-          {
-            l2 <- c(l2,
-                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="duration (min. dose)",
-                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                              class="legend-events", suppress.warnings=suppress.warnings));
-            # Save the info:
-            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                                data.frame("string"="duration (min. dose)",
-                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
-                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
-                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                           "font.size"=dims.chr.legend));
-          }
-          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration (min. dose)", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-
-          # Max dose:
-          if( do.plot )
-          {
-            l2 <- c(l2,
-                    .SVG.lines(x=x.origin + c(lmx, lmx + 3*dims.chr.legend), y=y.origin + c(lmy+lh, lmy+lh),
-                               connected=FALSE, stroke="black", stroke_width=lwd.event.max.dose, lty=lty.event,
-                               class="legend-events", suppress.warnings=suppress.warnings),
-                    .SVG.points(x=x.origin + c(lmx, lmx + 3*dims.chr.legend), y=y.origin + c(lmy+lh, lmy+lh),
-                                pch=c(pch.start.event, pch.end.event),col="black", cex=legend.cex,
-                                class="legend-events", suppress.warnings=suppress.warnings),
-                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="duration (max. dose)",
-                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                              class="legend-events", suppress.warnings=suppress.warnings));
-            # Save the info:
-            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                                data.frame("string"="duration (max. dose)",
-                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
-                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
-                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                           "font.size"=dims.chr.legend));
-          }
-          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration (max. dose)", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-        }
-
-        # No event:
-        if( do.plot )
-        {
-          l2 <- c(l2,
-                  .SVG.lines(x=x.origin + c(lmx, lmx + 3*dims.chr.legend), y=y.origin + c(lmy+lh, lmy+lh),
-                             connected=FALSE, stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
-                             class="legend-no-event", suppress.warnings=suppress.warnings),
-                  .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="no event/connector",
-                            col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                            class="legend-no-event", suppress.warnings=suppress.warnings));
-          # Save the info:
-          .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                              data.frame("string"="no event/connector",
-                                                                         "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
-                                                                         "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
-                                                                         "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                         "font.size"=dims.chr.legend));
-        }
-        lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("no event/connector", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-        lh <- lh + lnp*dims.chr.legend.title; # new para
-
-        # Event intervals:
-        if( show.event.intervals )
-        {
-          if( do.plot )
-          {
-            l2 <- c(l2,
-                    .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
-                              stroke="black", fill="black", fill_opacity=0.5,
-                              class="legend-interval"),
-                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="days covered",
-                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                              class="legend-interval", suppress.warnings=suppress.warnings));
-            # Save the info:
-            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                                data.frame("string"="days covered",
-                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
-                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
-                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                           "font.size"=dims.chr.legend));
-          }
-          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("days covered", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-          if( do.plot )
-          {
-            l2 <- c(l2,
-                    .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
-                              stroke="black", fill="none",
-                              class="legend-interval"),
-                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="gap days",
-                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                              class="legend-interval", suppress.warnings=suppress.warnings));
-            # Save the info:
-            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                                data.frame("string"="gap days",
-                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh,
-                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh,
-                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                           "font.size"=dims.chr.legend));
-          }
-          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("gap days", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-          lh <- lh + lnp*dims.chr.legend.title; # new para
-        }
-
-        # Medication classes:
-        for( i in 1:length(cols) )
-        {
-          med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
-          med.class.name.svg <- .map.category.to.class(med.class.name);
-          if( do.plot )
-          {
-            l2 <- c(l2,
-                    .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
-                              stroke="black", fill=cols[i], fill_opacity=0.5,
-                              class=paste0("legend-medication-class-rect", if(med.class.name != "<missing>") paste0("-",med.class.name.svg) )));
-          }
-          #med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
-          if( print.dose || plot.dose )
-          {
-            dose.for.cat <- (dose.range$category == med.class.name);
-            if( sum(dose.for.cat,na.rm=TRUE) == 1 )
-            {
-              med.class.name <- paste0(med.class.name," (",dose.range$min[dose.for.cat]," - ",dose.range$max[dose.for.cat],")");
-            }
-          }
-          if( do.plot )
-          {
-            l2 <- c(l2,
-                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text=med.class.name,
-                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                              class=paste0("legend-medication-class-label", if(med.class.name != "<missing>") paste0("-",med.class.name.svg) ), suppress.warnings=suppress.warnings));
-            # Save the info:
-            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                                data.frame("string"=med.class.name,
-                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
-                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
-                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                           "font.size"=dims.chr.legend));
-          }
-          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims(med.class.name, font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-        }
-        lh <- lh + lnp*dims.chr.legend.title; # new para
-
-        # Follow-up window:
-        if( highlight.followup.window )
-        {
-          if( do.plot )
-          {
-            l2 <- c(l2,
-                    .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
-                              stroke=followup.window.col, fill="none", stroke_width=2, lty="dashed",
-                              class="legend-fuw-rect"),
-                    .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="follow-up wnd.",
-                              col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                              class="legend-fuw-label", suppress.warnings=suppress.warnings));
-            # Save the info:
-            .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                                data.frame("string"="follow-up wnd.",
-                                                                           "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
-                                                                           "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
-                                                                           "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                           "font.size"=dims.chr.legend));
-          }
-          lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("follow-up wnd", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-        }
-
-        # Observation window:
-        if( highlight.observation.window )
-        {
-          if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
-          {
-            # CMA8 also has a "real" OW:
-            if( do.plot )
-            {
-              l2 <- c(l2,
-                      .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
-                                stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                                class="legend-ow-rect"),
-                      .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="theor. obs. wnd.",
-                                col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                                class="legend-ow-label", suppress.warnings=suppress.warnings));
-              # Save the info:
-              .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                                  data.frame("string"="theor. obs. wnd.",
-                                                                             "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
-                                                                             "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
-                                                                             "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                             "font.size"=dims.chr.legend));
-            }
-            lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("theor. obs. wnd", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-            if( do.plot )
-            {
-              l2 <- c(l2,
-                      .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
-                                stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                                class="legend-ow-real"),
-                      .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="real obs. wnd.",
-                                col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                                class="legend-ow-real", suppress.warnings=suppress.warnings));
-              # Save the info:
-              .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                                  data.frame("string"="real obs. wnd.",
-                                                                             "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
-                                                                             "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
-                                                                             "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                             "font.size"=dims.chr.legend));
-            }
-            lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("real obs. wnd.", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-          } else
-          {
-            if( do.plot )
-            {
-              l2 <- c(l2,
-                      .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
-                                stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                                class="legend-ow-rect"),
-                      .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text="observation wnd.",
-                                col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                                class="legend-ow-label", suppress.warnings=suppress.warnings));
-              # Save the info:
-              .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
-                                                                  data.frame("string"="observation wnd.",
-                                                                             "x.start"=x.origin + lmx, "y.start"=y.origin + lmy+lh-dims.chr.legend/2,
-                                                                             "x.end"=x.origin + lmx + 3*dims.chr.legend, "y.end"=y.origin + lmy+lh-dims.chr.legend/2+1*dims.chr.legend,
-                                                                             "x.string"=lmx + 4*dims.chr.legend, "y.string"=lmy+lh,
-                                                                             "font.size"=dims.chr.legend));
-            }
-            lh <- lh + lnl*dims.chr.legend; lw <- max(lw, .SVG.string.dims("duration", font_size=dims.chr.legend)["width"] + 4*dims.chr.legend);
-          }
-        }
-
-        # The legend background:
-        lbox <- .SVG.rect(x=x.origin, y=y.origin, width=lw+2*lmx, height=lh+2*lmy, stroke="gray60", stroke_width=2, fill="gray99", fill_opacity=legend.bkg.opacity, class="legend-background");
-
-        if( !do.plot )
-        {
-          # The legend position:
-          if( is.null(x) || length(x) > 1 || is.na(x) || !(x %in% c("left", "center", "right") || is.numeric(x)) ) x <- "right";
-          if( is.na(x) || x == "right" )
-          {
-            x <- (dims.plot.x + dims.plot.width - lw - 3*lmx);
-          } else if( x == "center" )
-          {
-            x <- (dims.plot.x + lmx + (dims.plot.width - lmx - lw)/2);
-          } else if( x == "left" )
-          {
-            x <- (dims.plot.x + lmx);
-          } else
-          {
-            x <- .scale.x.to.SVG.plot(x);
-          }
-          if( is.null(y) || length(y) > 1 || is.na(y) || !(y %in% c("top", "center", "bottom") || is.numeric(y)) ) y <- "bottom";
-          if( is.na(y) || y == "bottom" )
-          {
-            y <- (dims.plot.y + dims.plot.height - lh - 3*lmy);
-          } else if( y == "center" )
-          {
-            y <- (dims.plot.y + (dims.plot.height - lh - 2*lmy)/2);
-          } else if( y == "top" )
-          {
-            y <- (dims.plot.y + lmy);
-          } else
-          {
-            y <- .scale.y.to.SVG.plot(y);
-          }
-        }
-
-        if( do.plot )
-        {
-          # Close the legend:
-          l2 <- c(l2,
-                  '</g>\n');
-        }
-
-        # Save the info:
-        .last.cma.plot.info$SVG$legend$box <<- data.frame("x.start"=x, "y.start"=y, "x.end"=x+lw+2*lmx, "y.end"=y+lh+2*lmy);
-
-        if( do.plot )
-        {
-          # Insert the legend background where it should be:
-          return (c(l1, lbox, l2));
-        } else
-        {
-          return (NULL);
-        }
-      }
-
       # Compute the bounding box of the legend without showing it yet:
       .legend.SVG(legend.x, legend.y, do.plot=FALSE);
 
       # Display the legend where it should be displayed:
       svg.str <- c(svg.str,
                    # The legend:
-                   .legend.SVG(.last.cma.plot.info$SVG$legend$box$x.start, .last.cma.plot.info$SVG$legend$box$y.start, do.plot=TRUE)
+                   .legend.SVG(.last.cma.plot.info$SVG$legend$box$x.start, .last.cma.plot.info$SVG$legend$box$y.start + dims.adjust.for.tall.legend, do.plot=TRUE)
       );
 
       # Remove superfluous rownames from the saved info:
@@ -4834,6 +4863,5 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
   # Return value:
   return (invisible(exported.file.names));
 }
-
 
 
