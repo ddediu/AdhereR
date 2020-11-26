@@ -2385,7 +2385,7 @@ server <- function(input, output, session)
       # The dataset came as the `data` argument to `plot_interactive_cam()`, so we don't know it's "name":
       r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
       r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
-      r_code <<- paste0(r_code, "# \"", class(.GlobalEnv$.plotting.params$data), "\", and it has the structure:\n");
+      r_code <<- paste0(r_code, "# \"", paste0(class(.GlobalEnv$.plotting.params$data),collapse=","), "\", and it has the structure:\n");
       r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.GlobalEnv$.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n\n");
     } else
     {
@@ -2787,7 +2787,7 @@ server <- function(input, output, session)
     x <- names(d);
     x.info <- vapply(1:ncol(d),
                      function(i) paste0("(",
-                                        class(d[,i]),
+                                        paste0(class(d[,i]),collapse=","),
                                         ": ",
                                         paste0(d[1:min(n.vals.to.show,nrow(d)),i],collapse=", "),
                                         if(nrow(d)>n.vals.to.show) "...",
@@ -3443,7 +3443,7 @@ server <- function(input, output, session)
       x <- names(d);
       x.info <- vapply(1:ncol(d),
                        function(i) paste0("(",
-                                          class(d[,i]),
+                                          paste0(class(d[,i]),collapse=","),
                                           ": ",
                                           paste0(d[1:min(n.vals.to.show,nrow(d)),i],collapse=", "),
                                           if(nrow(d)>n.vals.to.show) "...",
@@ -4026,7 +4026,7 @@ server <- function(input, output, session)
                                      {if(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments)
                                       {
                                         paste0("was given as the <code>data</code> argument to the <code>plot_interactive_cma()</code> function called by the user.<br/>",
-                                               "Therefore, we cannot know its name outside the function call (and there might not be such a \"name\" as the data might have been created on-the-fly in the function call), and instead we identify it as the <b style='color:darkblue'><<'data' argument to plot_interactive_cma() call>></b> of class <i>", class(.GlobalEnv$.plotting.params$data), "</i>."
+                                               "Therefore, we cannot know its name outside the function call (and there might not be such a \"name\" as the data might have been created on-the-fly in the function call), and instead we identify it as the <b style='color:darkblue'><<'data' argument to plot_interactive_cma() call>></b> of class <i>", paste0(class(.GlobalEnv$.plotting.params$data),collapse=","), "</i>."
                                                )
                                       } else
                                       {
