@@ -4150,10 +4150,13 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   # Mark the drawing area for the CMAs:
   if( has.estimated.CMA && adh.plot.space[2] > 0 )
   {
-    if( is.cma.TS.or.SW ) # NEEDS FIXING!!!
+    if( is.cma.TS.or.SW )
     {
       if( .do.R ) # Rplot:
       {
+        # Background:
+        rect(.rescale.xcoord.for.CMA.plot(0.0), par("usr")[3], .rescale.xcoord.for.CMA.plot(max(adh.max,1.0)), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
+        # Vertical guides:
         abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.col, lty=c("solid","dotted"), lwd=1);
       }
 
@@ -4253,7 +4256,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   ## Title, box and axes ####
   ##
 
-  title.string <- paste0(ifelse(is.null(title),"",                                   # the plot title
+  title.string <- paste0(ifelse(is.null(title),"", # the plot title
                                 ifelse(length(title)==1,
                                        title,
                                        ifelse(align.all.patients,
