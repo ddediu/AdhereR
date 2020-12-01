@@ -54,7 +54,7 @@
   print.data = TRUE,
   exclude.params = c("event.info"),
   skip.header = FALSE,
-  cma.type = class(cma)[1]
+  cma.type = class(x)[1]
 )
 
 \method{print}{CMA_sliding_window}(...)
