@@ -713,7 +713,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
                 tmp <- cma[[p]]; tmp <- tmp[ order(tmp$group, tmp$class), ];
                 cat(paste0("    ",p," =  [ ",paste0(vapply(unique(tmp$group), function(s) paste0(s," (",paste0("'",tmp$class[tmp$group==s],"'",collapse=", "),") "), character(1)),collapse=", "),"]\n"));
               }
-            } else if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
+            } else if( !is.null(cma[[p]]) && length(cma[[p]]) > 0 && !is.na(cma[[p]]) )
             {
               cat(paste0("    ",p," = ",cma[[p]],"\n"));
             }
@@ -6738,7 +6738,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                                   print.data=TRUE,                       # show the summary of the data?
                                   exclude.params=c("event.info"),        # if so, should I not print some?
                                   skip.header=FALSE,                     # should I print the generic header?
-                                  cma.type=class(cma)[1]
+                                  cma.type=class(x)[1]
 )
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
@@ -6767,7 +6767,7 @@ print.CMA_per_episode <- function(x,                                     # the C
             if( p == "CMA" )
             {
               cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
-            } else if( !is.null(cma[[p]]) && !is.na(cma[[p]]) )
+            } else if( !is.null(cma[[p]]) && length(cma[[p]]) > 0 && !is.na(cma[[p]]) )
             {
               cat(paste0("    ",p," = ",cma[[p]],"\n"));
             }
