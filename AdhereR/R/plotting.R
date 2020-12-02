@@ -2011,12 +2011,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     cmas <- cbind(cmas, do.call(rbind, lapply(1:nrow(cmas), function(i)
     {
       s <- which(cma$event.info[,cma$ID.colname] == cmas[i,cma$ID.colname]);
-      if( length(s) == 0 ) return (NULL);
+      if( length(s) == 0 ) return(data.frame(".FU.START.DATE"=NA, ".FU.END.DATE"=NA, ".OBS.START.DATE"=NA, ".OBS.END.DATE"=NA)); #return (NULL);
       cma$event.info[s[1],c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
     })));
   } else
   {
-    # Create a fake one, contining but the follow-up and observation window info:
+    # Create a fake one, containing but the follow-up and observation window info:
     cmas <- data.frame("..patid.."=unique(cma$data[,cma$ID.colname]), "CMA"=NA); names(cmas)[1] <- cma$ID.colname;
     if( !is.null(cma$event.info) )
     {
