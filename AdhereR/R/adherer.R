@@ -493,11 +493,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
       return (NULL);
     }
     # the follow-up window:
-    if( !is.na(followup.window.start) && is.numeric(followup.window.start) && followup.window.start < 0 )
-    {
-      if( !suppress.warnings ) .report.ewms("The follow-up window start must be a positive number of time units after the first event!\n", "error", "CMA0", "AdhereR")
-      return (NULL);
-    } else if( !is.na(followup.window.start) && !inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) && !(followup.window.start %in% names(data)) )
+    if( !is.na(followup.window.start) && !inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) && !(followup.window.start %in% names(data)) )
     {
       # See if it can be forced to a valid Date:
       if( !is.na(followup.window.start) && (is.character(followup.window.start) || is.factor(followup.window.start)) && !is.na(followup.window.start <- as.Date(followup.window.start, format=date.format, optional=TRUE)) )
@@ -505,7 +501,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
         # Ok, it was apparently successfully converted to Date: nothing else to do...
       } else
       {
-        if( !suppress.warnings ) .report.ewms("The follow-up window start must be either a positive number, a Date, or a valid column name in 'data'!\n", "error", "CMA0", "AdhereR")
+        if( !suppress.warnings ) .report.ewms("The follow-up window start must be either a number, a Date, or a valid column name in 'data'!\n", "error", "CMA0", "AdhereR")
         return (NULL);
       }
     }
@@ -1046,7 +1042,7 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
 
 # Auxiliary function: add time units to date:
 .add.time.interval.to.date <- function( start.date, # a Date object
-                                        time.interval=0, # the number of "units" to add to the start.date (must be positive and is rounded)
+                                        time.interval=0, # the number of "units" to add to the start.date (must be numeric and is rounded)
                                         unit="days", # can be "days", "weeks", "months", "years"
                                         suppress.warnings=FALSE
 )
@@ -1054,16 +1050,16 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
   # Checks
   if( !inherits(start.date,"Date") )
   {
-    if( !suppress.warnings ) .report.ewms("start.date to '.add.time.interval.to.date' must be a Date() object.\n", "error", ".add.time.interval.to.date", "AdhereR");
+    if( !suppress.warnings ) .report.ewms("Parameter start.date of .add.time.interval.to.date() must be a Date() object.\n", "error", ".add.time.interval.to.date", "AdhereR");
     return (NA);
   }
-  if( !is.numeric(time.interval) || any(time.interval < 0) )
+  if( !is.numeric(time.interval) )
   {
-    if( !suppress.warnings ) .report.ewms("time.interval to '.add.time.interval.to.date' must be a positive integer.\n", "error", ".add.time.interval.to.date", "AdhereR");
+    if( !suppress.warnings ) .report.ewms("Parameter start.date of .add.time.interval.to.date() must be a number.\n", "error", ".add.time.interval.to.date", "AdhereR");
     return (NA);
   }
-  time.interval <- round(time.interval);
 
+  # time.interval <- round(time.interval);
   # return (switch( as.character(unit),
   #                 "days"  = (start.date + time.interval),
   #                 "weeks" = (start.date + time.interval*7),
@@ -1080,16 +1076,20 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
 
   # Faster but assumes that the internal representation of "Date" object is in number of days since the begining of time (probably stably true):
   return (switch( as.character(unit),
-                            "days"  = structure(unclass(start.date) + time.interval, class="Date"),
-                            "weeks" = structure(unclass(start.date) + time.interval*7, class="Date"),
-                            "months" = lubridate::add_with_rollback(start.date, lubridate::period(time.interval,"months"), roll_to_first=TRUE), # take care of cases such as 2001/01/29 + 1 month
-                            "years"  = lubridate::add_with_rollback(start.date, lubridate::period(time.interval,"years"),  roll_to_first=TRUE), # take care of cases such as 2000/02/29 + 1 year
+                            "days"  = structure(unclass(start.date) + round(time.interval), class="Date"),
+                            "weeks" = structure(unclass(start.date) + round(time.interval*7), class="Date"),
+                            "months" = lubridate::add_with_rollback(start.date,
+                                                                    lubridate::period(round(time.interval),"months"),
+                                                                    roll_to_first=TRUE), # take care of cases such as 2001/01/29 + 1 month
+                            "years"  = lubridate::add_with_rollback(start.date,
+                                                                    lubridate::period(round(time.interval),"years"),
+                                                                    roll_to_first=TRUE), # take care of cases such as 2000/02/29 + 1 year
                             {if( !suppress.warnings ) .report.ewms(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n"), "error", ".add.time.interval.to.date", "AdhereR"); NA;} # default
   ));
 }
 
 # Auxiliary function: subtract two dates to obtain the number of days in between:
-# WARNING! Faster than difftime() but makes the assumption that the internal representation of Date objects is the number of days since a given begining of time
+# WARNING! Faster than difftime() but makes the assumption that the internal representation of Date objects is the number of days since a given beginning of time
 # (true as of R 3.4 and probably conserved in future versions)
 .difftime.Dates.as.days <- function( start.dates, end.dates, suppress.warnings=FALSE )
 {
@@ -1618,13 +1618,12 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 
   # preconditions concerning follow-up window (as all violations result in the same error, aggregate them in a single if):
   if( (is.null(followup.window.start) || is.na(followup.window.start) || length(followup.window.start) != 1) ||                   # cannot be missing or have more than one values
-      (is.numeric(followup.window.start) && (followup.window.start < 0)) ||                                                       # if a number, must be a single positive one
       (!inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) &&                                           # not a Date or number:
           (!(is.character(followup.window.start) ||                                                                               # it must be a character...
              (is.factor(followup.window.start) && is.character(followup.window.start <- as.character(followup.window.start)))) || # ...or a factor (forced to character)
            !(followup.window.start %in% data.names))) )                                                                           # make sure it's a valid column name
   {
-    if( !suppress.warnings ) .report.ewms("The follow-up window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
+    if( !suppress.warnings ) .report.ewms("The follow-up window start must be a single value, either a number, a Date object, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
   if( is.null(followup.window.start.unit) || is.na(followup.window.start.unit) ||
