@@ -1918,9 +1918,24 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
   # Cache the CMA estimates (if any):
   cmas <- getCMA(cma);
-  if( inherits(cmas, "data.table") ) cmas <- as.data.frame(cmas); # same conversion to data.frame as above
+  # Keep only those patients with non-missing CMA estimates:
+  if( !is.null(cmas) )
+  {
+    if( inherits(cmas, "data.table") ) cmas <- as.data.frame(cmas); # same conversion to data.frame as above
 
-  # Depeding on the cma's exact type, the relevant columns might be different or even absent: homogenize them for later use
+    non_missing_cmas <- cmas[ !is.na(cmas[,"CMA"]), ]; non_missing_cma_patids <- unique(as.character(non_missing_cmas[,cma$ID.colname]));
+    if( is.null(non_missing_cma_patids) || length(non_missing_cma_patids) == 0 )
+    {
+      if( !suppress.warnings ) .report.ewms("No patients with CMA estimates: nothing to plot!\n", "error", ".plot.CMAs", "AdhereR");
+      plot.CMA.error(export.formats=export.formats,
+                     export.formats.fileprefix=export.formats.fileprefix,
+                     export.formats.directory=export.formats.directory,
+                     generate.R.plot=generate.R.plot);
+      return (invisible(NULL));
+    }
+  }
+
+  # Depending on the cma's exact type, the relevant columns might be different or even absent: homogenize them for later use
   if( inherits(cma, "CMA_per_episode") )
   {
     names(cmas)[2:ncol(cmas)] <- c("WND.ID", "start", "gap.days", "duration", "end", "CMA"); # avoid possible conflict with patients being called "ID"
@@ -2210,7 +2225,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   # Compute the duration if not given:
   if( is.na(duration) )
   {
-    latest.date <- max(cmas$.FU.END.DATE, cmas$.OBS.END.DATE, cma$data$.DATE.as.Date + cma$data[,cma$event.duration.colname], na.rm=TRUE);
+    latest.date <- max(cma$data$.DATE.as.Date + cma$data[,cma$event.duration.colname], cmas$.FU.END.DATE, cmas$.OBS.END.DATE, na.rm=TRUE);
     if( "end" %in% names(cmas) ) latest.date <- max(cmas$end, latest.date, na.rm=TRUE);
     duration <- as.numeric(latest.date - earliest.date) + correct.earliest.followup.window;
   }
