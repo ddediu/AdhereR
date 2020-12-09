@@ -2035,6 +2035,21 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                      generate.R.plot=generate.R.plot);
       return (invisible(NULL));
     }
+  } else
+  {
+    # Remove the participants without CMA estimates:
+    patids.no.events.to.plot <- unique(cmas[ is.na(cmas$CMA), cma$ID.colname ]);
+    if( length(patids.no.events.to.plot) > 0 )
+    {
+      cma$data <- cma$data[ !(cma$data[,cma$ID.colname] %in% patids.no.events.to.plot), ];
+      #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), cma$ID.colname ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
+      cmas <- cmas[ !(cmas[,cma$ID.colname] %in% patids.no.events.to.plot),  ]
+      if( !suppress.warnings ) .report.ewms(paste0("Patient",
+                                                   ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
+                                                   paste0("'",patids.no.events.to.plot, "'", collapse=", "),
+                                                   ifelse(length(patids.no.events.to.plot) > 1, " have ", " has "), " no events to plot!\n"),
+                                            "warning", ".plot.CMAs", "AdhereR");
+    }
   }
 
   # Add the follow-up and observation window info as well, to have everything in one place:

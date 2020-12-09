@@ -906,7 +906,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
-                      suppress.warnings=FALSE,         # suppress warnings?
+                      suppress.warnings=FALSE,               # suppress warnings?
                       max.patients.to.plot=100               # maximum number of patients to plot
 )
 {
@@ -2628,8 +2628,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                            min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
-                           max.patients.to.plot=100,        # maximum number of patients to plot
-                           suppress.warnings=TRUE,
+                           suppress.warnings=FALSE,               # suppress warnings?
+                           max.patients.to.plot=100,              # maximum number of patients to plot
                            ...
 )
 {
