@@ -1942,10 +1942,36 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   if( inherits(cma, "CMA_per_episode") )
   {
     names(cmas)[2:ncol(cmas)] <- c("WND.ID", "start", "gap.days", "duration", "end", "CMA"); # avoid possible conflict with patients being called "ID"
+
+    # Remove the participants without CMA estimates:
+    patids.no.events.to.plot <- setdiff(unique(cma$data[,cma$ID.colname]), unique(cmas[,cma$ID.colname]));
+    if( length(patids.no.events.to.plot) > 0 )
+    {
+      cma$data <- cma$data[ !(cma$data[,cma$ID.colname] %in% patids.no.events.to.plot), ];
+      #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), cma$ID.colname ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
+      if( !suppress.warnings ) .report.ewms(paste0("Patient",
+                                                   ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
+                                                   paste0("'",patids.no.events.to.plot, "'", collapse=", "),
+                                                   ifelse(length(patids.no.events.to.plot) > 1, " have ", " has "), " no events to plot!\n"),
+                                            "warning", ".plot.CMAs", "AdhereR");
+    }
   } else if( inherits(cma, "CMA_sliding_window") )
   {
     cmas <- cbind(cmas[,1:3], "gap.days"=NA, "duration"=cma$sliding.window.duration, cmas[,4:ncol(cmas)]);
     names(cmas)[2:ncol(cmas)] <- c("WND.ID", "start", "gap.days", "duration", "end", "CMA"); # avoid possible conflict with patients being called "ID"
+
+    # Remove the participants without CMA estimates:
+    patids.no.events.to.plot <- setdiff(unique(cma$data[,cma$ID.colname]), unique(cmas[,cma$ID.colname]));
+    if( length(patids.no.events.to.plot) > 0 )
+    {
+      cma$data <- cma$data[ !(cma$data[,cma$ID.colname] %in% patids.no.events.to.plot), ];
+      #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), cma$ID.colname ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
+      if( !suppress.warnings ) .report.ewms(paste0("Patient",
+                                                   ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
+                                                   paste0("'",patids.no.events.to.plot, "'", collapse=", "),
+                                                   ifelse(length(patids.no.events.to.plot) > 1, " have ", " has "), " no events to plot!\n"),
+                                            "warning", ".plot.CMAs", "AdhereR");
+    }
   } else if( inherits(cma, "CMA0") && is.null(cma$event.info) )
   {
     # Try to compute the event.info:
