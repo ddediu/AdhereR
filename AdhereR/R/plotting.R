@@ -1935,6 +1935,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
   }
 
+  # The patients that have no events to plot:
+  patids.no.events.to.plot <- NULL;
+
   # Depending on the cma's exact type, the relevant columns might be different or even absent: homogenize them for later use
   if( inherits(cma, "CMA_per_episode") )
   {
@@ -1982,6 +1985,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       event.info$.DATE.as.Date.end <- .add.time.interval.to.date(event.info$.DATE.as.Date, event.info[,cma$event.duration.colname], "days");
 
       # Remove all treatments that end before FUW starts and those that start after FUW ends:
+      patids.all <- unique(event.info[,cma$ID.colname]);
       event.info <- event.info[ !(event.info$.DATE.as.Date.end < event.info$.FU.START.DATE | event.info$.DATE.as.Date > event.info$.FU.END.DATE), ];
       if( is.null(event.info) || nrow(event.info) == 0 )
       {
@@ -1992,6 +1996,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        generate.R.plot=generate.R.plot);
         return (invisible(NULL));
       }
+      patids.no.events.to.plot <- setdiff(patids.all, unique(event.info[,cma$ID.colname]));
 
       # Find all prescriptions that start before the follow-up window and truncate them:
       s <- (event.info$.DATE.as.Date < event.info$.FU.START.DATE);
@@ -2009,6 +2014,18 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
       # Store the event.info data:
       cma$event.info <- event.info;
+
+      # For the patients without stuff to plot, replace their events by a fake single event:
+      if( length(patids.no.events.to.plot) > 0 )
+      {
+        cma$data <- cma$data[ !(cma$data[,cma$ID.colname] %in% patids.no.events.to.plot), ];
+        #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), cma$ID.colname ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
+        if( !suppress.warnings ) .report.ewms(paste0("Patient",
+                                                     ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
+                                                     paste0("'",patids.no.events.to.plot, "'", collapse=", "),
+                                                     ifelse(length(patids.no.events.to.plot) > 1, " have ", " has "), " no events to plot!\n"),
+                                              "warning", ".plot.CMAs", "AdhereR");
+      }
     } else
     {
       if( !suppress.warnings ) .report.ewms("Error(s) concerning the follow-up and observation windows!\n", "error", ".plot.CMAs", "AdhereR");
