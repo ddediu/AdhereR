@@ -1056,8 +1056,29 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
   }
   if( !is.numeric(time.interval) )
   {
-    if( !suppress.warnings ) .report.ewms("Parameter start.date of .add.time.interval.to.date() must be a number.\n", "error", ".add.time.interval.to.date", "AdhereR");
-    return (NA);
+    if( inherits(time.interval, "difftime") ) # check if a difftime and, if so, attempt conversion to number of units
+    {
+      # Time difference:
+      if( units(time.interval) == as.character(unit) )
+      {
+        time.interval <- as.numeric(time.interval);
+      } else
+      {
+        # Try to convert it:
+        time.interval <- as.numeric(time.interval, unit="days");
+        time.interval <- switch( as.character(unit),
+                                 "days"  = time.interval,
+                                 "weeks" = time.interval/7,
+                                 "months" = {if( !suppress.warnings ) .report.ewms("Converting to months assuming a 30-days month!", "warning", ".add.time.interval.to.date", "AdhereR"); time.interval/30;},
+                                 "years"  = {if( !suppress.warnings ) .report.ewms("Converting to years assuming a 365-days year!", "warning", ".add.time.interval.to.date", "AdhereR"); time.interval/365;},
+                                 {if( !suppress.warnings ) .report.ewms(paste0("Unknown unit '",unit,"' to '.add.time.interval.to.date'.\n"), "error", ".add.time.interval.to.date", "AdhereR"); return(NA);} # default
+        );
+      }
+    } else
+    {
+      if( !suppress.warnings ) .report.ewms("Parameter start.date of .add.time.interval.to.date() must be a number.\n", "error", ".add.time.interval.to.date", "AdhereR");
+      return (NA);
+    }
   }
 
   # time.interval <- round(time.interval);
