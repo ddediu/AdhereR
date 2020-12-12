@@ -54,8 +54,8 @@
   observation.window.opacity = 0.3,
   alternating.bands.cols = c("white", "gray95"),
   bw.plot = FALSE,
-  min.plot.size.in.characters.horiz = 10,
-  min.plot.size.in.characters.vert = 0.5,
+  min.plot.size.in.characters.horiz = 0,
+  min.plot.size.in.characters.vert = 0,
   suppress.warnings = FALSE,
   max.patients.to.plot = 100
 )
@@ -173,16 +173,17 @@ distinguishing the patients; can be \code{NULL} = don't draw the bandes;
 or a vector of colors.}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
-\code{\link[grDevices]{gray.colors}} function)?
-\emph{Numeric}, the minimum size of the plotting surface in characters;
-horizontally (min.plot.size.in.characters.horiz) referes to the the whole
-duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-referes to a single event.}
+\code{\link[grDevices]{gray.colors}} function)?}
 
 \item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
-horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+horizontally (min.plot.size.in.characters.horiz) refers to the the whole
 duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-referes to a single event.}
+refers to a single event. If the plotting is too small, possible solutions
+might be: if within \code{RStudio}, try to enlarge the "Plots" panel, or
+(also valid outside \code{RStudio} but not if using \code{RStudio server}
+start a new plotting device (e.g., using \code{X11()}, \code{quartz()}
+or \code{windows()}, depending on OS) or (works always) save to an image
+(e.g., \code{jpeg(...); ...; dev.off()}) and display it in a viewer.}
 
 \item{suppress.warnings}{\emph{Logical}: show or hide the warnings?}
 

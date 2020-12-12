@@ -848,15 +848,16 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' or a vector of colors.
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
-#' \emph{Numeric}, the minimum size of the plotting surface in characters;
-#' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
-#' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-#' referes to a single event.
 #' @param min.plot.size.in.characters.horiz,min.plot.size.in.characters.vert
 #' \emph{Numeric}, the minimum size of the plotting surface in characters;
-#' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+#' horizontally (min.plot.size.in.characters.horiz) refers to the the whole
 #' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-#' referes to a single event.
+#' refers to a single event. If the plotting is too small, possible solutions
+#' might be: if within \code{RStudio}, try to enlarge the "Plots" panel, or
+#' (also valid outside \code{RStudio} but not if using \code{RStudio server}
+#' start a new plotting device (e.g., using \code{X11()}, \code{quartz()}
+#' or \code{windows()}, depending on OS) or (works always) save to an image
+#' (e.g., \code{jpeg(...); ...; dev.off()}) and display it in a viewer.
 #' @param suppress.warnings \emph{Logical}: show or hide the warnings?
 #' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
 #' to plot.
@@ -905,7 +906,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                      min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
+                      min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                       suppress.warnings=FALSE,               # suppress warnings?
                       max.patients.to.plot=100               # maximum number of patients to plot
 )
@@ -2627,7 +2628,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                            alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                           min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
+                           min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                            suppress.warnings=FALSE,               # suppress warnings?
                            max.patients.to.plot=100,              # maximum number of patients to plot
                            ...
@@ -3203,9 +3204,14 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' relative only to its medication class.
 #' @param min.plot.size.in.characters.horiz,min.plot.size.in.characters.vert
 #' \emph{Numeric}, the minimum size of the plotting surface in characters;
-#' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+#' horizontally (min.plot.size.in.characters.horiz) refers to the the whole
 #' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-#' referes to a single event.
+#' refers to a single event. If the plotting is too small, possible solutions
+#' might be: if within \code{RStudio}, try to enlarge the "Plots" panel, or
+#' (also valid outside \code{RStudio} but not if using \code{RStudio server}
+#' start a new plotting device (e.g., using \code{X11()}, \code{quartz()}
+#' or \code{windows()}, depending on OS) or (works always) save to an image
+#' (e.g., \code{jpeg(...); ...; dev.off()}) and display it in a viewer.
 #' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
 #' to plot.
 #' @param ... other possible parameters
@@ -3247,7 +3253,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                       plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                      min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.5, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
+                      min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                       max.patients.to.plot=100               # maximum number of patients to plot
 )
 {
@@ -6944,9 +6950,14 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' Attributes of the observation window (colour, transparency).
 #' @param min.plot.size.in.characters.horiz,min.plot.size.in.characters.vert
 #' \emph{Numeric}, the minimum size of the plotting surface in characters;
-#' horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+#' horizontally (min.plot.size.in.characters.horiz) refers to the the whole
 #' duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-#' referes to a single event.
+#' refers to a single event. If the plotting is too small, possible solutions
+#' might be: if within \code{RStudio}, try to enlarge the "Plots" panel, or
+#' (also valid outside \code{RStudio} but not if using \code{RStudio server}
+#' start a new plotting device (e.g., using \code{X11()}, \code{quartz()}
+#' or \code{windows()}, depending on OS) or (works always) save to an image
+#' (e.g., \code{jpeg(...); ...; dev.off()}) and display it in a viewer.
 #' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
 #' to plot.
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
@@ -7038,7 +7049,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.opacity=0.3,
                                  alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                                  bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
-                                 min.plot.size.in.characters.horiz=10, min.plot.size.in.characters.vert=0.25, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
+                                 min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                                  max.patients.to.plot=100,        # maximum number of patients to plot
                                  suppress.warnings=FALSE,         # suppress warnings?
                                  ...
