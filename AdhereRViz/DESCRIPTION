@@ -1,7 +1,7 @@
 Package: AdhereRViz
 Type: Package
 Title: Adherence to Medications
-Version: 0.1
+Version: 0.1.1
 Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
                      email = "ddediu@gmail.com"),
              person("Alexandra", "Dima", role = "aut",
@@ -19,8 +19,8 @@ Description: Interactive graphical user interface (GUI) for the package
 URL: https://github.com/ddediu/AdhereR 
 License: GPL (>= 2)
 LazyData: TRUE
-RoxygenNote: 6.1.1
-Imports: AdhereR (>= 0.6),
+RoxygenNote: 7.1.1
+Imports: AdhereR (>= 0.6.1),
     lubridate (>= 1.5),
     parallel (>= 3.0),
     data.table (>= 1.9),

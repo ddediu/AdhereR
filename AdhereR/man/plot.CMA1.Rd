@@ -12,29 +12,64 @@
 \alias{plot.CMA9}
 \title{Plot CMA0-derived objects.}
 \usage{
-\method{plot}{CMA1}(x, ..., patients.to.plot = NULL, duration = NA,
-  align.all.patients = FALSE, align.first.event.at.zero = TRUE,
-  show.period = c("dates", "days")[2], period.in.days = 90,
-  show.legend = TRUE, legend.x = "right", legend.y = "bottom",
-  legend.bkg.opacity = 0.5, legend.cex = 0.75, legend.cex.title = 1,
-  cex = 1, cex.axis = 0.75, cex.lab = 1, show.cma = TRUE,
-  col.cats = rainbow, unspecified.category.label = "drug",
-  lty.event = "solid", lwd.event = 2, pch.start.event = 15,
-  pch.end.event = 16, show.event.intervals = TRUE,
-  col.na = "lightgray", print.CMA = TRUE, CMA.cex = 0.5,
-  plot.CMA = TRUE, CMA.plot.ratio = 0.1, CMA.plot.col = "lightgreen",
-  CMA.plot.border = "darkgreen", CMA.plot.bkg = "aquamarine",
-  CMA.plot.text = CMA.plot.border, highlight.followup.window = TRUE,
-  followup.window.col = "green", highlight.observation.window = TRUE,
-  observation.window.col = "yellow", observation.window.density = 35,
-  observation.window.angle = -30, observation.window.opacity = 0.3,
-  show.real.obs.window.start = TRUE, real.obs.window.density = 35,
-  real.obs.window.angle = 30, print.dose = FALSE, cex.dose = 0.75,
-  print.dose.outline.col = "white", print.dose.centered = FALSE,
-  plot.dose = FALSE, lwd.event.max.dose = 8,
-  plot.dose.lwd.across.medication.classes = FALSE, bw.plot = FALSE,
-  min.plot.size.in.characters.horiz = 10,
-  min.plot.size.in.characters.vert = 0.5, max.patients.to.plot = 100)
+\method{plot}{CMA1}(
+  x,
+  ...,
+  patients.to.plot = NULL,
+  duration = NA,
+  align.all.patients = FALSE,
+  align.first.event.at.zero = TRUE,
+  show.period = c("dates", "days")[2],
+  period.in.days = 90,
+  show.legend = TRUE,
+  legend.x = "right",
+  legend.y = "bottom",
+  legend.bkg.opacity = 0.5,
+  legend.cex = 0.75,
+  legend.cex.title = 1,
+  cex = 1,
+  cex.axis = 0.75,
+  cex.lab = 1,
+  show.cma = TRUE,
+  col.cats = rainbow,
+  unspecified.category.label = "drug",
+  lty.event = "solid",
+  lwd.event = 2,
+  pch.start.event = 15,
+  pch.end.event = 16,
+  show.event.intervals = TRUE,
+  col.na = "lightgray",
+  print.CMA = TRUE,
+  CMA.cex = 0.5,
+  plot.CMA = TRUE,
+  CMA.plot.ratio = 0.1,
+  CMA.plot.col = "lightgreen",
+  CMA.plot.border = "darkgreen",
+  CMA.plot.bkg = "aquamarine",
+  CMA.plot.text = CMA.plot.border,
+  highlight.followup.window = TRUE,
+  followup.window.col = "green",
+  highlight.observation.window = TRUE,
+  observation.window.col = "yellow",
+  observation.window.density = 35,
+  observation.window.angle = -30,
+  observation.window.opacity = 0.3,
+  show.real.obs.window.start = TRUE,
+  real.obs.window.density = 35,
+  real.obs.window.angle = 30,
+  print.dose = FALSE,
+  cex.dose = 0.75,
+  print.dose.outline.col = "white",
+  print.dose.centered = FALSE,
+  plot.dose = FALSE,
+  lwd.event.max.dose = 8,
+  plot.dose.lwd.across.medication.classes = FALSE,
+  bw.plot = FALSE,
+  force.draw.text = FALSE,
+  min.plot.size.in.characters.horiz = 0,
+  min.plot.size.in.characters.vert = 0,
+  max.patients.to.plot = 100
+)
 
 \method{plot}{CMA2}(...)
 
@@ -163,10 +198,18 @@ relative only to its medication class.}
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
 
+\item{force.draw.text}{\emph{Logical}, if \code{TRUE}, always draw text even
+if too big or too small}
+
 \item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
-horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+horizontally (min.plot.size.in.characters.horiz) refers to the the whole
 duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-referes to a single event.}
+refers to a single event. If the plotting is too small, possible solutions
+might be: if within \code{RStudio}, try to enlarge the "Plots" panel, or
+(also valid outside \code{RStudio} but not if using \code{RStudio server}
+start a new plotting device (e.g., using \code{X11()}, \code{quartz()}
+or \code{windows()}, depending on OS) or (works always) save to an image
+(e.g., \code{jpeg(...); ...; dev.off()}) and display it in a viewer.}
 
 \item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
 to plot.}

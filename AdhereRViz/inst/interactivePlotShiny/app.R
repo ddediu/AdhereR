@@ -20,6 +20,7 @@
 ###############################################################################################
 
 
+# Imports ----
 #library(shiny)
 #' @import AdhereR
 #' @import AdhereRViz
@@ -74,7 +75,8 @@ ui <- fluidPage(
 
   # JavaScript ----
   shinyjs::useShinyjs(),
-  shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}"),
+  shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}",
+                         functions=c("shinyjs.scroll_cma_compute_log")),
   #shinyjs::extendShinyjs(text="shinyjs.show_hide_sections = function() {$('#follow_up_folding_bits').toggle();"),
 
   # APP TITLE ----
@@ -192,10 +194,10 @@ ui <- fluidPage(
                                                                 conditionalPanel(
                                                                   condition = "(input.followup_window_start_unit == 'calendar date')",
                                                                   # Select an actual date
-                                                                  div(title='Select the actual start date of the follow-up window (possibly using a calendar widget)',
+                                                                  div(title='Select the actual start date of the follow-up window (possibly using a calendar widget in the format year-month-day)',
                                                                       dateInput(inputId="followup_window_start_date",
                                                                                 label="FUW start",
-                                                                                value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
+                                                                                value=NULL, format="yyyy-mm-dd", startview="month", weekstart=1))
                                                                 ),
 
                                                                 ## If follow-up window unit is "column in dataset"
@@ -250,10 +252,10 @@ ui <- fluidPage(
                                                                 conditionalPanel(
                                                                   condition = "(input.observation_window_start_unit == 'calendar date')",
                                                                   # Select an actual date
-                                                                  div(title='Select the actual start date of the observation window (possibly using a calendar widget)',
+                                                                  div(title='Select the actual start date of the observation window (possibly using a calendar widget in the format year-month-day)',
                                                                       dateInput(inputId="observation_window_start_date",
                                                                                 label="OW start",
-                                                                                value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
+                                                                                value=NULL, format="yyyy-mm-dd", startview="month", weekstart=1))
                                                                 ),
 
                                                                 # If observation window unit is not "calendar date"
@@ -541,7 +543,7 @@ ui <- fluidPage(
                                                                                                    value=TRUE, status="primary", right=TRUE)),
 
                                                                   conditionalPanel(
-                                                                    condition="input.cma_class != 'simple' && input.plot_cma",
+                                                                    condition="input.cma_class != 'simple'",
 
                                                                     div(title='Show the "partial" CMA estimates as stacked bars?',
                                                                         shinyWidgets::materialSwitch(inputId="plot_cma_stacked",
@@ -950,14 +952,14 @@ ui <- fluidPage(
                                                                                                   label="OW color",
                                                                                                   value="yellow"))
                                                                   ),
-                                                                  div(title='The density of the hashing lines (number of lines per inch) used to draw the observation window',
-                                                                      numericInput(inputId="observation_window_density",
-                                                                                   label="OW hash dens.",
-                                                                                   value=35, min=0, max=NA, step=5)),
-                                                                  div(title='The orientation of the hashing lines (in degrees) used to draw the observation window',
-                                                                      sliderInput(inputId="observation_window_angle",
-                                                                                  label="OW hash angle",
-                                                                                  min=-90.0, max=90.0, value=-30, step=15, round=TRUE)),
+                                                                  #div(title='The density of the hashing lines (number of lines per inch) used to draw the observation window',
+                                                                  #    numericInput(inputId="observation_window_density",
+                                                                  #                 label="OW hash dens.",
+                                                                  #                 value=35, min=0, max=NA, step=5)),
+                                                                  #div(title='The orientation of the hashing lines (in degrees) used to draw the observation window',
+                                                                  #    sliderInput(inputId="observation_window_angle",
+                                                                  #                label="OW hash angle",
+                                                                  #                min=-90.0, max=90.0, value=-30, step=15, round=TRUE)),
                                                                   div(title='The observation window\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
                                                                       sliderInput(inputId="observation_window_opacity",
                                                                                   label="OW opacity",
@@ -976,18 +978,18 @@ ui <- fluidPage(
                                                                       shinyWidgets::materialSwitch(inputId="show_real_obs_window_start",
                                                                                                    label="Show real OW?",
                                                                                                    value=TRUE, status="primary", right=TRUE)),
-                                                                  conditionalPanel(
-                                                                    condition="input.show_real_obs_window_start",
-
-                                                                    div(title='The density of the hashing lines (number of lines per inch) used to draw the real observation window',
-                                                                        numericInput(inputId="real_obs_window_density",
-                                                                                     label="Real OW hash dens.",
-                                                                                     value=35, min=0, max=NA, step=5)),
-                                                                    div(title='The orientation of the hashing lines (in degrees) used to draw the real observation window',
-                                                                        sliderInput(inputId="real_obs_window_angle",
-                                                                                    label="Real OW hash angle",
-                                                                                    min=-90.0, max=90.0, value=30, step=15, round=TRUE))
-                                                                  ),
+                                                                  #conditionalPanel(
+                                                                  #  condition="input.show_real_obs_window_start",
+                                                                  #
+                                                                  #  div(title='The density of the hashing lines (number of lines per inch) used to draw the real observation window',
+                                                                  #      numericInput(inputId="real_obs_window_density",
+                                                                  #                   label="Real OW hash dens.",
+                                                                  #                   value=35, min=0, max=NA, step=5)),
+                                                                  #  div(title='The orientation of the hashing lines (in degrees) used to draw the real observation window',
+                                                                  #      sliderInput(inputId="real_obs_window_angle",
+                                                                  #                  label="Real OW hash angle",
+                                                                  #                  min=-90.0, max=90.0, value=30, step=15, round=TRUE))
+                                                                  #),
 
                                                                   hr()
                                                                 ),
@@ -1682,34 +1684,55 @@ ui <- fluidPage(
                   conditionalPanel(
                     condition="(input.save_to_file_info)",
 
-                    column(2,
-                           div(title='The width of the exported plot (in the selected units)',
-                               numericInput(inputId="save_plot_width", label="width", value=5))),
-                    column(2,
-                           div(title='The height of the exported plot (in the selected units)',
-                               numericInput(inputId="save_plot_height", label="height", value=5))),
+                    div(title='Save the plot using the same size as currently displayed or pick a new size?',
+                        checkboxInput(inputId="save_plot_displayed_size", label="Save plot using current size?", value=TRUE)),
 
-                    conditionalPanel( # EPS + PDF
-                      condition="(input.save_plot_type == 'eps' || save_plot_type == 'pdf')",
+                    conditionalPanel(
+                      condition="(!input.save_plot_displayed_size)",
                       column(2,
-                             div(title='For EPS and PDF, only inches are available',
-                                 selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in"))) # only inches
+                             div(title='The width of the exported plot (in the selected units)',
+                                 numericInput(inputId="save_plot_width", label="width", value=5))),
+                      column(2,
+                             div(title='The height of the exported plot (in the selected units)',
+                                 numericInput(inputId="save_plot_height", label="height", value=5))),
+
+                      conditionalPanel( # EPS + PDF
+                        condition="(input.save_plot_type == 'eps' || save_plot_type == 'pdf')",
+                        column(2,
+                               div(title='For EPS and PDF, only inches are available',
+                                   selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in"))) # only inches
+                      ),
+                      conditionalPanel( # JPEG + PNG + TIFF
+                        condition="(input.save_plot_type != 'eps' && save_plot_type != 'pdf')",
+                        column(2,
+                               div(title='The unit of exported plot',
+                                   selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","px"), selected="in")))
+                      )
                     ),
-                    conditionalPanel( # JPEG + PNG + TIFF
-                      condition="(input.save_plot_type != 'eps' && save_plot_type != 'pdf')",
-                      column(2,
-                             div(title='The unit of exported plot',
-                                 selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","mm","px"), selected="in")))
+
+                    conditionalPanel(
+                      condition="(input.save_plot_displayed_size)",
+                      column(6,
+                             div())
                     ),
 
                     column(2,
                            div(title='The type of the exported image',
-                               selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpeg"))),
+                               selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpg"))),
 
                     #column(2,numericInput(inputId="save_plot_quality", label="quality", value=75, min=0, max=100, step=1)),
-                    column(2,
-                           div(title='The resolution of the exported image (not useful for EPS and PDF)',
-                               numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0))),
+                    conditionalPanel(
+                      condition="(input.save_plot_type != 'eps' && input.save_plot_type != 'pdf')",
+                      column(2,
+                             div(title='The resolution of the exported image (not useful for EPS and PDF)',
+                                 numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0)))
+                    ),
+
+                    conditionalPanel(
+                      condition="(input.save_plot_type == 'eps' || input.save_plot_type == 'pdf')",
+                      column(2,
+                             div())
+                    ),
 
                     column(2, style="margin-top: 25px;",
                            div(title='Export the plot now!',
@@ -1726,7 +1749,7 @@ ui <- fluidPage(
                     div(id="container", title="Various messages (in blue), warnings (in green) and errors (in red) generated during plotting...",
                         span(" Messages:", style="color:DarkBlue; font-weight: bold;"),
                         span(htmlOutput(outputId = "messages")),
-                        style="height: 4em; resize: none; overflow: auto")
+                        style="height: 4em; resize: vertical; overflow: auto")
              ),
 
              # The actual plot ----
@@ -1854,9 +1877,10 @@ ui <- fluidPage(
 )
 
 
-# The server logic ----
+# THE SERVER LOGIC ----
 server <- function(input, output, session)
 {
+  # Initialisation of the Shiny app ----
   isolate({showModal(modalDialog("Adherer", title=div(icon("hourglass", lib="glyphicon"), "Please wait while initializing the App..."), easyClose=FALSE, footer=NULL))})
 
   # Reactive value to allow UI updating on dataset changes:
@@ -1864,6 +1888,8 @@ server <- function(input, output, session)
 
   isolate(
     {
+      options(shiny.sanitize.errors=FALSE);
+
       # Initialisation for a directly-launched Shiny App or for a new session:
       if( is.null(.GlobalEnv$.plotting.params) ||
           (is.logical(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments) &&
@@ -1871,7 +1897,7 @@ server <- function(input, output, session)
            !.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments) )
       {
         # Ok, seem we've been launched directly as a "normal" Shiny app:
-        # make sure things are set to the their default in the .plotting.params global list:
+        # make sure things are set to their default in the .plotting.params global list:
         .GlobalEnv$.plotting.params <- list("data"=NULL,
                                             "cma.class"="simple",
                                             "ID.colname"=NA,
@@ -1932,7 +1958,7 @@ server <- function(input, output, session)
 
   #outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
 
-  # Clean up stuff when session ended:
+  # Clean up at session end ----
   session$onSessionEnded(function()
   {
     # Disconnect any open database connections...
@@ -1948,7 +1974,7 @@ server <- function(input, output, session)
   })
 
 
-  # The plotting function:
+  # The plotting function ----
   .renderPlot <- function()
   {
     patients.to.plot <- input$patient;
@@ -1994,18 +2020,14 @@ server <- function(input, output, session)
                                                          #carryover.into.obs.window=FALSE,
                                                          carry.only.for.same.medication=input$carry_only_for_same_medication,
                                                          consider.dosage.change=input$consider_dosage_change,
-                                                         followup.window.start=ifelse(input$followup_window_start_unit== "calendar date",
-                                                                                      as.Date(input$followup_window_start_date, format="%Y-%m-%d"),
-                                                                                      as.numeric(input$followup_window_start_no_units)),
-                                                         followup.window.start.unit=ifelse(input$followup_window_start_unit== "calendar date",
+                                                         followup.window.start=if(input$followup_window_start_unit == "calendar date"){as.Date(input$followup_window_start_date, format="%Y-%m-%d")} else {as.numeric(input$followup_window_start_no_units)},
+                                                         followup.window.start.unit=ifelse(input$followup_window_start_unit == "calendar date",
                                                                                            "days",
                                                                                            input$followup_window_start_unit),
                                                          followup.window.duration=as.numeric(input$followup_window_duration),
                                                          followup.window.duration.unit=input$followup_window_duration_unit,
-                                                         observation.window.start=ifelse(input$observation_window_start_unit== "calendar date",
-                                                                                         as.Date(input$observation_window_start_date, format="%Y-%m-%d"),
-                                                                                         as.numeric(input$observation_window_start_no_units)),
-                                                         observation.window.start.unit=ifelse(input$observation_window_start_unit== "calendar date",
+                                                         observation.window.start=if(input$observation_window_start_unit == "calendar date"){as.Date(input$observation_window_start_date, format="%Y-%m-%d")} else {as.numeric(input$observation_window_start_no_units)},
+                                                         observation.window.start.unit=ifelse(input$observation_window_start_unit == "calendar date",
                                                                                               "days",
                                                                                               input$observation_window_start_unit),
                                                          observation.window.duration=as.numeric(input$observation_window_duration),
@@ -2049,10 +2071,10 @@ server <- function(input, output, session)
                                                          cex=max(0.01,input$cex), cex.axis=max(0.01,input$cex_axis), cex.lab=max(0.01,input$cex_lab),
                                                          highlight.followup.window=input$highlight_followup_window, followup.window.col=input$followup_window_col,
                                                          highlight.observation.window=input$highlight_observation_window, observation.window.col=input$observation_window_col,
-                                                         observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
+                                                         #observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
                                                          observation.window.opacity=input$observation_window_opacity,
                                                          show.real.obs.window.start=input$show_real_obs_window_start,
-                                                         real.obs.window.density=input$real_obs_window_density, real.obs.window.angle=input$real_obs_window_angle,
+                                                         #real.obs.window.density=input$real_obs_window_density, real.obs.window.angle=input$real_obs_window_angle,
                                                          print.CMA=input$print_cma, CMA.cex=max(0.01,input$cma_cex),
                                                          plot.CMA=input$plot_cma, CMA.plot.ratio=input$cma_plot_ratio / 100.0,
                                                          CMA.plot.col=input$cma_plot_col, CMA.plot.border=input$cma_plot_border, CMA.plot.bkg=input$cma_plot_bkg, CMA.plot.text=input$cma_plot_text,
@@ -2095,7 +2117,7 @@ server <- function(input, output, session)
     return (res);
   }
 
-  # Do the ploting:
+  # renderPlot() ----
   output$distPlot <- renderPlot({
 
       rv$toggle.me; # make the plot aware of forced updates to the UI (for example, when chainging the dataset)
@@ -2122,26 +2144,45 @@ server <- function(input, output, session)
         if( input$cma_class %in% c("simple", "per episode", "sliding window") )
         {
           # Call the workhorse plotting function with the appropriate argumens:
-          msgs <- capture.output(res <- .renderPlot());
+          #msgs <- capture.output(res <- .renderPlot());
+          res <- .renderPlot();
         } else
         {
           # Quitting....
           showModal(modalDialog(title="AdhereR interactive plotting...", paste0("Unknwon CMA class '",input$cma_class,"'."), easyClose=TRUE));
         }
 
-        if( is.null(res) || length(grep("error", msgs, ignore.case=TRUE)) > 0 )
+        # Show the messages (if any):
+        ewms <- AdhereR:::.get.ewms();
+        if( !is.null(ewms) && nrow(ewms) > 0 )
         {
-          # Errors:
-          output$messages <- renderText({ paste0("<font color=\"red\"><b>",msgs,"</b></font>"); })
-        } else if( length(grep("warning", msgs, ignore.case=TRUE)) > 0 )
-        {
-          # Warnings:
-          output$messages <- renderText({ paste0("<font color=\"green\"><i>",msgs,"</i></font>"); })
-        } else
-        {
-          # Normal output:
-          output$messages <- renderText({ paste0("<font color=\"blue\">",msgs,"</font>"); })
+          msgs <- vapply(1:nrow(ewms), function(i)
+          {
+            switch(as.character(ewms$type[i]),
+                   "error"=  paste0("<b>&gt;</b> <font color=\"red\"><b>",as.character(ewms$text[i]),"</b></font>"),
+                   "warning"=paste0("<b>&gt;</b> <font color=\"green\"><i>",as.character(ewms$text[i]),"</i></font>"),
+                   "message"=paste0("<b>&gt;</b> <font color=\"blue\">",as.character(ewms$text[i]),"</font>"),
+                   paste0("<b>&gt;</b> ",as.character(ewms$text[i])));
+          }, character(1));
+          output$messages <- renderText(paste0(paste0("<font color=\"red\"><b>",  sum(ewms$type=="error",na.rm=TRUE),  " error(s)</b></font>, ",
+                                                      "<font color=\"green\"><i>",sum(ewms$type=="warning",na.rm=TRUE)," warning(s)</i></font> & ",
+                                                      "<font color=\"blue\">",    sum(ewms$type=="message",na.rm=TRUE)," message(s)</font>:<br>"),
+                                               paste0(msgs,collapse="<br>")));
         }
+
+        #if( is.null(res) || length(grep("error", msgs, ignore.case=TRUE)) > 0 )
+        #{
+        #  # Errors:
+        #  output$messages <- renderText({ paste0("<font color=\"red\"><b>",msgs,"</b></font>"); })
+        #} else if( length(grep("warning", msgs, ignore.case=TRUE)) > 0 )
+        #{
+        #  # Warnings:
+        #  output$messages <- renderText({ paste0("<font color=\"green\"><i>",msgs,"</i></font>"); })
+        #} else
+        #{
+        #  # Normal output:
+        #  output$messages <- renderText({ paste0("<font color=\"blue\">",msgs,"</font>"); })
+        #}
       }
     },
     width=function() # plot width
@@ -2162,12 +2203,13 @@ server <- function(input, output, session)
     execOnResize=TRUE # force redrawing on resize
   )
 
-  # Text messages:
+  # The text messages ----
   output$messages <- renderText({
     ""
   })
 
-  observeEvent(input$plot_keep_ratio, # plot keep ratio toggle
+  # Keep ratio toggle event ----
+  observeEvent(input$plot_keep_ratio,
   {
     if( input$plot_keep_ratio )
     {
@@ -2179,7 +2221,7 @@ server <- function(input, output, session)
   })
 
 
-  # Export plot to file:
+  # Export plot to file ----
   output$save_to_file <- downloadHandler(
     filename = function()
       {
@@ -2193,22 +2235,47 @@ server <- function(input, output, session)
       },
     content = function(file)
     {
+      # Plot dimensions:
+      if( input$save_plot_displayed_size )
+      {
+        if( input$save_plot_type %in% c("eps", "pdf") )
+        {
+          # Cairo PS and PDF only understand inches, so make sure we convert right:
+          plot.dims.width  <- input$plot_width / 72; # by default 72 DPI
+          if( !is.numeric(.GlobalEnv$.plotting.params$plot.ratio) ) .GlobalEnv$.plotting.params$plot.ratio <- (input$plot_width / input$plot_height); # define the ratio
+          plot.dims.height <- ifelse(input$plot_keep_ratio, input$plot_width / .GlobalEnv$.plotting.params$plot.ratio, input$plot_height) / 72; # by default 72 DPI
+          plot.dims.unit   <- "in";
+        } else
+        {
+          # The others work in pixels:
+          plot.dims.width  <- input$plot_width;
+          if( !is.numeric(.GlobalEnv$.plotting.params$plot.ratio) ) .GlobalEnv$.plotting.params$plot.ratio <- (input$plot_width / input$plot_height); # define the ratio
+          plot.dims.height <- ifelse(input$plot_keep_ratio, input$plot_width / .GlobalEnv$.plotting.params$plot.ratio, input$plot_height);
+          plot.dims.unit   <- "px";
+       }
+      } else
+      {
+        plot.dims.width  <- input$save_plot_width;
+        plot.dims.height <- input$save_plot_height;
+        plot.dims.unit   <- input$save_plot_dim_unit;
+      }
+
       # The type of plot to save:
       if( input$save_plot_type == "png" )
       {
-        png(file, width=input$save_plot_width, height=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution, type="cairo");
+        png(file, width=plot.dims.width, height=plot.dims.height, units=plot.dims.unit, res=input$save_plot_resolution, type="cairo");
       } else if( input$save_plot_type == "tiff" )
       {
-        tiff(file, width=input$save_plot_width, height=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution, compression="zip", type="cairo");
+        tiff(file, width=plot.dims.width, height=plot.dims.height, units=plot.dims.unit, res=input$save_plot_resolution, compression="zip", type="cairo");
       } else if( input$save_plot_type == "eps" )
       {
-        cairo_ps(file, width=input$save_plot_width, height=input$save_plot_height, onefile=FALSE);
+        cairo_ps(file, width=plot.dims.width, height=plot.dims.height, onefile=FALSE);
       } else if( input$save_plot_type == "pdf" )
       {
-        cairo_pdf(file, width=input$save_plot_width, height=input$save_plot_height, onefile=FALSE);
+        cairo_pdf(file, width=plot.dims.width, height=plot.dims.height, onefile=FALSE);
       } else # default to JPEG
       {
-        jpeg(file, width=input$save_plot_width, height=input$save_plot_height, units=input$save_plot_dim_unit, res=input$save_plot_resolution);
+        jpeg(file, width=plot.dims.width, height=plot.dims.height, units=plot.dims.unit, res=input$save_plot_resolution);
       }
 
       # Plot it:
@@ -2220,7 +2287,7 @@ server <- function(input, output, session)
   )
 
 
-  # About and Help:
+  # About and help box ----
   observeEvent(input$about_button,
   {
     # Get most of the relevant info from the DESCRIPTION file:
@@ -2279,7 +2346,7 @@ server <- function(input, output, session)
   })
 
 
-  # Show r code:
+  # Show the R code box ----
   r_code <- ""; # must be global because we need to access it form other functions as well (and it's not a big object anyway)
   observeEvent(input$show_r_code,
   {
@@ -2318,7 +2385,7 @@ server <- function(input, output, session)
       # The dataset came as the `data` argument to `plot_interactive_cam()`, so we don't know it's "name":
       r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
       r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
-      r_code <<- paste0(r_code, "# \"", class(.GlobalEnv$.plotting.params$data), "\", and it has the structure:\n");
+      r_code <<- paste0(r_code, "# \"", paste0(class(.GlobalEnv$.plotting.params$data),collapse=","), "\", and it has the structure:\n");
       r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.GlobalEnv$.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n\n");
     } else
     {
@@ -2426,7 +2493,7 @@ server <- function(input, output, session)
 
     # The parameters:
     r_code <<- paste0(r_code, "data=.data.for.selected.patients.,\n");
-    if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", "CMA=",input$cma_to_compute_within_complex,",\n");
+    if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", 'CMA="',input$cma_to_compute_within_complex,'",\n');
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # not relevant for a particular CMA type, we\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # nevertheless pass them as they will be ignored)\n");
@@ -2510,12 +2577,12 @@ server <- function(input, output, session)
                      "followup.window.col"=paste0('"',input$followup_window_col,'"'),
                      "highlight.observation.window"=input$highlight_observation_window,
                      "observation.window.col"=paste0('"',input$observation_window_col,'"'),
-                     "observation.window.density"=input$observation_window_density,
-                     "observation.window.angle"=input$observation_window_angle,
+                     #"observation.window.density"=input$observation_window_density,
+                     #"observation.window.angle"=input$observation_window_angle,
                      "observation.window.opacity"=input$observation_window_opacity,
                      "show.real.obs.window.start"=input$show_real_obs_window_start,
-                     "real.obs.window.density"=input$real_obs_window_density,
-                     "real.obs.window.angle"=input$real_obs_window_angle,
+                     #"real.obs.window.density"=input$real_obs_window_density,
+                     #"real.obs.window.angle"=input$real_obs_window_angle,
                      "print.CMA"=input$print_cma,
                      "CMA.cex"=max(0.01,input$cma_cex),
                      "plot.CMA"=input$plot_cma,
@@ -2554,7 +2621,7 @@ server <- function(input, output, session)
                                                                           output=NULL),
                                                      fixed=TRUE)),
                                        #div(HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
-                                           style="max-height: 50vh; overflow: auto;")),
+                                           style="max-height: 50vh; overflow-x: scroll; overflow-y: scroll;")), # overflow: auto;
                                    title=HTML("The <code>R</code> code for the current plot..."),
                                    footer = tagList(actionButton("copy_code", "Copy to clipboard", icon=icon("copy", lib="glyphicon")),
                                                     modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
@@ -2569,7 +2636,7 @@ server <- function(input, output, session)
   })
 
 
-  # Close shop nicely:
+  # Close shop nicely ----
   observeEvent(input$close_shop,
   {
     showModal(modalDialog(title="AdhereR interactive plotting...", "Are you sure you want to close the interactive plotting?",
@@ -2582,7 +2649,7 @@ server <- function(input, output, session)
     stopApp();
   })
 
-  # Show/hide panel sections:
+  # Show/hide panel sections ----
   .toggle.all.sections <- function(id=c("follow_up"), anim=TRUE, animType=c("slide","fade")[1])
   {
     shinyjs::toggle(id=paste0(id,"_unfold_icon"), anim=anim, animType=animType); # the unfolding icon
@@ -2603,8 +2670,7 @@ server <- function(input, output, session)
   shinyjs::onclick("advanced_section",         function(e){.toggle.all.sections("advanced");})
 
 
-  # Dataset stuff:
-
+  # Recursively list objects in memory ----
   .recursively.list.objects.in.memory <- function(..., # inspired from http://adv-r.had.co.nz/Environments.html#env-recursion
                                                   env = parent.frame(),
                                                   of.class="data.frame", # if NULL, no type testing (all go)
@@ -2646,7 +2712,7 @@ server <- function(input, output, session)
     }
   }
 
-  # If selecting an in-memory dataset, update the list of data.frame-derived objects all the way to the base environment:
+  # In-memory dataset: update the list of data.frame-derived objects all the way to the base environment ----
   observeEvent(input$datasource_type,
   {
     if( input$datasource_type == "already in memory" )
@@ -2669,7 +2735,7 @@ server <- function(input, output, session)
     }
   })
 
-  # For a given dataset from memory, list the columns and upate the selections:
+  # In-memory dataset: list the columns and update the selections ----
   observeEvent(input$dataset_from_memory,
   {
     # Disconnect any pre-existing database connections:
@@ -2681,7 +2747,7 @@ server <- function(input, output, session)
 
     # Set the data.frame:
     .GlobalEnv$.plotting.params$.inmemory.dataset <- NULL;
-    if( input$dataset_from_memory == "[none]" )
+    if( input$dataset_from_memory == "[none]" || input$dataset_from_memory == "" )
     {
       # Initialisation:
       return (invisible(NULL));
@@ -2717,13 +2783,14 @@ server <- function(input, output, session)
     }
 
     n.vals.to.show <-3;
-    x <- names(.GlobalEnv$.plotting.params$.inmemory.dataset);
-    x.info <- vapply(1:ncol(.GlobalEnv$.plotting.params$.inmemory.dataset),
+    d <- as.data.frame(.GlobalEnv$.plotting.params$.inmemory.dataset);
+    x <- names(d);
+    x.info <- vapply(1:ncol(d),
                      function(i) paste0("(",
-                                        class(.GlobalEnv$.plotting.params$.inmemory.dataset[,i]),
+                                        paste0(class(d[,i]),collapse=","),
                                         ": ",
-                                        paste0(.GlobalEnv$.plotting.params$.inmemory.dataset[1:min(n.vals.to.show,nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)),i],collapse=", "),
-                                        if(nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)>n.vals.to.show) "...",
+                                        paste0(d[1:min(n.vals.to.show,nrow(d)),i],collapse=", "),
+                                        if(nrow(d)>n.vals.to.show) "...",
                                         ")"),
                      character(1));
 
@@ -2738,7 +2805,7 @@ server <- function(input, output, session)
 
   })
 
-  # Display a data.frame as a nice HTML table:
+  # Display a data.frame as a nice HTML table ----
   .show.data.frame.as.HTML <- function(d, # the data.frame-derived object to show
                                        max.rows=50, # if NA, show all
                                        escape=TRUE)
@@ -2812,7 +2879,7 @@ server <- function(input, output, session)
     return (d.as.html);
   }
 
-  # Peek at in-memory dataset:
+  # In-memory dataset: peek ----
   observeEvent(input$dataset_from_memory_peek_button,
   {
     # Sanity checks:
@@ -2834,7 +2901,7 @@ server <- function(input, output, session)
 
   })
 
-  # Validate a given dataset and possibly load it:
+  # Validate a given dataset and possibly load it ----
   .validate.and.load.dataset <- function(d, # the dataset
                                          get.colnames.fnc, get.patients.fnc, get.data.for.patients.fnc, # getter functions appropriate for the dataset
                                          min.npats=1, min.ncol=3, # minimum number of patients and columns
@@ -2923,6 +2990,7 @@ server <- function(input, output, session)
     # More advanced checks of the column types:
     if( inherits(d, "data.frame") ) # for data.frame's
     {
+      d <- as.data.frame(d); # force it to a data.frame to avoid unexpected behaviours from derived classes
       if( inherits(d[,event.date.colname], "Date") )
       {
         # It's a column of Dates: perfect!
@@ -3026,7 +3094,7 @@ server <- function(input, output, session)
     .force.update.UI();
   }
 
-  # Validate and use in-memory dataset:
+  # In-memory dataset: validate and use ----
   observeEvent(input$dataset_from_memory_button_use,
   {
     # Sanity checks:
@@ -3070,7 +3138,7 @@ server <- function(input, output, session)
     }
   })
 
-  # Force updating the Shiny UI using the new data:
+  # Force updating the Shiny UI using the new data ----
   .force.update.UI <- function()
   {
     updateSelectInput(session, "cma_class", selected="simple");
@@ -3088,7 +3156,7 @@ server <- function(input, output, session)
   }
 
 
-  # For a given dataset from file, load it, list the columns and upate the selections:
+  # Dataset from file: load it, list the columns and upate the selections ----
   observeEvent(input$dataset_from_file_filename,
   {
     # Disconnect any pre-existing database connections:
@@ -3375,7 +3443,7 @@ server <- function(input, output, session)
       x <- names(d);
       x.info <- vapply(1:ncol(d),
                        function(i) paste0("(",
-                                          class(d[,i]),
+                                          paste0(class(d[,i]),collapse=","),
                                           ": ",
                                           paste0(d[1:min(n.vals.to.show,nrow(d)),i],collapse=", "),
                                           if(nrow(d)>n.vals.to.show) "...",
@@ -3416,7 +3484,7 @@ server <- function(input, output, session)
     }
   })
 
-  # Peek at in-memory dataset:
+  # Dataset from file: peek ----
   observeEvent(input$dataset_from_file_peek_button,
   {
     # Sanity checks:
@@ -3437,7 +3505,7 @@ server <- function(input, output, session)
                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
   })
 
-  # Validate and use from-file dataset:
+  # Dataset from file: validate and use ----
   observeEvent(input$dataset_from_file_button_use,
   {
     # Sanity checks:
@@ -3470,7 +3538,7 @@ server <- function(input, output, session)
     .GlobalEnv$.plotting.params$.dataset.name <- input$dataset_from_file_filename$name[1];
   })
 
-  # Connect to the SQL database and fecth tables:
+  # SQL database: connect and fetch tables ----
   observeEvent(input$dataset_from_sql_button_connect,
   {
     # Disconnect any pre-existing database connections:
@@ -3726,9 +3794,22 @@ server <- function(input, output, session)
 
     # Update the list of tables/views:
     x <- aggregate(column ~ nrow + table, d.tables.columns, length);
+    x.eligible <- which(x$column >= 3); # which are the eligible tables/views
+    x.to.pick <- 1;
+    if( length(x.eligible) == 0 )
+    {
+      # Warning:
+      showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                            div("There doesn't seem to be any tables/views with at least 3 columns in this database: picking the first (but this will generate an error)!\n"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      x.to.pick <- 1;
+    } else
+    {
+      x.to.pick <- x.eligible[1];
+    }
     shinyWidgets::updatePickerInput(session, "dataset_from_sql_table",
                                     choices=as.character(x$table),
-                                    selected=as.character(x$table)[1],
+                                    selected=as.character(x$table)[x.to.pick],
                                     choicesOpt=list(subtext=paste0(x$nrow," x ",x$column)));
 
     # Update UI:
@@ -3738,7 +3819,7 @@ server <- function(input, output, session)
     .show.db.info();
   })
 
-  # Disconnect from database:
+  # SQL database: disconnect ----
   observeEvent(input$dataset_from_sql_button_disconnect,
   {
     if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
@@ -3751,13 +3832,13 @@ server <- function(input, output, session)
     output$is_database_connected <- reactive({FALSE});
   })
 
-  # Peek at the database:
+  # SQL database: peek ----
   observeEvent(input$dataset_from_sql_button_peek,
   {
      .show.db.info();
   })
 
-  # Show database info:
+  # SQL database: show info ----
   .show.db.info <- function()
   {
     if( is.null(.GlobalEnv$.plotting.params$.db.connection.tables) ||
@@ -3828,7 +3909,7 @@ server <- function(input, output, session)
   }
 
 
-  # Update columns depending on the selected table:
+  # SQL database: update columns depending on the selected table ----
   observeEvent(input$dataset_from_sql_table,
   {
     if( input$dataset_from_sql_table != "[none]" &&
@@ -3859,7 +3940,7 @@ server <- function(input, output, session)
     }
   })
 
-  # Validate and use sql dataset:
+  # SQL database: validate and use ----
   observeEvent(input$dataset_from_sql_button_use,
   {
     # Sanity checks:
@@ -3934,7 +4015,7 @@ server <- function(input, output, session)
   })
 
 
-  # Show info about the currently used dataset:
+  # Show info about the curent dataset ----
   observeEvent(input$about_dataset_button,
   {
     showModal(modalDialog(title=div(icon("hdd", lib="glyphicon"), "AdhereR: info over the current dataset..."),
@@ -3945,7 +4026,7 @@ server <- function(input, output, session)
                                      {if(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments)
                                       {
                                         paste0("was given as the <code>data</code> argument to the <code>plot_interactive_cma()</code> function called by the user.<br/>",
-                                               "Therefore, we cannot know its name outside the function call (and there might not be such a \"name\" as the data might have been created on-the-fly in the function call), and instead we identify it as the <b style='color:darkblue'><<'data' argument to plot_interactive_cma() call>></b> of class <i>", class(.GlobalEnv$.plotting.params$data), "</i>."
+                                               "Therefore, we cannot know its name outside the function call (and there might not be such a \"name\" as the data might have been created on-the-fly in the function call), and instead we identify it as the <b style='color:darkblue'><<'data' argument to plot_interactive_cma() call>></b> of class <i>", paste0(class(.GlobalEnv$.plotting.params$data),collapse=","), "</i>."
                                                )
                                       } else
                                       {
@@ -3979,7 +4060,7 @@ server <- function(input, output, session)
   })
 
 
-  # Update the patient IDs table:
+  # Update the patient IDs table ----
   .update.patients.IDs.table <- function(reset.slider=TRUE)
   {
     if( is.null(.GlobalEnv$.plotting.params$all.IDs) || length(.GlobalEnv$.plotting.params$all.IDs) < 1 )
@@ -4003,7 +4084,6 @@ server <- function(input, output, session)
     output$show_patients_as_list <- renderDataTable(.GlobalEnv$.plotting.params$.patients.to.compute, options=list(pageLength=10));
     if( reset.slider ) updateSliderInput(session, inputId="compute_cma_patient_by_group_range", max=nrow(tmp), value=c(1,1));
   }
-
   observeEvent(input$compute_cma_patient_selection_method,
   {
     if( input$compute_cma_patient_selection_method == "by_position" )
@@ -4011,15 +4091,14 @@ server <- function(input, output, session)
       .update.patients.IDs.table();
     }
   })
-
   observeEvent(input$compute_cma_patient_by_group_sorting,
   {
     .update.patients.IDs.table();
   })
 
-  # Start the CMA computation:
-  # allow the user to break it and show progress
-  # inpured by https://gist.github.com/jcheng5/1659aff15904a0c4ffcd4d0c7788f789
+  # CMA computation for multiple patients ----
+  # Allow the user to break it and show progress (inspired by https://gist.github.com/jcheng5/1659aff15904a0c4ffcd4d0c7788f789 )
+  # The CMA computation main UI ----
   observeEvent(input$compute_cma_for_larger_sample_button,
   {
     # Get the selected patient IDs:
@@ -4102,6 +4181,7 @@ server <- function(input, output, session)
 
   })
 
+  # Close the CMA computation main UI ----
   observeEvent(input$close_compute_cma_dialog,
   {
     removeModal();
@@ -4158,6 +4238,7 @@ server <- function(input, output, session)
   #   removeModal();
   # })
 
+  # Compute CMA for one patient ----
   .compute.cma.for.patient <- function(i, start.time)
   {
     # Show the patient currently processed:
@@ -4267,9 +4348,10 @@ server <- function(input, output, session)
     shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
 
     # Return the results:
-    return (getCMA(res));
+    return (AdhereR::getCMA(res));
   }
 
+  # Collect computed CMA for several patients ----
   collected.results <<- list();
   cma.computation.progress.log.text <<- "";
   workQueue <- function(start.time = Sys.time(),
@@ -4376,6 +4458,7 @@ server <- function(input, output, session)
   #   #});
   # })
 
+  # Start CMA computation ----
   observeEvent(input$start_computation_now,
   {
     # Show up the progress bar and stopping button:
@@ -4432,7 +4515,7 @@ server <- function(input, output, session)
   #
   # })
 
-  # Export results to file:
+  # Export results to file ----
   output$save_cma_computation_results <- downloadHandler(
     filename = function() paste0("adherer-compute-",input$cma_class,"-",ifelse(input$cma_class=="simple", input$cma_to_compute, input$cma_to_compute_within_complex),"-results.tsv"),
     content = function(file)
@@ -4459,7 +4542,7 @@ server <- function(input, output, session)
     }
   )
 
-  # Make sure the UI is properly updated for ech new session:
+  # Make sure the UI is properly updated for ech new session ----
   isolate(
   {
     .force.update.UI();
@@ -4472,6 +4555,6 @@ server <- function(input, output, session)
 }
 
 
-# call shiny
+# Call shiny ----
 shinyApp(ui=ui, server=server);
 

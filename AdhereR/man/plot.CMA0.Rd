@@ -4,32 +4,62 @@
 \alias{plot.CMA0}
 \title{Plot CMA0 objects.}
 \usage{
-\method{plot}{CMA0}(x, ..., patients.to.plot = NULL, duration = NA,
-  align.all.patients = FALSE, align.first.event.at.zero = TRUE,
-  show.period = c("dates", "days")[2], period.in.days = 90,
-  show.legend = TRUE, legend.x = "right", legend.y = "bottom",
-  legend.bkg.opacity = 0.5, legend.cex = 0.75, legend.cex.title = 1,
-  cex = 1, cex.axis = 0.75, cex.lab = 1, xlab = c(dates = "Date",
-  days = "Days"), ylab = c(withoutCMA = "patient", withCMA =
-  "patient (& CMA)"), title = c(aligned =
-  "Event patterns (all patients aligned)", notaligned = "Event patterns"),
-  col.cats = rainbow, unspecified.category.label = "drug",
-  medication.groups = NULL, lty.event = "solid", lwd.event = 2,
-  pch.start.event = 15, pch.end.event = 16, print.dose = FALSE,
-  cex.dose = 0.75, print.dose.outline.col = "white",
-  print.dose.centered = FALSE, plot.dose = FALSE,
+\method{plot}{CMA0}(
+  x,
+  ...,
+  patients.to.plot = NULL,
+  duration = NA,
+  align.all.patients = FALSE,
+  align.first.event.at.zero = TRUE,
+  show.period = c("dates", "days")[2],
+  period.in.days = 90,
+  show.legend = TRUE,
+  legend.x = "right",
+  legend.y = "bottom",
+  legend.bkg.opacity = 0.5,
+  legend.cex = 0.75,
+  legend.cex.title = 1,
+  cex = 1,
+  cex.axis = 0.75,
+  cex.lab = 1,
+  xlab = c(dates = "Date", days = "Days"),
+  ylab = c(withoutCMA = "patient", withCMA = "patient (& CMA)"),
+  title = c(aligned = "Event patterns (all patients aligned)", notaligned =
+    "Event patterns"),
+  col.cats = rainbow,
+  unspecified.category.label = "drug",
+  medication.groups = NULL,
+  lty.event = "solid",
+  lwd.event = 2,
+  pch.start.event = 15,
+  pch.end.event = 16,
+  plot.events.vertically.displaced = TRUE,
+  print.dose = FALSE,
+  cex.dose = 0.75,
+  print.dose.outline.col = "white",
+  print.dose.centered = FALSE,
+  plot.dose = FALSE,
   lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
-  col.continuation = "black", lty.continuation = "dotted",
-  lwd.continuation = 1, col.na = "lightgray",
-  highlight.followup.window = TRUE, followup.window.col = "green",
+  col.continuation = "black",
+  lty.continuation = "dotted",
+  lwd.continuation = 1,
+  col.na = "lightgray",
+  highlight.followup.window = TRUE,
+  followup.window.col = "green",
   highlight.observation.window = TRUE,
-  observation.window.col = "yellow", observation.window.density = 35,
-  observation.window.angle = -30, observation.window.opacity = 0.3,
-  alternating.bands.cols = c("white", "gray95"), bw.plot = FALSE,
-  min.plot.size.in.characters.horiz = 10,
-  min.plot.size.in.characters.vert = 0.5, suppress.warnings = FALSE,
-  max.patients.to.plot = 100)
+  observation.window.col = "yellow",
+  observation.window.density = 35,
+  observation.window.angle = -30,
+  observation.window.opacity = 0.3,
+  alternating.bands.cols = c("white", "gray95"),
+  force.draw.text = FALSE,
+  bw.plot = FALSE,
+  min.plot.size.in.characters.horiz = 0,
+  min.plot.size.in.characters.vert = 0,
+  suppress.warnings = FALSE,
+  max.patients.to.plot = 100
+)
 }
 \arguments{
 \item{x}{A \emph{\code{CMA0}} or derived object, representing the CMA to
@@ -97,6 +127,9 @@ all are part of the same group).}
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
 
+\item{plot.events.vertically.displaced}{Should consecutive events be plotted
+on separate rows (i.e., separated vertically, the default) or on the same row?}
+
 \item{print.dose}{\emph{Logical}, should the daily dose be printed as text?}
 
 \item{cex.dose}{\emph{Numeric}, if daily dose is printed, what text size
@@ -140,17 +173,21 @@ opacity).}
 distinguishing the patients; can be \code{NULL} = don't draw the bandes;
 or a vector of colors.}
 
+\item{force.draw.text}{\emph{Logical}, if \code{TRUE}, always draw text even
+if too big or too small}
+
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
-\code{\link[grDevices]{gray.colors}} function)?
-\emph{Numeric}, the minimum size of the plotting surface in characters;
-horizontally (min.plot.size.in.characters.horiz) referes to the the whole
-duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-referes to a single event.}
+\code{\link[grDevices]{gray.colors}} function)?}
 
 \item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
-horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+horizontally (min.plot.size.in.characters.horiz) refers to the the whole
 duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-referes to a single event.}
+refers to a single event. If the plotting is too small, possible solutions
+might be: if within \code{RStudio}, try to enlarge the "Plots" panel, or
+(also valid outside \code{RStudio} but not if using \code{RStudio server}
+start a new plotting device (e.g., using \code{X11()}, \code{quartz()}
+or \code{windows()}, depending on OS) or (works always) save to an image
+(e.g., \code{jpeg(...); ...; dev.off()}) and display it in a viewer.}
 
 \item{suppress.warnings}{\emph{Logical}: show or hide the warnings?}
 

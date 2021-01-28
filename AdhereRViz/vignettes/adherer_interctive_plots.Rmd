@@ -570,6 +570,22 @@ New UI elements become visible, most being virtually identical to those used for
 
 ![**UI elements for using an SQL database.**](shiny-data-sql-mysql-columns.jpg)
 
+For example, when using the `MySQL` database described in the vignette [*Using AdhereR with various database technologies for processing very large datasets*](https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html) in package `AdhereR`, we can create, for example, a `view` (named `testview`) that brings together these data in the needed format with the following `SQL` commands in `MySQL Workbench`:
+
+```{SQL eval=FALSE}
+USE med_events;
+
+CREATE VIEW `testview` AS 
+SELECT patients.`id`, `date`, `category`, `duration`, `perday`
+FROM event_date
+JOIN event_info
+ON event_info.`id` = event_date.`id`
+JOIN event_patients
+ON event_patients.`id` = event_info.`id`
+JOIN patients
+ON patients.`id` = event_patients.`patient_id`;
+```
+
 
 ## References
 

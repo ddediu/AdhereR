@@ -4,11 +4,17 @@
 \alias{get.event.plotting.area}
 \title{Get the actual plotting area.}
 \usage{
-get.event.plotting.area(plot.type = c("baseR", "SVG")[1])
+get.event.plotting.area(
+  plot.type = c("baseR", "SVG")[1],
+  suppress.warnings = FALSE
+)
 }
 \arguments{
 \item{plot.type}{Can be either "baseR" or "SVG" and specifies to which type of plotting
 the mapping applies.}
+
+\item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
+warnings.}
 }
 \value{
 A numeric vector with components \emph{x.min}, \emph{x.max},

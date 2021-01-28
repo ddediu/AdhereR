@@ -4,7 +4,8 @@
 \name{durcomp.hospitalisation}
 \alias{durcomp.hospitalisation}
 \title{Example special periods for 10 patients.}
-\format{A data frame with 28 rows and 3 variables:
+\format{
+A data frame with 28 rows and 3 variables:
 \describe{
   \item{ID}{\emph{Integer} here; patient unique identifier. Can also
   be \emph{string}.}
@@ -12,7 +13,8 @@
   yyyy-mm-dd format.Can also be \emph{string}.}
   \item{DATE.OUT}{\emph{Date};the end of the hospitalization period, by default in the
   yyyy-mm-dd format. Can also be \emph{string}.}
-}}
+}
+}
 \usage{
 durcomp.hospitalisation
 }
