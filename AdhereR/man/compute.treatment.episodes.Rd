@@ -4,34 +4,24 @@
 \alias{compute.treatment.episodes}
 \title{Compute Treatment Episodes.}
 \usage{
-compute.treatment.episodes(
-  data,
-  ID.colname = NA,
-  event.date.colname = NA,
-  event.duration.colname = NA,
-  event.daily.dose.colname = NA,
-  medication.class.colname = NA,
+compute.treatment.episodes(data, ID.colname = NA,
+  event.date.colname = NA, event.duration.colname = NA,
+  event.daily.dose.colname = NA, medication.class.colname = NA,
   carryover.within.obs.window = TRUE,
-  carry.only.for.same.medication = TRUE,
-  consider.dosage.change = TRUE,
+  carry.only.for.same.medication = TRUE, consider.dosage.change = TRUE,
   medication.change.means.new.treatment.episode = TRUE,
   dosage.change.means.new.treatment.episode = FALSE,
   maximum.permissible.gap = 90,
-  maximum.permissible.gap.unit = c("days", "weeks", "months", "years", "percent")[1],
-  followup.window.start = 0,
+  maximum.permissible.gap.unit = c("days", "weeks", "months", "years",
+  "percent")[1], followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
   followup.window.duration = 365 * 2,
-  followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
-  event.interval.colname = "event.interval",
-  gap.days.colname = "gap.days",
-  date.format = "\%m/\%d/\%Y",
-  parallel.backend = c("none", "multicore", "snow", "snow(SOCK)", "snow(MPI)",
-    "snow(NWS)")[1],
-  parallel.threads = "auto",
-  suppress.warnings = FALSE,
-  return.data.table = FALSE,
-  ...
-)
+  followup.window.duration.unit = c("days", "weeks", "months",
+  "years")[1], event.interval.colname = "event.interval",
+  gap.days.colname = "gap.days", date.format = "\%m/\%d/\%Y",
+  parallel.backend = c("none", "multicore", "snow", "snow(SOCK)",
+  "snow(MPI)", "snow(NWS)")[1], parallel.threads = "auto",
+  suppress.warnings = FALSE, return.data.table = FALSE, ...)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the events used to

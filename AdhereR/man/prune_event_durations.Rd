@@ -4,17 +4,11 @@
 \alias{prune_event_durations}
 \title{Prune event durations.}
 \usage{
-prune_event_durations(
-  data,
-  include = c("special periods", "treatment interruptions", "dosage changes"),
+prune_event_durations(data, include = c("special periods",
+  "treatment interruptions", "dosage changes"),
   medication.class.colnames = data$medication.class.colnames,
-  days.within.out.date.1,
-  days.within.out.date.2,
-  keep.all = TRUE,
-  suppress.warnings = FALSE,
-  return.data.table = FALSE,
-  ...
-)
+  days.within.out.date.1, days.within.out.date.2, keep.all = TRUE,
+  suppress.warnings = FALSE, return.data.table = FALSE, ...)
 }
 \arguments{
 \item{data}{A \emph{\code{list}}, the output of \code{compute_event_durations}.}

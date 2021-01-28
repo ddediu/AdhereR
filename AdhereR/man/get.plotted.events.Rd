@@ -4,14 +4,11 @@
 \alias{get.plotted.events}
 \title{Get info about the plotted events.}
 \usage{
-get.plotted.events(plot.type = c("baseR", "SVG")[1], suppress.warnings = FALSE)
+get.plotted.events(plot.type = c("baseR", "SVG")[1])
 }
 \arguments{
 \item{plot.type}{Can be either "baseR" or "SVG" and specifies to which type of plotting
 the mapping applies.}
-
-\item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
-warnings.}
 }
 \value{
 A \code{data.frame} that, besides the info about each event, also

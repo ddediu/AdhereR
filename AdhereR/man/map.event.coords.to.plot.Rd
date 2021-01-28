@@ -4,15 +4,9 @@
 \alias{map.event.coords.to.plot}
 \title{Map from event to plot coordinates.}
 \usage{
-map.event.coords.to.plot(
-  x = NA,
-  y = NA,
-  x.is.Date = FALSE,
-  x.date.format = "\%m/\%d/\%Y",
-  adjust.for.earliest.date = TRUE,
-  plot.type = c("baseR", "SVG")[1],
-  suppress.warnings = FALSE
-)
+map.event.coords.to.plot(x = NA, y = NA, x.is.Date = FALSE,
+  x.date.format = "\%m/\%d/\%Y", adjust.for.earliest.date = TRUE,
+  plot.type = c("baseR", "SVG")[1])
 }
 \arguments{
 \item{x}{The \emph{x} coordinate in the event space, either a \code{number} giving the
@@ -34,9 +28,6 @@ calendar date that must be adjusted for the earliest plotted date (by default
 
 \item{plot.type}{Can be either "baseR" or "SVG" and specifies to which type of plotting
 the mapping applies.}
-
-\item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
-warnings.}
 }
 \value{
 A numeric vector with \emph{x} and \emph{y} components giving the plotting

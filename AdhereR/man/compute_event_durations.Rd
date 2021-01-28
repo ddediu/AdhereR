@@ -4,30 +4,15 @@
 \alias{compute_event_durations}
 \title{Computation of event durations.}
 \usage{
-compute_event_durations(
-  disp.data = NULL,
-  presc.data = NULL,
-  special.periods.data = NULL,
-  ID.colname,
-  medication.class.colnames,
-  disp.date.colname,
-  total.dose.colname,
-  presc.date.colname,
-  presc.daily.dose.colname,
-  presc.duration.colname,
-  visit.colname,
-  split.on.dosage.change = TRUE,
-  force.init.presc = FALSE,
-  force.presc.renew = FALSE,
-  trt.interruption = c("continue", "discard", "carryover")[1],
-  special.periods.method = trt.interruption,
-  carryover = FALSE,
-  date.format = "\%d.\%m.\%Y",
-  suppress.warnings = FALSE,
-  return.data.table = FALSE,
-  progress.bar = TRUE,
-  ...
-)
+compute_event_durations(disp.data = NULL, presc.data = NULL,
+  special.periods.data = NULL, ID.colname, medication.class.colnames,
+  disp.date.colname, total.dose.colname, presc.date.colname,
+  presc.daily.dose.colname, presc.duration.colname, visit.colname,
+  split.on.dosage.change = TRUE, force.init.presc = FALSE,
+  force.presc.renew = FALSE, trt.interruption = c("continue",
+  "discard", "carryover")[1], special.periods.method = trt.interruption,
+  date.format = "\%d.\%m.\%Y", suppress.warnings = FALSE,
+  return.data.table = FALSE, progress.bar = TRUE, ...)
 }
 \arguments{
 \item{disp.data}{A \emph{\code{data.frame}} or \emph{\code{data.table}} containing
@@ -104,7 +89,7 @@ medication class separatly.}
 treatment interruptions (see \code{special.periods.method}).
 If \emph{string}, the name of the (\emph{character}) column in \emph{disp.data}
 containing the information (\emph{"continue"}, \emph{"discard"}, or \emph{"carryover"})
-for each medication class separately.}
+for each medication class separatly.}
 
 \item{special.periods.method}{can be either of \emph{continue}, \emph{discard},
 \emph{carryover}, or \emph{custom}. It indicates how to handle durations during special periods.
@@ -114,11 +99,6 @@ remaining quantity is discarded. With \emph{carryover}, durations are truncated
 at the beginning of a special period and a new event with the remaining duration
 is created after the end of the end of the special period. With \emph{custom}, the
 mapping has to be included in \emph{\code{special.periods.data}}.}
-
-\item{carryover}{\emph{Logical}, if \code{TRUE} apply carry-over to medications of the
-same type (according to \code{medication.class.colnames}). Can only be used together with
-CMA7 and above in combination with \code{carry.only.for.same.medication = TRUE}.
-Currently \emph{not} implemented.}
 
 \item{date.format}{A \emph{string} giving the format of the dates used in
 the \code{data} and the other parameters; see the \code{format} parameters
@@ -162,8 +142,6 @@ A \code{list} with the following elements:
      by special durations or treatment interruptions of type "continue".
      \item \code{CARRYOVER.DURATION} the number of days \emph{after} the current duration affected
      by special durations or treatment interruptions of type "carryover".
-     \item \code{EVENT.ID}: in case of multiple events with the same dispensing date
-     (e.g. for dosage changes or interruptions); a unique ID starting at 1 for the first event
      \item \code{tot.presc.interruptions} the total number of prescription interruptions
      per patient for a specific medication.
      \item \code{tot.dosage.changes} the total number of dosage changes per patient

@@ -4,8 +4,7 @@
 \name{durcomp.prescribing}
 \alias{durcomp.prescribing}
 \title{Example prescription events for 16 patients.}
-\format{
-A data table with 1502 rows and 8 variables:
+\format{A data table with 1502 rows and 8 variables:
 \describe{
   \item{ID}{\emph{integer} here; patient unique identifier. Can also
   be \emph{string}.}
@@ -28,8 +27,7 @@ A data table with 1502 rows and 8 variables:
   is intended. Can be \code{NA} if the prescription is continuous without a fixed end date.}
   \item{DAILY.DOSE}{\emph{numeric}; the daily dose prescribed during this event (e.g., \code{50} for 1 tablet
   of 50 mg per day or \code{25} for 1 tablet of 50 mg every two days).}
-}
-}
+}}
 \usage{
 durcomp.prescribing
 }

@@ -4,32 +4,21 @@
 \alias{CMA0}
 \title{CMA0 constructor.}
 \usage{
-CMA0(
-  data = NULL,
-  ID.colname = NA,
-  event.date.colname = NA,
-  event.duration.colname = NA,
-  event.daily.dose.colname = NA,
-  medication.class.colname = NA,
-  medication.groups = NULL,
-  carryover.within.obs.window = NA,
-  carryover.into.obs.window = NA,
-  carry.only.for.same.medication = NA,
-  consider.dosage.change = NA,
-  followup.window.start = 0,
-  followup.window.start.unit = c("days", "weeks", "months", "years")[1],
-  followup.window.duration = 365 * 2,
-  followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
-  observation.window.start = 0,
-  observation.window.start.unit = c("days", "weeks", "months", "years")[1],
-  observation.window.duration = 365 * 2,
-  observation.window.duration.unit = c("days", "weeks", "months", "years")[1],
-  date.format = "\%m/\%d/\%Y",
-  summary = "Base CMA object",
-  suppress.warnings = FALSE,
-  arguments.that.should.not.be.defined = NULL,
-  ...
-)
+CMA0(data = NULL, ID.colname = NA, event.date.colname = NA,
+  event.duration.colname = NA, event.daily.dose.colname = NA,
+  medication.class.colname = NA, medication.groups = NULL,
+  carryover.within.obs.window = NA, carryover.into.obs.window = NA,
+  carry.only.for.same.medication = NA, consider.dosage.change = NA,
+  followup.window.start = 0, followup.window.start.unit = c("days",
+  "weeks", "months", "years")[1], followup.window.duration = 365 * 2,
+  followup.window.duration.unit = c("days", "weeks", "months",
+  "years")[1], observation.window.start = 0,
+  observation.window.start.unit = c("days", "weeks", "months",
+  "years")[1], observation.window.duration = 365 * 2,
+  observation.window.duration.unit = c("days", "weeks", "months",
+  "years")[1], date.format = "\%m/\%d/\%Y",
+  summary = "Base CMA object", suppress.warnings = FALSE,
+  arguments.that.should.not.be.defined = NULL, ...)
 }
 \arguments{
 \item{data}{A \emph{\code{data.frame}} containing the medication events
@@ -83,8 +72,7 @@ the actual start date of the follow-up window; if a \emph{string} it is the
 name of the column in \code{data} containing the start date of the follow-up
 window either as the numbers of \code{followup.window.start.unit} units
 after the first event (the column must be of type \code{numeric}) or as
-actual dates (in which case the column must be of type \code{Date} or a string
-that conforms to the format specified in \code{date.format}); if a
+actual dates (in which case the column must be of type \code{Date}); if a
 \emph{number} it is the number of time units defined in the
 \code{followup.window.start.unit} parameter after the begin of the
 participant's first event; or \code{NA} if not defined.}
