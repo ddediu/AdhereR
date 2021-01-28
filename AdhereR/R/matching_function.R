@@ -579,7 +579,7 @@ compute_event_durations <- function(disp.data = NULL,
                                 DATE.OUT = as.Date(DATE.OUT, format = date.format))];
 
     special.periods.data.copy[,SPECIAL.DURATION := as.numeric(DATE.OUT-DATE.IN)];
-  }
+  } else {special.periods.data.copy <- NULL}
 
   # force medication class to character
   for(class.colname in medication.class.colnames)
@@ -2007,7 +2007,10 @@ cover_special_periods <- function(events.data,
                                   special.periods.data,
                                   ID.colname,
                                   medication.class.colnames,
+                                  disp.date.colname,
                                   disp.start.colname,
+                                  episode.start.colname,
+                                  episode.end.colname,
                                   duration.colname,
                                   days.before,
                                   days.after,
@@ -2113,8 +2116,8 @@ cover_special_periods <- function(events.data,
   }
 
   setnames(events.data.copy,
-           old = c(ID.colname, disp.start.colname, duration.colname),
-           new = c("ID", "DISP.START", "DURATION"))
+           old = c(ID.colname, disp.date.colname, disp.start.colname, duration.colname, episode.start.colname, episode.end.colname),
+           new = c("ID", "DISP.DATE", "DISP.START", "DURATION", "episode.start", "episode.end"))
 
   setnames(special.periods.data.copy,
            old = c(ID.colname),
@@ -2130,7 +2133,7 @@ cover_special_periods <- function(events.data,
 
   # select special periods with event durations ending within x days before the start of a special period
   dt1 <- na.omit(special.periods.data.copy[events.data.copy, roll = -days.before], cols = "DATE.IN")
-  dt1 <- dt1[,c("ID", "DATE.IN", "DATE.OUT", medication.class.colnames, "SPECIAL.DURATION" #, events.data.copy_list$presc.daily.dose.colname
+  dt1 <- dt1[,c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", medication.class.colnames, "SPECIAL.DURATION", "episode.start", "episode.end" #, events.data.copy_list$presc.daily.dose.colname
   ), with = FALSE] # only keep necessary columns
 
   # set join date to the end of special durations
@@ -2143,7 +2146,7 @@ cover_special_periods <- function(events.data,
 
   # select special periods with event durations beginning within x days after the end of a special period
   dt2 <- na.omit(special.periods.data.copy[events.data.copy, roll = days.after], cols = "DATE.OUT")
-  dt2 <- dt2[,c("ID", "DATE.IN", "DATE.OUT", medication.class.colnames, "SPECIAL.DURATION"), with = FALSE] # only keep necessary columns
+  dt2 <- dt2[,c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", medication.class.colnames, "SPECIAL.DURATION", "episode.start", "episode.end"), with = FALSE] # only keep necessary columns
 
   # combine dt1 and dt2 and select unique rows
   dt_all <- unique(rbind(dt1, dt2))
@@ -2166,10 +2169,12 @@ cover_special_periods <- function(events.data,
   output[,`:=`(join_date = NULL,
                DATE.OUT = NULL)]
 
+  setorderv(output, cols = c("ID", medication.class.colnames, "DISP.DATE"))
+
   # change back to original column names
   setnames(output,
-           old = c("ID", "DISP.START", "DURATION"),
-           new = c(ID.colname, disp.start.colname, duration.colname))
+           old = c("ID", "DISP.DATE", "DISP.START", "DURATION", "episode.start", "episode.end"),
+           new = c(ID.colname, disp.date.colname, disp.start.colname, duration.colname, episode.start.colname, episode.end.colname))
 
   if( !return.data.table )
   {
