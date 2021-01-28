@@ -1014,6 +1014,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for CMA8, the real observation window starts at a different date
                        alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                        rotate.text=-60,                 # some text (e.g., axis labels) may be rotated by this much degrees
+                       force.draw.text=FALSE,           # if true, always draw text even if too big or too small
                        bw.plot=FALSE,                   # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                        min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                        max.patients.to.plot=100,        # maximum number of patients to plot
@@ -1096,7 +1097,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( .do.R ) # Rplot
     {
       segments(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2, .rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, lty="solid", lwd=1, col=CMA.plot.border);
-      if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0)) )
+      if( force.draw.text || char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0)) )
       {
         # There's enough space for vertically writing all three of them:
         text(x=.rescale.xcoord.for.CMA.plot(0.0),       y.mean - 2 - char.height.CMA/2,
@@ -1124,7 +1125,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                 class="cma-summary-plot", suppress.warnings=suppress.warnings)
         );
       }
-      if( 3*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
+      if( force.draw.text || 3*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
       {
         # There's enough space for vertically writing all three of them:
         svg.str <- c(svg.str,
@@ -1158,7 +1159,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( .do.R ) # Rplot:
     {
       points(.rescale.xcoord.for.CMA.plot(adh.x), y.mean - 2 + 4*adh.y, type="l", col=CMA.plot.border);
-      if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+      if( force.draw.text || char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
       {
         # There's enough space for vertical writing:
         text(x=.rescale.xcoord.for.CMA.plot(0.0), y.mean - 2 - char.height.CMA/2, sprintf("%.1f%%",100*adh.x.0), srt=90, pos=1, cex=CMA.cex, col=CMA.plot.text);
@@ -1179,7 +1180,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                               stroke=CMA.plot.border, stroke_width=1,
                               class="cma-summary-plot", suppress.warnings=suppress.warnings)
       );
-      if( 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
+      if( force.draw.text || 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
       {
         # There's enough space for vertical writing:
         svg.str <- c(svg.str,
@@ -1215,7 +1216,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           text(x=.rescale.xcoord.for.CMA.plot(adh.x[j]), y.mean + ifelse(j %% 2==0, 2 + char.height.CMA/2, -2 - char.height.CMA/2),
                sprintf("%.1f%%",100*adh[j]), srt=90, pos=ifelse(j %% 2==0, 3, 1), cex=CMA.cex, col=CMA.plot.text);
         }
-      } else if( char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
+      } else if( force.draw.text || char.height.CMA <= abs(.rescale.xcoord.for.CMA.plot(1) - .rescale.xcoord.for.CMA.plot(0)) )
       {
         # There's enough space for vertical writing only the extremes:
         text(x=.rescale.xcoord.for.CMA.plot(adh.x[1]),           y.mean - 2 - char.height.CMA/2,
@@ -1251,7 +1252,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                h.align=rep(c("right", "left"),times=length(adh))[1:length(adh)], v.align="center", rotate=rotate.text,
                                class="cma-summary-text", suppress.warnings=suppress.warnings)
         );
-      } else if( 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
+      } else if( force.draw.text || 2*dims.chr.cma <= abs(.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0) - .rescale.xcoord.for.CMA.plot(0.0))) )
       {
         # There's enough space for vertical writing only the extremes:
         svg.str <- c(svg.str,
@@ -2867,7 +2868,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   ## Plot most of the plot components ####
   ##
 
-  # Intialisations
+  # Initialisations
   y.cur <- 1; # the current vertical line at which plotting takes place
   alternating.band.to.draw <- 1; # for this patient, which alternating band to draw?
 
@@ -3296,6 +3297,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
               { # vertical writing of the CMA:
                 text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
                      labels=cma.string, col=CMA.plot.text, cex=CMA.cex, srt=90);
+              } else if( force.draw.text )
+              { # force horizontal writing of the CMA:
+                text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
+                     labels=cma.string, col=CMA.plot.text, cex=CMA.cex);
               } # otherwise, there's no space for showing the CMA here
             }
 
@@ -3616,7 +3621,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       ## Partial CMAs ####
       ##
 
-      # Draw its subperiods (if so requested, meaningful and possible):
+      # Draw its sub-periods (if so requested, meaningful and possible):
       if( is.cma.TS.or.SW && has.estimated.CMA )
       {
         if( length(s.cmas) > 0 && !all(is.na(cmas$CMA[s.cmas])) )
@@ -3666,7 +3671,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
               rect(corrected.x.start, ys + 0.10, corrected.x.end,   ys + 0.90, border=gray(0.7), col="white");
               # The CMAs as filled rectangles of length proportional to the CMA:
               rect(corrected.x.start, ys + 0.10, corrected.x.start + h, ys + 0.90, border=plot.partial.CMAs.as.stacked.col.border, col=plot.partial.CMAs.as.stacked.col.bars);
-              if( print.CMA && char.height.CMA <= 0.80 )
+              if( force.draw.text || print.CMA && char.height.CMA <= 0.80 )
               {
                 text(corrected.x.text, ys + 0.5, ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.stacked.col.text);
               }
@@ -3701,7 +3706,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                        stroke=plot.partial.CMAs.as.stacked.col.border, fill=plot.partial.CMAs.as.stacked.col.bars,
                                        class="partial_cma_stacked_rect_estimate"),
                              # The numeric estimate:
-                             if( print.CMA && dims.chr.cma <= dims.chr.event )
+                             if( force.draw.text || print.CMA && dims.chr.cma <= dims.chr.event )
                              {
                                .SVG.text(.scale.x.to.SVG.plot(corrected.x.text[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.50),
                                          text=ppts$text[j], font_size=dims.chr.cma, col=plot.partial.CMAs.as.stacked.col.text,
@@ -3791,7 +3796,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
             if( .do.R ) # Rplot:
             {
-              if( print.CMA && char.height.CMA <= 0.80 && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
+              if( print.CMA && (force.draw.text || char.height.CMA <= 0.80) && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
               {
                 text(corrected.x.text, y.cur + 1.0, ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.overlapping.col.text);
               }
@@ -3799,7 +3804,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
             if( .do.SVG ) # SVG:
             {
-              if( print.CMA && dims.chr.cma <= dims.chr.event && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
+              if( print.CMA && (force.draw.text || dims.chr.cma <= dims.chr.event) && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
               {
                 svg.str <- c(svg.str,
                              # The text estimates:
@@ -3900,7 +3905,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             # Numeric values:
             if( .do.R ) # Rplot:
             {
-              if( print.CMA && char.height.CMA <= 0.80 )
+              if( print.CMA && (force.draw.text || char.height.CMA <= 0.80) )
               {
                 text(corrected.x + x.start.min, min.y.norm, sprintf("%.1f%%",100*min.y), pos=2, cex=CMA.cex, col="black");
                 text(corrected.x + x.start.min, max.y.norm, sprintf("%.1f%%",100*max.y), pos=2, cex=CMA.cex, col="black");
@@ -3916,7 +3921,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             }
             if( .do.SVG ) # SVG:
             {
-              if( print.CMA && dims.chr.cma <= dims.chr.event )
+              if( print.CMA && (force.draw.text || dims.chr.cma <= dims.chr.event) )
               {
                 svg.str <- c(svg.str,
                              # Text
@@ -4191,14 +4196,14 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             # The actual values:
             if( .do.R ) # Rplot:
             {
-              if( print.CMA && char.height.CMA <= 0.80 && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
+              if( print.CMA && (force.draw.text || char.height.CMA <= 0.80) && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
               {
                 text(corrected.x.text, ppts$y.norm, ppts$text, adj=c(0.5,-0.5), cex=CMA.cex, col=plot.partial.CMAs.as.timeseries.col.text);
               }
             }
             if( .do.SVG ) # SVG:
             {
-              if( print.CMA && dims.chr.cma <= dims.chr.event && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
+              if( print.CMA && (force.draw.text || dims.chr.cma <= dims.chr.event) && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
               {
                 svg.str <- c(svg.str,
                              # The actual values:

@@ -79,6 +79,7 @@
   observation.window.opacity = 0.3,
   alternating.bands.cols = c("white", "gray95"),
   bw.plot = FALSE,
+  force.draw.text = FALSE,
   min.plot.size.in.characters.horiz = 0,
   min.plot.size.in.characters.vert = 0,
   max.patients.to.plot = 100,
@@ -160,6 +161,7 @@
   observation.window.opacity = 0.3,
   alternating.bands.cols = c("white", "gray95"),
   bw.plot = FALSE,
+  force.draw.text = FALSE,
   min.plot.size.in.characters.horiz = 0,
   min.plot.size.in.characters.vert = 0,
   max.patients.to.plot = 100,
@@ -294,6 +296,9 @@ or a vector of colors.}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
+
+\item{force.draw.text}{\emph{Logical}, if \code{TRUE}, always draw text even
+if too big or too small}
 
 \item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
 horizontally (min.plot.size.in.characters.horiz) refers to the the whole

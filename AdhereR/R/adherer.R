@@ -848,6 +848,8 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' or a vector of colors.
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
+#' @param force.draw.text \emph{Logical}, if \code{TRUE}, always draw text even
+#' if too big or too small
 #' @param min.plot.size.in.characters.horiz,min.plot.size.in.characters.vert
 #' \emph{Numeric}, the minimum size of the plotting surface in characters;
 #' horizontally (min.plot.size.in.characters.horiz) refers to the the whole
@@ -905,6 +907,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       highlight.followup.window=TRUE, followup.window.col="green",
                       highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
+                      force.draw.text=FALSE,                 # if true, always draw text even if too big or too small
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                       suppress.warnings=FALSE,               # suppress warnings?
@@ -963,6 +966,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              observation.window.opacity=observation.window.opacity,
              alternating.bands.cols=alternating.bands.cols,
              bw.plot=bw.plot,
+             force.draw.text=force.draw.text,
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
@@ -2649,6 +2653,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                            alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                           force.draw.text=FALSE,                 # if true, always draw text even if too big or too small
                            min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                            suppress.warnings=FALSE,               # suppress warnings?
                            max.patients.to.plot=100,              # maximum number of patients to plot
@@ -2713,6 +2718,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              real.obs.window.angle=real.obs.window.angle,
              alternating.bands.cols=alternating.bands.cols,
              bw.plot=bw.plot,
+             force.draw.text=force.draw.text,
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
@@ -3191,6 +3197,8 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' @param col.na The colour used for missing event data.
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
+#' @param force.draw.text \emph{Logical}, if \code{TRUE}, always draw text even
+#' if too big or too small
 #' @param print.CMA \emph{Logical}, should the CMA values be printed?
 #' @param plot.CMA \emph{Logical}, should the CMA values be represented
 #' graphically?
@@ -3274,6 +3282,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                       plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                      force.draw.text=FALSE,                 # if true, always draw text even if too big or too small
                       min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                       max.patients.to.plot=100               # maximum number of patients to plot
 )
@@ -3329,6 +3338,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  lwd.event.max.dose=lwd.event.max.dose,
                  plot.dose.lwd.across.medication.classes=plot.dose.lwd.across.medication.classes,
                  bw.plot=bw.plot,
+                 force.draw.text=force.draw.text,
                  min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
                  min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
                  max.patients.to.plot=max.patients.to.plot,
@@ -6937,6 +6947,8 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' or a vector of colors.
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
+#' @param force.draw.text \emph{Logical}, if \code{TRUE}, always draw text even
+#' if too big or too small
 #' @param print.CMA \emph{Logical}, should the CMA values be printed?
 #' @param CMA.cex ... and, if printed, what cex (\emph{numeric}) to use?
 #' @param plot.CMA \emph{Logical}, should the distribution of the CMA values
@@ -7069,7 +7081,8 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  highlight.followup.window=TRUE, followup.window.col="green",
                                  highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.opacity=0.3,
                                  alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
-                                 bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                                 bw.plot=FALSE,                   # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                                 force.draw.text=FALSE,           # if true, always draw text even if too big or too small
                                  min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                                  max.patients.to.plot=100,        # maximum number of patients to plot
                                  suppress.warnings=FALSE,         # suppress warnings?
@@ -7146,6 +7159,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              observation.window.opacity=observation.window.opacity,
              alternating.bands.cols=alternating.bands.cols,
              bw.plot=bw.plot,
+             force.draw.text=force.draw.text,
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,

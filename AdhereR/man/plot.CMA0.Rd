@@ -53,6 +53,7 @@
   observation.window.angle = -30,
   observation.window.opacity = 0.3,
   alternating.bands.cols = c("white", "gray95"),
+  force.draw.text = FALSE,
   bw.plot = FALSE,
   min.plot.size.in.characters.horiz = 0,
   min.plot.size.in.characters.vert = 0,
@@ -171,6 +172,9 @@ opacity).}
 \item{alternating.bands.cols}{The colors of the alternating vertical bands
 distinguishing the patients; can be \code{NULL} = don't draw the bandes;
 or a vector of colors.}
+
+\item{force.draw.text}{\emph{Logical}, if \code{TRUE}, always draw text even
+if too big or too small}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
