@@ -2912,7 +2912,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     # The current patient ID:
     cur_pat_id <- cma$data[i,cma$ID.colname];
 
-    # For a new patients, draw the alternating bands, show the CMA and print the y-axis label:
+    # For a new patient, draw the alternating bands, show the CMA and print the y-axis label:
     if( i == 1 || (cur_pat_id != cma$data[i-1,cma$ID.colname]) )
     {
       # Save the current vertical position (for drawing the FUW and OW windows):
@@ -2925,7 +2925,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       # Vertical space needed by this patient for the events and overall:
       vspace.needed.events <- ifelse(plot.events.vertically.displaced, length(s.events), 1);
       vspace.needed.total  <- vspace.needed.events +
-        ifelse(has.estimated.CMA && adh.plot.space[2] > 0,
+        ifelse(has.estimated.CMA,
                (length(s.cmas)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
                  3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
                  plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
