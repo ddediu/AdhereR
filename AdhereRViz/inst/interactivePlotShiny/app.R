@@ -2300,7 +2300,8 @@ server <- function(input, output, session)
     descr.adhererviz <- utils::packageDescription("AdhereRViz");
     msg <- paste0(# Logo:
                   "<img src='adherer-logo.png', align = 'left', style='font-size: x-large; font-weight: bold; height: 2em; vertical-align: baseline;'/>",
-                  "<div style='width: 1em; display: inline-block;'/>",
+                  #"<div style='width: 1em; display: inline-block;'/>",
+                  "<div style='display: inline-block;'/>",
                   "<hr/>",
                   # AdhereR:
                   "<div style='max-height: 50vh; overflow: auto;'>",
