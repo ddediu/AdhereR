@@ -1085,6 +1085,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     return (invisible(NULL));
   }
 
+  # Overriding dangerous or aesthetic defaults:
+  if( force.draw.text && !suppress.warnings ) .report.ewms("Forcing drawing of text elements even if too big or ugly!\n", "warning", ".plot.CMAs", "AdhereR");
+
 
   # Local functions for the various types of summary CMA plots:
   .plot.summary.CMA.as.histogram <- function(adh, svg.str)

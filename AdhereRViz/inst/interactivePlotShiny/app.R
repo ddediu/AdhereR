@@ -913,6 +913,10 @@ ui <- fluidPage(
                                                                     numericInput(inputId="cex_lab",
                                                                                  label="Axis labels font size",
                                                                                  value=1.0, min=0.0, max=NA, step=0.25)),
+                                                                div(title='Force showing text elements, even if they might be too small or ulgy?',
+                                                                    shinyWidgets::materialSwitch(inputId="force_draw_text",
+                                                                                                 label="Force drawing text?",
+                                                                                                 value=FALSE, status="primary", right=TRUE)),
 
                                                                 hr(),
 
@@ -2069,6 +2073,7 @@ server <- function(input, output, session)
                                                          lty.event=input$lty_event, lwd.event=input$lwd_event, pch.start.event=as.numeric(input$pch_start_event), pch.end.event=as.numeric(input$pch_end_event),
                                                          col.continuation=input$col_continuation, lty.continuation=input$lty_continuation, lwd.continuation=input$lwd_continuation,
                                                          cex=max(0.01,input$cex), cex.axis=max(0.01,input$cex_axis), cex.lab=max(0.01,input$cex_lab),
+                                                         force.draw.text=input$force_draw_text,
                                                          highlight.followup.window=input$highlight_followup_window, followup.window.col=input$followup_window_col,
                                                          highlight.observation.window=input$highlight_observation_window, observation.window.col=input$observation_window_col,
                                                          #observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
@@ -2573,6 +2578,7 @@ server <- function(input, output, session)
                      "cex"=max(0.01,input$cex),
                      "cex.axis"=max(0.01,input$cex_axis),
                      "cex.lab"=max(0.01,input$cex_lab),
+                     "force.draw.text"=input$force.draw.text,
                      "highlight.followup.window"=input$highlight_followup_window,
                      "followup.window.col"=paste0('"',input$followup_window_col,'"'),
                      "highlight.observation.window"=input$highlight_observation_window,

@@ -718,6 +718,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 show.period=c("dates","days")[2], period.in.days=90, # period on the x axis
 
                                 # Colors and fonts:
+                                force.draw.text=FALSE,
                                 bw.plot=FALSE,
                                 show.cma=TRUE,
                                 col.na="lightgray", col.cats=rainbow, unspecified.category.label="drug",
@@ -1032,7 +1033,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            col.na=col.na, col.cats=col.cats, unspecified.category.label=unspecified.category.label,
            lty.event=lty.event, lwd.event=lwd.event, pch.start.event=pch.start.event, pch.end.event=pch.end.event,
            col.continuation=col.continuation, lty.continuation=lty.continuation, lwd.continuation=lwd.continuation,
-           cex=cex, cex.axis=cex.axis, cex.lab=cex.lab,
+           cex=cex, cex.axis=cex.axis, cex.lab=cex.lab, force.draw.text=force.draw.text,
            highlight.followup.window=highlight.followup.window, followup.window.col=followup.window.col,
            highlight.observation.window=highlight.observation.window, observation.window.col=observation.window.col,
            observation.window.density=observation.window.density, observation.window.angle=observation.window.angle, observation.window.opacity=observation.window.opacity,
