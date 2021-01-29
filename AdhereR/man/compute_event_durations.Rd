@@ -104,7 +104,7 @@ medication class separatly.}
 treatment interruptions (see \code{special.periods.method}).
 If \emph{string}, the name of the (\emph{character}) column in \emph{disp.data}
 containing the information (\emph{"continue"}, \emph{"discard"}, or \emph{"carryover"})
-for each medication class separately.}
+for each medication class separatly.}
 
 \item{special.periods.method}{can be either of \emph{continue}, \emph{discard},
 \emph{carryover}, or \emph{custom}. It indicates how to handle durations during special periods.
@@ -117,8 +117,7 @@ mapping has to be included in \emph{\code{special.periods.data}}.}
 
 \item{carryover}{\emph{Logical}, if \code{TRUE} apply carry-over to medications of the
 same type (according to \code{medication.class.colnames}). Can only be used together with
-CMA7 and above in combination with \code{carry.only.for.same.medication = TRUE}.
-Currently \emph{not} implemented.}
+CMA7 and above in combination with \code{carry.only.for.same.medication = TRUE}.}
 
 \item{date.format}{A \emph{string} giving the format of the dates used in
 the \code{data} and the other parameters; see the \code{format} parameters

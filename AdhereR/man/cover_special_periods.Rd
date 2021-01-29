@@ -9,7 +9,10 @@ cover_special_periods(
   special.periods.data,
   ID.colname,
   medication.class.colnames,
+  disp.date.colname,
   disp.start.colname,
+  episode.start.colname,
+  episode.end.colname,
   duration.colname,
   days.before,
   days.after,
@@ -34,8 +37,8 @@ periods with the exact column names \emph{\code{DATE.IN}} and \emph{\code{DATE.O
 \item{medication.class.colnames}{A \emph{\code{Vector}} of \emph{strings}, the
 name(s) of the column(s) in the \code{events.data} identify medication classes.}
 
-\item{disp.start.colname}{A \emph{string}, the name of the column in
-\code{events.data} containing the event start date (in the format given in
+\item{disp.date.colname}{A \emph{string}, the name of the column in
+\code{events.data} containing the dispensation start date (in the format given in
 the \code{date.format} parameter).}
 
 \item{duration.colname}{A \emph{string}, the name of the column in

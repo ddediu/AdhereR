@@ -208,9 +208,9 @@ globalVariables(c("ID", "DATE.IN", "DATE.OUT", "DISP.DATE", "PRESC.DATE",
 #' at the beginning of a special period and a new event with the remaining duration
 #' is created after the end of the end of the special period. With \emph{custom}, the
 #' mapping has to be included in \emph{\code{special.periods.data}}.
-# @param carryover \emph{Logical}, if \code{TRUE} apply carry-over to medications of the
-# same type (according to \code{medication.class.colnames}). Can only be used together with
-# CMA7 and above in combination with \code{carry.only.for.same.medication = TRUE}.
+#' @param carryover \emph{Logical}, if \code{TRUE} apply carry-over to medications of the
+#' same type (according to \code{medication.class.colnames}). Can only be used together with
+#' CMA7 and above in combination with \code{carry.only.for.same.medication = TRUE}.
 #' @param date.format A \emph{string} giving the format of the dates used in
 #' the \code{data} and the other parameters; see the \code{format} parameters
 #' of the \code{\link[base]{as.Date}} function for details (NB, this concerns
@@ -1919,8 +1919,8 @@ prune_event_durations <- function(data,
 #' \code{special.periods.data} containing the unique patient ID.
 #' @param medication.class.colnames A \emph{\code{Vector}} of \emph{strings}, the
 #' name(s) of the column(s) in the \code{events.data} identify medication classes.
-#' @param disp.start.colname A \emph{string}, the name of the column in
-#' \code{events.data} containing the event start date (in the format given in
+#' @param disp.date.colname A \emph{string}, the name of the column in
+#' \code{events.data} containing the dispensation start date (in the format given in
 #' the \code{date.format} parameter).
 #' @param duration.colname A \emph{string}, the name of the column in
 #' \code{events.data} containing the duration of the medication event.
