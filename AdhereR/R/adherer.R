@@ -142,98 +142,92 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 "med.events"
 
 
-# Check if the defined medication groups have issues
-# Returns TRUE if everything's ok, or FALSE otherwise (and if suppress.warnings==FALSE, generate a warning message explaining the issue):
-.check.medication.groups <- function(medication.groups, # the medication groups as a named list of vectors of medication classed (or NULL if nt given)
-                                     list.of.medication.classes=NULL, # the actual full list of all possible medication classes (or NULL if not given)
+
+# Check and parse the medication groups:
+# The idea is to transform each group into a function and let R do the heavy lifting:
+# Returns the tools needed to perform the evaluation (the mapping between medication classes and function names, and the safe environment for their evaluation):
+.parse.medication.groups <- function(medication.groups, # the medication groups
                                      suppress.warnings=FALSE)
 {
-  if( is.null(medication.groups) )
+  if( is.null(medication.groups) || length(medication.groups) == 0 )
   {
     # by definition, there's nothing wrong with NULL
-    return (TRUE);
+    return (NULL);
   }
 
-  if( !inherits(medication.groups, "list") )
+  # Basic checks:
+  if( !(is.character(medication.groups) || is.factor(medication.groups)) )
   {
-    if( !suppress.warnings ) .report.ewms("The medication groups must be a list!\n", "error", ".check.medication.groups", "AdhereR");
-    return (FALSE);
+    if( !suppress.warnings ) .report.ewms("The medication groups must be a vector of characters!\n", "error", ".parse.medication.groups", "AdhereR");
+    return (NULL);
   }
 
-  #if( length(names(medication.groups)) != length(medication.groups) || any(duplicated(names(medication.groups))) || ("" %in% names(medication.groups)) )
-  #{
-  #  if( !suppress.warnings ) .report.ewms("The medication groups must be a named list with unique and non-empty names!\n", "error", ".check.medication.groups", "AdhereR");
-  #  return (FALSE);
-  #}
-
-  if( !all(vapply(medication.groups, function(x) (inherits(x,"character") || inherits(x,"factor")), logical(1))) )
+  if( length(names(medication.groups)) != length(medication.groups) || any(duplicated(names(medication.groups))) || ("" %in% names(medication.groups)) )
   {
-    if( !suppress.warnings ) .report.ewms("The members of the medication groups must vectors of charcters (or factors)!\n", "error", ".check.medication.groups", "AdhereR");
-    return (FALSE);
+    if( !suppress.warnings ) .report.ewms("The medication groups must be a named list with unique and non-empty names!\n", "error", ".parse.medication.groups", "AdhereR");
+    return (NULL);
   }
 
-  if( any(is.na(v <- unlist(medication.groups))) || any(duplicated(v)) )
-  {
-    if( !suppress.warnings ) .report.ewms("The vectors in the medication groups must not contain NAs and their values must appear only once!\n", "error", ".check.medication.groups", "AdhereR");
-    return (FALSE);
-  }
 
-  if( !is.null(list.of.medication.classes) )
+  # The safe environment for evaluating the medication groups (no parent) containing only the needed variables and functions (as per https://stackoverflow.com/a/18391779):
+  safe_env <- new.env(parent = emptyenv());
+  # ... add the safe functions:s
+  for( .f in c(getGroupMembers("Math"), getGroupMembers("Arith"), getGroupMembers("Logic"), getGroupMembers("Compare"), "(", "[", "!") ) safe_env[[.f]] <- get(.f, "package:base");
+  # ... and variables:
+  assign("data", NULL, envir=safe_env);
+  # The safe eval function (use evalq to avoid searching in the current environment): evalq(expr, env = safe_env);
+
+  # Check, transform, parse and add the group definitions as functions to the .mg_safe_env_original environment to be later used in the safe evaluation environment:
+  mg <- data.frame("name"=names(medication.groups),
+                   "def"=medication.groups,
+                   "uid"=make.names(names(medication.groups), unique=TRUE, allow_=TRUE),
+                   "fnc_name"=NA); # convert the names to valid identifiers
+  mg$fnc_name <- paste0(".mg_fnc_", mg$uid);
+  for( i in 1:nrow(mg) )
   {
-    # The list of all possible medication classes is given
-    if( !(inherits(list.of.medication.classes, "character") || inherits(list.of.medication.classes, "factor")) )
+    # Cache the definition:
+    s <- mg$def[i];
+    if( is.na(s) || is.null(s) || s == "" ) return (s); # nothing to do!
+
+    # Search for medication group references of the form {name} :
+    ss <- gregexpr("\\{[[:alpha:]]+\\}",s);
+    if( ss[[1]][1] != (-1) )
     {
-      if( !suppress.warnings ) .report.ewms("The list of all possible medication classes, if given, must be a vector of characters (or factors)!\n", "error", ".check.medication.groups", "AdhereR");
-      return (FALSE);
+      # There's at least one group reference: replace it by the corresponding function call:
+      ss_calls <- regmatches(s, ss)[[1]];
+      regmatches(s, ss)[[1]] <- vapply(ss_calls, function(x)
+        {
+          if( length(ii <- which(mg$name == substr(x, 2, nchar(x)-1))) != 1 )
+          {
+            if( !suppress.warnings ) .report.ewms(paste0("Error parsing the medication class definition '",mg$name[i],"': there is a call to the undefined medication class '",substr(x, 2, nchar(x)-1),"'!\n"), "error", ".parse.medication.groups", "AdhereR");
+            return (NULL);
+          } else
+          {
+            return (paste0("safe_env$",mg$fnc_name[ii],"()"));
+          }
+        }, character(1));
     }
 
-    if( length((x <- setdiff(v, list.of.medication.classes))) > 0 )
+    # Make it into a function definition:
+    s_fnc <- paste0("function() with(safe_env$data, ",s,");");
+
+    # Parse it:
+    s_parsed <- NULL;
+    try(s_parsed <- parse(text=s_fnc), silent=TRUE);
+    if( is.null(s_parsed) )
     {
-      if( !suppress.warnings ) .report.ewms(paste0("There are ",length(x)," medication classes given in the groups that are not in the list of all possible medication classes!\n"), "error", ".check.medication.groups", "AdhereR");
-      return (FALSE);
+      if( !suppress.warnings ) .report.ewms(paste0("Error parsing the medication class definition '",mg$name[i],"'!\n"), "error", ".parse.medication.groups", "AdhereR");
+      return (NULL);
     }
+
+    # Add the function:
+    safe_env[[mg$fnc_name[i]]] <- eval(s_parsed);
   }
 
   # All seems fine:
-  return (TRUE);
+  return (list("groups"=mg, "safe_env"=safe_env));
 }
 
-# Fill in the medication groups and return them as a data.frame in the long format (or NULL, if there are issues):
-.fill.medication.groups <- function(medication.groups, # the medication groups as a named list of vectors of medication classed (or NULL if nt given)
-                                    list.of.medication.classes=NULL, # the actual full list of all possible medication classes (or NULL if not given)
-                                    suppress.warnings=FALSE,
-                                    already.checked=FALSE) # were the conditions already checked (speed-up by avoiding superfluous checks)?
-{
-  if( !already.checked &&
-      !.check.medication.groups(medication.groups, list.of.medication.classes, suppress.warnings) )
-  {
-    # Some error:
-    return (NULL);
-  }
-
-  if( is.null(medication.groups) )
-  {
-    # All are part of the same group:
-    return (NULL);
-  }
-
-  # The data.frame containing the groups:
-  ret.val <- do.call(rbind, lapply(seq_along(medication.groups), function(i)
-    {
-      n <- names(medication.groups)[i]; v <- medication.groups[[i]];
-      if( is.null(n) || n == "" ) n <- paste0(as.character(v),collapse="+");
-      data.frame("group"=n, "class"=v);
-    }));
-  tmp <- setdiff(as.character(list.of.medication.classes), as.character(ret.val$class));
-  if( length(tmp) > 0 )
-  {
-    ret.val <- rbind(ret.val, data.frame("group"=tmp, "class"=tmp));
-  }
-  ret.val$group <- as.character(ret.val$group); ret.val$class <- as.character(ret.val$class);
-  ret.val <- ret.val[ order(ret.val$group, ret.val$class), ];
-
-  return (ret.val);
-}
 
 
 #' CMA0 constructor.
@@ -398,8 +392,8 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                  medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                  # Groups of medication classes:
-                 medication.groups=NULL, # a named list of vectors of medication class names; e.g., list("G1"=c("A","B"), "G2"=c("C","D","E")); class names not included in the list are considered to be their own group (by extension, NULL considers each class as its own group)
-                 # Various types medhods of computing gaps:
+                 medication.groups=NULL, # a named vector of medication group definitions or NULL
+                 # Various types methods of computing gaps:
                  carryover.within.obs.window=NA, # if TRUE consider the carry-over within the observation window (NA = undefined)
                  carryover.into.obs.window=NA, # if TRUE consider the carry-over from before the starting date of the observation window (NA = undefined)
                  carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
@@ -560,12 +554,6 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
       if( !suppress.warnings ) .report.ewms("The observation window duration unit is not recognized!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
-    if( !.check.medication.groups(medication.groups,
-                                  list.of.medication.classes=if(!is.na(medication.class.colname)) {as.character(unique(data[,medication.class.colname]))} else {NULL},
-                                  suppress.warnings=suppress.warnings) )
-    {
-      return (NULL);
-    }
 
     # Arguments that should not have been passed:
     if( !suppress.warnings && !is.null(arguments.that.should.not.be.defined) )
@@ -592,10 +580,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  "event.duration.colname"=event.duration.colname,
                  "event.daily.dose.colname"=event.daily.dose.colname,
                  "medication.class.colname"=medication.class.colname,
-                 "medication.groups"=.fill.medication.groups(medication.groups,
-                                                             list.of.medication.classes=if(!is.na(medication.class.colname)) {as.character(unique(data[,medication.class.colname]))} else {NULL},
-                                                             suppress.warnings=TRUE,
-                                                             already.checked=TRUE),
+                 "medication.groups"=.parse.medication.groups(medication.groups, suppress.warnings),
                  "carryover.within.obs.window"=carryover.within.obs.window,
                  "carryover.into.obs.window"=carryover.into.obs.window,
                  "carry.only.for.same.medication"=carry.only.for.same.medication,
@@ -706,8 +691,10 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
             {
               if( !is.null(cma[[p]]) )
               {
-                tmp <- cma[[p]]; tmp <- tmp[ order(tmp$group, tmp$class), ];
-                cat(paste0("    ",p," =  [ ",paste0(vapply(unique(tmp$group), function(s) paste0(s," (",paste0("'",tmp$class[tmp$group==s],"'",collapse=", "),") "), character(1)),collapse=", "),"]\n"));
+                cat(paste0("    ", p, " = ", nrow(cma[[p]]$groups), " [", ifelse(nrow(cma[[p]]$groups)<4, paste0("'",cma[[p]]$groups$name,"'", collapse=", "), paste0(paste0("'",cma[[p]]$groups$name[1:4],"'", collapse=", ")," ...")), "]\n"));
+              } else
+              {
+                cat(paste0("    ", p, " = <NONE>\n"));
               }
             } else if( !is.null(cma[[p]]) && length(cma[[p]]) > 0 && !is.na(cma[[p]]) )
             {
@@ -1533,7 +1520,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                    # The description of the output (added) columns:
                                    event.interval.colname="event.interval", # contains number of days between the start of current event and the start of the next
                                    gap.days.colname="gap.days", # contains the number of days when medication was not available
-                                   # Various types medhods of computing gaps:
+                                   # Various types methods of computing gaps:
                                    carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
                                    carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
                                    carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
@@ -1838,7 +1825,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: For a given patient, compute the gaps and return the required columns:
+    # Auxiliary internal function: For a given patient, compute the gaps and return the required columns:
     .process.patient <- function(data4ID)
     {
       # Number of events:
@@ -2369,7 +2356,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         event.duration.colname=NA, # the event duration in days
                                         event.daily.dose.colname=NA, # the prescribed daily dose
                                         medication.class.colname=NA, # the classes/types/groups of medication
-                                        # Various types medhods of computing gaps:
+                                        # Various types methods of computing gaps:
                                         carryover.within.obs.window=TRUE, # if TRUE consider the carry-over within the observation window
                                         carry.only.for.same.medication=TRUE, # if TRUE the carry-over applies only across medication of same type
                                         consider.dosage.change=TRUE, # if TRUE carry-over is adjusted to reflect changes in dosage
@@ -2475,7 +2462,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       # Cache things up:
@@ -2904,6 +2891,8 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions or NULL
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
@@ -2958,6 +2947,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=ID.colname,
                   event.date.colname=event.date.colname,
                   event.duration.colname=event.duration.colname,
+                  medication.groups=medication.groups,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
                   followup.window.duration=followup.window.duration,
@@ -2998,7 +2988,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       # Force the selection, evaluation of promises and caching of the needed columns:
@@ -3524,6 +3514,8 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions or NULL
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
@@ -3618,7 +3610,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       sel.data4ID <- data4ID[ !.EVENT.STARTS.BEFORE.OBS.WINDOW & !.EVENT.STARTS.AFTER.OBS.WINDOW, ]; # select the events within the observation window only
@@ -3738,6 +3730,8 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions or NULL
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
@@ -3838,6 +3832,8 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions or NULL
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
@@ -4132,7 +4128,9 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                  # Various types medhods of computing gaps:
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                   # The follow-up window:
@@ -4231,7 +4229,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       sel.data4ID <- data4ID[ !.EVENT.STARTS.BEFORE.OBS.WINDOW & !.EVENT.STARTS.AFTER.OBS.WINDOW, ]; # select the events within the observation window only
@@ -4543,7 +4541,9 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                  # Various types medhods of computing gaps:
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                   # The follow-up window:
@@ -4642,7 +4642,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       sel.data4ID <- data4ID[ !.EVENT.STARTS.BEFORE.OBS.WINDOW & !.EVENT.STARTS.AFTER.OBS.WINDOW, ]; # select the events within the observation window only
@@ -4951,7 +4951,9 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                  # Various types medhods of computing gaps:
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                   # The follow-up window:
@@ -5050,7 +5052,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       # Select the events within the observation window:
@@ -5420,7 +5422,9 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                  # Various types medhods of computing gaps:
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                   # The follow-up window:
@@ -5519,7 +5523,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the new OW start date:
+    # Auxiliary internal function: Compute the new OW start date:
     .new.OW.start <- function(data4ID)
     {
       # Select the events that start before the observation window but end within it:
@@ -5862,7 +5866,9 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                  # Various types medhods of computing gaps:
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                   # The follow-up window:
@@ -5961,7 +5967,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       n.events <- nrow(data4ID); # cache number of events
@@ -6379,7 +6385,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              event.duration.colname=NA, # the event duration in days (NA = undefined)
                              event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                              medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                             # Various types medhods of computing gaps:
+                             # Various types methods of computing gaps:
                              carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = use the CMA's values)
                              consider.dosage.change=NA, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = use the CMA's values)
                              # Treatment episodes:
@@ -7380,7 +7386,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                 event.duration.colname=NA, # the event duration in days (NA = undefined)
                                 event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                                 medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                                # Various types medhods of computing gaps:
+                                # Various types methods of computing gaps:
                                 carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                                 consider.dosage.change=NA, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                                 # The follow-up window:
@@ -7556,7 +7562,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       n.events <- nrow(data4ID); # cache number of events
