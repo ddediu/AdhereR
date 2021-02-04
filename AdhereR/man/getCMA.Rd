@@ -13,7 +13,7 @@ getCMA(x)
 a \emph{data.frame} containing the CMA estimate(s).
 }
 \description{
-Retreive the actual CMA estimate(s) encapsulated in a simple, per episode,
+Retrieve the actual CMA estimate(s) encapsulated in a simple, per episode,
 or sliding window CMA object.
 }
 \examples{

@@ -11,6 +11,7 @@ CMA6(
   event.duration.colname = NA,
   event.daily.dose.colname = NA,
   medication.class.colname = NA,
+  medication.groups = NULL,
   carry.only.for.same.medication = FALSE,
   consider.dosage.change = FALSE,
   followup.window.start = 0,

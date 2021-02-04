@@ -142,93 +142,6 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 "med.events"
 
 
-
-# # Check and parse the medication groups:
-# # The idea is to transform each group into a function and let R do the heavy lifting:
-# # Returns the tools needed to perform the evaluation (the mapping between medication classes and function names, and the safe environment for their evaluation):
-# .parse.medication.groups <- function(medication.groups, # the medication groups
-#                                      suppress.warnings=FALSE)
-# {
-#   if( is.null(medication.groups) || length(medication.groups) == 0 )
-#   {
-#     # by definition, there's nothing wrong with NULL
-#     return (NULL);
-#   }
-#
-#   # Basic checks:
-#   if( !(is.character(medication.groups) || is.factor(medication.groups)) )
-#   {
-#     if( !suppress.warnings ) .report.ewms("The medication groups must be a vector of characters!\n", "error", ".parse.medication.groups", "AdhereR");
-#     return (NULL);
-#   }
-#
-#   if( length(names(medication.groups)) != length(medication.groups) || any(duplicated(names(medication.groups))) || ("" %in% names(medication.groups)) )
-#   {
-#     if( !suppress.warnings ) .report.ewms("The medication groups must be a named list with unique and non-empty names!\n", "error", ".parse.medication.groups", "AdhereR");
-#     return (NULL);
-#   }
-#
-#
-#   # The safe environment for evaluating the medication groups (no parent) containing only the needed variables and functions (as per https://stackoverflow.com/a/18391779):
-#   safe_env <- new.env(parent = emptyenv());
-#   # ... add the safe functions:s
-#   for( .f in c(getGroupMembers("Math"), getGroupMembers("Arith"), getGroupMembers("Logic"), getGroupMembers("Compare"), "(", "[", "!") ) safe_env[[.f]] <- get(.f, "package:base");
-#   # ... and variables:
-#   assign("data", NULL, envir=safe_env);
-#   # The safe eval function (use evalq to avoid searching in the current environment): evalq(expr, env = safe_env);
-#
-#   # Check, transform, parse and add the group definitions as functions to the .mg_safe_env_original environment to be later used in the safe evaluation environment:
-#   mg <- data.frame("name"=names(medication.groups),
-#                    "def"=medication.groups,
-#                    "uid"=make.names(names(medication.groups), unique=TRUE, allow_=TRUE),
-#                    "fnc_name"=NA); # convert the names to valid identifiers
-#   mg$fnc_name <- paste0(".mg_fnc_", mg$uid);
-#   for( i in 1:nrow(mg) )
-#   {
-#     # Cache the definition:
-#     s <- mg$def[i];
-#     if( is.na(s) || is.null(s) || s == "" ) return (s); # nothing to do!
-#
-#     # Search for medication group references of the form {name} :
-#     ss <- gregexpr("\\{[[:alpha:]]+\\}",s);
-#     if( ss[[1]][1] != (-1) )
-#     {
-#       # There's at least one group reference: replace it by the corresponding function call:
-#       ss_calls <- regmatches(s, ss)[[1]];
-#       regmatches(s, ss)[[1]] <- vapply(ss_calls, function(x)
-#         {
-#           if( length(ii <- which(mg$name == substr(x, 2, nchar(x)-1))) != 1 )
-#           {
-#             if( !suppress.warnings ) .report.ewms(paste0("Error parsing the medication class definition '",mg$name[i],"': there is a call to the undefined medication class '",substr(x, 2, nchar(x)-1),"'!\n"), "error", ".parse.medication.groups", "AdhereR");
-#             return (NULL);
-#           } else
-#           {
-#             return (paste0("safe_env$",mg$fnc_name[ii],"()"));
-#           }
-#         }, character(1));
-#     }
-#
-#     # Make it into a function definition:
-#     s_fnc <- paste0("function() with(safe_env$data, ",s,");");
-#
-#     # Parse it:
-#     s_parsed <- NULL;
-#     try(s_parsed <- parse(text=s_fnc), silent=TRUE);
-#     if( is.null(s_parsed) )
-#     {
-#       if( !suppress.warnings ) .report.ewms(paste0("Error parsing the medication class definition '",mg$name[i],"'!\n"), "error", ".parse.medication.groups", "AdhereR");
-#       return (NULL);
-#     }
-#
-#     # Add the function:
-#     safe_env[[mg$fnc_name[i]]] <- eval(s_parsed);
-#   }
-#
-#   # All seems fine:
-#   return (list("groups"=mg, "safe_env"=safe_env));
-# }
-
-
 # Check, parse and evaluate the medication groups:
 # The idea is to transform each group into a function and let R do the heavy lifting:
 # Returns a list with two components:
@@ -741,13 +654,25 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
     return (NULL);
   }
 
+  # Parse, check and evaluate the medication groups (if any):
+  if( !is.null(medication.groups) )
+  {
+    if( is.null(mg <- .apply.medication.groups(medication.groups=medication.groups, data=data, suppress.warnings=suppress.warnings)) )
+    {
+      return (NULL);
+    }
+  } else
+  {
+    mg <- NULL;
+  }
+
   structure(list("data"=data,
                  "ID.colname"=ID.colname,
                  "event.date.colname"=event.date.colname,
                  "event.duration.colname"=event.duration.colname,
                  "event.daily.dose.colname"=event.daily.dose.colname,
                  "medication.class.colname"=medication.class.colname,
-                 "medication.groups"=.parse.medication.groups(medication.groups, suppress.warnings),
+                 "medication.groups"=mg,
                  "carryover.within.obs.window"=carryover.within.obs.window,
                  "carryover.into.obs.window"=carryover.into.obs.window,
                  "carry.only.for.same.medication"=carry.only.for.same.medication,
@@ -858,7 +783,7 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
             {
               if( !is.null(cma[[p]]) )
               {
-                cat(paste0("    ", p, " = ", nrow(cma[[p]]$groups), " [", ifelse(nrow(cma[[p]]$groups)<4, paste0("'",cma[[p]]$groups$name,"'", collapse=", "), paste0(paste0("'",cma[[p]]$groups$name[1:4],"'", collapse=", ")," ...")), "]\n"));
+                cat(paste0("    ", p, " = ", nrow(cma[[p]]$defs), " [", ifelse(nrow(cma[[p]]$defs)<4, paste0("'",cma[[p]]$defs$name,"'", collapse=", "), paste0(paste0("'",cma[[p]]$defs$name[1:4],"'", collapse=", ")," ...")), "]\n"));
               } else
               {
                 cat(paste0("    ", p, " = <NONE>\n"));
@@ -1128,9 +1053,36 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
 }
 
 
+#' Access the medication groups of a CMA object.
+#'
+#' Retrieve the medication groups and the observations they refer to (if any).
+#'
+#' @param x a CMA object.
+#' @return a \emph{list} with two members:
+#' \itemize{
+#'  \item \code{defs} A \code{data.frame} containing the names and definitions of
+#'  the medication classes; please note that there is an extra class
+#'  \emph{__ALL_OTHERS__} containing all the observations not selected by any of
+#'  the explicitly given medication classes.
+#'  \item \code{obs} A \code{logical matrix} where the columns are the medication
+#'  classes (the last being \emph{__ALL_OTHERS__}), and the rows the observations in
+#'  the x's data; element \eqn{(i,j)} is \code{TRUE} iff observation \eqn{j} was
+#'  selected by medication class \eqn{i}.
+#' }
+#' @export
+getMGs <- function(x) UseMethod("getMGs")
+#' @export
+getMGs.CMA0 <- function(x)
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA0") || is.null(cma$medication.groups) ) return (NULL);
+  return (cma$medication.groups);
+}
+
+
 #' Access the actual CMA estimate from a CMA object.
 #'
-#' Retreive the actual CMA estimate(s) encapsulated in a simple, per episode,
+#' Retrieve the actual CMA estimate(s) encapsulated in a simple, per episode,
 #' or sliding window CMA object.
 #'
 #' @param x a CMA object.
@@ -1171,6 +1123,7 @@ getCMA.CMA0 <- function(x)
   if( is.null(cma) || !inherits(cma, "CMA0") || !("CMA" %in% names(cma)) || is.null(cma$CMA) ) return (NULL);
   return (cma$CMA);
 }
+
 
 # Restrict a CMA object to a subset of patients:
 subsetCMA <- function(cma, patients, suppress.warnings) UseMethod("subsetCMA")
@@ -3130,7 +3083,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
   # The followup.window.start and observation.window.start might have been converted to Date:
   followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
-  # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
+  # The workhorse auxiliary function:
   .workhorse.function <- function(data=NULL,
                                   ID.colname=NULL,
                                   event.date.colname=NULL,
@@ -3217,53 +3170,165 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
+  # Convert to data.table, cache event date as Date objects, and key by patient ID and event date
   data.copy <- data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
-                           ID.colname=ID.colname,
-                           event.date.colname=event.date.colname,
-                           event.duration.colname=event.duration.colname,
-                           event.daily.dose.colname=NA, # not relevant
-                           medication.class.colname=NA, # not relevant
-                           event.interval.colname=event.interval.colname,
-                           gap.days.colname=gap.days.colname,
-                           carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
-                           carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
-                           carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
-                           consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage
-                           followup.window.start=followup.window.start,
-                           followup.window.start.unit=followup.window.start.unit,
-                           followup.window.duration=followup.window.duration,
-                           followup.window.duration.unit=followup.window.duration.unit,
-                           observation.window.start=observation.window.start,
-                           observation.window.start.unit=observation.window.start.unit,
-                           observation.window.duration=observation.window.duration,
-                           observation.window.duration.unit=observation.window.duration.unit,
-                           date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
-
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
+  # Are there medication groups?
+  if( is.null(mg <- getMGs(ret.val)) )
   {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
+    # Nope: do a single estimation on the whole dataset:
+
+    # Compute the workhorse function:
+    tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+                             parallel.backend=parallel.backend,
+                             parallel.threads=parallel.threads,
+                             data=data.copy,
+                             ID.colname=ID.colname,
+                             event.date.colname=event.date.colname,
+                             event.duration.colname=event.duration.colname,
+                             event.daily.dose.colname=NA, # not relevant
+                             medication.class.colname=NA, # not relevant
+                             event.interval.colname=event.interval.colname,
+                             gap.days.colname=gap.days.colname,
+                             carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
+                             carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
+                             carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
+                             consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage
+                             followup.window.start=followup.window.start,
+                             followup.window.start.unit=followup.window.start.unit,
+                             followup.window.duration=followup.window.duration,
+                             followup.window.duration.unit=followup.window.duration.unit,
+                             observation.window.start=observation.window.start,
+                             observation.window.start.unit=observation.window.start.unit,
+                             observation.window.duration=observation.window.duration,
+                             observation.window.duration.unit=observation.window.duration.unit,
+                             date.format=date.format,
+                             suppress.warnings=suppress.warnings);
+    if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+
+    # Convert to data.frame and return:
+    if( force.NA.CMA.for.failed.patients )
     {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+      # Make sure patients with failed CMA estimations get an NA estimate!
+      patids <- unique(data.copy[,get(ID.colname)]);
+      if( length(patids) > nrow(tmp$CMA) )
+      {
+        setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+      }
     }
+    setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
+    ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
+    class(ret.val) <- c("CMA1", class(ret.val));
+    return (ret.val);
+
+  } else
+  {
+    # Yes
+    # Focus only on the non-trivial ones:
+    mg.to.eval <- (colSums(!is.na(mg$obs) & mg$obs) > 0);
+    if( sum(mg.to.eval) == 0 )
+    {
+      # None selects not even one observation!
+      .report.ewms(paste0("None of the medication classes (included __ALL_OTHER__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
+      return (NULL);
+    }
+    mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
+
+    # Check if there are medication classes that refer to the same observations (they would result in the same estimates):
+    mb.obs.dupl <- duplicated(mb.obs, MARGIN=2);
+
+    # Estimate each separately:
+    tmp <- lapply(1:nrow(mg$defs), function(i)
+    {
+      # Check if these are to be evaluated:
+      if( !mg.to.eval[i] )
+      {
+        return (list("CMA"=NULL, "event.info"=NULL));
+      }
+
+      # Translate into the index of the classes to be evaluated:
+      ii <- sum(mg.to.eval[1:i]);
+
+      # Cache the selected observations:
+      mg.sel.obs <- mb.obs[,ii];
+
+      # Check if this is a duplicated medication class:
+      if( mb.obs.dupl[ii] )
+      {
+        # Find which one is the original:
+        for( j in 1:(ii-1) ) # ii=1 never should be TRUE
+        {
+          if( identical(mb.obs[,j], mg.sel.obs) )
+          {
+            # This is the original: return it and stop
+            return (c("identical.to"=j));
+          }
+        }
+      }
+
+      # Compute the workhorse function:
+      tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+                               parallel.backend=parallel.backend,
+                               parallel.threads=parallel.threads,
+                               data=data.copy[mg.sel.obs,], # apply it on the subset of observations covered by this medication class
+                               ID.colname=ID.colname,
+                               event.date.colname=event.date.colname,
+                               event.duration.colname=event.duration.colname,
+                               event.daily.dose.colname=NA, # not relevant
+                               medication.class.colname=NA, # not relevant
+                               event.interval.colname=event.interval.colname,
+                               gap.days.colname=gap.days.colname,
+                               carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
+                               carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
+                               carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
+                               consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage
+                               followup.window.start=followup.window.start,
+                               followup.window.start.unit=followup.window.start.unit,
+                               followup.window.duration=followup.window.duration,
+                               followup.window.duration.unit=followup.window.duration.unit,
+                               observation.window.start=observation.window.start,
+                               observation.window.start.unit=observation.window.start.unit,
+                               observation.window.duration=observation.window.duration,
+                               observation.window.duration.unit=observation.window.duration.unit,
+                               date.format=date.format,
+                               suppress.warnings=suppress.warnings);
+      if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+
+      # Convert to data.frame and return:
+      if( force.NA.CMA.for.failed.patients )
+      {
+        # Make sure patients with failed CMA estimations get an NA estimate!
+        patids <- unique(data.copy[,get(ID.colname)]);
+        if( length(patids) > nrow(tmp$CMA) )
+        {
+          setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+        }
+      }
+
+      setnames(tmp$CMA, c(ID.colname,"CMA")); tmp$CMA <- as.data.frame(tmp$CMA);
+      tmp$event.info <- as.data.frame(tmp$event.info);
+      return (tmp);
+
+    });
+
+    # Set the names:
+    names(tmp) <- mg$defs$name;
+
+    # Solve the duplicates:
+    for( i in seq_along(tmp) )
+    {
+      if( is.numeric(tmp[[i]]) && length(tmp[[i]]) == 1 && names(tmp[[i]]) == "identical.to" ) tmp[[i]] <- tmp[[ tmp[[i]] ]];
+    }
+
+    # Rearrange these and return:
+    ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
+    ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
+    class(ret.val) <- c("CMA1", class(ret.val));
+    return (ret.val);
+
   }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA1", class(ret.val));
-  return (ret.val);
 }
 
 
