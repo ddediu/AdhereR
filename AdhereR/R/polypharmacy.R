@@ -722,22 +722,22 @@ CMA_polypharmacy <- function(data = data,
       return (NULL);
     }
 
-  } else if(.check.medication.groups(medication.groups,
-                                     list.of.medication.classes = unique(data[[medication.class.colname]])))
-  {
-
-    if(is.null(medication.groups)){
-      medication.groups <- unique(data[[medication.class.colname]])
-    }
-
-    med.groups.dt <- as.data.table(.fill.medication.groups(medication.groups,
-                                                           list.of.medication.classes = unique(data[[medication.class.colname]]),
-                                                           already.checked = TRUE))
-
-    setnames(med.groups.dt, old = "class", new = medication.class.colname)
-
-    data.copy <- merge(data.copy, med.groups.dt, by = medication.class.colname)
-
+  # } else if(.check.medication.groups(medication.groups,
+  #                                    list.of.medication.classes = unique(data[[medication.class.colname]])))
+  # {
+  #
+  #   if(is.null(medication.groups)){
+  #     medication.groups <- unique(data[[medication.class.colname]])
+  #   }
+  #
+  #   med.groups.dt <- as.data.table(.fill.medication.groups(medication.groups,
+  #                                                          list.of.medication.classes = unique(data[[medication.class.colname]]),
+  #                                                          already.checked = TRUE))
+  #
+  #   setnames(med.groups.dt, old = "class", new = medication.class.colname)
+  #
+  #   data.copy <- merge(data.copy, med.groups.dt, by = medication.class.colname)
+  #
   } else {
     return (NULL);
   }

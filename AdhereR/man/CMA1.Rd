@@ -79,6 +79,18 @@ the \code{date.format} parameter); must be present.}
 \item{event.duration.colname}{A \emph{string}, the name of the column in
 \code{data} containing the event duration (in days); must be present.}
 
+\item{medication.groups}{A \emph{vector} of characters defining medication
+groups. The names of the vector are the medication group unique names, while
+the content defines them as logical expressions. For example,
+\code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+medication groups: \emph{A} which selects all events of type "medA", and
+\emph{B} which selects all events already defined by "A" but with a daily
+dose lower than 4. If \code{NULL}, no medication groups are defined. If
+medication groups are defined, there is one CMA estimate for each group;
+moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+containing all observations \emph{not} covred by any of the explicitly defined
+groups.}
+
 \item{followup.window.start}{If a \emph{\code{Date}} object, it represents
 the actual start date of the follow-up window; if a \emph{string} it is the
 name of the column in \code{data} containing the start date of the follow-up
@@ -212,6 +224,9 @@ with the following fields:
  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
  estimates for each participant (the \code{ID.colname} column).
 }
+Please note that if \code{medication.groups} are defined, then the \code{CMA}
+and \code{event.info} are named lists, each element containing the CMA and
+event.info corresponding to a single medication group (the element's name).
 }
 \description{
 Constructs a CMA (continuous multiple-interval measures of medication
