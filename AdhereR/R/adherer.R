@@ -349,8 +349,16 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
 #' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
-#' containing all observations \emph{not} covred by any of the explicitly defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carryover.within.obs.window \emph{Logical}, if \code{TRUE} consider
 #' the carry-over within the observation window, or \code{NA} if not defined.
 #' @param carryover.into.obs.window \emph{Logical}, if \code{TRUE} consider the
@@ -481,6 +489,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                  # Groups of medication classes:
                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                 flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                  # Various types methods of computing gaps:
                  carryover.within.obs.window=NA, # if TRUE consider the carry-over within the observation window (NA = undefined)
                  carryover.into.obs.window=NA, # if TRUE consider the carry-over from before the starting date of the observation window (NA = undefined)
@@ -681,6 +690,8 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  "event.daily.dose.colname"=event.daily.dose.colname,
                  "medication.class.colname"=medication.class.colname,
                  "medication.groups"=mg,
+                 "flatten.medication.groups"=flatten.medication.groups,
+                 "medication.groups.colname"=medication.groups.colname,
                  "carryover.within.obs.window"=carryover.within.obs.window,
                  "carryover.into.obs.window"=carryover.into.obs.window,
                  "carry.only.for.same.medication"=carry.only.for.same.medication,
@@ -1094,6 +1105,13 @@ getMGs.CMA0 <- function(x)
 #' or sliding window CMA object.
 #'
 #' @param x a CMA object.
+#' @param flatten.medication.groups \emph{Logical}, if \code{TRUE} and there are
+#' medication groups defined, then the return value is flattened to a single
+#' \code{data.frame} with an extra column containing the medication group (its
+#' name is given by \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @return a \emph{data.frame} containing the CMA estimate(s).
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -1152,6 +1170,13 @@ getCMA.CMA0 <- function(x, flatten.medication.groups=FALSE, medication.groups.co
 #' or sliding window CMA object.
 #'
 #' @param x a CMA object.
+#' @param flatten.medication.groups \emph{Logical}, if \code{TRUE} and there are
+#' medication groups defined, then the return value is flattened to a single
+#' \code{data.frame} with an extra column containing the medication group (its
+#' name is given by \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @return a \emph{data.frame} containing the CMA estimate(s).
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -2973,8 +2998,16 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
 #' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
-#' containing all observations \emph{not} covred by any of the explicitly defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param followup.window.start If a \emph{\code{Date}} object, it represents
 #' the actual start date of the follow-up window; if a \emph{string} it is the
 #' name of the column in \code{data} containing the start date of the follow-up
@@ -3092,9 +3125,13 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #'  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
 #'  estimates for each participant (the \code{ID.colname} column).
 #' }
-#' Please note that if \code{medication.groups} are defined, then the \code{CMA}
+#' Please note that if \code{medication.groups} are defined and
+#' \code{flatten.medication.groups} is \code{FALSE}, then the \code{CMA}
 #' and \code{event.info} are named lists, each element containing the CMA and
-#' event.info corresponding to a single medication group (the element's name).
+#' event.info corresponding to a single medication group (the element's name),
+#' but if \code{flatten.medication.groups} is \code{FALSE} then they are
+#' \code{data.frame}s with an extra column giving the medication group (the
+#' column's name is given by \code{medication.groups.colname}).
 #' @seealso CMAs 1 to 8 are described in:
 #'
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
@@ -3129,6 +3166,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   # Groups of medication classes:
                   medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
@@ -3184,6 +3222,8 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   event.date.colname=event.date.colname,
                   event.duration.colname=event.duration.colname,
                   medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
                   followup.window.duration=followup.window.duration,
@@ -3441,6 +3481,32 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
     # Rearrange these and return:
     ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
     ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
+    if( flatten.medication.groups && !is.na(medication.groups.colname) )
+    {
+      # Flatten the CMA:
+      tmp <- do.call(rbind, ret.val[["CMA"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["CMA"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["CMA"]]), function(i) if(!is.null(ret.val[["CMA"]][[i]])){rep(names(ret.val[["CMA"]])[i], nrow(ret.val[["CMA"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["CMA"]] <- tmp;
+      }
+
+      # ... and the event.info:
+      tmp <- do.call(rbind, ret.val[["event.info"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["event.info"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["event.info"]]), function(i) if(!is.null(ret.val[["event.info"]][[i]])){rep(names(ret.val[["event.info"]])[i], nrow(ret.val[["event.info"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["event.info"]] <- tmp;
+      }
+    }
     class(ret.val) <- c("CMA1", class(ret.val));
     return (ret.val);
 
@@ -3878,6 +3944,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   # Groups of medication classes:
                   medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)

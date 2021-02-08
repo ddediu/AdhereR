@@ -11,6 +11,8 @@ CMA1(
   event.date.colname = NA,
   event.duration.colname = NA,
   medication.groups = NULL,
+  flatten.medication.groups = FALSE,
+  medication.groups.colname = ".MED_GROUP_ID",
   followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
   followup.window.duration = 365 * 2,
@@ -88,8 +90,18 @@ medication groups: \emph{A} which selects all events of type "medA", and
 dose lower than 4. If \code{NULL}, no medication groups are defined. If
 medication groups are defined, there is one CMA estimate for each group;
 moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
-containing all observations \emph{not} covred by any of the explicitly defined
+containing all observations \emph{not} covered by any of the explicitly defined
 groups.}
+
+\item{flatten.medication.groups}{\emph{Logical}, if \code{FALSE} (the default)
+then the \code{CMA} and \code{event.info} components of the object are lists
+with one medication group per element; otherwise, they are \code{data.frame}s
+with an extra column containing the medication group (its name is given by
+\code{medication.groups.colname}).}
+
+\item{medication.groups.colname}{a \emph{string} (defaults to ".MED_GROUP_ID")
+giving the name of the column storing the group name when
+\code{flatten.medication.groups} is \code{TRUE}.}
 
 \item{followup.window.start}{If a \emph{\code{Date}} object, it represents
 the actual start date of the follow-up window; if a \emph{string} it is the
@@ -224,9 +236,13 @@ with the following fields:
  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
  estimates for each participant (the \code{ID.colname} column).
 }
-Please note that if \code{medication.groups} are defined, then the \code{CMA}
+Please note that if \code{medication.groups} are defined and
+\code{flatten.medication.groups} is \code{FALSE}, then the \code{CMA}
 and \code{event.info} are named lists, each element containing the CMA and
-event.info corresponding to a single medication group (the element's name).
+event.info corresponding to a single medication group (the element's name),
+but if \code{flatten.medication.groups} is \code{FALSE} then they are
+\code{data.frame}s with an extra column giving the medication group (the
+column's name is given by \code{medication.groups.colname}).
 }
 \description{
 Constructs a CMA (continuous multiple-interval measures of medication

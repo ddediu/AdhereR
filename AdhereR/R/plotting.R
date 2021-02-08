@@ -1921,7 +1921,19 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   ##
 
   # Cache the CMA estimates (if any):
-  cmas <- getCMA(cma, flatten.medication.groups=TRUE);
+  if( is.null(cma$medication.groups) )
+  {
+    cmas <- getCMA(cma);
+  } else
+  {
+    if( cma$flatten.medication.groups )
+    {
+      cmas <- getCMA(cma); cma.mg.colname <- cma$medication.groups.colname;
+    } else
+    {
+      cmas <- getCMA(cma, flatten.medication.groups=TRUE); cma.mg.colname <- names(cmas)[ncol(cmas)];
+    }
+  }
   # Keep only those patients with non-missing CMA estimates:
   if( !is.null(cmas) )
   {
