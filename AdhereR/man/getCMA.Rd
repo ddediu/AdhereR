@@ -4,7 +4,11 @@
 \alias{getCMA}
 \title{Access the actual CMA estimate from a CMA object.}
 \usage{
-getCMA(x)
+getCMA(
+  x,
+  flatten.medication.groups = FALSE,
+  medication.groups.colname = ".MED_GROUP_ID"
+)
 }
 \arguments{
 \item{x}{a CMA object.}

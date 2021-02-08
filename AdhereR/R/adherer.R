@@ -1123,13 +1123,66 @@ getMGs.CMA0 <- function(x)
 #'                        );
 #' getCMA(cmaE);}
 #' @export
-getCMA <- function(x) UseMethod("getCMA")
+getCMA <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID") UseMethod("getCMA")
 #' @export
-getCMA.CMA0 <- function(x)
+getCMA.CMA0 <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA0") || !("CMA" %in% names(cma)) || is.null(cma$CMA) ) return (NULL);
-  return (cma$CMA);
+  if( inherits(cma$CMA, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$CMA);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$CMA);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$CMA), function(i) if(!is.null(cma$CMA[[i]])){rep(names(cma$CMA)[i], nrow(cma$CMA[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
+}
+
+
+
+
+#' Access the event info from a CMA object.
+#'
+#' Retrieve the event info encapsulated in a simple, per episode,
+#' or sliding window CMA object.
+#'
+#' @param x a CMA object.
+#' @return a \emph{data.frame} containing the CMA estimate(s).
+#' @examples
+#' cma1 <- CMA1(data=med.events,
+#'              ID.colname="PATIENT_ID",
+#'              event.date.colname="DATE",
+#'              event.duration.colname="DURATION",
+#'              followup.window.start=30,
+#'              observation.window.start=30,
+#'              observation.window.duration=365,
+#'              date.format="%m/%d/%Y"
+#'             );
+#' getEventInfo(cma1);
+#' @export
+getEventInfo <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID") UseMethod("getEventInfo")
+#' @export
+getEventInfo.CMA0 <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA0") || !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (NULL);
+  if( inherits(cma$event.info, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$event.info);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$event.info);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$event.info), function(i) if(!is.null(cma$event.info[[i]])){rep(names(cma$event.info)[i], nrow(cma$event.info[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
 }
 
 
@@ -1177,8 +1230,26 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
 
   ret.val <- cma;
   ret.val$data <- ret.val$data[ ret.val$data[,ret.val$ID.colname] %in% patients.to.keep, ];
-  if( !is.null(ret.val$event.info) ) ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ];
-  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) ) ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+  if( !is.null(ret.val$event.info) )
+  {
+    if( inherits(ret.val$event.info, "data.frame") )
+    {
+      ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ]; if( nrow(ret.val$event.info) == 0 ) ret.val$event.info <- NULL;
+    } else if( is.list(ret.val$event.info) && length(ret.val$event.info) > 0 )
+    {
+      ret.val$event.info <- lapply(ret.val$event.info, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
+  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) )
+  {
+    if( inherits(ret.val$CMA, "data.frame") )
+    {
+      ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+    } else if( is.list(ret.val$CMA) && length(ret.val$CMA) > 0 )
+    {
+      ret.val$CMA <- lapply(ret.val$CMA, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
   return (ret.val);
 }
 
@@ -7236,7 +7307,7 @@ getMGs.CMA_per_episode <- function(x)
 }
 
 #' @export
-getCMA.CMA_per_episode <- function(x)
+getCMA.CMA_per_episode <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA_per_episode") || !("CMA" %in% names(cma)) || is.null(cma$CMA) ) return (NULL);
@@ -7263,8 +7334,26 @@ subsetCMA.CMA_per_episode <- function(cma, patients, suppress.warnings=FALSE)
 
   ret.val <- cma;
   ret.val$data <- ret.val$data[ ret.val$data[,ret.val$ID.colname] %in% patients.to.keep, ];
-  if( !is.null(ret.val$event.info) ) ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ];
-  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) ) ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+  if( !is.null(ret.val$event.info) )
+  {
+    if( inherits(ret.val$event.info, "data.frame") )
+    {
+      ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ]; if( nrow(ret.val$event.info) == 0 ) ret.val$event.info <- NULL;
+    } else if( is.list(ret.val$event.info) && length(ret.val$event.info) > 0 )
+    {
+      ret.val$event.info <- lapply(ret.val$event.info, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
+  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) )
+  {
+    if( inherits(ret.val$CMA, "data.frame") )
+    {
+      ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+    } else if( is.list(ret.val$CMA) && length(ret.val$CMA) > 0 )
+    {
+      ret.val$CMA <- lapply(ret.val$CMA, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
   return (ret.val);
 }
 
@@ -8383,7 +8472,7 @@ getMGs.CMA_sliding_window <- function(x)
 }
 
 #' @export
-getCMA.CMA_sliding_window <- function(x)
+getCMA.CMA_sliding_window <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA_sliding_window") || !("CMA" %in% names(cma)) || is.null(cma$CMA) ) return (NULL);
@@ -8404,7 +8493,26 @@ subsetCMA.CMA_sliding_window <- function(cma, patients, suppress.warnings=FALSE)
 
   ret.val <- cma;
   ret.val$data <- ret.val$data[ ret.val$data[,ret.val$ID.colname] %in% patients.to.keep, ];
-  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) ) ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+  if( !is.null(ret.val$event.info) )
+  {
+    if( inherits(ret.val$event.info, "data.frame") )
+    {
+      ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ]; if( nrow(ret.val$event.info) == 0 ) ret.val$event.info <- NULL;
+    } else if( is.list(ret.val$event.info) && length(ret.val$event.info) > 0 )
+    {
+      ret.val$event.info <- lapply(ret.val$event.info, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
+  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) )
+  {
+    if( inherits(ret.val$CMA, "data.frame") )
+    {
+      ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+    } else if( is.list(ret.val$CMA) && length(ret.val$CMA) > 0 )
+    {
+      ret.val$CMA <- lapply(ret.val$CMA, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
   return (ret.val);
 }
 
