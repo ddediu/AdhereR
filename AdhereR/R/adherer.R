@@ -7382,6 +7382,14 @@ getCMA.CMA_per_episode <- function(x, flatten.medication.groups=FALSE, medicatio
 }
 
 #' @export
+getEventInfo.CMA_per_episode <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA_per_episode") || !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (NULL);
+  return (cma$event.info);
+}
+
+#' @export
 subsetCMA.CMA_per_episode <- function(cma, patients, suppress.warnings=FALSE)
 {
   if( inherits(patients, "factor") ) patients <- as.character(patients);
@@ -8544,6 +8552,14 @@ getCMA.CMA_sliding_window <- function(x, flatten.medication.groups=FALSE, medica
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA_sliding_window") || !("CMA" %in% names(cma)) || is.null(cma$CMA) ) return (NULL);
   return (cma$CMA);
+}
+
+#' @export
+getEventInfo.CMA_sliding_window <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA_sliding_window") || !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (NULL);
+  return (cma$event.info);
 }
 
 #' @export

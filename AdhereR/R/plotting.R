@@ -992,7 +992,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        print.dose=FALSE, cex.dose=0.75, print.dose.col="black", print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                        plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                        col.na="lightgray",                    # color for missing data
-                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
+                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the continuation lines connecting consecutive events
                        print.CMA=TRUE, CMA.cex=0.50, # print CMA next to the participant's ID?
                        plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
                        plot.CMA.as.histogram=TRUE,      # plot CMA as a histogram or as a density plot?
@@ -1874,6 +1874,62 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
 
   ##
+  ## medication groups: expand the data and keep only those patient x group that contain events ####
+  ##
+  cma.mg <- !is.null(cma$medication.groups); # are there medication groups?
+  if( cma.mg )
+  {
+    # Expand the data to contain all the patient x groups:
+    cma$data <- do.call(rbind, lapply(1:ncol(cma$medication.groups$obs), function(i)
+    {
+      tmp <- cma$data[cma$medication.groups$obs[,i],];
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        return (NULL);
+      } else
+      {
+        tmp <- cbind(tmp, colnames(cma$medication.groups$obs)[i]); names(tmp)[ncol(tmp)] <- cma$medication.groups.colname;
+        return (tmp);
+      }
+    }));
+
+    # Keep only those that actually have events:
+    patients.and.mg.with.events <- unique(cma$data[,c(cma$ID.colname, cma$medication.groups.colname)]);
+    if( is.null(patients.and.mg.with.events) || nrow(patients.and.mg.with.events) == 0 )
+    {
+      # Nothing to plot!
+      if( !suppress.warnings ) .report.ewms("No patients to plot!\n", "error", ".plot.CMAs", "AdhereR");
+      plot.CMA.error(export.formats=export.formats,
+                     export.formats.fileprefix=export.formats.fileprefix,
+                     export.formats.directory=export.formats.directory,
+                     generate.R.plot=generate.R.plot);
+      return (invisible(NULL));
+    }
+
+    # The data should be already fine: focus on the CMA estimates:
+    if( !is.null(cma$CMA) )
+    {
+      if( cma$flatten.medication.groups )
+      {
+        cma$CMA <- cma$CMA[ vapply(1:nrow(cma$CMA), function(i)
+          sum(cma$CMA[i,cma$ID.colname] == patients.and.mg.with.events[,cma$ID.colname] &
+                cma$CMA[i,cma$medication.groups.colname] == patients.and.mg.with.events[,cma$medication.groups.colname], na.rm=TRUE), logical(1)), ];
+      } else
+      {
+        tmp <- lapply(1:length(cma$CMA), function(i)
+        {
+          tmp <- cma$CMA[[i]];
+          if( is.null(tmp) ) return (NULL);
+          tmp <- tmp[ tmp[,cma$ID.colname] %in% patients.and.mg.with.events[patients.and.mg.with.events[,cma$medication.groups.colname] == names(cma$CMA)[i], cma$ID.colname], ];
+          if( is.null(tmp) || nrow(tmp) == 0 ) return (NULL) else return (tmp);
+        });
+        names(tmp) <- names(cma$CMA); cma$CMA <- tmp;
+      }
+    }
+  }
+
+
+  ##
   ## Select patients ####
   ##
 
@@ -1921,11 +1977,13 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   ##
 
   # Cache the CMA estimates (if any):
-  if( is.null(cma$medication.groups) )
+  if( !cma.mg )
   {
+    # No medication groups:
     cmas <- getCMA(cma);
   } else
   {
+    # There are medication groups:
     if( cma$flatten.medication.groups )
     {
       cmas <- getCMA(cma); cma.mg.colname <- cma$medication.groups.colname;
@@ -1934,6 +1992,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       cmas <- getCMA(cma, flatten.medication.groups=TRUE); cma.mg.colname <- names(cmas)[ncol(cmas)];
     }
   }
+
   # Keep only those patients with non-missing CMA estimates:
   if( !is.null(cmas) )
   {
@@ -2080,11 +2139,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   } else
   {
     # Remove the participants without CMA estimates:
-    patids.no.events.to.plot <- unique(cmas[ is.na(cmas$CMA), cma$ID.colname ]);
+    patids.no.events.to.plot <- setdiff(unique(cmas[, cma$ID.colname ]), unique(cmas[ !is.na(cmas$CMA), cma$ID.colname ]));
     if( length(patids.no.events.to.plot) > 0 )
     {
       cma$data <- cma$data[ !(cma$data[,cma$ID.colname] %in% patids.no.events.to.plot), ];
-      #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), cma$ID.colname ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
+      #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), cma$ID.colname ] <- patids.no.events.to.plot; # everything else is NA except for the patient id
       cmas <- cmas[ !(cmas[,cma$ID.colname] %in% patids.no.events.to.plot),  ]
       if( !suppress.warnings ) .report.ewms(paste0("Patient",
                                                    ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
@@ -2094,22 +2153,45 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
   }
 
+  # Cache the event.info:
+  if( !cma.mg )
+  {
+    # No medication groups:
+    evinfo <- getEventInfo(cma);
+  } else
+  {
+    # There are medication groups:
+    if( cma$flatten.medication.groups )
+    {
+      evinfo <- getEventInfo(cma); evinfo.mg.colname <- cma$medication.groups.colname;
+    } else
+    {
+      evinfo <- getEventInfo(cma, flatten.medication.groups=TRUE); evinfo.mg.colname <- names(evinfo)[ncol(evinfo)];
+    }
+  }
+
   # Add the follow-up and observation window info as well, to have everything in one place:
   if( !is.null(cmas) )
   {
     cmas <- cbind(cmas, do.call(rbind, lapply(1:nrow(cmas), function(i)
     {
-      s <- which(cma$event.info[,cma$ID.colname] == cmas[i,cma$ID.colname]);
+      if( !cma.mg )
+      {
+        s <- which(evinfo[,cma$ID.colname] == cmas[i,cma$ID.colname]);
+      } else
+      {
+        s <- which(evinfo[,cma$ID.colname] == cmas[i,cma$ID.colname] & evinfo[,evinfo.mg.colname] == cmas[i,cma.mg.colname]);
+      }
       if( length(s) == 0 ) return(data.frame(".FU.START.DATE"=NA, ".FU.END.DATE"=NA, ".OBS.START.DATE"=NA, ".OBS.END.DATE"=NA)); #return (NULL);
-      cma$event.info[s[1],c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
+      evinfo[s[1],c(".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")];
     })));
   } else
   {
     # Create a fake one, containing but the follow-up and observation window info:
     cmas <- data.frame("..patid.."=unique(cma$data[,cma$ID.colname]), "CMA"=NA); names(cmas)[1] <- cma$ID.colname;
-    if( !is.null(cma$event.info) )
+    if( !is.null(evinfo) )
     {
-      cmas <- merge(cmas, unique(cma$event.info[,c(cma$ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]), by=c(cma$ID.colname), all.x=TRUE);
+      cmas <- merge(cmas, unique(evinfo[,c(cma$ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]), by=c(cma$ID.colname), all.x=TRUE);
     } else
     {
       cmas <- cbind(cmas, ".FU.START.DATE"=NA, ".FU.END.DATE"=NA, ".OBS.START.DATE"=NA, ".OBS.END.DATE"=NA);
@@ -2146,8 +2228,14 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     cma$data$.DATE.as.Date <- cma$data[,cma$event.date.colname];
   }
 
-  # Make sure the patients are ordered by ID and date:
-  cma$data <- cma$data[ order( cma$data[,cma$ID.colname], cma$data$.DATE.as.Date), ];
+  # Make sure the patients are ordered by ID, medication group (if the case), and date:
+  if( !cma.mg )
+  {
+    cma$data <- cma$data[ order( cma$data[,cma$ID.colname], cma$data$.DATE.as.Date), ];
+  } else
+  {
+    cma$data <- cma$data[ order( cma$data[,cma$ID.colname], cma$data[,cma$medication.groups.colname], cma$data$.DATE.as.Date), ];
+  }
   if( all(c("WND.ID","start") %in% names(cmas)) )
   {
     cmas <- cmas[ order( cmas[,cma$ID.colname], cmas$WND.ID, cmas$start), ];
@@ -2319,7 +2407,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                     function(p)
                                     {
                                       # The participant axis text:
-                                      s <- which(cma$event.info[,cma$ID.colname] == p);
+                                      s <- which(evinfo[,cma$ID.colname] == p);
                                       pid <- ifelse( print.CMA &&
                                                        !is.cma.TS.or.SW &&
                                                        has.estimated.CMA &&
@@ -3062,14 +3150,14 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
               real.obs.window.start <- cma$real.obs.windows$window.start[s.realOW];
             } else
             {
-              real.obs.window.start <- cma$event.info$.OBS.START.DATE[s.events[1]];
+              real.obs.window.start <- evinfo$.OBS.START.DATE[s.events[1]];
             }
             if( !is.null(cma$real.obs.windows$window.end) && !is.na(cma$real.obs.windows$window.end[s.realOW]) )
             {
               real.obs.window.end <- cma$real.obs.windows$window.end[s.realOW];
             } else
             {
-              real.obs.window.end <- cma$event.info$.OBS.END.DATE[s.events[1]];
+              real.obs.window.end <- evinfo$.OBS.END.DATE[s.events[1]];
             }
 
             # Draw the "real" OW:
@@ -3395,10 +3483,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
 
     # Show event intervals as rectangles?
-    if( show.event.intervals && !is.null(cma$event.info) && !is.na(cma$event.info$event.interval[i]) )
+    if( show.event.intervals && !is.null(evinfo) && !is.na(evinfo$event.interval[i]) )
     {
       # The end of the prescription:
-      end.pi <- start + cma$event.info$event.interval[i] - cma$event.info$gap.days[i];
+      end.pi <- start + evinfo$event.interval[i] - evinfo$gap.days[i];
 
       if( .do.R ) # Rplot:
       {
@@ -3412,12 +3500,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         rect(.last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"],
              .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"],
              col=adjustcolor(col,alpha.f=0.2), border=col);
-        if( cma$event.info$gap.days[i] > 0 )
+        if( evinfo$gap.days[i] > 0 )
         {
           # Save the info:
           .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"] <- (adh.plot.space[2] + end.pi + correct.earliest.followup.window);
           .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"] <- (y.cur - char.height/2);
-          .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"]   <- (adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"]   <- (adh.plot.space[2] + end.pi + evinfo$gap.days[i] + correct.earliest.followup.window);
           .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"]   <- (y.cur + char.height/2);
 
           # Draw:
@@ -3445,12 +3533,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                stroke=col, fill=col, fill_opacity=0.2,
                                class=paste0("event-interval-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
                                tooltip=med.class.svg));
-        if( cma$event.info$gap.days[i] > 0 )
+        if( evinfo$gap.days[i] > 0 )
         {
           # Save the info:
           .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window);
           .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] <- .scale.y.to.SVG.plot(y.cur) - dims.event.y/2;
-          .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + cma$event.info$gap.days[i] + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + evinfo$gap.days[i] + correct.earliest.followup.window);
           .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.END"]   <- .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] + dims.event.y;
 
           # Draw:

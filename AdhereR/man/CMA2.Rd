@@ -11,6 +11,8 @@ CMA2(
   event.date.colname = NA,
   event.duration.colname = NA,
   medication.groups = NULL,
+  flatten.medication.groups = FALSE,
+  medication.groups.colname = ".MED_GROUP_ID",
   followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
   followup.window.duration = 365 * 2,
