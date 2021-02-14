@@ -383,6 +383,10 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -498,6 +502,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  # The follow-up window:
                  followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                  followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                 followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                  followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                  followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                  # The observation window (embedded in the follow-up window):
@@ -698,6 +703,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  "consider.dosage.change"=consider.dosage.change,
                  "followup.window.start"=followup.window.start,
                  "followup.window.start.unit"=followup.window.start.unit,
+                 "followup.window.start.per.medication.group"=followup.window.start.per.medication.group,
                  "followup.window.duration"=followup.window.duration,
                  "followup.window.duration.unit"=followup.window.duration.unit,
                  "observation.window.start"=observation.window.start,
@@ -1886,9 +1892,10 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     if( !suppress.warnings ) .report.ewms("The follow-up window start must be a single value, either a number, a Date object, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( is.null(followup.window.start.unit) || is.na(followup.window.start.unit) ||
+  if( is.null(followup.window.start.unit) ||
+      (is.na(followup.window.start.unit) && !(is.factor(followup.window.start) || is.character(followup.window.start))) ||
       length(followup.window.start.unit) != 1 ||
-      !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
+      ((is.factor(followup.window.start.unit) || is.character(followup.window.start.unit)) && !(followup.window.start.unit %in% c("days", "weeks", "months", "years"))) )
   {
     if( !suppress.warnings ) .report.ewms("The follow-up window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
@@ -1921,9 +1928,10 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     if( !suppress.warnings ) .report.ewms("The observation window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( is.null(observation.window.start.unit) || is.na(observation.window.start.unit) ||
+  if( is.null(observation.window.start.unit) ||
+      (is.na(observation.window.start.unit) && !(is.factor(observation.window.start) || is.character(observation.window.start))) ||
       length(observation.window.start.unit) != 1 ||
-      !(observation.window.start.unit %in% c("days", "weeks", "months", "years") ) )
+      ((is.factor(observation.window.start.unit) || is.character(observation.window.start.unit)) && !(observation.window.start.unit %in% c("days", "weeks", "months", "years"))) )
   {
     if( !suppress.warnings ) .report.ewms("The observation window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
@@ -2851,6 +2859,278 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 }
 
 
+# Shared code between multiple CMAs
+.cma.skeleton <- function(data,
+                          ret.val,
+                          cma.class.name,
+                          ID.colname,
+                          event.date.colname,
+                          event.duration.colname,
+                          event.daily.dose.colname,
+                          medication.class.colname,
+                          medication.groups.colname,
+                          flatten.medication.groups,
+                          followup.window.start.per.medication.group,
+                          event.interval.colname,
+                          gap.days.colname,
+                          carryover.within.obs.window,
+                          carryover.into.obs.window,
+                          carry.only.for.same.medication,
+                          consider.dosage.change,
+                          followup.window.start,
+                          followup.window.start.unit,
+                          followup.window.duration,
+                          followup.window.duration.unit,
+                          observation.window.start,
+                          observation.window.start.unit,
+                          observation.window.duration,
+                          observation.window.duration.unit,
+                          date.format,
+                          suppress.warnings,
+                          force.NA.CMA.for.failed.patients,
+                          parallel.backend,
+                          parallel.threads,
+                          .workhorse.function)
+{
+  # Convert to data.table, cache event date as Date objects, and key by patient ID and event date
+  data.copy <- data.table(data);
+  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
+  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+
+  # Are there medication groups?
+  if( is.null(mg <- getMGs(ret.val)) )
+  {
+    # Nope: do a single estimation on the whole dataset:
+
+    # Compute the workhorse function:
+    tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+                             parallel.backend=parallel.backend,
+                             parallel.threads=parallel.threads,
+                             data=data.copy,
+                             ID.colname=ID.colname,
+                             event.date.colname=event.date.colname,
+                             event.duration.colname=event.duration.colname,
+                             event.daily.dose.colname=event.daily.dose.colname,
+                             medication.class.colname=medication.class.colname,
+                             event.interval.colname=event.interval.colname,
+                             gap.days.colname=gap.days.colname,
+                             carryover.within.obs.window=carryover.within.obs.window,
+                             carryover.into.obs.window=carryover.into.obs.window,
+                             carry.only.for.same.medication=carry.only.for.same.medication,
+                             consider.dosage.change=consider.dosage.change,
+                             followup.window.start=followup.window.start,
+                             followup.window.start.unit=followup.window.start.unit,
+                             followup.window.duration=followup.window.duration,
+                             followup.window.duration.unit=followup.window.duration.unit,
+                             observation.window.start=observation.window.start,
+                             observation.window.start.unit=observation.window.start.unit,
+                             observation.window.duration=observation.window.duration,
+                             observation.window.duration.unit=observation.window.duration.unit,
+                             date.format=date.format,
+                             suppress.warnings=suppress.warnings);
+    if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+
+    # Convert to data.frame and return:
+    if( force.NA.CMA.for.failed.patients )
+    {
+      # Make sure patients with failed CMA estimations get an NA estimate!
+      patids <- unique(data.copy[,get(ID.colname)]);
+      if( length(patids) > nrow(tmp$CMA) )
+      {
+        setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+      }
+    }
+    setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
+    ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
+    class(ret.val) <- c(cma.class.name, class(ret.val));
+    return (ret.val);
+
+  } else
+  {
+    # Yes
+    # Focus only on the non-trivial ones:
+    mg.to.eval <- (colSums(!is.na(mg$obs) & mg$obs) > 0);
+    if( sum(mg.to.eval) == 0 )
+    {
+      # None selects not even one observation!
+      .report.ewms(paste0("None of the medication classes (included __ALL_OTHER__) selects any observation!\n"), "warning", cma.class.name, "AdhereR");
+      return (NULL);
+    }
+    mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
+
+    # How is the FUW to be estimated?
+    if( !followup.window.start.per.medication.group )
+    {
+      # The FUW and OW are estimated once per patient (i.e., all medication groups share the same FUW and OW):
+      # Call the compute.event.int.gaps() function and use the results:
+      event.info <- compute.event.int.gaps(data=as.data.frame(data.copy),
+                                           ID.colname=ID.colname,
+                                           event.date.colname=event.date.colname,
+                                           event.duration.colname=event.duration.colname,
+                                           event.daily.dose.colname=event.daily.dose.colname,
+                                           medication.class.colname=medication.class.colname,
+                                           event.interval.colname=event.interval.colname,
+                                           gap.days.colname=gap.days.colname,
+                                           carryover.within.obs.window=carryover.within.obs.window,
+                                           carryover.into.obs.window=carryover.into.obs.window,
+                                           carry.only.for.same.medication=carry.only.for.same.medication,
+                                           consider.dosage.change=consider.dosage.change,
+                                           followup.window.start=followup.window.start,
+                                           followup.window.start.unit=followup.window.start.unit,
+                                           followup.window.duration=followup.window.duration,
+                                           followup.window.duration.unit=followup.window.duration.unit,
+                                           observation.window.start=observation.window.start,
+                                           observation.window.start.unit=observation.window.start.unit,
+                                           observation.window.duration=observation.window.duration,
+                                           observation.window.duration.unit=observation.window.duration.unit,
+                                           date.format=date.format,
+                                           keep.window.start.end.dates=TRUE,
+                                           parallel.backend="none", # make sure this runs sequentially!
+                                           parallel.threads=1,
+                                           suppress.warnings=suppress.warnings,
+                                           return.data.table=FALSE);
+      if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
+
+      # Add the FUW and OW start dates to the data:
+      data.copy <- merge(data.copy, unique(event.info[,c(ID.colname, ".FU.START.DATE", ".OBS.START.DATE")]), by=ID.colname, all.x=TRUE, all.y=FALSE);
+      names(data.copy)[ names(data.copy) == ".FU.START.DATE" ]  <- ".FU.START.DATE.PER.PATIENT.ACROSS.MGS";
+      names(data.copy)[ names(data.copy) == ".OBS.START.DATE" ] <- ".OBS.START.DATE.PER.PATIENT.ACROSS.MGS";
+
+      # Adjust the corresponding params:
+      actual.followup.window.start         <- ".FU.START.DATE.PER.PATIENT.ACROSS.MGS";
+      actual.followup.window.start.unit    <- NA;
+      actual.observation.window.start      <- ".OBS.START.DATE.PER.PATIENT.ACROSS.MGS";
+      actual.observation.window.start.unit <- NA;
+    } else
+    {
+      # The FUW and OW are estimated separately for each medication group -- nothing to do...
+      actual.followup.window.start         <- followup.window.start;
+      actual.followup.window.start.unit    <- followup.window.start.unit;
+      actual.observation.window.start      <- observation.window.start;
+      actual.observation.window.start.unit <- observation.window.start.unit;
+    }
+
+    # Check if there are medication classes that refer to the same observations (they would result in the same estimates):
+    mb.obs.dupl <- duplicated(mb.obs, MARGIN=2);
+
+    # Estimate each separately:
+    tmp <- lapply(1:nrow(mg$defs), function(i)
+    {
+      # Check if these are to be evaluated:
+      if( !mg.to.eval[i] )
+      {
+        return (list("CMA"=NULL, "event.info"=NULL));
+      }
+
+      # Translate into the index of the classes to be evaluated:
+      ii <- sum(mg.to.eval[1:i]);
+
+      # Cache the selected observations:
+      mg.sel.obs <- mb.obs[,ii];
+
+      # Check if this is a duplicated medication class:
+      if( mb.obs.dupl[ii] )
+      {
+        # Find which one is the original:
+        for( j in 1:(ii-1) ) # ii=1 never should be TRUE
+        {
+          if( identical(mb.obs[,j], mg.sel.obs) )
+          {
+            # This is the original: return it and stop
+            return (c("identical.to"=j));
+          }
+        }
+      }
+
+      # Compute the workhorse function:
+      tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+                               parallel.backend=parallel.backend,
+                               parallel.threads=parallel.threads,
+                               data=data.copy[mg.sel.obs,], # apply it on the subset of observations covered by this medication class
+                               ID.colname=ID.colname,
+                               event.date.colname=event.date.colname,
+                               event.duration.colname=event.duration.colname,
+                               event.daily.dose.colname=event.daily.dose.colname,
+                               medication.class.colname=medication.class.colname,
+                               event.interval.colname=event.interval.colname,
+                               gap.days.colname=gap.days.colname,
+                               carryover.within.obs.window=carryover.within.obs.window,
+                               carryover.into.obs.window=carryover.into.obs.window,
+                               carry.only.for.same.medication=carry.only.for.same.medication,
+                               consider.dosage.change=consider.dosage.change,
+                               followup.window.start=actual.followup.window.start,
+                               followup.window.start.unit=actual.followup.window.start.unit,
+                               followup.window.duration=followup.window.duration,
+                               followup.window.duration.unit=followup.window.duration.unit,
+                               observation.window.start=actual.observation.window.start,
+                               observation.window.start.unit=actual.observation.window.start.unit,
+                               observation.window.duration=observation.window.duration,
+                               observation.window.duration.unit=observation.window.duration.unit,
+                               date.format=date.format,
+                               suppress.warnings=suppress.warnings);
+      if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+
+      # Convert to data.frame and return:
+      if( force.NA.CMA.for.failed.patients )
+      {
+        # Make sure patients with failed CMA estimations get an NA estimate!
+        patids <- unique(data.copy[,get(ID.colname)]);
+        if( length(patids) > nrow(tmp$CMA) )
+        {
+          setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+        }
+      }
+
+      setnames(tmp$CMA, c(ID.colname,"CMA")); tmp$CMA <- as.data.frame(tmp$CMA);
+      tmp$event.info <- as.data.frame(tmp$event.info);
+      return (tmp);
+
+    });
+
+    # Set the names:
+    names(tmp) <- mg$defs$name;
+
+    # Solve the duplicates:
+    for( i in seq_along(tmp) )
+    {
+      if( is.numeric(tmp[[i]]) && length(tmp[[i]]) == 1 && names(tmp[[i]]) == "identical.to" ) tmp[[i]] <- tmp[[ tmp[[i]] ]];
+    }
+
+    # Rearrange these and return:
+    ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
+    ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
+    if( flatten.medication.groups && !is.na(medication.groups.colname) )
+    {
+      # Flatten the CMA:
+      tmp <- do.call(rbind, ret.val[["CMA"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["CMA"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["CMA"]]), function(i) if(!is.null(ret.val[["CMA"]][[i]])){rep(names(ret.val[["CMA"]])[i], nrow(ret.val[["CMA"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["CMA"]] <- tmp;
+      }
+
+      # ... and the event.info:
+      tmp <- do.call(rbind, ret.val[["event.info"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["event.info"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["event.info"]]), function(i) if(!is.null(ret.val[["event.info"]][[i]])){rep(names(ret.val[["event.info"]])[i], nrow(ret.val[["event.info"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["event.info"]] <- tmp;
+      }
+    }
+    class(ret.val) <- c(cma.class.name, class(ret.val));
+    return (ret.val);
+
+  }
+}
+
 
 ############################################################################################
 #
@@ -3022,6 +3302,10 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -3170,6 +3454,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -3226,6 +3511,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -3326,191 +3612,283 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event date as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  # # <<< OLD VERSION:
+  # if( FALSE )
+  # {
+  #   # Convert to data.table, cache event date as Date objects, and key by patient ID and event date
+  #   data.copy <- data.table(data);
+  #   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
+  #   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  #
+  #   # Are there medication groups?
+  #   if( is.null(mg <- getMGs(ret.val)) )
+  #   {
+  #     # Nope: do a single estimation on the whole dataset:
+  #
+  #     # Compute the workhorse function:
+  #     tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+  #                              parallel.backend=parallel.backend,
+  #                              parallel.threads=parallel.threads,
+  #                              data=data.copy,
+  #                              ID.colname=ID.colname,
+  #                              event.date.colname=event.date.colname,
+  #                              event.duration.colname=event.duration.colname,
+  #                              event.daily.dose.colname=NA, # not relevant
+  #                              medication.class.colname=NA, # not relevant
+  #                              event.interval.colname=event.interval.colname,
+  #                              gap.days.colname=gap.days.colname,
+  #                              carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
+  #                              carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
+  #                              carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
+  #                              consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage
+  #                              followup.window.start=followup.window.start,
+  #                              followup.window.start.unit=followup.window.start.unit,
+  #                              followup.window.duration=followup.window.duration,
+  #                              followup.window.duration.unit=followup.window.duration.unit,
+  #                              observation.window.start=observation.window.start,
+  #                              observation.window.start.unit=observation.window.start.unit,
+  #                              observation.window.duration=observation.window.duration,
+  #                              observation.window.duration.unit=observation.window.duration.unit,
+  #                              date.format=date.format,
+  #                              suppress.warnings=suppress.warnings);
+  #     if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+  #
+  #     # Convert to data.frame and return:
+  #     if( force.NA.CMA.for.failed.patients )
+  #     {
+  #       # Make sure patients with failed CMA estimations get an NA estimate!
+  #       patids <- unique(data.copy[,get(ID.colname)]);
+  #       if( length(patids) > nrow(tmp$CMA) )
+  #       {
+  #         setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+  #       }
+  #     }
+  #     setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
+  #     ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
+  #     class(ret.val) <- c("CMA1", class(ret.val));
+  #     return (ret.val);
+  #
+  #   } else
+  #   {
+  #     # Yes
+  #     # Focus only on the non-trivial ones:
+  #     mg.to.eval <- (colSums(!is.na(mg$obs) & mg$obs) > 0);
+  #     if( sum(mg.to.eval) == 0 )
+  #     {
+  #       # None selects not even one observation!
+  #       .report.ewms(paste0("None of the medication classes (included __ALL_OTHER__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
+  #       return (NULL);
+  #     }
+  #     mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
+  #
+  #     # How is the FUW to be estimated?
+  #     if( !followup.window.start.per.medication.group )
+  #     {
+  #       # The FUW and OW are estimated once per patient (i.e., all medication groups share the same FUW and OW):
+  #       # Call the compute.event.int.gaps() function and use the results:
+  #       event.info <- compute.event.int.gaps(data=as.data.frame(data.copy),
+  #                                            ID.colname=ID.colname,
+  #                                            event.date.colname=event.date.colname,
+  #                                            event.duration.colname=event.duration.colname,
+  #                                            event.daily.dose.colname=NA, # not relevant
+  #                                            medication.class.colname=NA, # not relevant
+  #                                            event.interval.colname=event.interval.colname,
+  #                                            gap.days.colname=gap.days.colname,
+  #                                            carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
+  #                                            carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
+  #                                            carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
+  #                                            consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage
+  #                                            followup.window.start=followup.window.start,
+  #                                            followup.window.start.unit=followup.window.start.unit,
+  #                                            followup.window.duration=followup.window.duration,
+  #                                            followup.window.duration.unit=followup.window.duration.unit,
+  #                                            observation.window.start=observation.window.start,
+  #                                            observation.window.start.unit=observation.window.start.unit,
+  #                                            observation.window.duration=observation.window.duration,
+  #                                            observation.window.duration.unit=observation.window.duration.unit,
+  #                                            date.format=date.format,
+  #                                            keep.window.start.end.dates=TRUE,
+  #                                            parallel.backend="none", # make sure this runs sequentially!
+  #                                            parallel.threads=1,
+  #                                            suppress.warnings=suppress.warnings,
+  #                                            return.data.table=FALSE);
+  #       if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
+  #
+  #       # Add the FUW and OW start dates to the data:
+  #       data.copy <- merge(data.copy, unique(event.info[,c(ID.colname, ".FU.START.DATE", ".OBS.START.DATE")]), by=ID.colname, all.x=TRUE, all.y=FALSE);
+  #       names(data.copy)[ names(data.copy) == ".FU.START.DATE" ]  <- ".FU.START.DATE.PER.PATIENT.ACROSS.MGS";
+  #       names(data.copy)[ names(data.copy) == ".OBS.START.DATE" ] <- ".OBS.START.DATE.PER.PATIENT.ACROSS.MGS";
+  #
+  #       # Adjust the corresponding params:
+  #       actual.followup.window.start         <- ".FU.START.DATE.PER.PATIENT.ACROSS.MGS";
+  #       actual.followup.window.start.unit    <- NA;
+  #       actual.observation.window.start      <- ".OBS.START.DATE.PER.PATIENT.ACROSS.MGS";
+  #       actual.observation.window.start.unit <- NA;
+  #     } else
+  #     {
+  #       # The FUW and OW are estimated separately for each medication group -- nothing to do...
+  #       actual.followup.window.start         <- followup.window.start;
+  #       actual.followup.window.start.unit    <- followup.window.start.unit;
+  #       actual.observation.window.start      <- observation.window.start;
+  #       actual.observation.window.start.unit <- observation.window.start.unit;
+  #     }
+  #
+  #     # Check if there are medication classes that refer to the same observations (they would result in the same estimates):
+  #     mb.obs.dupl <- duplicated(mb.obs, MARGIN=2);
+  #
+  #     # Estimate each separately:
+  #     tmp <- lapply(1:nrow(mg$defs), function(i)
+  #     {
+  #       # Check if these are to be evaluated:
+  #       if( !mg.to.eval[i] )
+  #       {
+  #         return (list("CMA"=NULL, "event.info"=NULL));
+  #       }
+  #
+  #       # Translate into the index of the classes to be evaluated:
+  #       ii <- sum(mg.to.eval[1:i]);
+  #
+  #       # Cache the selected observations:
+  #       mg.sel.obs <- mb.obs[,ii];
+  #
+  #       # Check if this is a duplicated medication class:
+  #       if( mb.obs.dupl[ii] )
+  #       {
+  #         # Find which one is the original:
+  #         for( j in 1:(ii-1) ) # ii=1 never should be TRUE
+  #         {
+  #           if( identical(mb.obs[,j], mg.sel.obs) )
+  #           {
+  #             # This is the original: return it and stop
+  #             return (c("identical.to"=j));
+  #           }
+  #         }
+  #       }
+  #
+  #       # Compute the workhorse function:
+  #       tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+  #                                parallel.backend=parallel.backend,
+  #                                parallel.threads=parallel.threads,
+  #                                data=data.copy[mg.sel.obs,], # apply it on the subset of observations covered by this medication class
+  #                                ID.colname=ID.colname,
+  #                                event.date.colname=event.date.colname,
+  #                                event.duration.colname=event.duration.colname,
+  #                                event.daily.dose.colname=NA, # not relevant
+  #                                medication.class.colname=NA, # not relevant
+  #                                event.interval.colname=event.interval.colname,
+  #                                gap.days.colname=gap.days.colname,
+  #                                carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
+  #                                carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
+  #                                carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
+  #                                consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage
+  #                                followup.window.start=actual.followup.window.start,
+  #                                followup.window.start.unit=actual.followup.window.start.unit,
+  #                                followup.window.duration=followup.window.duration,
+  #                                followup.window.duration.unit=followup.window.duration.unit,
+  #                                observation.window.start=actual.observation.window.start,
+  #                                observation.window.start.unit=actual.observation.window.start.unit,
+  #                                observation.window.duration=observation.window.duration,
+  #                                observation.window.duration.unit=observation.window.duration.unit,
+  #                                date.format=date.format,
+  #                                suppress.warnings=suppress.warnings);
+  #       if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+  #
+  #       # Convert to data.frame and return:
+  #       if( force.NA.CMA.for.failed.patients )
+  #       {
+  #         # Make sure patients with failed CMA estimations get an NA estimate!
+  #         patids <- unique(data.copy[,get(ID.colname)]);
+  #         if( length(patids) > nrow(tmp$CMA) )
+  #         {
+  #           setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+  #         }
+  #       }
+  #
+  #       setnames(tmp$CMA, c(ID.colname,"CMA")); tmp$CMA <- as.data.frame(tmp$CMA);
+  #       tmp$event.info <- as.data.frame(tmp$event.info);
+  #       return (tmp);
+  #
+  #     });
+  #
+  #     # Set the names:
+  #     names(tmp) <- mg$defs$name;
+  #
+  #     # Solve the duplicates:
+  #     for( i in seq_along(tmp) )
+  #     {
+  #       if( is.numeric(tmp[[i]]) && length(tmp[[i]]) == 1 && names(tmp[[i]]) == "identical.to" ) tmp[[i]] <- tmp[[ tmp[[i]] ]];
+  #     }
+  #
+  #     # Rearrange these and return:
+  #     ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
+  #     ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
+  #     if( flatten.medication.groups && !is.na(medication.groups.colname) )
+  #     {
+  #       # Flatten the CMA:
+  #       tmp <- do.call(rbind, ret.val[["CMA"]]);
+  #       if( is.null(tmp) || nrow(tmp) == 0 )
+  #       {
+  #         ret.val[["CMA"]] <- NULL;
+  #       } else
+  #       {
+  #         tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["CMA"]]), function(i) if(!is.null(ret.val[["CMA"]][[i]])){rep(names(ret.val[["CMA"]])[i], nrow(ret.val[["CMA"]][[i]]))}else{NULL})));
+  #         names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+  #         ret.val[["CMA"]] <- tmp;
+  #       }
+  #
+  #       # ... and the event.info:
+  #       tmp <- do.call(rbind, ret.val[["event.info"]]);
+  #       if( is.null(tmp) || nrow(tmp) == 0 )
+  #       {
+  #         ret.val[["event.info"]] <- NULL;
+  #       } else
+  #       {
+  #         tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["event.info"]]), function(i) if(!is.null(ret.val[["event.info"]][[i]])){rep(names(ret.val[["event.info"]])[i], nrow(ret.val[["event.info"]][[i]]))}else{NULL})));
+  #         names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+  #         ret.val[["event.info"]] <- tmp;
+  #       }
+  #     }
+  #     class(ret.val) <- c("CMA1", class(ret.val));
+  #     return (ret.val);
+  #
+  #   }
+  # }
+  # # OLD VERSION >>>>
 
-  # Are there medication groups?
-  if( is.null(mg <- getMGs(ret.val)) )
-  {
-    # Nope: do a single estimation on the whole dataset:
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name="CMA1",
 
-    # Compute the workhorse function:
-    tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                             parallel.backend=parallel.backend,
-                             parallel.threads=parallel.threads,
-                             data=data.copy,
-                             ID.colname=ID.colname,
-                             event.date.colname=event.date.colname,
-                             event.duration.colname=event.duration.colname,
-                             event.daily.dose.colname=NA, # not relevant
-                             medication.class.colname=NA, # not relevant
-                             event.interval.colname=event.interval.colname,
-                             gap.days.colname=gap.days.colname,
-                             carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
-                             carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
-                             carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
-                             consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage
-                             followup.window.start=followup.window.start,
-                             followup.window.start.unit=followup.window.start.unit,
-                             followup.window.duration=followup.window.duration,
-                             followup.window.duration.unit=followup.window.duration.unit,
-                             observation.window.start=observation.window.start,
-                             observation.window.start.unit=observation.window.start.unit,
-                             observation.window.duration=observation.window.duration,
-                             observation.window.duration.unit=observation.window.duration.unit,
-                             date.format=date.format,
-                             suppress.warnings=suppress.warnings);
-    if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+                           ID.colname=ID.colname,
+                           event.date.colname=event.date.colname,
+                           event.duration.colname=event.duration.colname,
+                           event.daily.dose.colname=NA, # not relevant
+                           medication.class.colname=NA, # not relevant
+                           event.interval.colname=event.interval.colname,
+                           gap.days.colname=gap.days.colname,
+                           carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
+                           carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
+                           carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
+                           consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage
+                           followup.window.start=followup.window.start,
+                           followup.window.start.unit=followup.window.start.unit,
+                           followup.window.duration=followup.window.duration,
+                           followup.window.duration.unit=followup.window.duration.unit,
+                           observation.window.start=observation.window.start,
+                           observation.window.start.unit=observation.window.start.unit,
+                           observation.window.duration=observation.window.duration,
+                           observation.window.duration.unit=observation.window.duration.unit,
+                           date.format=date.format,
 
-    # Convert to data.frame and return:
-    if( force.NA.CMA.for.failed.patients )
-    {
-      # Make sure patients with failed CMA estimations get an NA estimate!
-      patids <- unique(data.copy[,get(ID.colname)]);
-      if( length(patids) > nrow(tmp$CMA) )
-      {
-        setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-      }
-    }
-    setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-    ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-    class(ret.val) <- c("CMA1", class(ret.val));
-    return (ret.val);
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
 
-  } else
-  {
-    # Yes
-    # Focus only on the non-trivial ones:
-    mg.to.eval <- (colSums(!is.na(mg$obs) & mg$obs) > 0);
-    if( sum(mg.to.eval) == 0 )
-    {
-      # None selects not even one observation!
-      .report.ewms(paste0("None of the medication classes (included __ALL_OTHER__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
-      return (NULL);
-    }
-    mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
 
-    # Check if there are medication classes that refer to the same observations (they would result in the same estimates):
-    mb.obs.dupl <- duplicated(mb.obs, MARGIN=2);
-
-    # Estimate each separately:
-    tmp <- lapply(1:nrow(mg$defs), function(i)
-    {
-      # Check if these are to be evaluated:
-      if( !mg.to.eval[i] )
-      {
-        return (list("CMA"=NULL, "event.info"=NULL));
-      }
-
-      # Translate into the index of the classes to be evaluated:
-      ii <- sum(mg.to.eval[1:i]);
-
-      # Cache the selected observations:
-      mg.sel.obs <- mb.obs[,ii];
-
-      # Check if this is a duplicated medication class:
-      if( mb.obs.dupl[ii] )
-      {
-        # Find which one is the original:
-        for( j in 1:(ii-1) ) # ii=1 never should be TRUE
-        {
-          if( identical(mb.obs[,j], mg.sel.obs) )
-          {
-            # This is the original: return it and stop
-            return (c("identical.to"=j));
-          }
-        }
-      }
-
-      # Compute the workhorse function:
-      tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                               parallel.backend=parallel.backend,
-                               parallel.threads=parallel.threads,
-                               data=data.copy[mg.sel.obs,], # apply it on the subset of observations covered by this medication class
-                               ID.colname=ID.colname,
-                               event.date.colname=event.date.colname,
-                               event.duration.colname=event.duration.colname,
-                               event.daily.dose.colname=NA, # not relevant
-                               medication.class.colname=NA, # not relevant
-                               event.interval.colname=event.interval.colname,
-                               gap.days.colname=gap.days.colname,
-                               carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
-                               carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
-                               carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
-                               consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage
-                               followup.window.start=followup.window.start,
-                               followup.window.start.unit=followup.window.start.unit,
-                               followup.window.duration=followup.window.duration,
-                               followup.window.duration.unit=followup.window.duration.unit,
-                               observation.window.start=observation.window.start,
-                               observation.window.start.unit=observation.window.start.unit,
-                               observation.window.duration=observation.window.duration,
-                               observation.window.duration.unit=observation.window.duration.unit,
-                               date.format=date.format,
-                               suppress.warnings=suppress.warnings);
-      if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
-
-      # Convert to data.frame and return:
-      if( force.NA.CMA.for.failed.patients )
-      {
-        # Make sure patients with failed CMA estimations get an NA estimate!
-        patids <- unique(data.copy[,get(ID.colname)]);
-        if( length(patids) > nrow(tmp$CMA) )
-        {
-          setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-        }
-      }
-
-      setnames(tmp$CMA, c(ID.colname,"CMA")); tmp$CMA <- as.data.frame(tmp$CMA);
-      tmp$event.info <- as.data.frame(tmp$event.info);
-      return (tmp);
-
-    });
-
-    # Set the names:
-    names(tmp) <- mg$defs$name;
-
-    # Solve the duplicates:
-    for( i in seq_along(tmp) )
-    {
-      if( is.numeric(tmp[[i]]) && length(tmp[[i]]) == 1 && names(tmp[[i]]) == "identical.to" ) tmp[[i]] <- tmp[[ tmp[[i]] ]];
-    }
-
-    # Rearrange these and return:
-    ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
-    ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
-    if( flatten.medication.groups && !is.na(medication.groups.colname) )
-    {
-      # Flatten the CMA:
-      tmp <- do.call(rbind, ret.val[["CMA"]]);
-      if( is.null(tmp) || nrow(tmp) == 0 )
-      {
-        ret.val[["CMA"]] <- NULL;
-      } else
-      {
-        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["CMA"]]), function(i) if(!is.null(ret.val[["CMA"]][[i]])){rep(names(ret.val[["CMA"]])[i], nrow(ret.val[["CMA"]][[i]]))}else{NULL})));
-        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
-        ret.val[["CMA"]] <- tmp;
-      }
-
-      # ... and the event.info:
-      tmp <- do.call(rbind, ret.val[["event.info"]]);
-      if( is.null(tmp) || nrow(tmp) == 0 )
-      {
-        ret.val[["event.info"]] <- NULL;
-      } else
-      {
-        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["event.info"]]), function(i) if(!is.null(ret.val[["event.info"]][[i]])){rep(names(ret.val[["event.info"]])[i], nrow(ret.val[["event.info"]][[i]]))}else{NULL})));
-        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
-        ret.val[["event.info"]] <- tmp;
-      }
-    }
-    class(ret.val) <- c("CMA1", class(ret.val));
-    return (ret.val);
-
-  }
 }
 
 
@@ -3804,6 +4182,10 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -3948,6 +4330,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -4001,6 +4384,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=event.duration.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -4164,6 +4548,7 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -4217,6 +4602,7 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=event.duration.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -4266,6 +4652,7 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -4319,6 +4706,7 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=event.duration.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -4431,6 +4819,10 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -4579,6 +4971,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -4634,6 +5027,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   consider.dosage.change=consider.dosage.change,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -4858,6 +5252,10 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -5006,6 +5404,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -5061,6 +5460,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   consider.dosage.change=consider.dosage.change,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -5289,6 +5689,10 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -5437,6 +5841,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -5492,6 +5897,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   consider.dosage.change=consider.dosage.change,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -5774,6 +6180,10 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -5922,6 +6332,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -5977,6 +6388,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   consider.dosage.change=consider.dosage.change,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -6239,6 +6651,10 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -6380,6 +6796,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -6435,6 +6852,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   consider.dosage.change=consider.dosage.change,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -6747,6 +7165,10 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -6918,6 +7340,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              # The follow-up window:
                              followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                              followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                             followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                              followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                              followup.window.duration.unit=c("days", "weeks", "months", "years")[1],# the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                              # The observation window (embedded in the follow-up window):
@@ -7004,6 +7427,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                   consider.dosage.change=consider.dosage.change,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -7906,6 +8330,10 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -8080,6 +8508,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                 # The follow-up window:
                                 followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                                 followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                                followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                                 followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                                 followup.window.duration.unit=c("days", "weeks", "months", "years")[1],# the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                                 # The observation window (embedded in the follow-up window):
@@ -8213,6 +8642,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                   consider.dosage.change=consider.dosage.change,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
