@@ -914,8 +914,8 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
-#' @param medication.groups Optionally, the groups of medications (by default,
-#' all are part of the same group).
+#' @param medication.groups.to.plot the names of the medication groups to plot or
+#' \code{NULL} (the default) for all.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param plot.events.vertically.displaced Should consecutive events be plotted
@@ -1001,7 +1001,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nonthing
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
-                      medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
+                      medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                       print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
@@ -1040,7 +1040,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              title=title,
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
-             medication.groups=medication.groups,
+             medication.groups.to.plot=medication.groups.to.plot,
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=FALSE, # not for CMA0
@@ -3151,7 +3151,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nothing
                            col.cats=rainbow,                      # single color or a function mapping the categories to colors
                            unspecified.category.label="drug",     # the label of the unspecified category of medication
-                           medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
+                           medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
                            lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                            show.event.intervals=TRUE,             # show the actual prescription intervals
                            plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
@@ -3196,7 +3196,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              title=title,
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
-             medication.groups=medication.groups,
+             medication.groups.to.plot=medication.groups.to.plot,
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=show.event.intervals,
@@ -3971,6 +3971,8 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
+#' @param medication.groups.to.plot the names of the medication groups to plot or
+#' \code{NULL} (the default) for all.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param show.event.intervals \emph{Logical}, should the actual event intervals
@@ -4049,6 +4051,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       show.cma=TRUE,                         # show the CMA type
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
+                      medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       show.event.intervals=TRUE,             # show the actual rpescription intervals
                       col.na="lightgray",                    # color for mising data
@@ -4087,6 +4090,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  show.cma=show.cma,
                  col.cats=col.cats,
                  unspecified.category.label=unspecified.category.label,
+                 medication.groups.to.plot=medication.groups.to.plot,
                  lty.event=lty.event,
                  lwd.event=lwd.event,
                  pch.start.event=pch.start.event,
@@ -8031,6 +8035,8 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
+#' @param medication.groups.to.plot the names of the medication groups to plot or
+#' \code{NULL} (the default) for all.
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param plot.events.vertically.displaced Should consecutive events be plotted
@@ -8157,6 +8163,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nonthing
                                  col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                  unspecified.category.label="drug",     # the label of the unspecified category of medication
+                                 medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                                  plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                                  print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
@@ -8212,7 +8219,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              title=title,
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
-             #medication.groups=medication.groups,
+             medication.groups.to.plot=medication.groups.to.plot,
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=FALSE, # per-episode and sliding windows might have overlapping intervals, so better not to show them at all

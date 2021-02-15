@@ -985,7 +985,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nothing
                        col.cats=rainbow,                      # single color or a function mapping the categories to colors
                        unspecified.category.label="drug",     # the label of the unspecified category of medication
-                       medication.groups=NULL,                # optionally, the groups of medications (implicitly all are part of the same group)
+                       medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
                        lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                        show.event.intervals=TRUE,             # show the actual prescription intervals
                        plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
@@ -1894,6 +1894,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     # Expand the data to contain all the patient x groups:
     cma$data <- do.call(rbind, lapply(1:ncol(cma$medication.groups$obs), function(i)
     {
+      if( !is.null(medication.groups.to.plot) && length(medication.groups.to.plot) > 0 &&
+          !(colnames(cma$medication.groups$obs)[i] %in% medication.groups.to.plot) )
+      {
+        # Not all medication groups should be plotted and this is one of them!
+        return (NULL);
+      }
       tmp <- cma$data[cma$medication.groups$obs[,i],];
       if( is.null(tmp) || nrow(tmp) == 0 )
       {
@@ -1905,7 +1911,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       }
     }));
 
-    # Keep only those that actually have events:
+    # Keep only those that actually have events and that should be plotted:
     patmgids <- unique(cma$data[,c(col.patid, col.mg)]);
     if( is.null(patmgids) || nrow(patmgids) == 0 )
     {
