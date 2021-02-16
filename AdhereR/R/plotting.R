@@ -986,6 +986,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        col.cats=rainbow,                      # single color or a function mapping the categories to colors
                        unspecified.category.label="drug",     # the label of the unspecified category of medication
                        medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                       medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
                        lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                        show.event.intervals=TRUE,             # show the actual prescription intervals
                        plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
@@ -2783,7 +2784,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       "xlab"=xlab, "ylab"=ylab,
       "title"=title,
       "col.cats"=col.cats, "unspecified.category.label"=unspecified.category.label,
-      "medication.groups"=medication.groups,
+      "medication.groups.to.plot"=medication.groups.to.plot,
       "lty.event"=lty.event, "lwd.event"=lwd.event, "pch.start.event"=pch.start.event, "pch.end.event"=pch.end.event,
       "show.event.intervals"=show.event.intervals,
       "print.dose"=print.dose, "cex.dose"=cex.dose, "print.dose.col"=print.dose.col, "print.dose.centered"=print.dose.centered,
@@ -2871,7 +2872,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       "xlab"=xlab, "ylab"=ylab,
       "title"=title,
       "col.cats"=col.cats, "unspecified.category.label"=unspecified.category.label,
-      "medication.groups"=medication.groups,
+      "medication.groups.to.plot"=medication.groups.to.plot,
       "lty.event"=lty.event, "lwd.event"=lwd.event, "pch.start.event"=pch.start.event, "pch.end.event"=pch.end.event,
       "show.event.intervals"=show.event.intervals,
       "print.dose"=print.dose, "cex.dose"=cex.dose, "print.dose.col"=print.dose.col, "print.dose.centered"=print.dose.centered,
@@ -3050,6 +3051,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   }
 
   # For each individual event in turn:
+  alternating.band.mg.to.draw <- FALSE;
+  y.old.mg <- y.cur;
   for( i in 1:nrow(cma$data) )
   {
     # The current plot ID:
@@ -3099,7 +3102,65 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
         alternating.band.to.draw <- if(alternating.band.to.draw >= length(alternating.bands.cols)) 1 else (alternating.band.to.draw + 1); # move to the next band
       }
+    }
 
+    ##
+    ## Medication groups within patients ####
+    ##
+
+    # Draw the separators over the alternating bands but bellow all other graphical elements:
+    if( medication.groups.separator.show && (i == 1 || (i > 1 && cma$data[i,col.patid] != cma$data[i-1,col.patid]) || i == nrow(cma$data)) )
+    {
+      y.adjust <- ifelse(i == nrow(cma$data), 0.5, -0.5);
+      if( .do.R ) # Rplot:
+      {
+        # The separating line:
+        segments(par("usr")[1], y.cur + y.adjust, par("usr")[2], y.cur + y.adjust,
+                 col=medication.groups.separator.color, lty=medication.groups.separator.lty, lwd=medication.groups.separator.lwd);
+        if( i > 1 && alternating.band.mg.to.draw )
+        {
+          rect( par("usr")[1],        y.cur + y.adjust, 0.0,           y.old.mg - 0.5, col=medication.groups.separator.color, border=NA );
+          rect( duration.total + 1.0, y.cur + y.adjust, par("usr")[2], y.old.mg - 0.5, col=medication.groups.separator.color, border=NA );
+        }
+      }
+
+      #browser()
+      if( .do.SVG ) # SVG:
+      {
+        # Draw:
+        svg.str <- c(svg.str,
+                     # The separating line:
+                     .SVG.lines(x=c(dims.plot.x, dims.plot.x+dims.plot.width),
+                               y=rep(.scale.y.to.SVG.plot(y.cur + y.adjust),2),
+                               connected=FALSE,
+                               stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
+                               class="medication-groups-separator-hline", comment="Medication groups separator: horizontal line", suppress.warnings=suppress.warnings));
+        if( i > 1 && alternating.band.mg.to.draw )
+        {
+          svg.str <- c(svg.str,
+                       # The left and right lines:
+                       .SVG.lines(x=c(dims.plot.x, dims.plot.x),
+                                  y=c(.scale.y.to.SVG.plot(y.cur + y.adjust), .scale.y.to.SVG.plot(y.old.mg - 0.5)),
+                                  connected=FALSE,
+                                  stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
+                                  class="medication-groups-separator-vline", comment="Medication groups separator: vertical lines", suppress.warnings=suppress.warnings),
+                       .SVG.lines(x=c(dims.plot.x, dims.plot.x)+dims.plot.width,
+                                  y=c(.scale.y.to.SVG.plot(y.cur + y.adjust), .scale.y.to.SVG.plot(y.old.mg - 0.5)),
+                                  connected=FALSE,
+                                  stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
+                                  class="medication-groups-separator-vline", comment="Medication groups separator: vertical lines", suppress.warnings=suppress.warnings)
+          );
+        }
+      }
+
+      alternating.band.mg.to.draw <- !alternating.band.mg.to.draw;
+      y.old.mg <- y.cur;
+    }
+
+
+    # Continue doing things for a new patient...
+    if( i == 1 || (cur_plot_id != cma$data[i-1,col.plotid]) )
+    {
 
       ##
       ## FUW and OW ####
@@ -3647,7 +3708,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
       # Draw:
       svg.str <- c(svg.str,
-                   # The begining of the event:
+                   # The beginning of the event:
                    .SVG.lines(x=c(.scale.x.to.SVG.plot(seg.x1), .scale.x.to.SVG.plot(seg.x2)),
                               y=rep(.scale.y.to.SVG.plot(y.cur),2),
                               connected=FALSE,
@@ -4691,6 +4752,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( !is.null(export.formats) )
     {
       file.svg <- NULL;
+      svg.placeholder.filename <- NULL;
       if( "svg" %in% export.formats )
       {
         ## Export as stand-alone SVG file ####
@@ -4810,7 +4872,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
                                width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
 
-          if( export.formats.save.svg.placeholder )
+          if( export.formats.save.svg.placeholder && !is.null(svg.placeholder.filename) )
           {
             # The JPG placeholder:
             exported.file.names <- c(exported.file.names, svg.placeholder.filename);
