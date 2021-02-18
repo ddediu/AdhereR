@@ -767,14 +767,14 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
 #'             );
 #' cma1;
 #' @export
-print.CMA0 <- function(x,                                     # the CMA0 (or derived) object
-                       ...,                                   # required for S3 consistency
-                       inline=FALSE,                          # print inside a line of text or as a separate, extended object?
-                       format=c("text", "latex", "markdown"), # the format to print to
-                       print.params=TRUE,                     # show the parameters?
-                       print.data=TRUE,                       # show the summary of the data?
-                       exclude.params=c("event.info"),        # if so, should I not print some?
-                       skip.header=FALSE,                     # should I print the generic header?
+print.CMA0 <- function(x,                                                  # the CMA0 (or derived) object
+                       ...,                                                # required for S3 consistency
+                       inline=FALSE,                                       # print inside a line of text or as a separate, extended object?
+                       format=c("text", "latex", "markdown"),              # the format to print to
+                       print.params=TRUE,                                  # show the parameters?
+                       print.data=TRUE,                                    # show the summary of the data?
+                       exclude.params=c("event.info", "real.obs.windows"), # if so, should I not print some?
+                       skip.header=FALSE,                                  # should I print the generic header?
                        cma.type=class(cma)[1]
 )
 {
@@ -3932,6 +3932,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                            parallel.threads=parallel.threads,
                            .workhorse.function=.workhorse.function);
 
+  return (ret.val);
 }
 
 
@@ -4459,6 +4460,9 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=ID.colname,
                   event.date.colname=event.date.colname,
                   event.duration.colname=event.duration.colname,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
                   followup.window.start.per.medication.group=followup.window.start.per.medication.group,
@@ -4550,16 +4554,10 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA2","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -4580,24 +4578,17 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA2","CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
-  if( is.null(CMA) ) return (NULL);
 }
 
 #' @rdname print.CMA0
@@ -4622,6 +4613,7 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   # Groups of medication classes:
                   medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
@@ -4677,6 +4669,9 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=ID.colname,
                   event.date.colname=event.date.colname,
                   event.duration.colname=event.duration.colname,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
                   followup.window.start.per.medication.group=followup.window.start.per.medication.group,
@@ -4697,8 +4692,17 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   arguments.that.should.not.be.defined=arguments.that.should.not.be.defined);
   if( is.null(ret.val) ) return (NULL); # some error upstream
 
-  # Cap CMA at 1.0:
-  ret.val$CMA$CMA <- pmin(1, ret.val$CMA$CMA);
+  # Cap the CMA at 1.0:
+  if( !is.null(ret.val$CMA) )
+  {
+    if( inherits(ret.val$CMA, "data.frame") )
+    {
+      ret.val$CMA$CMA <- pmin(1, ret.val$CMA$CMA);
+    } else if( is.list(ret.val$CMA) && length(ret.val$CMA) > 0 )
+    {
+      for( i in 1:length(ret.val$CMA) ) if( !is.null(ret.val$CMA[[i]]) ) ret.val$CMA[[i]]$CMA <- pmin(1, ret.val$CMA[[i]]$CMA);
+    }
+  }
 
   # Convert to data.frame and return:
   class(ret.val) <- c("CMA3", class(ret.val));
@@ -4726,6 +4730,7 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   # Groups of medication classes:
                   medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
@@ -4781,6 +4786,9 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=ID.colname,
                   event.date.colname=event.date.colname,
                   event.duration.colname=event.duration.colname,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
                   followup.window.start.per.medication.group=followup.window.start.per.medication.group,
@@ -4801,8 +4809,17 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   arguments.that.should.not.be.defined=arguments.that.should.not.be.defined);
   if( is.null(ret.val) ) return (NULL); # some error upstream
 
-  # Cap CMA at 1.0:
-  ret.val$CMA$CMA <- pmin(1, ret.val$CMA$CMA);
+  # Cap the CMA at 1.0:
+  if( !is.null(ret.val$CMA) )
+  {
+    if( inherits(ret.val$CMA, "data.frame") )
+    {
+      ret.val$CMA$CMA <- pmin(1, ret.val$CMA$CMA);
+    } else if( is.list(ret.val$CMA) && length(ret.val$CMA) > 0 )
+    {
+      for( i in 1:length(ret.val$CMA) ) if( !is.null(ret.val$CMA[[i]]) ) ret.val$CMA[[i]]$CMA <- pmin(1, ret.val$CMA[[i]]$CMA);
+    }
+  }
 
   # Convert to data.frame and return:
   class(ret.val) <- c("CMA4", class(ret.val));
@@ -5042,6 +5059,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                   # Groups of medication classes:
                   medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
@@ -5102,6 +5120,9 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=medication.class.colname,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
                   followup.window.start.per.medication.group=followup.window.start.per.medication.group,
@@ -5193,16 +5214,10 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA5","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -5223,24 +5238,17 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA5","CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
-  if( is.null(CMA) ) return (NULL);
 }
 
 #' @rdname print.CMA0
@@ -5475,6 +5483,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                   # Groups of medication classes:
                   medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
@@ -5535,6 +5544,9 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=medication.class.colname,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
                   followup.window.start.per.medication.group=followup.window.start.per.medication.group,
@@ -5626,16 +5638,10 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA6","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -5656,24 +5662,17 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA6","CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
-  if( is.null(CMA) ) return (NULL);
 }
 
 #' @rdname print.CMA0
@@ -5912,6 +5911,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                   # Groups of medication classes:
                   medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
@@ -5972,6 +5972,9 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=medication.class.colname,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
                   followup.window.start.per.medication.group=followup.window.start.per.medication.group,
@@ -6107,16 +6110,10 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA7","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -6137,24 +6134,17 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA7","CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
-  if( is.null(CMA) ) return (NULL);
 }
 
 #' @rdname print.CMA0
@@ -6403,6 +6393,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                   # Groups of medication classes:
                   medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
@@ -6463,6 +6454,9 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=medication.class.colname,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
                   followup.window.start.per.medication.group=followup.window.start.per.medication.group,
@@ -6577,16 +6571,10 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA$CMA, "event.info"=event.info)); # make sure to return the non-adjusted event.info prior to computing CMA7!
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA8","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -6607,23 +6595,46 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
+  # Save the real observation window as well:
+  if( !is.null(ret.val$event.info) )
   {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
+    if( inherits(ret.val$event.info, "data.frame") )
     {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE); setnames(tmp$CMA, 1, ID.colname);
+      ret.val[["real.obs.windows"]] <- unique(data.frame( ret.val$event.info[, ID.colname],
+                                                          "window.start"=ret.val$event.info$.OBS.START.DATE.UPDATED,
+                                                          "window.end"=NA));
+      setnames(ret.val$real.obs.windows, 1, ID.colname);
+    } else if( is.list(ret.val$event.info) && length(ret.val$event.info) > 0 )
+    {
+      ret.val[["real.obs.windows"]] <- lapply(ret.val$event.info, function(x)
+        {
+          if( is.null(x) ) return (NULL);
+          tmp <- unique(data.frame( x[, ID.colname],
+                                    "window.start"=x$.OBS.START.DATE.UPDATED,
+                                    "window.end"=NA));
+          setnames(tmp, 1, ID.colname);
+          return (tmp);
+        });
+      names(ret.val[["real.obs.windows"]]) <- names(ret.val$event.info);
+    } else
+    {
+      ret.val[["real.obs.windows"]] <- NULL;
     }
+  } else
+  {
+    ret.val[["real.obs.windows"]] <- NULL;
   }
-  ret.val[["CMA"]] <- as.data.frame(tmp$CMA); # names are fine cause this come directly from CMA7
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  ret.val[["real.obs.windows"]] <- unique(data.frame( ret.val$event.info[, ID.colname], "window.start"=ret.val$event.info$.OBS.START.DATE.UPDATED, "window.end"=NA)); setnames(ret.val$real.obs.windows, 1, ID.colname);
-  class(ret.val) <- c("CMA8","CMA1", class(ret.val));
+
   return (ret.val);
 }
 
@@ -6867,6 +6878,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                   # Groups of medication classes:
                   medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
@@ -6927,6 +6939,9 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=medication.class.colname,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
                   followup.window.start.per.medication.group=followup.window.start.per.medication.group,
@@ -6992,7 +7007,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
       }
     }
 
-    # ATTENTION: this is done for an observation window that is identical to the follow-up window to accomodate events that overshoot the observation window!
+    # ATTENTION: this is done for an observation window that is identical to the follow-up window to accommodate events that overshoot the observation window!
     event.info <- compute.event.int.gaps(data=as.data.frame(data),
                                          ID.colname=ID.colname,
                                          event.date.colname=event.date.colname,
@@ -7010,7 +7025,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                                          followup.window.duration=followup.window.duration,
                                          followup.window.duration.unit=followup.window.duration.unit,
                                          observation.window.start=0, # force follow-up window start at 0!
-                                         observation.window.start.unit=followup.window.start.unit,
+                                         observation.window.start.unit="days",
                                          observation.window.duration=followup.window.duration,
                                          observation.window.duration.unit=followup.window.duration.unit,
                                          date.format=date.format,
@@ -7094,16 +7109,10 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA9","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -7124,22 +7133,16 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA9","CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
 }
 

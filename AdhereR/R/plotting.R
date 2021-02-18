@@ -1449,7 +1449,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         # Observation window:
         if( highlight.observation.window )
         {
-          if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
+          if( !is.null(cma.realOW) )
           {
             # CMA8 also has a "real" OW:
             if( do.plot )
@@ -1741,7 +1741,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         # Observation window:
         if( highlight.observation.window )
         {
-          if( inherits(cma,"CMA8") && !is.null(cma$real.obs.windows) && show.real.obs.window.start )
+          if( !is.null(cma.realOW) )
           {
             # CMA8 also has a "real" OW:
             if( do.plot )
@@ -1888,6 +1888,17 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   }
 
   #
+  # If CMA8, cache the real observation windows if it is to be plotted ####
+  #
+  if( inherits(cma,"CMA8") && !is.null(cma$real.obs.window) && show.real.obs.window.start )
+  {
+    cma.realOW <- cma$real.obs.window;
+  } else
+  {
+    cma.realOW <- NULL;
+  }
+
+  #
   # Medication groups: expand the data and keep only those patient x group that contain events ####
   #
   if( cma.mg )
@@ -1948,6 +1959,30 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         });
         names(tmp) <- names(cma$CMA); cma$CMA <- tmp;
       }
+    }
+    if( !is.null(cma.realOW) )
+    {
+      if( cma$flatten.medication.groups )
+      {
+        # Nothing to do, the real OW is already a data.frame!
+      } else
+      {
+        # Flatten the OW:
+        tmp <- do.call(rbind, cma.realOW);
+        if( is.null(tmp) || nrow(tmp) == 0 )
+        {
+          cma.realOW <- NULL;
+        } else
+        {
+          tmp <- cbind(tmp, unlist(lapply(1:length(cma.realOW), function(i) if(!is.null(cma.realOW[[i]])){rep(names(cma.realOW)[i], nrow(cma.realOW[[i]]))}else{NULL})));
+          names(tmp)[ncol(tmp)] <- cma$medication.groups.colname; rownames(tmp) <- NULL;
+          cma.realOW <- tmp;
+        }
+      }
+
+      # Add the new column containing the patient ID and the medication group for plotting:
+      cma.realOW <- cbind(cma.realOW, paste0(cma.realOW[,col.patid]," [",cma.realOW[,col.mg],"]")); names(cma.realOW)[ncol(cma.realOW)] <- col.plotid;
+
     }
   }
 
@@ -3109,7 +3144,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     ##
 
     # Draw the separators over the alternating bands but bellow all other graphical elements:
-    if( medication.groups.separator.show && (i == 1 || (i > 1 && cma$data[i,col.patid] != cma$data[i-1,col.patid]) || i == nrow(cma$data)) )
+    if( cma.mg &&
+        medication.groups.separator.show &&
+        (i == 1 || (i > 1 && cma$data[i,col.patid] != cma$data[i-1,col.patid]) || i == nrow(cma$data)) )
     {
       y.adjust <- ifelse(i == nrow(cma$data), 0.5, -0.5);
       if( .do.R ) # Rplot:
@@ -3238,24 +3275,24 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           );
         }
 
-        if( inherits(cma,"CMA8") && !is.null(cma$real.obs.window) && show.real.obs.window.start )
+        if( !is.null(cma.realOW) )
         {
           # For CMA8, the OW might have been changed, so we also have a "real" OW:
-          s.realOW <- which(cma$real.obs.window[,col.plotid] == cur_plot_id);
+          s.realOW <- which(cma.realOW[,col.plotid] == cur_plot_id);
 
-          # Find the begining of the "real" OW:
+          # Find the beginning of the "real" OW:
           if( length(s.realOW) == 1)
           {
-            if( !is.null(cma$real.obs.windows$window.start) && !is.na(cma$real.obs.windows$window.start[s.realOW]) )
+            if( !is.null(cma.realOW$window.start) && !is.na(cma.realOW$window.start[s.realOW]) )
             {
-              real.obs.window.start <- cma$real.obs.windows$window.start[s.realOW];
+              real.obs.window.start <- cma.realOW$window.start[s.realOW];
             } else
             {
               real.obs.window.start <- evinfo$.OBS.START.DATE[s.events[1]];
             }
-            if( !is.null(cma$real.obs.windows$window.end) && !is.na(cma$real.obs.windows$window.end[s.realOW]) )
+            if( !is.null(cma.realOW$window.end) && !is.na(cma.realOW$window.end[s.realOW]) )
             {
-              real.obs.window.end <- cma$real.obs.windows$window.end[s.realOW];
+              real.obs.window.end <- cma.realOW$window.end[s.realOW];
             } else
             {
               real.obs.window.end <- evinfo$.OBS.END.DATE[s.events[1]];
