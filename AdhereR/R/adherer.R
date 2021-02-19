@@ -3098,21 +3098,27 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                observation.window.duration.unit=observation.window.duration.unit,
                                date.format=date.format,
                                suppress.warnings=suppress.warnings);
-      if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+      if( is.null(tmp) ) return (NULL);
 
-      # Convert to data.frame and return:
-      if( force.NA.CMA.for.failed.patients )
+      if( !is.null(tmp$CMA) )
       {
-        # Make sure patients with failed CMA estimations get an NA estimate!
-        patids <- unique(data.copy[,get(ID.colname)]);
-        if( length(patids) > nrow(tmp$CMA) )
+        # Convert to data.frame and return:
+        if( force.NA.CMA.for.failed.patients )
         {
-          setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+          # Make sure patients with failed CMA estimations get an NA estimate!
+          patids <- unique(data.copy[,get(ID.colname)]);
+          if( length(patids) > nrow(tmp$CMA) )
+          {
+            setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+          }
         }
-      }
 
-      setnames(tmp$CMA, c(ID.colname,"CMA")); tmp$CMA <- as.data.frame(tmp$CMA);
-      tmp$event.info <- as.data.frame(tmp$event.info);
+        setnames(tmp$CMA, c(ID.colname,"CMA")); tmp$CMA <- as.data.frame(tmp$CMA);
+      }
+      if( !is.null(tmp$event.info) )
+      {
+        tmp$event.info <- as.data.frame(tmp$event.info);
+      }
       return (tmp);
 
     });

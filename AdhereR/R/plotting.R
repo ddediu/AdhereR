@@ -1886,6 +1886,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     col.mg <- cma$medication.groups.colname;
     col.plotid <- paste0("__",col.patid, ":", col.mg,"__"); # when there are medication groups, the plotting ID is patient ID concatenated with the medication group
   }
+  cma.data <- cma$data; # the original data
 
   #
   # If CMA8, cache the real observation windows if it is to be plotted ####
@@ -2055,7 +2056,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
 
     # Add the new column containing the patient ID and the medication group for plotting:
-    cmas <- cbind(cmas, paste0(cmas[,col.patid]," [",cmas[,col.mg],"]")); names(cmas)[ncol(cmas)] <- col.plotid;
+    if( !is.null(cmas) )
+    {
+      cmas <- cbind(cmas, paste0(cmas[,col.patid]," [",cmas[,col.mg],"]")); names(cmas)[ncol(cmas)] <- col.plotid;
+    }
   }
 
   # Keep only those patients with non-missing CMA estimates:
@@ -2115,91 +2119,192 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   } else if( inherits(cma, "CMA0") && is.null(cma$event.info) )
   {
     # Try to compute the event.info:
-    event.info <- compute.event.int.gaps(data=cma$data,
-                                         ID.colname=col.patid,
-                                         event.date.colname=cma$event.date.colname,
-                                         event.duration.colname=cma$event.duration.colname,
-                                         event.daily.dose.colname=cma$event.daily.dose.colname,
-                                         medication.class.colname=cma$medication.class.colname,
-                                         event.interval.colname="event.interval",
-                                         gap.days.colname="gap.days",
-                                         carryover.within.obs.window=FALSE,
-                                         carryover.into.obs.window=FALSE,
-                                         carry.only.for.same.medication=FALSE,
-                                         consider.dosage.change=FALSE,
-                                         followup.window.start=cma$followup.window.start,
-                                         followup.window.start.unit=cma$followup.window.start.unit,
-                                         followup.window.duration=cma$followup.window.duration,
-                                         followup.window.duration.unit=cma$followup.window.duration.unit,
-                                         observation.window.start=cma$observation.window.start,
-                                         observation.window.start.unit=cma$observation.window.start.unit,
-                                         observation.window.duration=cma$observation.window.duration,
-                                         observation.window.duration.unit=cma$observation.window.duration.unit,
-                                         date.format=cma$date.format,
-                                         keep.window.start.end.dates=TRUE,
-                                         remove.events.outside.followup.window=FALSE,
-                                         keep.event.interval.for.all.events=TRUE,
-                                         parallel.backend="none", # make sure this runs sequentially!
-                                         parallel.threads=1,
-                                         suppress.warnings=FALSE,
-                                         return.data.table=FALSE);
-    if( !is.null(event.info) )
+    if( !cma.mg )
     {
-      # Keep only those events that intersect with the observation window (and keep only the part that is within the intersection):
-
-      # Compute end prescription date as well:
-      event.info$.DATE.as.Date.end <- .add.time.interval.to.date(event.info$.DATE.as.Date, event.info[,cma$event.duration.colname], "days");
-
-      # Remove all treatments that end before FUW starts and those that start after FUW ends:
-      patids.all <- unique(event.info[,col.patid]);
-      event.info <- event.info[ !(event.info$.DATE.as.Date.end < event.info$.FU.START.DATE | event.info$.DATE.as.Date > event.info$.FU.END.DATE), ];
-      if( is.null(event.info) || nrow(event.info) == 0 )
+      # No medication groups:
+      event.info <- compute.event.int.gaps(data=cma$data,
+                                           ID.colname=col.patid,
+                                           event.date.colname=cma$event.date.colname,
+                                           event.duration.colname=cma$event.duration.colname,
+                                           event.daily.dose.colname=cma$event.daily.dose.colname,
+                                           medication.class.colname=cma$medication.class.colname,
+                                           event.interval.colname="event.interval",
+                                           gap.days.colname="gap.days",
+                                           carryover.within.obs.window=FALSE,
+                                           carryover.into.obs.window=FALSE,
+                                           carry.only.for.same.medication=FALSE,
+                                           consider.dosage.change=FALSE,
+                                           followup.window.start=cma$followup.window.start,
+                                           followup.window.start.unit=cma$followup.window.start.unit,
+                                           followup.window.duration=cma$followup.window.duration,
+                                           followup.window.duration.unit=cma$followup.window.duration.unit,
+                                           observation.window.start=cma$observation.window.start,
+                                           observation.window.start.unit=cma$observation.window.start.unit,
+                                           observation.window.duration=cma$observation.window.duration,
+                                           observation.window.duration.unit=cma$observation.window.duration.unit,
+                                           date.format=cma$date.format,
+                                           keep.window.start.end.dates=TRUE,
+                                           remove.events.outside.followup.window=FALSE,
+                                           keep.event.interval.for.all.events=TRUE,
+                                           parallel.backend="none", # make sure this runs sequentially!
+                                           parallel.threads=1,
+                                           suppress.warnings=FALSE,
+                                           return.data.table=FALSE);
+      if( !is.null(event.info) )
       {
-        if( !suppress.warnings ) .report.ewms("No events in the follow-up window: nothing to plot!\n", "error", ".plot.CMAs", "AdhereR");
+        # Keep only those events that intersect with the observation window (and keep only the part that is within the intersection):
+
+        # Compute end prescription date as well:
+        event.info$.DATE.as.Date.end <- .add.time.interval.to.date(event.info$.DATE.as.Date, event.info[,cma$event.duration.colname], "days");
+
+        # Remove all treatments that end before FUW starts and those that start after FUW ends:
+        patids.all <- unique(event.info[,col.patid]);
+        event.info <- event.info[ !(event.info$.DATE.as.Date.end < event.info$.FU.START.DATE | event.info$.DATE.as.Date > event.info$.FU.END.DATE), ];
+        if( is.null(event.info) || nrow(event.info) == 0 )
+        {
+          if( !suppress.warnings ) .report.ewms("No events in the follow-up window: nothing to plot!\n", "error", ".plot.CMAs", "AdhereR");
+          plot.CMA.error(export.formats=export.formats,
+                         export.formats.fileprefix=export.formats.fileprefix,
+                         export.formats.directory=export.formats.directory,
+                         generate.R.plot=generate.R.plot);
+          return (invisible(NULL));
+        }
+        patids.no.events.to.plot <- setdiff(patids.all, unique(event.info[,col.patid]));
+
+        # Find all prescriptions that start before the follow-up window and truncate them:
+        s <- (event.info$.DATE.as.Date < event.info$.FU.START.DATE);
+        if( length(s) > 0 )
+        {
+          event.info$.DATE.as.Date[s] <- event.info$.FU.START.DATE[s];
+        }
+
+        # Find all prescriptions that end after the follow-up window and truncate them:
+        s <- (event.info$.DATE.as.Date.end > event.info$.FU.END.DATE);
+        if( length(s) > 0 )
+        {
+          event.info[s,cma$event.duration.colname] <- .difftime.Dates.as.days(event.info$.FU.END.DATE[s], event.info$.DATE.as.Date[s]);
+        }
+
+        # Store the event.info data:
+        cma$event.info <- event.info;
+
+        # For the patients without stuff to plot, replace their events by a fake single event:
+        if( length(patids.no.events.to.plot) > 0 )
+        {
+          cma$data <- cma$data[ !(cma$data[,col.patid] %in% patids.no.events.to.plot), ];
+          #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), col.patid ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
+          if( !suppress.warnings ) .report.ewms(paste0("Patient",
+                                                       ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
+                                                       paste0("'",patids.no.events.to.plot, "'", collapse=", "),
+                                                       ifelse(length(patids.no.events.to.plot) > 1, " have ", " has "), " no events to plot!\n"),
+                                                "warning", ".plot.CMAs", "AdhereR");
+        }
+      } else
+      {
+        if( !suppress.warnings ) .report.ewms("Error(s) concerning the follow-up and observation windows!\n", "error", ".plot.CMAs", "AdhereR");
         plot.CMA.error(export.formats=export.formats,
                        export.formats.fileprefix=export.formats.fileprefix,
                        export.formats.directory=export.formats.directory,
                        generate.R.plot=generate.R.plot);
         return (invisible(NULL));
       }
-      patids.no.events.to.plot <- setdiff(patids.all, unique(event.info[,col.patid]));
-
-      # Find all prescriptions that start before the follow-up window and truncate them:
-      s <- (event.info$.DATE.as.Date < event.info$.FU.START.DATE);
-      if( length(s) > 0 )
-      {
-        event.info$.DATE.as.Date[s] <- event.info$.FU.START.DATE[s];
-      }
-
-      # Find all prescriptions that end after the follow-up window and truncate them:
-      s <- (event.info$.DATE.as.Date.end > event.info$.FU.END.DATE);
-      if( length(s) > 0 )
-      {
-        event.info[s,cma$event.duration.colname] <- .difftime.Dates.as.days(event.info$.FU.END.DATE[s], event.info$.DATE.as.Date[s]);
-      }
-
-      # Store the event.info data:
-      cma$event.info <- event.info;
-
-      # For the patients without stuff to plot, replace their events by a fake single event:
-      if( length(patids.no.events.to.plot) > 0 )
-      {
-        cma$data <- cma$data[ !(cma$data[,col.patid] %in% patids.no.events.to.plot), ];
-        #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), col.patid ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
-        if( !suppress.warnings ) .report.ewms(paste0("Patient",
-                                                     ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
-                                                     paste0("'",patids.no.events.to.plot, "'", collapse=", "),
-                                                     ifelse(length(patids.no.events.to.plot) > 1, " have ", " has "), " no events to plot!\n"),
-                                              "warning", ".plot.CMAs", "AdhereR");
-      }
     } else
     {
-      if( !suppress.warnings ) .report.ewms("Error(s) concerning the follow-up and observation windows!\n", "error", ".plot.CMAs", "AdhereR");
-      plot.CMA.error(export.formats=export.formats,
-                     export.formats.fileprefix=export.formats.fileprefix,
-                     export.formats.directory=export.formats.directory,
-                     generate.R.plot=generate.R.plot);
-      return (invisible(NULL));
+      # There are medication groups:
+
+      # Do what the simple CMAs do: compute the event.info!
+      # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
+      .workhorse.function <- function(data=NULL,
+                                      ID.colname=NULL,
+                                      event.date.colname=NULL,
+                                      event.duration.colname=NULL,
+                                      event.daily.dose.colname=NULL,
+                                      medication.class.colname=NULL,
+                                      event.interval.colname=NULL,
+                                      gap.days.colname=NULL,
+                                      carryover.within.obs.window=NULL,
+                                      carryover.into.obs.window=NULL,
+                                      carry.only.for.same.medication=NULL,
+                                      consider.dosage.change=NULL,
+                                      followup.window.start=NULL,
+                                      followup.window.start.unit=NULL,
+                                      followup.window.duration=NULL,
+                                      followup.window.duration.unit=NULL,
+                                      observation.window.start=NULL,
+                                      observation.window.start.unit=NULL,
+                                      observation.window.duration=NULL,
+                                      observation.window.duration.unit=NULL,
+                                      date.format=NULL,
+                                      suppress.warnings=NULL
+      )
+      {
+        # Call the compute.event.int.gaps() function and use the results:
+        event.info <- compute.event.int.gaps(data=as.data.frame(data),
+                                             ID.colname=ID.colname,
+                                             event.date.colname=event.date.colname,
+                                             event.duration.colname=event.duration.colname,
+                                             event.daily.dose.colname=event.daily.dose.colname,
+                                             medication.class.colname=medication.class.colname,
+                                             event.interval.colname=event.interval.colname,
+                                             gap.days.colname=gap.days.colname,
+                                             carryover.within.obs.window=carryover.within.obs.window,
+                                             carryover.into.obs.window=carryover.into.obs.window,
+                                             carry.only.for.same.medication=carry.only.for.same.medication,
+                                             consider.dosage.change=consider.dosage.change,
+                                             followup.window.start=followup.window.start,
+                                             followup.window.start.unit=followup.window.start.unit,
+                                             followup.window.duration=followup.window.duration,
+                                             followup.window.duration.unit=followup.window.duration.unit,
+                                             observation.window.start=observation.window.start,
+                                             observation.window.start.unit=observation.window.start.unit,
+                                             observation.window.duration=observation.window.duration,
+                                             observation.window.duration.unit=observation.window.duration.unit,
+                                             date.format=date.format,
+                                             keep.window.start.end.dates=TRUE,
+                                             parallel.backend="none", # make sure this runs sequentially!
+                                             parallel.threads=1,
+                                             suppress.warnings=suppress.warnings,
+                                             return.data.table=TRUE);
+        if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
+
+        return (list("CMA"=NULL, "event.info"=event.info));
+      }
+
+      tmp <- .cma.skeleton(data=cma.data,
+                           ret.val=cma,
+                           cma.class.name=c("CMA0"),
+
+                           ID.colname=col.patid,
+                           event.date.colname=cma$event.date.colname,
+                           event.duration.colname=cma$event.duration.colname,
+                           event.daily.dose.colname=cma$event.daily.dose.colname,
+                           medication.class.colname=cma$medication.class.colname,
+                           event.interval.colname="event.interval",
+                           gap.days.colname="gap.days",
+                           carryover.within.obs.window=FALSE,
+                           carryover.into.obs.window=FALSE,
+                           carry.only.for.same.medication=FALSE,
+                           consider.dosage.change=FALSE,
+                           followup.window.start=cma$followup.window.start,
+                           followup.window.start.unit=cma$followup.window.start.unit,
+                           followup.window.duration=cma$followup.window.duration,
+                           followup.window.duration.unit=cma$followup.window.duration.unit,
+                           observation.window.start=cma$observation.window.start,
+                           observation.window.start.unit=cma$observation.window.start.unit,
+                           observation.window.duration=cma$observation.window.duration,
+                           observation.window.duration.unit=cma$observation.window.duration.unit,
+                           date.format=cma$date.format,
+
+                           flatten.medication.groups=cma$flatten.medication.groups,
+                           followup.window.start.per.medication.group=cma$followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend="none", # make sure this runs sequentially!
+                           parallel.threads=1,
+                           .workhorse.function=.workhorse.function);
+      cma$event.info <- tmp$event.info;
+
     }
   } else
   {
@@ -2253,13 +2358,35 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   } else
   {
     # Create a fake one, containing but the follow-up and observation window info:
-    cmas <- data.frame("..patid.."=unique(cma$data[,col.patid]), "CMA"=NA); names(cmas)[1] <- col.patid;
-    if( !is.null(evinfo) )
+    if( !cma.mg )
     {
-      cmas <- merge(cmas, unique(evinfo[,c(col.patid, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]), by=c(col.patid), all.x=TRUE);
+      # No medication grops:
+      cmas <- data.frame("..patid.."=unique(cma$data[,col.patid]), "CMA"=NA); names(cmas)[1] <- col.patid;
+      if( !is.null(evinfo) )
+      {
+        cmas <- merge(cmas,
+                      unique(evinfo[,c(col.patid, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]),
+                      by=c(col.patid), all.x=TRUE);
+      } else
+      {
+        cmas <- cbind(cmas, ".FU.START.DATE"=NA, ".FU.END.DATE"=NA, ".OBS.START.DATE"=NA, ".OBS.END.DATE"=NA);
+      }
     } else
     {
-      cmas <- cbind(cmas, ".FU.START.DATE"=NA, ".FU.END.DATE"=NA, ".OBS.START.DATE"=NA, ".OBS.END.DATE"=NA);
+      # There are medication groups:
+      cmas <- cbind(unique(cma$data[,c(col.patid, col.mg)]), "CMA"=NA);
+      if( !is.null(evinfo) )
+      {
+        cmas <- merge(cmas,
+                      unique(evinfo[,c(col.patid, col.mg, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]),
+                      by=c(col.patid, col.mg), all.x=TRUE);
+      } else
+      {
+        cmas <- cbind(cmas, ".FU.START.DATE"=NA, ".FU.END.DATE"=NA, ".OBS.START.DATE"=NA, ".OBS.END.DATE"=NA);
+      }
+
+      # Add the new column containing the patient ID and the medication group for plotting:
+      cmas <- cbind(cmas, paste0(cmas[,col.patid]," [",cmas[,col.mg],"]")); names(cmas)[ncol(cmas)] <- col.plotid;
     }
   }
 
