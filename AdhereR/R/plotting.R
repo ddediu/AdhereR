@@ -1946,9 +1946,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     {
       if( cma$flatten.medication.groups )
       {
-        cma$CMA <- cma$CMA[ vapply(1:nrow(cma$CMA), function(i)
-          sum(cma$CMA[i,col.patid] == patmgids[,col.patid] &
-                cma$CMA[i,col.mg] == patmgids[,col.mg], na.rm=TRUE), logical(1)), ];
+        cma$CMA <- cma$CMA[ vapply(1:nrow(cma$CMA), function(i) any(cma$CMA[i,col.patid] == patmgids[,col.patid] & cma$CMA[i,col.mg] == patmgids[,col.mg]), logical(1)), ];
       } else
       {
         tmp <- lapply(1:length(cma$CMA), function(i)
@@ -2102,7 +2100,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   } else if( inherits(cma, "CMA_sliding_window") )
   {
     cmas <- cbind(cmas[,1:3], "gap.days"=NA, "duration"=cma$sliding.window.duration, cmas[,4:ncol(cmas)]);
-    names(cmas)[2:ncol(cmas)] <- c("WND.ID", "start", "gap.days", "duration", "end", "CMA"); # avoid possible conflict with patients being called "ID"
+    names(cmas)[2:7] <- c("WND.ID", "start", "gap.days", "duration", "end", "CMA"); # avoid possible conflict with patients being called "ID"
 
     # Remove the participants without CMA estimates:
     patids.no.events.to.plot <- setdiff(unique(cma$data[,col.patid]), unique(cmas[,col.patid]));
@@ -3232,12 +3230,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
       # Vertical space needed by this patient for the events and overall:
       vspace.needed.events <- ifelse(plot.events.vertically.displaced, length(s.events), 1);
-      vspace.needed.total  <- vspace.needed.events +
-        ifelse(has.estimated.CMA,
-               (length(s.cmas)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-                 3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
-                 plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
-               0);
+      vspace.needed.partial.cmas <- ifelse(has.estimated.CMA,
+                                           (length(s.cmas)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
+                                             3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+                                             plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
+                                           0);
+      vspace.needed.total  <- vspace.needed.events + vspace.needed.partial.cmas;
 
 
       ##
@@ -3275,27 +3273,29 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         medication.groups.separator.show &&
         (i == 1 || (i > 1 && cma$data[i,col.patid] != cma$data[i-1,col.patid]) || i == nrow(cma$data)) )
     {
-      y.adjust <- ifelse(i == nrow(cma$data), 0.5, -0.5);
+      # The y coordinates:
+      y.mg.start <- ifelse(i == nrow(cma$data), y.cur + vspace.needed.partial.cmas + 0.5, y.cur - 0.5);
+      y.mg.end   <- (y.old.mg - 0.5);
+
       if( .do.R ) # Rplot:
       {
         # The separating line:
-        segments(par("usr")[1], y.cur + y.adjust, par("usr")[2], y.cur + y.adjust,
+        segments(par("usr")[1], y.mg.start, par("usr")[2], y.mg.start,
                  col=medication.groups.separator.color, lty=medication.groups.separator.lty, lwd=medication.groups.separator.lwd);
         if( i > 1 && alternating.band.mg.to.draw )
         {
-          rect( par("usr")[1],        y.cur + y.adjust, 0.0,           y.old.mg - 0.5, col=medication.groups.separator.color, border=NA );
-          rect( duration.total + 1.0, y.cur + y.adjust, par("usr")[2], y.old.mg - 0.5, col=medication.groups.separator.color, border=NA );
+          rect( par("usr")[1],        y.mg.start, 0.0,           y.mg.end, col=medication.groups.separator.color, border=NA );
+          rect( duration.total + 1.0, y.mg.start, par("usr")[2], y.mg.end, col=medication.groups.separator.color, border=NA );
         }
       }
 
-      #browser()
       if( .do.SVG ) # SVG:
       {
         # Draw:
         svg.str <- c(svg.str,
                      # The separating line:
                      .SVG.lines(x=c(dims.plot.x, dims.plot.x+dims.plot.width),
-                               y=rep(.scale.y.to.SVG.plot(y.cur + y.adjust),2),
+                               y=rep(.scale.y.to.SVG.plot(y.mg.start),2),
                                connected=FALSE,
                                stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
                                class="medication-groups-separator-hline", comment="Medication groups separator: horizontal line", suppress.warnings=suppress.warnings));
@@ -3304,12 +3304,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           svg.str <- c(svg.str,
                        # The left and right lines:
                        .SVG.lines(x=c(dims.plot.x, dims.plot.x),
-                                  y=c(.scale.y.to.SVG.plot(y.cur + y.adjust), .scale.y.to.SVG.plot(y.old.mg - 0.5)),
+                                  y=c(.scale.y.to.SVG.plot(y.mg.start), .scale.y.to.SVG.plot(y.mg.end)),
                                   connected=FALSE,
                                   stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
                                   class="medication-groups-separator-vline", comment="Medication groups separator: vertical lines", suppress.warnings=suppress.warnings),
                        .SVG.lines(x=c(dims.plot.x, dims.plot.x)+dims.plot.width,
-                                  y=c(.scale.y.to.SVG.plot(y.cur + y.adjust), .scale.y.to.SVG.plot(y.old.mg - 0.5)),
+                                  y=c(.scale.y.to.SVG.plot(y.mg.start), .scale.y.to.SVG.plot(y.mg.end)),
                                   connected=FALSE,
                                   stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
                                   class="medication-groups-separator-vline", comment="Medication groups separator: vertical lines", suppress.warnings=suppress.warnings)
