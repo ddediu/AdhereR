@@ -6970,8 +6970,16 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
 #' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
-#' containing all observations \emph{not} covred by any of the explicitly defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type; valid only for
 #' CMAs 5 to 9, in which case it is coupled (i.e., the same value is used for
@@ -7172,6 +7180,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                              # Groups of medication classes:
                              medication.groups=NULL, # a named vector of medication group definitions or NULL
+                             flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                              # Various types methods of computing gaps:
                              carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = use the CMA's values)
                              consider.dosage.change=NA, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = use the CMA's values)
@@ -7264,6 +7273,8 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                   event.daily.dose.colname=event.daily.dose.colname,
                   medication.class.colname=medication.class.colname,
                   medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   carryover.within.obs.window=carryover.within.obs.window,
                   carryover.into.obs.window=carryover.into.obs.window,
                   carry.only.for.same.medication=carry.only.for.same.medication,
@@ -7624,8 +7635,34 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     # Rearrange these and return:
     ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
     ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
-    class(ret.val) <- "CMA_per_episode";
     ret.val$computed.CMA <- CMA.to.apply;
+    if( flatten.medication.groups && !is.na(medication.groups.colname) )
+    {
+      # Flatten the CMA:
+      tmp <- do.call(rbind, ret.val[["CMA"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["CMA"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["CMA"]]), function(i) if(!is.null(ret.val[["CMA"]][[i]])){rep(names(ret.val[["CMA"]])[i], nrow(ret.val[["CMA"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["CMA"]] <- tmp;
+      }
+
+      # ... and the event.info:
+      tmp <- do.call(rbind, ret.val[["event.info"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["event.info"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["event.info"]]), function(i) if(!is.null(ret.val[["event.info"]][[i]])){rep(names(ret.val[["event.info"]])[i], nrow(ret.val[["event.info"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["event.info"]] <- tmp;
+      }
+    }
+    class(ret.val) <- "CMA_per_episode";
     ret.val$summary <- summary;
     return (ret.val);
 
@@ -7645,7 +7682,18 @@ getCMA.CMA_per_episode <- function(x, flatten.medication.groups=FALSE, medicatio
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA_per_episode") || !("CMA" %in% names(cma)) || is.null(cma$CMA) ) return (NULL);
-  return (cma$CMA);
+  if( inherits(cma$CMA, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$CMA);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$CMA);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$CMA), function(i) if(!is.null(cma$CMA[[i]])){rep(names(cma$CMA)[i], nrow(cma$CMA[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
 }
 
 #' @export
@@ -7653,7 +7701,18 @@ getEventInfo.CMA_per_episode <- function(x, flatten.medication.groups=FALSE, med
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA_per_episode") || !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (NULL);
-  return (cma$event.info);
+  if( inherits(cma$event.info, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$event.info);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$event.info);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$event.info), function(i) if(!is.null(cma$event.info[[i]])){rep(names(cma$event.info)[i], nrow(cma$event.info[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
 }
 
 #' @export

@@ -2083,7 +2083,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   # Depending on the cma's exact type, the relevant columns might be different or even absent: homogenize them for later use
   if( inherits(cma, "CMA_per_episode") )
   {
-    names(cmas)[2:ncol(cmas)] <- c("WND.ID", "start", "gap.days", "duration", "end", "CMA"); # avoid possible conflict with patients being called "ID"
+    names(cmas)[2:7] <- c("WND.ID", "start", "gap.days", "duration", "end", "CMA"); # avoid possible conflict with patients being called "ID"
 
     # Remove the participants without CMA estimates:
     patids.no.events.to.plot <- setdiff(unique(cma$data[,col.patid]), unique(cmas[,col.patid]));
