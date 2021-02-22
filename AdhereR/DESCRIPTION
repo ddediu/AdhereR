@@ -42,6 +42,6 @@ Depends: R (>= 3.0)
 Suggests: rmarkdown (>= 1.1),
     knitr (>= 1.20),
     R.rsp (>= 0.40),
-    AdhereRViz (>= 0.1)
+    AdhereRViz (>= 0.2)
 VignetteBuilder: knitr, R.rsp
 Encoding: UTF-8
