@@ -348,7 +348,7 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 #' \emph{B} which selects all events already defined by "A" but with a daily
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
-#' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 #' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
 #' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
@@ -916,6 +916,8 @@ print.CMA0 <- function(x,                                                  # the
 #' unspecified (generic) medication category.
 #' @param medication.groups.to.plot the names of the medication groups to plot or
 #' \code{NULL} (the default) for all.
+#' @param medication.groups.allother.label a \emph{string} giving the label to
+#' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param plot.events.vertically.displaced Should consecutive events be plotted
@@ -1019,6 +1021,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
                       medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                      medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                       print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
@@ -1064,6 +1067,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
              medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.allother.label=medication.groups.allother.label,
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=FALSE, # not for CMA0
@@ -2983,7 +2987,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     if( sum(mg.to.eval) == 0 )
     {
       # None selects not even one observation!
-      .report.ewms(paste0("None of the medication classes (included __ALL_OTHER__) selects any observation!\n"), "warning", cma.class.name, "AdhereR");
+      .report.ewms(paste0("None of the medication classes (included __ALL_OTHERS__) selects any observation!\n"), "warning", cma.class.name, "AdhereR");
       return (NULL);
     }
     mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
@@ -3188,6 +3192,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            col.cats=rainbow,                      # single color or a function mapping the categories to colors
                            unspecified.category.label="drug",     # the label of the unspecified category of medication
                            medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                           medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                            lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                            show.event.intervals=TRUE,             # show the actual prescription intervals
                            plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
@@ -3239,6 +3244,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
              medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.allother.label=medication.groups.allother.label,
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=show.event.intervals,
@@ -3326,7 +3332,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' \emph{B} which selects all events already defined by "A" but with a daily
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
-#' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 #' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
 #' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
@@ -3780,6 +3786,8 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' unspecified (generic) medication category.
 #' @param medication.groups.to.plot the names of the medication groups to plot or
 #' \code{NULL} (the default) for all.
+#' @param medication.groups.allother.label a \emph{string} giving the label to
+#' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param show.event.intervals \emph{Logical}, should the actual event intervals
@@ -3876,6 +3884,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
                       medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                      medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       show.event.intervals=TRUE,             # show the actual rpescription intervals
                       col.na="lightgray",                    # color for mising data
@@ -3921,6 +3930,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  col.cats=col.cats,
                  unspecified.category.label=unspecified.category.label,
                  medication.groups.to.plot=medication.groups.to.plot,
+                 medication.groups.allother.label=medication.groups.allother.label,
                  lty.event=lty.event,
                  lwd.event=lwd.event,
                  pch.start.event=pch.start.event,
@@ -4006,7 +4016,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' \emph{B} which selects all events already defined by "A" but with a daily
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
-#' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 #' containing all observations \emph{not} covred by any of the explicitly defined
 #' groups.
 #' @param followup.window.start If a \emph{\code{Date}} object, it represents
@@ -4655,7 +4665,7 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' \emph{B} which selects all events already defined by "A" but with a daily
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
-#' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 #' containing all observations \emph{not} covred by any of the explicitly defined
 #' groups.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
@@ -5079,7 +5089,7 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' \emph{B} which selects all events already defined by "A" but with a daily
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
-#' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 #' containing all observations \emph{not} covred by any of the explicitly defined
 #' groups.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
@@ -5507,7 +5517,7 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' \emph{B} which selects all events already defined by "A" but with a daily
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
-#' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 #' containing all observations \emph{not} covred by any of the explicitly defined
 #' groups.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
@@ -5989,7 +5999,7 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' \emph{B} which selects all events already defined by "A" but with a daily
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
-#' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 #' containing all observations \emph{not} covred by any of the explicitly defined
 #' groups.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
@@ -6481,7 +6491,7 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' \emph{B} which selects all events already defined by "A" but with a daily
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
-#' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 #' containing all observations \emph{not} covred by any of the explicitly defined
 #' groups.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
@@ -6969,7 +6979,7 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' \emph{B} which selects all events already defined by "A" but with a daily
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
-#' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 #' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
 #' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
@@ -7551,7 +7561,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     if( sum(mg.to.eval) == 0 )
     {
       # None selects not even one observation!
-      .report.ewms(paste0("None of the medication classes (included __ALL_OTHER__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
+      .report.ewms(paste0("None of the medication classes (included __ALL_OTHERS__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
       return (NULL);
     }
     mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
@@ -7935,6 +7945,8 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' unspecified (generic) medication category.
 #' @param medication.groups.to.plot the names of the medication groups to plot or
 #' \code{NULL} (the default) for all.
+#' @param medication.groups.allother.label a \emph{string} giving the label to
+#' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param plot.events.vertically.displaced Should consecutive events be plotted
@@ -8079,6 +8091,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                  unspecified.category.label="drug",     # the label of the unspecified category of medication
                                  medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                                 medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                                  plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                                  print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
@@ -8141,6 +8154,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
              medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.allother.label=medication.groups.allother.label,
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=FALSE, # per-episode and sliding windows might have overlapping intervals, so better not to show them at all
@@ -8244,7 +8258,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' \emph{B} which selects all events already defined by "A" but with a daily
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
-#' moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 #' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
 #' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
@@ -8815,7 +8829,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
     if( sum(mg.to.eval) == 0 )
     {
       # None selects not even one observation!
-      .report.ewms(paste0("None of the medication classes (included __ALL_OTHER__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
+      .report.ewms(paste0("None of the medication classes (included __ALL_OTHERS__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
       return (NULL);
     }
     mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones

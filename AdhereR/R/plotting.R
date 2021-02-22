@@ -987,6 +987,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        unspecified.category.label="drug",     # the label of the unspecified category of medication
                        medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
                        medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
+                       medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                        lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                        show.event.intervals=TRUE,             # show the actual prescription intervals
                        plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
@@ -1861,7 +1862,6 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
   }
 
-
   # Is the cma a time series or per episodes?
   is.cma.TS.or.SW <- (inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window"));
   # Does the cma contains estimated CMAs?
@@ -1887,6 +1887,15 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     col.plotid <- paste0("__",col.patid, ":", col.mg,"__"); # when there are medication groups, the plotting ID is patient ID concatenated with the medication group
   }
   cma.data <- cma$data; # the original data
+
+  # Given a patient ID and medication group name, form the display label:
+  if( cma.mg )
+  {
+    .mg.label <- function(patients, medication.groups)
+    {
+      paste0(patients," [",ifelse(medication.groups=="__ALL_OTHERS__", medication.groups.allother.label, medication.groups),"]");
+    }
+  }
 
   #
   # If CMA8, cache the real observation windows if it is to be plotted ####
@@ -1938,8 +1947,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
 
     # Add the new column containing the patient ID and the medication group for plotting:
-    cma$data <- cbind(cma$data, paste0(cma$data[,col.patid]," [",cma$data[,col.mg],"]")); names(cma$data)[ncol(cma$data)] <- col.plotid;
-    patmgids <- cbind(patmgids, paste0(patmgids[,col.patid]," [",patmgids[,col.mg],"]")); names(patmgids)[ncol(patmgids)] <- col.plotid;
+    cma$data <- cbind(cma$data, .mg.label(cma$data[,col.patid], cma$data[,col.mg])); names(cma$data)[ncol(cma$data)] <- col.plotid;
+    patmgids <- cbind(patmgids, .mg.label(patmgids[,col.patid], patmgids[,col.mg])); names(patmgids)[ncol(patmgids)] <- col.plotid;
 
     # The data should be already fine: focus on the CMA estimates:
     if( !is.null(cma$CMA) )
@@ -1980,7 +1989,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       }
 
       # Add the new column containing the patient ID and the medication group for plotting:
-      cma.realOW <- cbind(cma.realOW, paste0(cma.realOW[,col.patid]," [",cma.realOW[,col.mg],"]")); names(cma.realOW)[ncol(cma.realOW)] <- col.plotid;
+      cma.realOW <- cbind(cma.realOW, .mg.label(cma.realOW[,col.patid], cma.realOW[,col.mg])); names(cma.realOW)[ncol(cma.realOW)] <- col.plotid;
 
     }
   }
@@ -2056,7 +2065,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     # Add the new column containing the patient ID and the medication group for plotting:
     if( !is.null(cmas) )
     {
-      cmas <- cbind(cmas, paste0(cmas[,col.patid]," [",cmas[,col.mg],"]")); names(cmas)[ncol(cmas)] <- col.plotid;
+      cmas <- cbind(cmas, .mg.label(cmas[,col.patid], cmas[,col.mg])); names(cmas)[ncol(cmas)] <- col.plotid;
     }
   }
 
@@ -2384,7 +2393,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       }
 
       # Add the new column containing the patient ID and the medication group for plotting:
-      cmas <- cbind(cmas, paste0(cmas[,col.patid]," [",cmas[,col.mg],"]")); names(cmas)[ncol(cmas)] <- col.plotid;
+      cmas <- cbind(cmas, .mg.label(cmas[,col.patid], cmas[,col.mg])); names(cmas)[ncol(cmas)] <- col.plotid;
     }
   }
 
