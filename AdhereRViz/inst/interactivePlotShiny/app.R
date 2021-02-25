@@ -1612,59 +1612,78 @@ ui <- fluidPage(
                        # MEDICATION GROUPS TAB ----
                        tabPanel(span("Groups", title="Define medication groups..."),
                                 value="sidebar-params-data", icon=icon("list", lib="glyphicon"), fluid=TRUE,
-                                wellPanel(id = "tPanel3", style = "overflow:scroll; max-height: 90vh; min-height: 50vh",
+                                conditionalPanel(
+                                  condition="!(output.is_dataset_defined)",
 
-                                          # Source of medication groups ----
-                                          span(title='Define medication groups...',
-                                               h4("Medication groups"), style="color:DarkBlue"),
 
-                                          div(title='Define medication groups: don\'t use any, load an already exisitng naming vector in memory, use the interactive wizard, ot give it in plain text (advanced)...',
-                                              selectInput(inputId="mg_type",
-                                                          label="Define groups from",
-                                                          choices=c("<NONE>",
-                                                                    "vector in memory",
-                                                                    "interactive wizard",
-                                                                    "plain text input"),
-                                                          selected="<NONE>")),
-
-                                          # No medication groups ----
-                                          conditionalPanel(
-                                            condition = "(input.mg_type == '<NONE>')",
-
+                                  wellPanel(id = "tPanelnomg", style = "overflow:scroll; max-height: 90vh;",
+                                            div(h4("No datasource!"), style="color:DarkRed"),
+                                            br(),
+                                            div(span(span("There is no valid source of data defined (probably because the interactive Shiny plotting was invoked without passing a dataset).")), style="color: red;"),
                                             hr(),
+                                            div(span("Please use the "),
+                                                span(icon("hdd",lib="glyphicon"),strong("Data"), style="color: darkblue"),
+                                                span(" tab to select a valid datesource!"))
+                                  )
+                                ),
+
+                                conditionalPanel(
+                                  condition="(output.is_dataset_defined)",
+
+                                  wellPanel(id = "tPanel3", style = "overflow:scroll; max-height: 90vh; min-height: 50vh",
+
+                                            # Source of medication groups ----
+                                            span(title='Define medication groups...',
+                                                 h4("Medication groups"), style="color:DarkBlue"),
+
+                                            div(title='Define medication groups: don\'t use any, load an already exisitng naming vector in memory, use the interactive wizard, ot give it in plain text (advanced)...',
+                                                selectInput(inputId="mg_type",
+                                                            label="Define groups from",
+                                                            choices=c("<NONE>",
+                                                                      "vector in memory",
+                                                                      "interactive wizard",
+                                                                      "plain text input"),
+                                                            selected="<NONE>")),
+
+                                            # No medication groups ----
+                                            conditionalPanel(
+                                              condition = "(input.mg_type == '<NONE>')",
+
+                                              hr(),
+
+                                              # Allow last comma:
+                                              NULL
+
+                                            ),
+
+                                            # Use in-memory vector ----
+                                            conditionalPanel(
+                                              condition = "(input.mg_type == 'vector in memory')",
+
+                                              div(title='Select a vector defining the medication groups from memory',
+                                                  selectInput(inputId="mg_from_memory",
+                                                              label="In-memory vector",
+                                                              choices=c("[none]"),
+                                                              selected="[none]")),
+                                              div(title="Click here to check the selected vector...",
+                                                  actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon"))),
+
+                                              hr(),
+
+                                              div(title='Validate and use the medication groups!',
+                                                  actionButton(inputId="mg_from_memory_button_use",
+                                                               label=strong("Validate & use!"),
+                                                               icon=icon("sunglasses", lib="glyphicon"),
+                                                               style="color:DarkBlue; border-color:DarkBlue;"),
+                                                  style="float: center;"),
+
+                                              # Allow last comma:
+                                              NULL
+                                            ),
 
                                             # Allow last comma:
                                             NULL
-
-                                          ),
-
-                                          # Use in-memory vector ----
-                                          conditionalPanel(
-                                            condition = "(input.mg_type == 'vector in memory')",
-
-                                            div(title='Select a vector defining the medication groups from memory',
-                                                selectInput(inputId="mg_from_memory",
-                                                            label="In-memory vector",
-                                                            choices=c("[none]"),
-                                                            selected="[none]")),
-                                            div(title="Click here to check the selected vector...",
-                                                actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon"))),
-
-                                            hr(),
-
-                                            div(title='Validate and use the medication groups!',
-                                                actionButton(inputId="mg_from_memory_button_use",
-                                                             label=strong("Validate & use!"),
-                                                             icon=icon("sunglasses", lib="glyphicon"),
-                                                             style="color:DarkBlue; border-color:DarkBlue;"),
-                                                style="float: center;"),
-
-                                            # Allow last comma:
-                                            NULL
-                                          ),
-
-                                          # Allow last comma:
-                                          NULL
+                                  )
                                 )
                        )
 
