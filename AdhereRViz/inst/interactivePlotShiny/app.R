@@ -107,7 +107,8 @@ ui <- fluidPage(
            # PARAMS TAB ----
            shinyjs::hidden(div(id="sidebar_tabpanel_container", # start with these hidden...
              tabsetPanel(id="sidebar-tabpanel",
-                       tabPanel("Params", value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
+                       tabPanel(span("Params", title="See the plot and adjust various parameters (type of CMA, patients, etc.)"),
+                                value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
                                 conditionalPanel(
                                   condition="!(output.is_dataset_defined)",
 
@@ -1249,7 +1250,8 @@ ui <- fluidPage(
                        ),
 
                        # DATA TAB ----
-                       tabPanel("Data", value="sidebar-params-data", icon=icon("hdd", lib="glyphicon"), fluid=TRUE,
+                       tabPanel(span("Data", title="Select the data source (in-memory data frame, file, SQL database)..."),
+                                value="sidebar-params-data", icon=icon("hdd", lib="glyphicon"), fluid=TRUE,
                                 wellPanel(id = "tPanel2", style = "overflow:scroll; max-height: 90vh; min-height: 50vh",
 
                                           # Datasource ----
@@ -1608,7 +1610,8 @@ ui <- fluidPage(
                        ),
 
                        # MEDICATION GROUPS TAB ----
-                       tabPanel("Groups", value="sidebar-params-data", icon=icon("list", lib="glyphicon"), fluid=TRUE,
+                       tabPanel(span("Groups", title="Define medication groups..."),
+                                value="sidebar-params-data", icon=icon("list", lib="glyphicon"), fluid=TRUE,
                                 wellPanel(id = "tPanel3", style = "overflow:scroll; max-height: 90vh; min-height: 50vh",
 
                                           # Source of medication groups ----
