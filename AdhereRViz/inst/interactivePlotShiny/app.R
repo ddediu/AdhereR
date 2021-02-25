@@ -4237,8 +4237,8 @@ server <- function(input, output, session)
 
                        # If defined, add the medication groups sent to the Shiny plotting function:
                        if( !is.null(.GlobalEnv$.plotting.params) &&
-                           !is.null(.GlobalEnv$.plotting.params$mg) &&
-                           (is.character(.GlobalEnv$.plotting.params$mg) || is.factor(.GlobalEnv$.plotting.params$mg)))
+                           !is.null(.GlobalEnv$.plotting.params$medication.groups) &&
+                           (is.character(.GlobalEnv$.plotting.params$medication.groups) || is.factor(.GlobalEnv$.plotting.params$medication.groups)))
                        {
                          if( .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments )
                          {
@@ -4264,7 +4264,7 @@ server <- function(input, output, session)
                  } else if( input$mg_from_memory == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
                  {
                    # The special value pointing to the argument to plot_interactive_cma():
-                   .GlobalEnv$.plotting.params$.inmemory.mg <- .GlobalEnv$.plotting.params$mg;
+                   .GlobalEnv$.plotting.params$.inmemory.mg <- .GlobalEnv$.plotting.params$medication.groups;
                  } else
                  {
                    # Try to find it memory:
@@ -4568,7 +4568,7 @@ server <- function(input, output, session)
 
     ### Now, really load the data! ###
     # Place the data in the .GlobalEnv$.plotting.params list:
-    .GlobalEnv$.plotting.params$mg <- mg;
+    .GlobalEnv$.plotting.params$medication.groups <- mg;
 
     # Force UI updating...
     .force.update.UI();

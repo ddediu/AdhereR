@@ -100,6 +100,8 @@ globalVariables(c("patientID", "selectedCMA", "carry.only.for.same.medication", 
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the classes/types/groups of medication, or \code{NA}
 #' if not defined.
+#' @param medication.groups A \emph{named character vector} defining the
+#' medication classes or \code{NULL} if none (the default).
 #' @param date.format A \emph{string} giving the format of the dates used in the
 #' \code{data} and the other parameters; see the \code{format} parameters of the
 #' \code{\link[base]{as.Date}} function for details (NB, this concerns only the
@@ -160,6 +162,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
+                                  medication.groups=NULL, # definition of medication groups (NULL = undefined)
                                   # Date format:
                                   date.format="%m/%d/%Y", # the format of the dates used in this function (NA = undefined)
                                   # Parameter ranges:
@@ -668,6 +671,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 event.duration.colname=NA, # the event duration in days (NA = undefined)
                                 event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                                 medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
+                                medication.groups=NULL, # definition of medication groups (NULL = undefined)
                                 # Date format:
                                 date.format=NA, # the format of the dates used in this function (NA = undefined)
                                 ID=NULL, # the ID of the patient to plot
@@ -818,7 +822,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     recompute.CMA <- TRUE;
   } else if( # if not defined at all:
              is.null(pp <- .GlobalEnv$.plotting.params$.recompute.CMA.old.params) || # (and cache .GlobalEnv$.plotting.params$.recompute.CMA.old.params as "pp" for later use)
-             # otherwise chaeck if anything meaningful has changed:
+             # otherwise check if anything meaningful has changed:
              # check if the data or any of its important attributed have changed:
              (!identical(pp$data, data) ||
               !identical(pp$ID.colname, ID.colname) ||
@@ -832,6 +836,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
               !identical(pp$get.data.for.patients.fnc, get.data.for.patients.fnc)) ||
              # check if the patients have changed:
              (!identical(pp$ID, ID)) ||
+             # check if the medication groups have changed:
+             (!identical(pp$medication.groups, medication.groups)) ||
              # check if CMA or any of their relevant parameters have changed:
              (!identical(pp$cma, cma) ||
               (cma == "per episode" && # per episode specifically
@@ -875,6 +881,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
         "event.duration.colname"=event.duration.colname,
         "event.daily.dose.colname"=event.daily.dose.colname,
         "medication.class.colname"=medication.class.colname,
+        "medication.groups"=medication.groups,
         # Date format:
         "date.format"=date.format,
         # The IDs and CMAs:
@@ -958,6 +965,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                                   event.duration.colname=event.duration.colname,
                                                   event.daily.dose.colname=event.daily.dose.colname,
                                                   medication.class.colname=medication.class.colname,
+                                                  medication.groups=medication.groups,
                                                   date.format=date.format,
                                                   carryover.within.obs.window=carryover.within.obs.window,
                                                   carryover.into.obs.window=carryover.into.obs.window,
@@ -1083,6 +1091,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                         event.duration.colname=NA, # the event duration in days (NA = undefined)
                                         event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                                         medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
+                                        medication.groups=NULL, # definition of medication groups (NULL = undefined)
                                         # Date format:
                                         date.format=NA, # the format of the dates used in this function (NA = undefined)
                                         align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
@@ -1180,6 +1189,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       "event.duration.colname"=event.duration.colname,
                                       "event.daily.dose.colname"=event.daily.dose.colname,
                                       "medication.class.colname"=medication.class.colname,
+                                      "medication.groups"=medication.groups,
                                       "date.format"=date.format,
                                       "align.all.patients"=align.all.patients,
                                       "align.first.event.at.zero"=align.first.event.at.zero,
@@ -1207,7 +1217,11 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       ".fromfile.dataset.sheet"=NULL,
                                       ".db.connection.tables"=NULL,
                                       ".db.connection.selected.table"=NULL,
-                                      ".db.connection"=NULL
+                                      ".db.connection"=NULL,
+                                      ".mg.type"=if(is.null(medication.groups)) NA else c("in memory")[1],
+                                      ".mg.comes.from.function.arguments"=!is.null(medication.groups),
+                                      ".mg.name"=NA,
+                                      ".inmemory.mg"=NULL
                                      );
 
   # Make sure they are deleted on exit from shiny:
