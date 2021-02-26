@@ -178,6 +178,42 @@ ui <- fluidPage(
                                                 hr()
                                             ),
 
+                                            # Medication groups to plot ----
+                                            conditionalPanel(
+                                              condition="(output.is_mg_defined)",
+
+                                              div(id='mg_section', style="cursor: pointer;",
+                                                  div(title='Chose which medication groups to plot', h4(id="medication_groups", "Medication groups"), style="color:DarkBlue;"),
+                                                  div(title='Click to unfold...', id="mg_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                              shinyjs::hidden(div(id="mg_contents",
+                                                                  # List the medication groups to show:
+                                                                  div(title='Please select all the medication groups that should be plotted!',
+                                                                      shinyWidgets::pickerInput(inputId="mg_to_plot_list",
+                                                                                                label="...to plot:",
+                                                                                                choices=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"),
+                                                                                                options=list(`actions-box`=TRUE,
+                                                                                                             `select-all-text`  ="<b>ALL</b>",
+                                                                                                             `deselect-all-text`="<b>NONE</b>"),
+                                                                                                multiple = TRUE,
+                                                                                                selected=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"))),
+
+                                                                  conditionalPanel(
+                                                                    condition="(input.mg_to_plot_list.length > 0)",
+
+                                                                    div(title='Apply the selected medication groups!',
+                                                                      actionButton(inputId="mg_plot_apply_button",
+                                                                                   label=strong("Show them!"),
+                                                                                   icon=icon("sunglasses", lib="glyphicon"),
+                                                                                   style="color:DarkBlue; border-color:DarkBlue;"),
+                                                                      style="float: center;")
+                                                                    ),
+
+                                                                  hr()
+
+                                              ))
+                                            ),
+
                                             # Follow-up window ----
                                             div(id='follow_up_section', style="cursor: pointer;",
                                                 div(title='Define the follow-up window (shortened to FUW)', h4(id="followup_window", "Follow-up window (FUW)"), style="color:DarkBlue;"),
@@ -2041,6 +2077,9 @@ server <- function(input, output, session)
   output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
   outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
+  output$is_mg_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.groups)});
+  outputOptions(output, "is_mg_defined", suspendWhenHidden = FALSE);
+
   #outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
 
   # Clean up at session end ----
@@ -2744,6 +2783,7 @@ server <- function(input, output, session)
     shinyjs::toggle(id=paste0(id,"_unfold_icon"), anim=anim, animType=animType); # the unfolding icon
     shinyjs::toggle(id=paste0(id,"_contents"),    anim=anim, animType=animType); # the section content
   }
+  shinyjs::onclick("mg_section",               function(e){.toggle.all.sections("mg");})
   shinyjs::onclick("follow_up_section",        function(e){.toggle.all.sections("follow_up");})
   shinyjs::onclick("general_settings_section", function(e){.toggle.all.sections("general_settings");})
   shinyjs::onclick("observation_section",      function(e){.toggle.all.sections("observation");})
@@ -3253,6 +3293,7 @@ server <- function(input, output, session)
 
     rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not change any UI elements)
     output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)}); # now a dataset is defined!
+    output$is_mg_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.groups)}); # and medication groups!
   }
 
 
@@ -4609,6 +4650,18 @@ server <- function(input, output, session)
                  {
                    .GlobalEnv$.plotting.params$.mg.name <- input$mg_from_memory;
                  }
+               })
+
+  # Show selected medication groups ----
+  observeEvent(input$mg_plot_apply_button,
+               {
+                 # Sanity checks:
+
+                 # Let the world know this:
+                 .GlobalEnv$.plotting.params$.dataset.mg.to.plot <- input$mg_to_plot_list;
+
+                 # Re-plot things:
+                 cat(.GlobalEnv$.plotting.params$.dataset.mg.to.plot); stop("HERE I AM!");
                })
 
 
