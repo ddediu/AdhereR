@@ -198,6 +198,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 event.duration.colname=event.duration.colname,
                                 event.daily.dose.colname=event.daily.dose.colname,
                                 medication.class.colname=medication.class.colname,
+                                medication.groups=medication.groups,
                                 date.format=date.format,
                                 followup.window.start.max=followup.window.start.max,
                                 followup.window.duration.max=followup.window.duration.max,

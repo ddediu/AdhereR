@@ -1989,6 +1989,7 @@ server <- function(input, output, session)
                                             "event.duration.colname"=NA,
                                             "event.daily.dose.colname"=NA,
                                             "medication.class.colname"=NA,
+                                            "medication.groups"=NULL,
                                             "date.format"=NA,
                                             "align.all.patients"=FALSE,
                                             "align.first.event.at.zero"=FALSE,
@@ -2071,7 +2072,7 @@ server <- function(input, output, session)
                      " patients can be shown in an interactive plot: we kept only the first ",.GlobalEnv$.plotting.params$max.number.patients.to.plot,
                      " from those you selected!\n"));
     }
-    ## This check can be too constly during plotting (especially for database connections), so we don't do it for now assuming there's not too many events per patient anyway:
+    ## This check can be too costly during plotting (especially for database connections), so we don't do it for now assuming there's not too many events per patient anyway:
     #if( !is.null(n.events <- .GlobalEnv$.plotting.params$get.data.for.patients.fnc(patients.to.plot, .GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname)) &&
     #    nrow(n.events) > .GlobalEnv$.plotting.params$max.number.events.to.plot )
     #{
@@ -2092,6 +2093,7 @@ server <- function(input, output, session)
                                                          event.daily.dose.colname=.GlobalEnv$.plotting.params$event.daily.dose.colname,
                                                          medication.class.colname=.GlobalEnv$.plotting.params$medication.class.colname,
                                                          date.format=.GlobalEnv$.plotting.params$date.format,
+                                                         medication.groups=.GlobalEnv$.plotting.params$medication.groups,
 
                                                          ID=patients.to.plot,
                                                          cma=ifelse(input$cma_class == "simple",
@@ -4590,7 +4592,7 @@ server <- function(input, output, session)
 
                  # Checks:
                  .validate.and.load.medication.groups(.GlobalEnv$.plotting.params$.inmemory.mg,
-                                                      NULL);
+                                                      .GlobalEnv$.plotting.params$data);
 
                  # Let the world know this:
                  .GlobalEnv$.plotting.params$.mg.type <- "in memory";
