@@ -209,6 +209,13 @@ ui <- fluidPage(
                                                                       style="float: center;")
                                                                     ),
 
+                                                                  hr(),
+
+                                                                  div(title='Visually group the medication groups by patient?',
+                                                                      shinyWidgets::materialSwitch(inputId="mg_plot_by_patient",
+                                                                                                   label="Visually group by patient?",
+                                                                                                   value=TRUE, status="primary", right=TRUE)),
+
                                                                   hr()
 
                                               ))
@@ -2132,9 +2139,13 @@ server <- function(input, output, session)
                                                          event.daily.dose.colname=.GlobalEnv$.plotting.params$event.daily.dose.colname,
                                                          medication.class.colname=.GlobalEnv$.plotting.params$medication.class.colname,
                                                          date.format=.GlobalEnv$.plotting.params$date.format,
-                                                         medication.groups=.GlobalEnv$.plotting.params$medication.groups,
 
                                                          ID=patients.to.plot,
+
+                                                         medication.groups=.GlobalEnv$.plotting.params$medication.groups,
+                                                         medication.groups.separator.show=input$mg_plot_by_patient,
+                                                         medication.groups.to.plot=.GlobalEnv$.plotting.params$medication.groups.to.plot,
+
                                                          cma=ifelse(input$cma_class == "simple",
                                                                     input$cma_to_compute,
                                                                     input$cma_class),
@@ -2235,6 +2246,7 @@ server <- function(input, output, session)
                                                          title=if(input$show_plot_title) {c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns")} else {NULL},
                                                          min.plot.size.in.characters.horiz=input$min_plot_size_in_characters_horiz,
                                                          min.plot.size.in.characters.vert=input$min_plot_size_in_characters_vert,
+
                                                          get.colnames.fnc=.GlobalEnv$.plotting.params$get.colnames.fnc,
                                                          get.patients.fnc=.GlobalEnv$.plotting.params$get.patients.fnc,
                                                          get.data.for.patients.fnc=.GlobalEnv$.plotting.params$get.data.for.patients.fnc
@@ -2246,7 +2258,7 @@ server <- function(input, output, session)
   # renderPlot() ----
   output$distPlot <- renderPlot({
 
-      rv$toggle.me; # make the plot aware of forced updates to the UI (for example, when chainging the dataset)
+      rv$toggle.me; # make the plot aware of forced updates to the UI (for example, when changing the dataset)
 
       msgs <- ""; # the output messages
       res <- NULL; # the result of plotting
@@ -3292,6 +3304,7 @@ server <- function(input, output, session)
     output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
 
     rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not change any UI elements)
+
     output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)}); # now a dataset is defined!
     output$is_mg_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.groups)}); # and medication groups!
   }
@@ -4658,10 +4671,10 @@ server <- function(input, output, session)
                  # Sanity checks:
 
                  # Let the world know this:
-                 .GlobalEnv$.plotting.params$.dataset.mg.to.plot <- input$mg_to_plot_list;
+                 .GlobalEnv$.plotting.params$medication.groups.to.plot <- input$mg_to_plot_list;
 
                  # Re-plot things:
-                 cat(.GlobalEnv$.plotting.params$.dataset.mg.to.plot); stop("HERE I AM!");
+                 rv$toggle.me <- !rv$toggle.me; # make the plotting aware of the changes
                })
 
 

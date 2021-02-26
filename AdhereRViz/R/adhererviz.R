@@ -191,6 +191,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   {
     .plot_interactive_cma_shiny(data=data,
                                 ID=ID,
+                                medication.groups.to.plot=NULL, # plot all medication groups, by default
                                 cma.class=cma.class,
                                 print.full.params=print.full.params,
                                 ID.colname=ID.colname,
@@ -676,6 +677,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 # Date format:
                                 date.format=NA, # the format of the dates used in this function (NA = undefined)
                                 ID=NULL, # the ID of the patient to plot
+                                medication.groups.to.plot=NULL, # medication groups to plot
+                                medication.groups.separator.show=TRUE, # visuallt group medication groups within patient?
                                 cma="none", # the CMA to use for plotting
                                 cma.to.apply="none", # cma to compute per episode or sliding window
                                 # Various types medhods of computing gaps:
@@ -927,7 +930,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
   # Preconditions (and data extraction):
   if( is.null(ID) ||
       is.null(data <- get.data.for.patients.fnc(ID, data, ID.colname)) || # extract the data for these IDs
-      nrow(data)==0 )
+      nrow(data)==0 ||
+      (!is.null(medication.groups.to.plot) && length(medication.groups.to.plot) < 1) )
   {
     if( compute.cma.only )
     {
@@ -1035,6 +1039,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
     {
       # Plot the results:
       plot(results,
+           medication.groups.to.plot=medication.groups.to.plot, medication.groups.separator.show=medication.groups.separator.show,
            show.legend=show.legend, legend.x=legend.x, legend.y=legend.y, legend.bkg.opacity=legend.bkg.opacity, legend.cex=legend.cex, legend.cex.title=legend.cex.title,
            duration=duration,
            bw.plot=bw.plot,
@@ -1084,6 +1089,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
 # The shiny plotting itself:
 .plot_interactive_cma_shiny <- function(data=NULL, # the data used to compute the CMA on
                                         ID=NULL, # the ID of the patient to be plotted (automatically taken to be the first)
+                                        medication.groups.to.plot=NULL, # which medication groups to plot
                                         cma.class=c("simple","per episode","sliding window")[1], # the CMA class to plot
                                         print.full.params=FALSE, # should the parameter values for the currently plotted plot be printed?
                                         # Important columns in the data
@@ -1195,6 +1201,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                       "align.all.patients"=align.all.patients,
                                       "align.first.event.at.zero"=align.first.event.at.zero,
                                       "ID"=ID, "all.IDs"=all.IDs,
+                                      "medication.groups.to.plot"=medication.groups.to.plot,
                                       "max.number.patients.to.plot"=10, "max.number.events.to.plot"=500,
                                       "max.number.patients.to.compute"=100, "max.number.events.to.compute"=5000, "max.running.time.in.minutes.to.compute"=5,
                                       ".patients.to.compute"=NULL,
