@@ -916,6 +916,12 @@ print.CMA0 <- function(x,                                                  # the
 #' unspecified (generic) medication category.
 #' @param medication.groups.to.plot the names of the medication groups to plot or
 #' \code{NULL} (the default) for all.
+#' @param medication.groups.separator.show a \emph{boolean}, if \code{TRUE} (the
+#' default) visually mark the medication groups the belong to the same patient,
+#' using horizontal lines and alternating vertical lines.
+#' @param medication.groups.separator.lty,medication.groups.separator.lwd,medication.groups.separator.color
+#' graphical parameters (line type, line width and colour describing the visual
+#' marking og medication groups as beloning to the same patient.
 #' @param medication.groups.allother.label a \emph{string} giving the label to
 #' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -1021,6 +1027,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
                       medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                      medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
                       medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
@@ -1067,6 +1074,10 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
              medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.separator.show=medication.groups.separator.show,
+             medication.groups.separator.lty=medication.groups.separator.lty,
+             medication.groups.separator.lwd=medication.groups.separator.lwd,
+             medication.groups.separator.color=medication.groups.separator.color,
              medication.groups.allother.label=medication.groups.allother.label,
              lty.event=lty.event,
              lwd.event=lwd.event,
@@ -3192,6 +3203,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            col.cats=rainbow,                      # single color or a function mapping the categories to colors
                            unspecified.category.label="drug",     # the label of the unspecified category of medication
                            medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                           medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
                            medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                            lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                            show.event.intervals=TRUE,             # show the actual prescription intervals
@@ -3244,6 +3256,11 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
              medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.separator.show=medication.groups.separator.show,
+             medication.groups.separator.lty=medication.groups.separator.lty,
+             medication.groups.separator.lwd=medication.groups.separator.lwd,
+             medication.groups.separator.color=medication.groups.separator.color,
              medication.groups.allother.label=medication.groups.allother.label,
              lty.event=lty.event,
              lwd.event=lwd.event,
@@ -3786,6 +3803,12 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' unspecified (generic) medication category.
 #' @param medication.groups.to.plot the names of the medication groups to plot or
 #' \code{NULL} (the default) for all.
+#' @param medication.groups.separator.show a \emph{boolean}, if \code{TRUE} (the
+#' default) visually mark the medication groups the belong to the same patient,
+#' using horizontal lines and alternating vertical lines.
+#' @param medication.groups.separator.lty,medication.groups.separator.lwd,medication.groups.separator.color
+#' graphical parameters (line type, line width and colour describing the visual
+#' marking og medication groups as beloning to the same patient.
 #' @param medication.groups.allother.label a \emph{string} giving the label to
 #' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -3884,6 +3907,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
                       medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                      medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
                       medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       show.event.intervals=TRUE,             # show the actual rpescription intervals
@@ -3930,6 +3954,11 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  col.cats=col.cats,
                  unspecified.category.label=unspecified.category.label,
                  medication.groups.to.plot=medication.groups.to.plot,
+                 medication.groups.to.plot=medication.groups.to.plot,
+                 medication.groups.separator.show=medication.groups.separator.show,
+                 medication.groups.separator.lty=medication.groups.separator.lty,
+                 medication.groups.separator.lwd=medication.groups.separator.lwd,
+                 medication.groups.separator.color=medication.groups.separator.color,
                  medication.groups.allother.label=medication.groups.allother.label,
                  lty.event=lty.event,
                  lwd.event=lwd.event,
@@ -7945,6 +7974,12 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' unspecified (generic) medication category.
 #' @param medication.groups.to.plot the names of the medication groups to plot or
 #' \code{NULL} (the default) for all.
+#' @param medication.groups.separator.show a \emph{boolean}, if \code{TRUE} (the
+#' default) visually mark the medication groups the belong to the same patient,
+#' using horizontal lines and alternating vertical lines.
+#' @param medication.groups.separator.lty,medication.groups.separator.lwd,medication.groups.separator.color
+#' graphical parameters (line type, line width and colour describing the visual
+#' marking og medication groups as beloning to the same patient.
 #' @param medication.groups.allother.label a \emph{string} giving the label to
 #' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
@@ -8091,6 +8126,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                  unspecified.category.label="drug",     # the label of the unspecified category of medication
                                  medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                                 medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
                                  medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                                  plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
@@ -8154,6 +8190,11 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
              medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.separator.show=medication.groups.separator.show,
+             medication.groups.separator.lty=medication.groups.separator.lty,
+             medication.groups.separator.lwd=medication.groups.separator.lwd,
+             medication.groups.separator.color=medication.groups.separator.color,
              medication.groups.allother.label=medication.groups.allother.label,
              lty.event=lty.event,
              lwd.event=lwd.event,

@@ -107,6 +107,8 @@ ui <- fluidPage(
            # PARAMS TAB ----
            shinyjs::hidden(div(id="sidebar_tabpanel_container", # start with these hidden...
              tabsetPanel(id="sidebar-tabpanel",
+                         selected=ifelse(!is.null(.GlobalEnv$.plotting.params$data), "sidebar-params-tab", "sidebar-params-data"),
+
                        tabPanel(span("Params", title="See the plot and adjust various parameters (type of CMA, patients, etc.)"),
                                 value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
                                 conditionalPanel(
@@ -180,7 +182,7 @@ ui <- fluidPage(
 
                                             # Medication groups to plot ----
                                             conditionalPanel(
-                                              condition="(output.is_mg_defined)",
+                                              condition="(output.is_mg_defined && input.mg_use_medication_groups)",
 
                                               div(id='mg_section', style="cursor: pointer;",
                                                   div(title='Chose which medication groups to plot', h4(id="medication_groups", "Medication groups"), style="color:DarkBlue;"),
@@ -1679,58 +1681,48 @@ ui <- fluidPage(
                                             span(title='Define medication groups...',
                                                  h4("Medication groups"), style="color:DarkBlue"),
 
-                                            div(title='Define medication groups: don\'t use any, load an already exisitng naming vector in memory, use the interactive wizard, ot give it in plain text (advanced)...',
-                                                selectInput(inputId="mg_type",
-                                                            label="Define groups from",
-                                                            choices=c("<NONE>",
-                                                                      "vector in memory",
-                                                                      "interactive wizard",
-                                                                      "plain text input"),
-                                                            selected="<NONE>")),
+                                            div(title='Are there medication groups or not?',
+                                                shinyWidgets::materialSwitch(inputId="mg_use_medication_groups",
+                                                                             label=HTML("Use medication groups?"),
+                                                                             value=FALSE, status="primary", right=TRUE)),
 
-                                            # No medication groups ----
                                             conditionalPanel(
-                                              condition = "(input.mg_type == '<NONE>')",
+                                              condition="(input.mg_use_medication_groups)",
 
-                                              hr(),
+                                              div(title='Define medication groups from a named vector already in memory or define it anew using a simple wizard?',
+                                                  selectInput(inputId="mg_type",
+                                                              label="Define groups from",
+                                                              choices=c("already in memory",
+                                                                        "interactive wizard"),
+                                                              selected="already in memory")),
 
-                                              # Allow last comma:
-                                              NULL
+                                              # Use in-memory vector ----
+                                              conditionalPanel(
+                                                condition = "(input.mg_type == 'already in memory')",
 
-                                            ),
+                                                div(title='Select a vector defining the medication groups from memory',
+                                                    selectInput(inputId="mg_from_memory",
+                                                                label="In-memory vector",
+                                                                choices=c("[none]"),
+                                                                selected="[none]")),
+                                                div(title="Click here to check the selected vector...",
+                                                    actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon"))),
 
-                                            # Use in-memory vector ----
-                                            conditionalPanel(
-                                              condition = "(input.mg_type == 'vector in memory')",
+                                                hr(),
 
-                                              div(title='Select a vector defining the medication groups from memory',
-                                                  selectInput(inputId="mg_from_memory",
-                                                              label="In-memory vector",
-                                                              choices=c("[none]"),
-                                                              selected="[none]")),
-                                              div(title="Click here to check the selected vector...",
-                                                  actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon"))),
-
-                                              hr(),
-
-                                              div(title='Validate and use the medication groups!',
-                                                  actionButton(inputId="mg_from_memory_button_use",
-                                                               label=strong("Validate & use!"),
-                                                               icon=icon("sunglasses", lib="glyphicon"),
-                                                               style="color:DarkBlue; border-color:DarkBlue;"),
-                                                  style="float: center;"),
-
-                                              # Allow last comma:
-                                              NULL
-                                            ),
-
-                                            # Allow last comma:
-                                            NULL
+                                                div(title='Validate and use the medication groups!',
+                                                    actionButton(inputId="mg_from_memory_button_use",
+                                                                 label=strong("Validate & use!"),
+                                                                 icon=icon("sunglasses", lib="glyphicon"),
+                                                                 style="color:DarkBlue; border-color:DarkBlue;"),
+                                                    style="float: center;")
+                                              )
+                                            )
                                   )
                                 )
                        )
 
-           )))),
+             )))),
 
 
     # OUTPUT PANEL ----
@@ -2142,7 +2134,7 @@ server <- function(input, output, session)
 
                                                          ID=patients.to.plot,
 
-                                                         medication.groups=.GlobalEnv$.plotting.params$medication.groups,
+                                                         medication.groups=if( input$mg_use_medication_groups ){ .GlobalEnv$.plotting.params$medication.groups }else{ NULL },
                                                          medication.groups.separator.show=input$mg_plot_by_patient,
                                                          medication.groups.to.plot=.GlobalEnv$.plotting.params$medication.groups.to.plot,
 
@@ -4263,10 +4255,11 @@ server <- function(input, output, session)
                  any(duplicated(names(v))) ));          # and unique
   }
 
+
   # In-memory medication groups: update the list of appropriate vectors objects all the way to the base environment ----
   observeEvent(input$mg_type,
                {
-                 if( input$mg_type == "vector in memory" )
+                 if( input$mg_type == "already in memory" )
                  {
                    # List all the character or factor vectors currently in memory:
                    x <- sort(c(.recursively.list.objects.in.memory(of.class="character", min.nrow=NA, min.ncol=NA, return.dimensions=FALSE),
