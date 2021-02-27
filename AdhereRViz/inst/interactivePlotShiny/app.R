@@ -194,11 +194,13 @@ ui <- fluidPage(
                                                                       shinyWidgets::pickerInput(inputId="mg_to_plot_list",
                                                                                                 label="...to plot:",
                                                                                                 choices=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"),
+                                                                                                #choices="<none>",
                                                                                                 options=list(`actions-box`=TRUE,
                                                                                                              `select-all-text`  ="<b>ALL</b>",
                                                                                                              `deselect-all-text`="<b>NONE</b>"),
                                                                                                 multiple = TRUE,
                                                                                                 selected=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"))),
+                                                                                                #selected="<none>")),
 
                                                                   conditionalPanel(
                                                                     condition="(input.mg_to_plot_list.length > 0)",
@@ -3291,6 +3293,10 @@ server <- function(input, output, session)
 
     updateSelectInput(session, "compute_cma_patient_by_id", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$all.IDs[1]);
 
+    shinyWidgets::updatePickerInput(session, "mg_to_plot_list",
+                                    choices=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"),
+                                    selected=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"));
+
     #if( is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname) ) shinyjs::hide(id="dose_is_defined") else shinyjs::show(id="dose_is_defined");
     output$is_dose_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
     output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
@@ -4316,7 +4322,7 @@ server <- function(input, output, session)
                    .GlobalEnv$.plotting.params$.inmemory.mg <- .GlobalEnv$.plotting.params$medication.groups;
                  } else
                  {
-                   # Try to find it memory:
+                   # Try to find it in memory:
                    try(.GlobalEnv$.plotting.params$.inmemory.mg <- get(input$mg_from_memory), silent=TRUE);
                  }
 
@@ -4617,6 +4623,7 @@ server <- function(input, output, session)
 
     ### Now, really load the data! ###
     # Place the data in the .GlobalEnv$.plotting.params list:
+    browser()
     .GlobalEnv$.plotting.params$medication.groups <- mg;
 
     # Force UI updating...
