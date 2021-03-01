@@ -3287,8 +3287,8 @@ server <- function(input, output, session)
   # Force updating the Shiny UI using the new data ----
   .force.update.UI <- function()
   {
-    updateSelectInput(session, "cma_class", selected="simple");
-    updateSelectInput(session, "cma_to_compute", selected=.GlobalEnv$.plotting.params$cma.class);
+    updateSelectInput(session, "cma_class", selected=.GlobalEnv$.plotting.params$cma.class);
+    #updateSelectInput(session, "cma_to_compute", selected=.GlobalEnv$.plotting.params$cma.class);
     updateSelectInput(session, "patient", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$ID);
 
     updateSelectInput(session, "compute_cma_patient_by_id", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$all.IDs[1]);
