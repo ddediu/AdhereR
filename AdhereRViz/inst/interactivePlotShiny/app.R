@@ -189,10 +189,14 @@ ui <- fluidPage(
                                                   div(title='Click to unfold...', id="mg_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
                                               shinyjs::hidden(div(id="mg_contents",
+                                                                  # View the current medication groups definitions:
+                                                                  div(title="Click here to view the medication groups...",
+                                                                      actionButton("mg_view_button", label="View definitions!", icon=icon("eye-open", lib="glyphicon"))),
+
                                                                   # List the medication groups to show:
                                                                   div(title='Please select all the medication groups that should be plotted!',
                                                                       shinyWidgets::pickerInput(inputId="mg_to_plot_list",
-                                                                                                label="...to plot:",
+                                                                                                label="Groups to plot:",
                                                                                                 choices=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"),
                                                                                                 #choices="<none>",
                                                                                                 options=list(`actions-box`=TRUE,
@@ -1707,6 +1711,38 @@ ui <- fluidPage(
                                                                 label="In-memory vector",
                                                                 choices=c("[none]"),
                                                                 selected="[none]")),
+
+                                                span(title='View the selected medication group',
+                                                    actionButton(inputId="mg_view_group_button", label=NULL, icon=icon("eye-open", lib="glyphicon")),
+                                                    style="float: center;"),
+
+                                                span(title='Edit the selected medication group',
+                                                    actionButton(inputId="mg_edit_group_button", label=NULL, icon=icon("edit", lib="glyphicon")),
+                                                    style="float: center;"),
+
+                                                span(title='Duplicate the selected medication group',
+                                                    actionButton(inputId="mg_duplicate_group_button", label=NULL, icon=icon("duplicate", lib="glyphicon")),
+                                                    style="float: center;"),
+
+                                                span(title='Add a new selected medication group',
+                                                    actionButton(inputId="mg_add_group_button", label=NULL, icon=icon("plus-sign", lib="glyphicon")),
+                                                    style="float: center;"),
+
+                                                span(title='Delete the selected medication group',
+                                                    actionButton(inputId="mg_delete_group_button", label=NULL, icon=icon("remove-sign", lib="glyphicon"),
+                                                                 style="color:Red; border-color:Red;"),
+                                                    style="float: center;"),
+
+                                                div(style="height: 0.50em;"),
+
+                                                div(title='The list of already defined groups', strong("Defined groups:"),
+                                                    div(radioButtons(inputId="mg_list_of_groups", label=NULL,
+                                                                     choices=c("A", paste("XcolomakaLAKAXYZ",1:20)),
+                                                                     selected="A"),
+                                                        style="max-height: 10em; overflow-y: auto;")),
+
+                                                div(style="height: 0.50em;"),
+
                                                 div(title="Click here to check the selected vector...",
                                                     actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon"))),
 
@@ -1717,7 +1753,9 @@ ui <- fluidPage(
                                                                  label=strong("Validate & use!"),
                                                                  icon=icon("sunglasses", lib="glyphicon"),
                                                                  style="color:DarkBlue; border-color:DarkBlue;"),
-                                                    style="float: center;")
+                                                    style="float: center;"),
+
+                                                hr(),
                                               )
                                             )
                                   )
@@ -4446,6 +4484,27 @@ server <- function(input, output, session)
 
                  showModal(modalDialog(title="AdhereR: the selected in-memory medication group definitions ...",
                                        div(HTML(.show.medication.groups.as.HTML(.GlobalEnv$.plotting.params$.inmemory.mg)),
+                                           style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
+                                       footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+
+               })
+
+  # View the currently selected medication group definitions ----
+  observeEvent(input$mg_view_button,
+               {
+                 # Sanity checks:
+                 if( is.null(.GlobalEnv$.plotting.params$medication.groups) ||
+                     (!is.character(.GlobalEnv$.plotting.params$medication.groups) && !is.factor(.GlobalEnv$.plotting.params$medication.groups)) ||
+                     length(.GlobalEnv$.plotting.params$medication.groups) < 1 )
+                 {
+                   showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                         div(paste0("The medication group definitions seems to be of the wrong type or empty!\n"), style="color: red;"),
+                                         footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                   return (invisible(NULL));
+                 }
+
+                 showModal(modalDialog(title="AdhereR: the medication group definitions ...",
+                                       div(HTML(.show.medication.groups.as.HTML(.GlobalEnv$.plotting.params$medication.groups)),
                                            style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
                                        footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
 
