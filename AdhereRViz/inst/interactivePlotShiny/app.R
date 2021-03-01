@@ -1686,7 +1686,7 @@ ui <- fluidPage(
                                             div(title='Are there medication groups or not?',
                                                 shinyWidgets::materialSwitch(inputId="mg_use_medication_groups",
                                                                              label=HTML("Use medication groups?"),
-                                                                             value=FALSE, status="primary", right=TRUE)),
+                                                                             value=!is.null(.GlobalEnv$.plotting.params$medication.groups), status="primary", right=TRUE)),
 
                                             conditionalPanel(
                                               condition="(input.mg_use_medication_groups)",
@@ -4623,7 +4623,6 @@ server <- function(input, output, session)
 
     ### Now, really load the data! ###
     # Place the data in the .GlobalEnv$.plotting.params list:
-    browser()
     .GlobalEnv$.plotting.params$medication.groups <- mg;
 
     # Force UI updating...
