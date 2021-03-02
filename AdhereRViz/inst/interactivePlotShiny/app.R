@@ -1695,14 +1695,14 @@ ui <- fluidPage(
                                             conditionalPanel(
                                               condition="(input.mg_use_medication_groups)",
 
-                                              div(title='Define medication groups from a named vector already in memory or define it anew using a simple wizard?',
+                                              div(title='Initialise the medication groups as empty or from a named vector already in memory',
                                                   selectInput(inputId="mg_type",
-                                                              label="Define groups from",
-                                                              choices=c("already in memory",
-                                                                        "interactive wizard"),
+                                                              label="Initialise from:",
+                                                              choices=c("empty",
+                                                                        "already in memory"),
                                                               selected="already in memory")),
 
-                                              # Use in-memory vector ----
+                                              # From in-memory vector ----
                                               conditionalPanel(
                                                 condition = "(input.mg_type == 'already in memory')",
 
@@ -1710,53 +1710,54 @@ ui <- fluidPage(
                                                     selectInput(inputId="mg_from_memory",
                                                                 label="In-memory vector",
                                                                 choices=c("[none]"),
-                                                                selected="[none]")),
+                                                                selected="[none]"))
+                                                ),
 
-                                                span(title='View the selected medication group',
-                                                    actionButton(inputId="mg_view_group_button", label=NULL, icon=icon("eye-open", lib="glyphicon")),
-                                                    style="float: center;"),
+                                              # Edit/change/view/apply the medication groups ----
+                                              span(title='View the selected medication group',
+                                                   actionButton(inputId="mg_view_group_button", label=NULL, icon=icon("eye-open", lib="glyphicon")),
+                                                   style="float: center;"),
 
-                                                span(title='Edit the selected medication group',
-                                                    actionButton(inputId="mg_edit_group_button", label=NULL, icon=icon("edit", lib="glyphicon")),
-                                                    style="float: center;"),
+                                              span(title='Edit the selected medication group',
+                                                   actionButton(inputId="mg_edit_group_button", label=NULL, icon=icon("edit", lib="glyphicon")),
+                                                   style="float: center;"),
 
-                                                span(title='Duplicate the selected medication group',
-                                                    actionButton(inputId="mg_duplicate_group_button", label=NULL, icon=icon("duplicate", lib="glyphicon")),
-                                                    style="float: center;"),
+                                              span(title='Duplicate the selected medication group',
+                                                   actionButton(inputId="mg_duplicate_group_button", label=NULL, icon=icon("duplicate", lib="glyphicon")),
+                                                   style="float: center;"),
 
-                                                span(title='Add a new selected medication group',
-                                                    actionButton(inputId="mg_add_group_button", label=NULL, icon=icon("plus-sign", lib="glyphicon")),
-                                                    style="float: center;"),
+                                              span(title='Add a new selected medication group',
+                                                   actionButton(inputId="mg_add_group_button", label=NULL, icon=icon("plus-sign", lib="glyphicon")),
+                                                   style="float: center;"),
 
-                                                span(title='Delete the selected medication group',
-                                                    actionButton(inputId="mg_delete_group_button", label=NULL, icon=icon("remove-sign", lib="glyphicon"),
-                                                                 style="color:Red; border-color:Red;"),
-                                                    style="float: center;"),
+                                              span(title='Delete the selected medication group',
+                                                   actionButton(inputId="mg_delete_group_button", label=NULL, icon=icon("remove-sign", lib="glyphicon"),
+                                                                style="color:Red; border-color:Red;"),
+                                                   style="float: center;"),
 
-                                                div(style="height: 0.50em;"),
+                                              div(style="height: 0.50em;"),
 
-                                                div(title='The list of already defined groups', strong("Defined groups:"),
-                                                    div(radioButtons(inputId="mg_list_of_groups", label=NULL,
-                                                                     choices=c("A", paste("XcolomakaLAKAXYZ",1:20)),
-                                                                     selected="A"),
-                                                        style="max-height: 10em; overflow-y: auto;")),
+                                              div(title='The list of already defined groups', strong("Defined groups:"),
+                                                  div(radioButtons(inputId="mg_list_of_groups", label=NULL,
+                                                                   choices=if(is.null(names(.GlobalEnv$.plotting.params$.inmemory.mg))) {"<EMPTY>"} else {names(.GlobalEnv$.plotting.params$.inmemory.mg)},
+                                                                   selected=NULL),
+                                                      style="max-height: 10em; overflow-y: auto;")),
 
-                                                div(style="height: 0.50em;"),
+                                              div(style="height: 0.50em;"),
 
-                                                div(title="Click here to check the selected vector...",
-                                                    actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon"))),
+                                              div(title="Click here to check the selected vector...",
+                                                  actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon"))),
 
-                                                hr(),
+                                              hr(),
 
-                                                div(title='Validate and use the medication groups!',
-                                                    actionButton(inputId="mg_from_memory_button_use",
-                                                                 label=strong("Validate & use!"),
-                                                                 icon=icon("sunglasses", lib="glyphicon"),
-                                                                 style="color:DarkBlue; border-color:DarkBlue;"),
-                                                    style="float: center;"),
+                                              div(title='Validate and use the medication groups!',
+                                                  actionButton(inputId="mg_from_memory_button_use",
+                                                               label=strong("Validate & use!"),
+                                                               icon=icon("sunglasses", lib="glyphicon"),
+                                                               style="color:DarkBlue; border-color:DarkBlue;"),
+                                                  style="float: center;"),
 
-                                                hr(),
-                                              )
+                                              hr()
                                             )
                                   )
                                 )
@@ -4342,6 +4343,9 @@ server <- function(input, output, session)
                        updateSelectInput(session, "mg_from_memory", choices=x, selected=x[1]);
                      }
                    }
+                 } else if( input$mg_type == "empty" )
+                 {
+                   .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
                  }
                })
 
