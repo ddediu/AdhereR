@@ -1695,51 +1695,12 @@ ui <- fluidPage(
                                             conditionalPanel(
                                               condition="(input.mg_use_medication_groups)",
 
-                                              div(title='Initialise the medication groups as empty or from a named vector already in memory',
-                                                  selectInput(inputId="mg_initialise_from",
-                                                              label="Initialise from:",
-                                                              choices=c("empty",
-                                                                        "already in memory"),
-                                                              selected="already in memory")),
-
-                                              # From in-memory vector ----
-                                              conditionalPanel(
-                                                condition = "(input.mg_initialise_from == 'already in memory')",
-
-                                                div(title='Select a vector defining the medication groups from memory',
-                                                    selectInput(inputId="mg_from_memory",
-                                                                label="In-memory vector",
-                                                                choices=c("[none]"),
-                                                                selected="[none]"))
-                                            ),
-
-                                              # Edit/change/view/apply the medication groups ----
-                                              span(title='View the selected medication group',
-                                                   actionButton(inputId="mg_view_group_button", label=NULL, icon=icon("eye-open", lib="glyphicon")),
-                                                   style="float: center;"),
-
-                                              span(title='Edit the selected medication group',
-                                                   actionButton(inputId="mg_edit_group_button", label=NULL, icon=icon("edit", lib="glyphicon")),
-                                                   style="float: center;"),
-
-                                              span(title='Duplicate the selected medication group',
-                                                   actionButton(inputId="mg_duplicate_group_button", label=NULL, icon=icon("duplicate", lib="glyphicon")),
-                                                   style="float: center;"),
-
-                                              span(title='Add a new selected medication group',
-                                                   actionButton(inputId="mg_add_group_button", label=NULL, icon=icon("plus-sign", lib="glyphicon")),
-                                                   style="float: center;"),
-
-                                              span(title='Delete the selected medication group',
-                                                   actionButton(inputId="mg_delete_group_button", label=NULL, icon=icon("remove-sign", lib="glyphicon"),
-                                                                style="color:Red; border-color:Red;"),
-                                                   style="float: center;"),
-
-                                              div(style="height: 0.50em;"),
-
-                                              div(title='The list of already defined groups', strong("Defined groups:"),
-                                                  div(radioButtons(inputId="mg_list_of_groups", label=NULL, choices="", selected=NULL),
-                                                      style="height: 10em; overflow-y: auto; resize: vertical;")),
+                                              div(title='Load the medication groups from a named vector in memory',
+                                                  # From in-memory vector ----
+                                                  selectInput(inputId="mg_from_memory",
+                                                              label="Load named vector",
+                                                              choices=c("[none]"),
+                                                              selected="[none]")),
 
                                               div(style="height: 0.50em;"),
 
@@ -1750,7 +1711,7 @@ ui <- fluidPage(
 
                                               div(title='Validate and use the medication groups!',
                                                   actionButton(inputId="mg_from_memory_button_use",
-                                                               label=strong("Validate & use!"),
+                                                               label=strong("Use it!"),
                                                                icon=icon("sunglasses", lib="glyphicon"),
                                                                style="color:DarkBlue; border-color:DarkBlue;"),
                                                   style="float: center;"),
@@ -4299,61 +4260,48 @@ server <- function(input, output, session)
   }
 
 
-  # In-memory medication groups: update the list of appropriate vectors objects all the way to the base environment ----
-  observeEvent(input$mg_initialise_from,
-               {
-                 if( input$mg_initialise_from == "already in memory" )
-                 {
-                   # List all the character or factor vectors currently in memory:
-                   x <- sort(c(.recursively.list.objects.in.memory(of.class="character", min.nrow=NA, min.ncol=NA, return.dimensions=FALSE),
-                               .recursively.list.objects.in.memory(of.class="factor", min.nrow=NA, min.ncol=NA, return.dimensions=FALSE)));
+  # In-memory medication groups: get the list of appropriate vectors objects all the way to the base environment ----
+  .list.mg.from.memory <- function()
+  {
+    # List all the character or factor vectors currently in memory:
+    x <- sort(c(.recursively.list.objects.in.memory(of.class="character", min.nrow=NA, min.ncol=NA, return.dimensions=FALSE),
+                .recursively.list.objects.in.memory(of.class="factor", min.nrow=NA, min.ncol=NA, return.dimensions=FALSE)));
 
-                   if( is.null(x) || length(x) == 0 )
-                   {
-                     showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                           div("There are no fitting medication group definitions in memory!", style="color: red;"),
-                                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-                   } else
-                   {
-                     # Check that they meet the basic requirements for medication group definitions:
-                     s <- vapply(x, function(v) .check.basic.mg.definition(get(v)), logical(1));
-                     if( !any(s) )
-                     {
-                       showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                             div("There are no fitting medication group definitions in memory!", style="color: red;"),
-                                             footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-                     } else
-                     {
-                       # Keep only these:
-                       x <- x[s];
+    if( is.null(x) || length(x) == 0 )
+    {
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("There are no fitting medication group definitions in memory!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+    } else
+    {
+      # Check that they meet the basic requirements for medication group definitions:
+      s <- vapply(x, function(v) .check.basic.mg.definition(get(v)), logical(1));
+      if( !any(s) )
+      {
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There are no fitting medication group definitions in memory!", style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      } else
+      {
+        # Keep only these:
+        x <- x[s];
 
-                       # If defined, add the medication groups sent to the Shiny plotting function:
-                       if( !is.null(.GlobalEnv$.plotting.params) &&
-                           !is.null(.GlobalEnv$.plotting.params$medication.groups) &&
-                           (is.character(.GlobalEnv$.plotting.params$medication.groups) || is.factor(.GlobalEnv$.plotting.params$medication.groups)))
-                       {
-                         if( .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments )
-                         {
-                           # Add the function argument as well:
-                           x <- c("<<'medication.groups' argument to plot_interactive_cma() call>>", x);
-                         }
-                       }
-                       updateSelectInput(session, "mg_from_memory", choices=x, selected=x[1]);
-                       .update.mg.inmemory();
-                     }
-                   }
-                 } else if( input$mg_initialise_from == "empty" )
-                 {
-                   .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
-
-                   # Update the relevant UI elements:
-                   updateRadioButtons(session, "mg_list_of_groups",
-                                      choices=ifelse(is.null(.GlobalEnv$.plotting.params$.inmemory.mg),
-                                                     "<EMPTY>",
-                                                     names(.GlobalEnv$.plotting.params$.inmemory.mg)),
-                                      selected=NULL);
-                 }
-               })
+        # If defined, add the medication groups sent to the Shiny plotting function:
+        if( !is.null(.GlobalEnv$.plotting.params) &&
+            !is.null(.GlobalEnv$.plotting.params$medication.groups) &&
+            (is.character(.GlobalEnv$.plotting.params$medication.groups) || is.factor(.GlobalEnv$.plotting.params$medication.groups)))
+        {
+          if( .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments )
+          {
+            # Add the function argument as well:
+            x <- c("<<'medication.groups' argument to plot_interactive_cma() call>>", x);
+          }
+        }
+        updateSelectInput(session, "mg_from_memory", choices=x, selected=x[1]);
+        .update.mg.inmemory();
+      }
+    }
+  }
 
   # In-memory vector: update the selections ----
   .update.mg.inmemory <- function()
@@ -5202,9 +5150,10 @@ server <- function(input, output, session)
     }
   )
 
-  # Make sure the UI is properly updated for ech new session ----
+  # Make sure the UI is properly updated for each new session ----
   isolate(
   {
+    .list.mg.from.memory();
     .force.update.UI();
     removeModal();
     shinyjs::show(id="sidebar_tabpanel_container");
