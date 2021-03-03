@@ -1696,7 +1696,7 @@ ui <- fluidPage(
                                               condition="(input.mg_use_medication_groups)",
 
                                               div(title='Initialise the medication groups as empty or from a named vector already in memory',
-                                                  selectInput(inputId="mg_type",
+                                                  selectInput(inputId="mg_initialise_from",
                                                               label="Initialise from:",
                                                               choices=c("empty",
                                                                         "already in memory"),
@@ -1704,14 +1704,14 @@ ui <- fluidPage(
 
                                               # From in-memory vector ----
                                               conditionalPanel(
-                                                condition = "(input.mg_type == 'already in memory')",
+                                                condition = "(input.mg_initialise_from == 'already in memory')",
 
                                                 div(title='Select a vector defining the medication groups from memory',
                                                     selectInput(inputId="mg_from_memory",
                                                                 label="In-memory vector",
                                                                 choices=c("[none]"),
                                                                 selected="[none]"))
-                                                ),
+                                            ),
 
                                               # Edit/change/view/apply the medication groups ----
                                               span(title='View the selected medication group',
@@ -1738,10 +1738,8 @@ ui <- fluidPage(
                                               div(style="height: 0.50em;"),
 
                                               div(title='The list of already defined groups', strong("Defined groups:"),
-                                                  div(radioButtons(inputId="mg_list_of_groups", label=NULL,
-                                                                   choices=if(is.null(names(.GlobalEnv$.plotting.params$.inmemory.mg))) {"<EMPTY>"} else {names(.GlobalEnv$.plotting.params$.inmemory.mg)},
-                                                                   selected=NULL),
-                                                      style="max-height: 10em; overflow-y: auto;")),
+                                                  div(radioButtons(inputId="mg_list_of_groups", label=NULL, choices="", selected=NULL),
+                                                      style="height: 10em; overflow-y: auto; resize: vertical;")),
 
                                               div(style="height: 0.50em;"),
 
@@ -4302,9 +4300,9 @@ server <- function(input, output, session)
 
 
   # In-memory medication groups: update the list of appropriate vectors objects all the way to the base environment ----
-  observeEvent(input$mg_type,
+  observeEvent(input$mg_initialise_from,
                {
-                 if( input$mg_type == "already in memory" )
+                 if( input$mg_initialise_from == "already in memory" )
                  {
                    # List all the character or factor vectors currently in memory:
                    x <- sort(c(.recursively.list.objects.in.memory(of.class="character", min.nrow=NA, min.ncol=NA, return.dimensions=FALSE),
@@ -4341,44 +4339,62 @@ server <- function(input, output, session)
                          }
                        }
                        updateSelectInput(session, "mg_from_memory", choices=x, selected=x[1]);
+                       .update.mg.inmemory();
                      }
                    }
-                 } else if( input$mg_type == "empty" )
+                 } else if( input$mg_initialise_from == "empty" )
                  {
                    .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
+
+                   # Update the relevant UI elements:
+                   updateRadioButtons(session, "mg_list_of_groups",
+                                      choices=ifelse(is.null(.GlobalEnv$.plotting.params$.inmemory.mg),
+                                                     "<EMPTY>",
+                                                     names(.GlobalEnv$.plotting.params$.inmemory.mg)),
+                                      selected=NULL);
                  }
                })
 
   # In-memory vector: update the selections ----
+  .update.mg.inmemory <- function()
+  {
+    # Set the vector:
+    .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
+    if( input$mg_from_memory == "[none]" || input$mg_from_memory == "" )
+    {
+      # Initialisation:
+      .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
+    } else if( input$mg_from_memory == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
+    {
+      # The special value pointing to the argument to plot_interactive_cma():
+      .GlobalEnv$.plotting.params$.inmemory.mg <- .GlobalEnv$.plotting.params$medication.groups;
+    } else
+    {
+      try(.GlobalEnv$.plotting.params$.inmemory.mg <- get(input$mg_from_memory), silent=TRUE);
+      if( inherits(.GlobalEnv$.plotting.params$.inmemory.mg, "try-error") ) .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
+    }
+
+    # Sanity checks:
+    if( (input$mg_from_memory != "[none]") &&
+        (is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ||
+         (!is.character(.GlobalEnv$.plotting.params$.inmemory.mg) && !is.factor(.GlobalEnv$.plotting.params$.inmemory.mg)) ||
+         length(.GlobalEnv$.plotting.params$.inmemory.mg) < 1 ))
+    {
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected medication group definitions '",input$mg_from_memory, "' from memory!"), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return (invisible(NULL));
+    }
+
+    # Update the relevant UI elements:
+    updateRadioButtons(session, "mg_list_of_groups",
+                       choices=if( is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ) {"<EMPTY>"} else {names(.GlobalEnv$.plotting.params$.inmemory.mg)},
+                       selected=NULL);
+  }
+
   observeEvent(input$mg_from_memory,
                {
-                 # Set the vector:
-                 .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
-                 if( input$mg_from_memory == "[none]" || input$mg_from_memory == "" )
-                 {
-                   # Initialisation:
-                   return (invisible(NULL));
-                 } else if( input$mg_from_memory == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
-                 {
-                   # The special value pointing to the argument to plot_interactive_cma():
-                   .GlobalEnv$.plotting.params$.inmemory.mg <- .GlobalEnv$.plotting.params$medication.groups;
-                 } else
-                 {
-                   # Try to find it in memory:
-                   try(.GlobalEnv$.plotting.params$.inmemory.mg <- get(input$mg_from_memory), silent=TRUE);
-                 }
-
-                 # Sanity checks:
-                 if( (input$mg_from_memory != "[none]") &&
-                     (is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ||
-                      (!is.character(.GlobalEnv$.plotting.params$.inmemory.mg) && !is.factor(.GlobalEnv$.plotting.params$.inmemory.mg)) ||
-                      length(.GlobalEnv$.plotting.params$.inmemory.mg) < 1 ))
-                 {
-                   showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                         div(paste0("Cannot load the selected medication group definitions '",input$mg_from_memory, "' from memory!"), style="color: red;"),
-                                         footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-                   return (invisible(NULL));
-                 }
+                 .update.mg.inmemory();
                })
 
   # Display a vector of medication groups nicely as HTML ----

@@ -8688,7 +8688,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
       # Compute the sliding windows for this patient:
       start.date <- .add.time.interval.to.date(data4ID$.OBS.START.DATE[1], sliding.window.start, sliding.window.start.unit, suppress.warnings); # when do the windows start?
       sliding.duration <- as.numeric(data4ID$.OBS.END.DATE[1] - start.date) - sliding.window.duration.in.days; # the effective duration to be covered with sliding windows
-      if( sliding.duration <= 0)  return (NULL); # the sliding window is longer than the available time in the observation window
+      if( sliding.duration < 0)  return (NULL); # the sliding window is longer than the available time in the observation window
       if( is.na(sliding.window.no.steps) )
       {
         # Compute the number of steps required from the step size:
