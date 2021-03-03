@@ -7556,7 +7556,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       n.events <- nrow(data4ID); # cache number of events
@@ -7565,7 +7565,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
       # Compute the sliding windows for this patient:
       start.date <- .add.time.interval.to.date(data4ID$.OBS.START.DATE[1], sliding.window.start, sliding.window.start.unit, suppress.warnings); # when do the windows start?
       sliding.duration <- as.numeric(data4ID$.OBS.END.DATE[1] - start.date) - sliding.window.duration.in.days; # the effective duration to be covered with sliding windows
-      if( sliding.duration <= 0)  return (NULL); # the sliding window is longer than the available time in the observation window
+      if( sliding.duration < 0)  return (NULL); # the sliding window is longer than the available time in the observation window
       if( is.na(sliding.window.no.steps) )
       {
         # Compute the number of steps required from the step size:
@@ -7575,7 +7575,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
         # Compute the step size to optimally cover the duration (possibly adjust the number of steps, too):
         sliding.window.step.duration.in.days <- (sliding.duration / (sliding.window.no.steps - 1));
         sliding.window.step.duration.in.days <- max(1, min(sliding.window.duration.in.days, sliding.window.step.duration.in.days)); # make sure we don't overdue it
-        sliding.window.no.steps <- min(((sliding.duration / sliding.window.step.duration.in.days) + 1), sliding.duration); # ajust the number of steps just in case
+        sliding.window.no.steps <- min(((sliding.duration / sliding.window.step.duration.in.days) + 1), sliding.duration); # adjust the number of steps just in case
       } else
       {
         # Only one sliding window:
