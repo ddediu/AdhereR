@@ -33,6 +33,12 @@
   show.cma = TRUE,
   col.cats = rainbow,
   unspecified.category.label = "drug",
+  medication.groups.to.plot = NULL,
+  medication.groups.separator.show = TRUE,
+  medication.groups.separator.lty = "solid",
+  medication.groups.separator.lwd = 2,
+  medication.groups.separator.color = "blue",
+  medication.groups.allother.label = "*",
   lty.event = "solid",
   lwd.event = 2,
   pch.start.event = 15,
@@ -68,7 +74,14 @@
   force.draw.text = FALSE,
   min.plot.size.in.characters.horiz = 0,
   min.plot.size.in.characters.vert = 0,
-  max.patients.to.plot = 100
+  max.patients.to.plot = 100,
+  export.formats = NULL,
+  export.formats.fileprefix = "AdhereR-plot",
+  export.formats.height = NA,
+  export.formats.width = NA,
+  export.formats.save.svg.placeholder = TRUE,
+  export.formats.directory = NA,
+  generate.R.plot = TRUE
 )
 
 \method{plot}{CMA2}(...)
@@ -139,6 +152,19 @@ colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.}
 
 \item{unspecified.category.label}{A \emph{string} giving the name of the
 unspecified (generic) medication category.}
+
+\item{medication.groups.to.plot}{the names of the medication groups to plot or
+\code{NULL} (the default) for all.}
+
+\item{medication.groups.separator.show}{a \emph{boolean}, if \code{TRUE} (the
+default) visually mark the medication groups the belong to the same patient,
+using horizontal lines and alternating vertical lines.}
+
+\item{medication.groups.separator.lty, medication.groups.separator.lwd, medication.groups.separator.color}{graphical parameters (line type, line width and colour describing the visual
+marking og medication groups as beloning to the same patient.}
+
+\item{medication.groups.allother.label}{a \emph{string} giving the label to
+use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").}
 
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
@@ -213,6 +239,29 @@ or \code{windows()}, depending on OS) or (works always) save to an image
 
 \item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
 to plot.}
+
+\item{export.formats}{a \emph{string} giving the formats to export the figure
+to (by default \code{NULL}, meaning no exporting); can be any combination of
+"svg" (just an \code{SVG} file), "html" (\code{SVG} + \code{HTML} + \code{CSS}
++ \code{JavaScript}, all embedded within one \code{HTML} document), "jpg",
+"png", "webp", "ps" or "pdf".}
+
+\item{export.formats.fileprefix}{a \emph{string} giving the file name prefix
+for the exported formats (defaults to "AdhereR-plot").}
+
+\item{export.formats.height, export.formats.width}{\emph{numbers} giving the
+desired dimensions (in pixels) for the exported figure (defaults to sane
+values if \code{NA}).}
+
+\item{export.formats.save.svg.placeholder}{a \emph{logical}, if TRUE, save a
+\code{JPG} placeholder for the \code{SVG} image.}
+
+\item{export.formats.directory}{a \emph{string}; if exporting, which directory
+to export to; if \code{NA} (the default), creates the files in a temporary
+directory.}
+
+\item{generate.R.plot}{a \emph{logical}, if \code{TRUE} (the default),
+generate the standard (base \code{R}) plot for plotting within \code{R}.}
 }
 \description{
 Plots the event data and estimated CMA encapsulated in objects derived from

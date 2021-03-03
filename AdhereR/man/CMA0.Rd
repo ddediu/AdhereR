@@ -20,6 +20,7 @@ CMA0(
   consider.dosage.change = NA,
   followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
+  followup.window.start.per.medication.group = FALSE,
   followup.window.duration = 365 * 2,
   followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
   observation.window.start = 0,
@@ -66,7 +67,7 @@ medication groups: \emph{A} which selects all events of type "medA", and
 \emph{B} which selects all events already defined by "A" but with a daily
 dose lower than 4. If \code{NULL}, no medication groups are defined. If
 medication groups are defined, there is one CMA estimate for each group;
-moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
+moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
 containing all observations \emph{not} covered by any of the explicitly defined
 groups.}
 

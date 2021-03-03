@@ -13,10 +13,13 @@ CMA_sliding_window(
   event.daily.dose.colname = NA,
   medication.class.colname = NA,
   medication.groups = NULL,
+  flatten.medication.groups = FALSE,
+  medication.groups.colname = ".MED_GROUP_ID",
   carry.only.for.same.medication = NA,
   consider.dosage.change = NA,
   followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
+  followup.window.start.per.medication.group = FALSE,
   followup.window.duration = 365 * 2,
   followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
   observation.window.start = 0,
@@ -75,9 +78,19 @@ medication groups: \emph{A} which selects all events of type "medA", and
 \emph{B} which selects all events already defined by "A" but with a daily
 dose lower than 4. If \code{NULL}, no medication groups are defined. If
 medication groups are defined, there is one CMA estimate for each group;
-moreover, there is a special group \emph{__ALL_OTHER__} automatically defined
-containing all observations \emph{not} covred by any of the explicitly defined
+moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+containing all observations \emph{not} covered by any of the explicitly defined
 groups.}
+
+\item{flatten.medication.groups}{\emph{Logical}, if \code{FALSE} (the default)
+then the \code{CMA} and \code{event.info} components of the object are lists
+with one medication group per element; otherwise, they are \code{data.frame}s
+with an extra column containing the medication group (its name is given by
+\code{medication.groups.colname}).}
+
+\item{medication.groups.colname}{a \emph{string} (defaults to ".MED_GROUP_ID")
+giving the name of the column storing the group name when
+\code{flatten.medication.groups} is \code{TRUE}.}
 
 \item{carry.only.for.same.medication}{\emph{Logical}, if \code{TRUE}, the
 carry-over applies only across medication of the same type.}

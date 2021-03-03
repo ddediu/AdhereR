@@ -22,7 +22,7 @@
   format = c("text", "latex", "markdown"),
   print.params = TRUE,
   print.data = TRUE,
-  exclude.params = c("event.info"),
+  exclude.params = c("event.info", "real.obs.windows"),
   skip.header = FALSE,
   cma.type = class(cma)[1]
 )

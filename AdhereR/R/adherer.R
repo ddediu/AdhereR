@@ -9144,3 +9144,104 @@ plot_interactive_cma <- function(...)
     }
   }
 }
+
+
+
+# # Create the medication groups example dataset med.groups from the drcomp dataset:
+# # DON'T RUN!
+# event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+#                                            presc.data = durcomp.prescribing,
+#                                            special.periods.data = durcomp.hospitalisation,
+#                                            ID.colname = "ID",
+#                                            presc.date.colname = "DATE.PRESC",
+#                                            disp.date.colname = "DATE.DISP",
+#                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+#                                            total.dose.colname = "TOTAL.DOSE",
+#                                            presc.daily.dose.colname = "DAILY.DOSE",
+#                                            presc.duration.colname = "PRESC.DURATION",
+#                                            visit.colname = "VISIT",
+#                                            split.on.dosage.change = TRUE,
+#                                            force.init.presc = TRUE,
+#                                            force.presc.renew = TRUE,
+#                                            trt.interruption = "continue",
+#                                            special.periods.method = "continue",
+#                                            date.format = "%Y-%m-%d",
+#                                            suppress.warnings = FALSE,
+#                                            return.data.table = FALSE);
+# med.events.ATC <- event_durations$event_durations[ !is.na(event_durations$event_durations$DURATION) & event_durations$event_durations$DURATION > 0,
+#                                                    c("ID", "DISP.START", "DURATION", "DAILY.DOSE", "ATC.CODE")];
+# names(med.events.ATC) <- c("PATIENT_ID", "DATE", "DURATION", "PERDAY", "CATEGORY");
+# # Classes from the ATC codes:
+# sort(unique(med.events.ATC$CATEGORY)); # all the ATC codes in the data
+# # Level 1:
+# med.events.ATC$CATEGORY_L1 <- vapply(substr(med.events.ATC$CATEGORY,1,1), switch, character(1),
+#                                      "A"="ALIMENTARY TRACT AND METABOLISM",
+#                                      "B"="BLOOD AND BLOOD FORMING ORGANS",
+#                                      "J"="ANTIINFECTIVES FOR SYSTEMIC USE",
+#                                      "R"="RESPIRATORY SYSTEM",
+#                                      "OTHER");
+# # Level 2:
+# med.events.ATC$CATEGORY_L2 <- vapply(substr(med.events.ATC$CATEGORY,1,3), switch, character(1),
+#                                      "A02"="DRUGS FOR ACID RELATED DISORDERS",
+#                                      "A05"="BILE AND LIVER THERAPY",
+#                                      "A09"="DIGESTIVES, INCL. ENZYMES",
+#                                      "A10"="DRUGS USED IN DIABETES",
+#                                      "A11"="VITAMINS",
+#                                      "A12"="MINERAL SUPPLEMENTS",
+#                                      "B02"="ANTIHEMORRHAGICS",
+#                                      "J01"="ANTIBACTERIALS FOR SYSTEMIC USE",
+#                                      "J02"="ANTIMYCOTICS FOR SYSTEMIC USE",
+#                                      "R03"="DRUGS FOR OBSTRUCTIVE AIRWAY DISEASES",
+#                                      "R05"="COUGH AND COLD PREPARATIONS",
+#                                      "OTHER");
+#
+# # Define groups of medications:
+# med.groups <- c("Vitamines" = "(CATEGORY_L2 == 'VITAMINS')",
+#                 "VitaResp"  = "({Vitamines} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')",
+#                 "VitaShort" = "({Vitamines} & DURATION <= 30)",
+#                 "VitELow"   = "(CATEGORY == 'A11HA03' & PERDAY <= 500)",
+#                 "VitaComb"  = "({VitaShort} | {VitELow})",
+#                 "NotVita"   = "(!{Vitamines})");
+# save(med.events.ATC, med.groups, file="./data/medgroups.rda");
+
+#' Example of medication events with ATC codes.
+#'
+#' An artificial dataset containing medication events (one per row) for 16
+#' patients (1564 events in total), containing ATC codes. This dataset is
+#' derived from the \code{durcomp} datasets using the \code{compute_event_durations}
+#' function. See @med.events for more details.
+#'
+#' @format A data frame with 1564 rows and 7 variables:
+#' \describe{
+#'   \item{PATIENT_ID}{the patient unique identifier.}
+#'   \item{DATE}{the medication event date.}
+#'   \item{DURATION}{the duration in days.}
+#'   \item{PERDAY}{the daily dosage.}
+#'   \item{CATEGORY}{the ATC code.}
+#'   \item{CATEGORY_L1}{explicitation of the first field of the ATC code (e.g.,
+#'   "A"="ALIMENTARY TRACT AND METABOLISM").}
+#'   \item{CATEGORY_L2}{explicitation of the first and second fields of the ATC
+#'   code (e.g., "A02"="DRUGS FOR ACID RELATED DISORDERS").}
+#' }
+"med.events.ATC"
+
+#' Example of medication groups.
+#'
+#' An example defining 6 medication groups for \code{med.events.ATC}.
+#' It is a \emph{named character vector}, where the names are the medication
+#' group unique \emph{names} (e.g., "Vitamines") and the elements are the medication
+#' group \emph{definitions} (e.g., "(CATEGORY_L2 == 'VITAMINS')").
+#' The definitions are \code{R} logical expressions using \emph{column names} and
+#' \emph{values} that appear in the dataset, as well as references to other
+#' medication groups using the construction \emph{"{NAME}"}.
+#'
+#' In the above example, "CATEGORY_L2" is a column name in the \code{med.events.ATC}
+#' dataset, and 'VITAMINS' one of its possible values, and which selects all events
+#' that have prescribed ATC codes "A11" (aka "VITAMINS").
+#' Another example is "NotVita" defined as "(!{Vitamines})", which selects all
+#' events that do not have Vitamines prescribed.
+#'
+#' For more details, please see the acompanying vignette.
+"med.groups"
+
+

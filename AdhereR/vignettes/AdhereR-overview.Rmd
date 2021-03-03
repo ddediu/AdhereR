@@ -674,6 +674,12 @@ Primary non-adherence (not acquiring the first prescription) or delayed initiati
 The function `time_to_initiation` calculates the time between the first prescription and the first dispensing event, taking into account multiple variables to differentiate between treatments.
 
 
+## Defining medication groups
+<a name="Section-defining-medication-groups"></a>
+
+
+
+
 ## Working with very large databases
 <a name="Section-working-with-databases"></a>
 
