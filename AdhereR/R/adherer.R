@@ -287,8 +287,9 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
   for( i in 1:nrow(mg) )
   {
     # Call the corresponding function:
+    res <- NULL;
     try(res <- eval(parse(text=paste0(mg$fnc_name[i],"()")), envir=safe_env), silent=TRUE); # the errors will be anyway recorded in the .errs variable in safe_env
-    if( inherits(res, 'try-error') || !safe_env$.evald[i] )
+    if( is.null(res) || inherits(res, 'try-error') || !safe_env$.evald[i] )
     {
       # Evaluation error:
       if( !is.null(safe_env$.errs) )
