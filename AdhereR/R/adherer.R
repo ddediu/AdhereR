@@ -9171,7 +9171,7 @@ plot_interactive_cma <- function(...)
 # med.events.ATC <- event_durations$event_durations[ !is.na(event_durations$event_durations$DURATION) & event_durations$event_durations$DURATION > 0,
 #                                                    c("ID", "DISP.START", "DURATION", "DAILY.DOSE", "ATC.CODE")];
 # names(med.events.ATC) <- c("PATIENT_ID", "DATE", "DURATION", "PERDAY", "CATEGORY");
-# # Classes from the ATC codes:
+# # Groups from the ATC codes:
 # sort(unique(med.events.ATC$CATEGORY)); # all the ATC codes in the data
 # # Level 1:
 # med.events.ATC$CATEGORY_L1 <- vapply(substr(med.events.ATC$CATEGORY,1,1), switch, character(1),
@@ -9196,12 +9196,12 @@ plot_interactive_cma <- function(...)
 #                                      "OTHER");
 #
 # # Define groups of medications:
-# med.groups <- c("Vitamines" = "(CATEGORY_L2 == 'VITAMINS')",
-#                 "VitaResp"  = "({Vitamines} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')",
-#                 "VitaShort" = "({Vitamines} & DURATION <= 30)",
+# med.groups <- c("Vitamins"  = "(CATEGORY_L2 == 'VITAMINS')",
+#                 "VitaResp"  = "({Vitamins} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')",
+#                 "VitaShort" = "({Vitamins} & DURATION <= 30)",
 #                 "VitELow"   = "(CATEGORY == 'A11HA03' & PERDAY <= 500)",
 #                 "VitaComb"  = "({VitaShort} | {VitELow})",
-#                 "NotVita"   = "(!{Vitamines})");
+#                 "NotVita"   = "(!{Vitamins})");
 # save(med.events.ATC, med.groups, file="./data/medgroups.rda");
 
 #' Example of medication events with ATC codes.

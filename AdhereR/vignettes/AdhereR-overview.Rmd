@@ -677,6 +677,182 @@ The function `time_to_initiation` calculates the time between the first prescrip
 ## Defining medication groups
 <a name="Section-defining-medication-groups"></a>
 
+The main idea behind *medication groups* is that there might be meaningful ways of grouping medications both for the computation of CMAs and their plotting.
+For example, a patient might receive medication for treating a hart conditions and medication for a dermatological condition, and we might want to investigate the patient's patterns of adherence to each of these two broad types (or groups) of medication separately.
+However, the mechanism for defining such groups much be flexible enough to allow, for example, the same medication to belong to two groups based on dose, duration or other characteristics.
+Therefore, we implemented this using a very flexible yet powerful and intuitive mechanism that can use any type of information associated to the actual events.
+
+To illustrate, we will use the data that comes with the package: `med.events.ATC` and `med.groups`.
+`med.events.ATC` is a `data.frame` with `r nrow(med.events.ATC)` events (one per row) for `r length(unique(med.events.ATC$PATIENT_ID))` patients, containing the patient's unique identifier (column `PATIENT_ID`), the event date (`DATE`) and duration (`DURATION`), and the medication's [ATC code](https://www.whocc.no/atc/structure_and_principles/) (column `CATEGORY`), further detailing its first two levels: level 1 (one letter giving the anatomical main group, e.g., "A" for "Alimentary tract and metabolism"; column `CATEGORY_L1`) and level 2 (the therapeutic subgroup, e.g., "A02" for "Drugs for acid related disorders"):
+
+```{r, echo=FALSE}
+knitr::kable(head(med.events.ATC, n=5), row.names=FALSE,
+             caption="First 5 lines of the `med.events.ATC` dataset.");
+```
+
+In fact, `med.events.ATC` is derived from the `durcomp` data as follows:
+
+```{r, eval=FALSE}
+event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+                                           presc.data = durcomp.prescribing,
+                                           special.periods.data = durcomp.hospitalisation,
+                                           ID.colname = "ID",
+                                           presc.date.colname = "DATE.PRESC",
+                                           disp.date.colname = "DATE.DISP",
+                                           medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                           total.dose.colname = "TOTAL.DOSE",
+                                           presc.daily.dose.colname = "DAILY.DOSE",
+                                           presc.duration.colname = "PRESC.DURATION",
+                                           visit.colname = "VISIT",
+                                           split.on.dosage.change = TRUE,
+                                           force.init.presc = TRUE,
+                                           force.presc.renew = TRUE,
+                                           trt.interruption = "continue",
+                                           special.periods.method = "continue",
+                                           date.format = "%Y-%m-%d",
+                                           suppress.warnings = FALSE,
+                                           return.data.table = FALSE);
+med.events.ATC <- event_durations$event_durations[ !is.na(event_durations$event_durations$DURATION) & 
+                                                     event_durations$event_durations$DURATION > 0,
+                                         c("ID", "DISP.START", "DURATION", "DAILY.DOSE", "ATC.CODE")];
+names(med.events.ATC) <- c("PATIENT_ID", "DATE", "DURATION", "PERDAY", "CATEGORY");
+# Groups from the ATC codes:
+sort(unique(med.events.ATC$CATEGORY)); # all the ATC codes in the data
+# Level 1:
+med.events.ATC$CATEGORY_L1 <- vapply(substr(med.events.ATC$CATEGORY,1,1), switch, character(1),
+                                     "A"="ALIMENTARY TRACT AND METABOLISM",
+                                     "B"="BLOOD AND BLOOD FORMING ORGANS",
+                                     "J"="ANTIINFECTIVES FOR SYSTEMIC USE",
+                                     "R"="RESPIRATORY SYSTEM",
+                                     "OTHER");
+# Level 2:
+med.events.ATC$CATEGORY_L2 <- vapply(substr(med.events.ATC$CATEGORY,1,3), switch, character(1),
+                                     "A02"="DRUGS FOR ACID RELATED DISORDERS",
+                                     "A05"="BILE AND LIVER THERAPY",
+                                     "A09"="DIGESTIVES, INCL. ENZYMES",
+                                     "A10"="DRUGS USED IN DIABETES",
+                                     "A11"="VITAMINS",
+                                     "A12"="MINERAL SUPPLEMENTS",
+                                     "B02"="ANTIHEMORRHAGICS",
+                                     "J01"="ANTIBACTERIALS FOR SYSTEMIC USE",
+                                     "J02"="ANTIMYCOTICS FOR SYSTEMIC USE",
+                                     "R03"="DRUGS FOR OBSTRUCTIVE AIRWAY DISEASES",
+                                     "R05"="COUGH AND COLD PREPARATIONS",
+                                     "OTHER");
+```
+
+For this dataset, we could define the following medication groups:
+
+- *Vitamins*:  all 'VITAMINS' (i.e., all medications of ATC subgroup "A11"),
+- *VitaResp*:  groups all *Vitamins* and medications referring to the 'RESPIRATORY SYSTEM' (ATC group "R"),
+- *VitaShort*: all *Vitamins* administered for less than 31 days,
+- *VitELow*: 	 tocopherol (vit E) (ATC code "A11HA03") at doses lower or equal to 500mg,
+- *VitaComb*:  groups *VitaShort* and *VitELow* (i.e., vitamines for less than 31 days and tocopherol at at most 500mg),
+- *NotVita*:   all non-*Vitamins*.
+
+These are defined in `med.groups`, which is a named vector of characters:
+
+```{r eval=FALSE}
+med.groups <- c("Vitamins"  = "(CATEGORY_L2 == 'VITAMINS')",
+                "VitaResp"  = "({Vitamins} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')",
+                "VitaShort" = "({Vitamins} & DURATION <= 30)",
+                "VitELow"   = "(CATEGORY == 'A11HA03' & PERDAY <= 500)",
+                "VitaComb"  = "({VitaShort} | {VitELow})",
+                "NotVita"   = "(!{Vitamins})");
+```
+
+The `names` in the vector are the names of the various medication groups (e.g., "Vitamins" is the name of the first group, corresponding to all the vitamins), while the values of the vector are the actual definitions and use the same syntax, operators and conventions as any `R` *expression*.
+Focussing on the first one, `(CATEGORY_L2 == 'VITAMINS')`, `CATEGORY_L2` refers to the `CATEGORY_L2` column in the `med.events.ATC` dataset, `'VITAMINS'` is a possible value that may appear in that column, and `(`, `)` and `==` have the usual interpretation in `R` (grouping and test of equality, respectively).
+In fact, this *is* translated internally into an expression that is evaluated on the `med.events.ATC` dataset, resulting in a vector of logical values, one per row, saying which events in `med.events.ATC` correspond to this medication group (`TRUE`, there are `r sum(med.events.ATC$CATEGORY_L2 == 'VITAMINS',na.rm=TRUE)` such events) and which not (`FALSE`, the remaining `r sum(!(med.events.ATC$CATEGORY_L2 == 'VITAMINS'),na.rm=TRUE)` events):
+
+```{r, echo=FALSE}
+knitr::kable(head(med.events.ATC[med.events.ATC$CATEGORY_L2 == 'VITAMINS',], n=5), row.names=FALSE,
+             caption="First 5 events in `med.events.ATC` corresponding to the *Vitamins* medication group.");
+```
+
+A special notation is used to "make reference" to another named medication group, by surrounding the medication group's name by `{` and `}`: the second medication group "VitaResp" si defined as `({Vitamins} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')`, where `{Vitamins}` simply refers to the events corresponding to the "Vitamins" group discussed above; internally, the "Vitamins" group is evaluated and its vector of logicals is combined using `|` (OR) with the vector of logicals corresponding to `CATEGORY_L1 == 'RESPIRATORY SYSTEM'`:
+
+```{r, echo=FALSE}
+knitr::kable(head(med.events.ATC[med.events.ATC$CATEGORY_L2 == 'VITAMINS' | med.events.ATC$CATEGORY_L1 == 'RESPIRATORY SYSTEM',], n=5), row.names=FALSE,
+             caption="First 5 events in `med.events.ATC` corresponding to the *VitaResp* medication group.");
+```
+
+This mechanism is very flexible and extensible, allowing, for example, tests involving the duration ("VitaShort") and the dosage ("VitELow"), and the combination of several defined groups ("VitaComb").
+However, it is important to remember that:
+
+a) these must be well-formed and meaningful expressions,
+b) using column names and values in the dataset containing the events,
+c) and/or other groups between `{` and `}`,
+d) and must evaluate to valid logical vectors of the same length as the number of events (rows) in the dataset.
+
+By default, an extra special medication group `__ALL_OTHERS__` is automatically computed, including all events that are not covered by any of the explicitly defined medication groups (if any).
+
+Please note that, for security reasons, this evaluation is performed in a separate environment where only certain functions and operators are allowed (the functions in the `Math`, `Arith`, `Logic` and `Compare` groups, and the operators `(`, `[` and `!`).
+
+With these, definitions of medication groups can be passed to all CMA functions using the `medication.groups` parameter:
+
+```{r}
+cma1_mg <- CMA1(data=med.events.ATC,
+                ID.colname="PATIENT_ID",
+                event.date.colname="DATE",
+                event.duration.colname="DURATION",
+                event.daily.dose.colname="PERDAY",
+                medication.class.colname="CATEGORY",
+                medication.groups=med.groups,
+                followup.window.start=0,
+                observation.window.start=0,
+                observation.window.duration=365,
+                date.format="%m/%d/%Y");
+cma1_mg; # print it
+```
+
+There is a new function, `getMGs()`, which returns the medication groups for a CMA object (if none, `NULL`); this is a list with two members (here, for `getMGs(cma1_mg)`):
+
+- `def`, which contains the definitions of the medication groups (+ `__ALL_OTHERS__`) as a `data.frame` with columns `name` and `def`:
+```{r echo=FALSE}
+getMGs(cma1_mg)$def;
+```
+
+- `obs`, which is logical `matrix` with as many rows as the dataset on which the CMA was estimated (here, `med.events.ATC`) and as many columns as medication groups (including `__ALL_OTHERS__`); a value of `TRUE` means that the corresponding event in the dataset is selected by the corresponding medication group (here, its first 10 rows):
+```{r echo=FALSE}
+head(getMGs(cma1_mg)$obs, n=10);
+```
+
+The `getCMA()` function works as before, except that now, by default, it returns a list with as many entries as there are medication groups (+ `__ALL_OTHERS__`), each containing its own CMA estimates:
+
+```{r}
+getCMA(cma1_mg);
+```
+
+Thus, patient `2` has a `CMA1` of ~1.77 for "Vitamins", of ~1.76 for "VitaResp", none  (`NA`) for "VitaShort", "VitELow" and "VitaComb", of ~2.76 for "NotVita".
+Here, as can also be seen in the `obs` component of `getMGs(cma1_mg)`, the default `__ALL_OTHERS__` did not select any events, results in an empty CMA estimate for it.
+
+Sometimes, however, this structuring of the CMAs as a list may not be desirable, in which case the parameter `flatten.medication.groups = TRUE` comes in handy:
+
+```{r}
+getCMA(cma1_mg, flatten.medication.groups=TRUE);
+```
+
+(It can also be directly passed to the CMA function.)
+
+Please note that, by default, all medication groups belonging to one patient share the same follow-up and observation windows, but this can be changed by setting the parameter  `followup.window.start.per.medication.group = TRUE` so that each medication group has its own follow-up and observation windows.
+
+The medication groups also affect the plotting:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** CMA 1 with medication groups.", fig.height=9, fig.width=9, out.width="100%"}
+plot(cma1_mg,
+     #medication.groups.to.plot=c("VitaResp", "VitaShort", "VitaComb"),
+     patients.to.plot=1:3,
+     show.legend=FALSE);
+```
+
+The medication groups are ordered within patients, and visually grouped using alternating thick blue lines (which can be controlled through the parameters `medication.groups.separator.show`, `medication.groups.separator.lty`, `medication.groups.separator.lwd` and `medication.groups.separator.color`); likewise, the name of the special `__ALL_OTHERS__` groups can be controlled with the `medication.groups.allother.label` parameter (defaults to "*").
+Only the medication groups that contain at least one event are shown for each patient.
+If desired, the parameter `medication.groups.to.plot` can be used to explicitly list the names of the medication groups to include in the plot (by default, all).
+
+Medication groups work in the same way across all simple and complex CMAs, an are included in the interactive `Shiny` interface as well.
+
+Please note that if no medication groups are defined (the default), then *nothing* changes in the behaviour of the package (so it is fully backwards compatible).
 
 
 
