@@ -1271,8 +1271,44 @@ ui <- fluidPage(
 
                                                                     hr()
                                                                   )
+                                                                ),
 
-                                                                )
+                                                                conditionalPanel(
+                                                                  condition="(output.is_mg_defined && input.mg_use_medication_groups)",
+
+                                                                  div(title='Visually grouping medication groups within patients',
+                                                                      span(p("Medication groups"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                  div(title='The separator color',
+                                                                      colourpicker::colourInput(inputId="plot_mg_separator_color",
+                                                                                                label="Separator color",
+                                                                                                value="blue")),
+
+                                                                  div(title='The line style of the separator',
+                                                                      shinyWidgets::pickerInput(inputId="plot_mg_separator_lty", # using actual images
+                                                                                                label="Separator line style",
+                                                                                                multiple=FALSE,
+                                                                                                choices=names(line.types),
+                                                                                                choicesOpt=list(content=lapply(1:length(line.types),
+                                                                                                                               function(i)
+                                                                                                                                 HTML(paste0("<img src='",
+                                                                                                                                             line.types[i],
+                                                                                                                                             "' width=50 height=10/>",
+                                                                                                                                             names(line.types[i]))))),
+                                                                                                selected="solid")),
+
+                                                                  div(title='The line width of the separator',
+                                                                      numericInput(inputId="plot_mg_separator_lwd",
+                                                                                   label="Separator line width",
+                                                                                   value=2, min=0, max=NA, step=1)),
+
+                                                                  div(title='The label of the __ALL_OTHERS__ implicit medication group',
+                                                                      textInput(inputId="plot_mg_allothers_label",
+                                                                                   label="__ALL_OTHERS__ label",
+                                                                                   value="*"))
+
+                                            )
+
                                             )),
 
 
@@ -2137,6 +2173,10 @@ server <- function(input, output, session)
                                                          medication.groups=if( input$mg_use_medication_groups ){ .GlobalEnv$.plotting.params$medication.groups }else{ NULL },
                                                          medication.groups.separator.show=input$mg_plot_by_patient,
                                                          medication.groups.to.plot=.GlobalEnv$.plotting.params$medication.groups.to.plot,
+                                                         medication.groups.separator.lty=input$plot_mg_separator_lty,
+                                                         medication.groups.separator.lwd=input$plot_mg_separator_lwd,
+                                                         medication.groups.separator.color=input$plot_mg_separator_color,
+                                                         medication.groups.allother.label=input$plot_mg_allothers_label,
 
                                                          cma=ifelse(input$cma_class == "simple",
                                                                     input$cma_to_compute,

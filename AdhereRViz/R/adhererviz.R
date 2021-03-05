@@ -677,8 +677,14 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 # Date format:
                                 date.format=NA, # the format of the dates used in this function (NA = undefined)
                                 ID=NULL, # the ID of the patient to plot
+                                # Medication groups:
                                 medication.groups.to.plot=NULL, # medication groups to plot
                                 medication.groups.separator.show=TRUE, # visuallt group medication groups within patient?
+                                medication.groups.separator.lty="solid",
+                                medication.groups.separator.lwd=2,
+                                medication.groups.separator.color="blue",
+                                medication.groups.allother.label="*",
+                                # CMA:
                                 cma="none", # the CMA to use for plotting
                                 cma.to.apply="none", # cma to compute per episode or sliding window
                                 # Various types medhods of computing gaps:
@@ -1040,6 +1046,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
       # Plot the results:
       plot(results,
            medication.groups.to.plot=medication.groups.to.plot, medication.groups.separator.show=medication.groups.separator.show,
+           medication.groups.separator.lty=medication.groups.separator.lty, medication.groups.separator.lwd=medication.groups.separator.lwd,
+           medication.groups.separator.color=medication.groups.separator.color,
+           medication.groups.allother.label=medication.groups.allother.label,
            show.legend=show.legend, legend.x=legend.x, legend.y=legend.y, legend.bkg.opacity=legend.bkg.opacity, legend.cex=legend.cex, legend.cex.title=legend.cex.title,
            duration=duration,
            bw.plot=bw.plot,
