@@ -587,6 +587,38 @@ ON patients.`id` = event_patients.`patient_id`;
 ```
 
 
+### Defining and using *medication groups* {#ui-medicationgroups}
+
+Since `AdhereRViz` version 0.2/`AdhereR` version 0.7, *medication groups* can be defined and used for interactive plotting.
+For ore details about medication groups, please see the vignette "AdhereR: Adherence to Medications" in package `AdhereR`, but, fundamentally, they are named vectors of characters where the names are the unique names of groups of medication defined using `R`-like expressions that describe with of the events in the dataset are covered by a given medication group.
+
+Medication groups can be passed with the `medication.groups` argument to the `plot_interactive_cma()` function, or can be interactively loaded through a new panel `Groups` of the user interface (please note that a valid dataset must have already been loaded):
+
+![**Loading medication groups.** The **Groups** tab allows the interactive selection of medication groups from already defined named character (or factor) vectors in memory (here, the pre-defined example `med.groups` from the `AdhereR` package). The switch allows us to instantly ignore or apply any medication groups that may have been defined.](shiny-groups-panel-1.jpg)
+
+![**Inspecting medication groups.** Clicking on the "Check it!" button in the **Groups** tab allows the inspection of the currently selected vector contaning medication group definitions (here, the pre-defined example `med.groups` from the `AdhereR` package).](shiny-groups-panel-2.jpg)
+
+Pressing the "Use it!" button load the selected medication group definitions; please make sure they are correct and fit the currently loaded dataset!
+If the loading goes well, the plotting is automatically updated to reflect the medication groups:
+
+![**Plotting medication groups.** `CMA1` for patients "1" and "2" in the example dataset `med.events.ATC` using the example medication groups `med.groups` from the `AdhereR` package.](shiny-medgroups-plot.jpg)
+
+The main differences to a plot without medication groups are:
+
+- any given patient may be "split" into several medication groups (here, patient "1" is split into "1 [NoVita]" and "1 [VitaResp]")
+- only those medication groups that have at least one event are shown, and only those patients with at least one medication group with at least one event are shown,
+- the medication groups belonging to a patient may be shown grouped using thick blue lines (but this can be changed at will).
+
+These apply not only to simple CMAs, but also to sliding windows and per episode (not shown).
+
+Various options related to plotting the medication groups can be changed in the using the new "Medication groups" user interface, probably the most important being the medication groups to be included in the plot:
+
+![**Selecting which of the defined medication groups to plot.** We may plot only a subset of all the defined medication groups, including the implicitly defined `__ALL_OTHERS__` (here shown as "* (all others)*) that includes all events not selected by any of the explicitely defined groups. Don't forget to press the "Show them!" button to apply your changes.](shiny-medgroups-select.jpg)
+
+
+
+
+
 ## References
 
 <a name="Ref-Dima2017"></a>Dima A.L., Dediu D. (2017) [Computation of adherence to medication and visualization of medication histories in R with *AdhereR*: Towards transparent and reproducible use of electronic healthcare data](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0174426). *PLoS ONE* **12**(4): e0174426. [doi:10.1371/journal.pone.0174426](https://doi.org/10.1371/journal.pone.0174426).
