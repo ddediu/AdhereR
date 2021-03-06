@@ -2557,7 +2557,7 @@ server <- function(input, output, session)
       r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
       r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
       r_code <<- paste0(r_code, "# \"", paste0(class(.GlobalEnv$.plotting.params$data),collapse=","), "\", and it has the structure:\n");
-      r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.GlobalEnv$.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n\n");
+      r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.GlobalEnv$.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n");
     } else
     {
       # The dataset was manually selected, so we know quite a bit about it:
@@ -2608,6 +2608,36 @@ server <- function(input, output, session)
                         "");
       r_code <<- paste0(r_code, "# These data has ", length(.GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)), " columns, ",
                                 "and contains info for ", length(unique(.GlobalEnv$.plotting.params$get.patients.fnc(.GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname))), " patients.\n");
+    }
+
+    # The medication group:
+    if( !is.null(.GlobalEnv$.plotting.params$medication.groups) && input$mg_use_medication_groups )
+    {
+      # Defined:
+      r_code <<- paste0(r_code, "# \n",
+                                "# There are medication groups defined: we denote them here as MGs.\n");
+      if( .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments )
+      {
+        # The medication groups came as the `medication.groups` argument to `plot_interactive_cam()`, so we don't know it's "name":
+        r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
+        r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
+        r_code <<- paste0(r_code, "# \"", paste0(class(.GlobalEnv$.plotting.params$medication.groups),collapse=","), "\", and has ",length(.GlobalEnv$.plotting.params$medication.groups)," elements:\n");
+      } else
+      {
+        # The medication groups were manually selected, so we know quite a bit about them:
+        r_code <<- paste0(r_code, "# The medication groups are defined using an object already\n",
+                                  "# in memory under the name '",.GlobalEnv$.plotting.params$.mg.name,"'.\n",
+                                  "# Assuming this object still exists with the same name, then:\n\n");
+        r_code <<- paste0(r_code, "# it is of type \"", paste0(class(.GlobalEnv$.plotting.params$medication.groups),collapse=","), "\"\n",
+                                  "# and has ",length(.GlobalEnv$.plotting.params$medication.groups)," elements:\n");
+      }
+      # The elements are the same:
+      r_code <<- paste0(r_code, "# c(\n");
+      r_code <<- paste0(r_code,
+                        paste0("#   '",names(.GlobalEnv$.plotting.params$medication.groups),"' = '",.GlobalEnv$.plotting.params$medication.groups,"'",collapse=",\n"),
+                        "\n");
+      r_code <<- paste0(r_code, "#  );\n",
+                                "# \n");
     }
 
     # The accessor functions:
@@ -2665,6 +2695,11 @@ server <- function(input, output, session)
     # The parameters:
     r_code <<- paste0(r_code, "data=.data.for.selected.patients.,\n");
     if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", 'CMA="',input$cma_to_compute_within_complex,'",\n');
+    if( !is.null(.GlobalEnv$.plotting.params$medication.groups) && input$mg_use_medication_groups )
+    {
+      # Medication groups defined:
+      r_code <<- paste0(r_code, cma_fnc_body_indent, " medication.groups=MGs, ### don't forget to put here your REAL medication groups! ###\n");
+    }
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # not relevant for a particular CMA type, we\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # nevertheless pass them as they will be ignored)\n");
@@ -2773,7 +2808,20 @@ server <- function(input, output, session)
                      "lwd.event.max.dose"=input$lwd_event_max_dose,
                      "plot.dose.lwd.across.medication.classes"=input$plot_dose_lwd_across_medication_classes,
                      "min.plot.size.in.characters.horiz"=input$min_plot_size_in_characters_horiz,
-                     "min.plot.size.in.characters.vert"=input$min_plot_size_in_characters_vert);
+                     "min.plot.size.in.characters.vert"=input$min_plot_size_in_characters_vert,
+                     "medication.groups.to.plot"=ifelse(!is.null(.GlobalEnv$.plotting.params$medication.groups) && input$mg_use_medication_groups,
+                                                        paste0("c(",
+                                                               paste0('"',
+                                                                      ifelse(input$mg_to_plot_list=="* (all others)","__ALL_OTHERS__",input$mg_to_plot_list),
+                                                                      '"',collapse=","),
+                                                               ")"),
+                                                        "NULL"),
+                     "medication.groups.separator.show"=input$mg_plot_by_patient,
+                     "medication.groups.separator.lty"=paste0('"',input$plot_mg_separator_lty,'"'),
+                     "medication.groups.separator.lwd"=input$plot_mg_separator_lwd,
+                     "medication.groups.separator.color"=paste0('"',input$plot_mg_separator_color,'"'),
+                     "medication.groups.allother.label"=paste0('"',input$plot_mg_allothers_label,'"')
+    );
     r_code <<- paste0(r_code, paste0("         ", names(params.plot), "=", params.plot, collapse=",\n"), "\n");
     r_code <<- paste0(r_code, "    );\n");
     r_code <<- paste0(r_code, "}\n");
@@ -2782,18 +2830,20 @@ server <- function(input, output, session)
     #cat(r_code);
 
     tryCatch(showModal(modalDialog(div(div(HTML("<p>This is the <code>R</code> that would generate the plot currently seen. You can copy it to the clipboard using the <i>Copy to clipboard</i> button.</p>
-                                                <p>Please note that the parameter value <b><code>DATA</code></b> <i>must be replaced</i> by the actual data you passed to the Shiny interactive plot function!</p>")),
-                                       div(HTML(gsub('<span class="symbol">DATA</span>','<span class="symbol_data">DATA</span>',
-                                                     highlight::highlight(parse.output=parse(text=r_code),
-                                                                          renderer=highlight::renderer_html(document=TRUE,
-                                                                                                            stylesheet=file.path(system.file('interactivePlotShiny',
-                                                                                                                                             package='AdhereRViz'),
-                                                                                                                                 "r-code-highlight.css")),
-                                                                          show_line_numbers=FALSE,
-                                                                          output=NULL),
+                                                <p>Please note that the parameter values <b><code>DATA</code></b> and <b><code>MGs</code></b> <i>must be replaced</i> by the actual data and medication groups (if the case) you passed to the Shiny interactive plot function!</p>")),
+                                       div(HTML(gsub('<span class="symbol">MGs</span>','<span class="symbol_data">MGs</span>',
+                                                     gsub('<span class="symbol">DATA</span>','<span class="symbol_data">DATA</span>',
+                                                          highlight::highlight(parse.output=parse(text=r_code),
+                                                                               renderer=highlight::renderer_html(document=TRUE,
+                                                                                                                 stylesheet=file.path(system.file('interactivePlotShiny',
+                                                                                                                                                  package='AdhereRViz'),
+                                                                                                                                      "r-code-highlight.css")),
+                                                                               show_line_numbers=FALSE,
+                                                                               output=NULL),
+                                                          fixed=TRUE),
                                                      fixed=TRUE)),
-                                       #div(HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
-                                           style="max-height: 50vh; overflow-x: scroll; overflow-y: scroll;")), # overflow: auto;
+                                           #div(HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
+                                           style="max-height: 50vh; overflow-x: scroll; overflow-y: scroll; white-space: nowrap;")), # overflow: auto;
                                    title=HTML("The <code>R</code> code for the current plot..."),
                                    footer = tagList(actionButton("copy_code", "Copy to clipboard", icon=icon("copy", lib="glyphicon")),
                                                     modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
