@@ -37,7 +37,8 @@ Imports: lubridate (>= 1.5),
 	rsvg (>= 1.3),
 	jpeg (>= 0.1),
 	png (>= 0.1),
-	webp (>= 1.0)
+	webp (>= 1.0),
+	methods
 Depends: R (>= 3.0)
 Suggests: rmarkdown (>= 1.1),
     knitr (>= 1.20),

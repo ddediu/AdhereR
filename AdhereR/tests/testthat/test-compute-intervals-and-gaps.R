@@ -170,7 +170,7 @@ test_that("internally created columns for storing the event intervals and the ga
 })
 
 
-# Test exected results for various parameter combinations using the included med.events data:
+# Test expected results for various parameter combinations using the included med.events data:
 # Given that we expect to obtain large data.frames, we will test the major properties of the result (class, nrow, ncols, column names),
 # the number/distribution of values per columns, and some rows chosen either at random or due to some interesting properties.
 # General rules:

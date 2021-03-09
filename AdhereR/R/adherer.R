@@ -24,6 +24,7 @@
 #' @import stats
 #' @import data.table
 #' @import utils
+#' @import methods
 NULL
 
 # Declare some variables as global to avoid NOTEs during package building:
@@ -184,10 +185,10 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
   # The safe environment for evaluating the medication groups (no parent) containing only the needed variables and functions (as per https://stackoverflow.com/a/18391779):
   safe_env <- new.env(parent = emptyenv());
   # ... add the safe functions:
-  for( .f in c(methods::getGroupMembers("Math"),
-               methods::getGroupMembers("Arith"),
-               methods::getGroupMembers("Logic"),
-               methods::getGroupMembers("Compare"),
+  for( .f in c(getGroupMembers("Math"),
+               getGroupMembers("Arith"),
+               getGroupMembers("Logic"),
+               getGroupMembers("Compare"),
                "(", "[", "!") )
   {
     safe_env[[.f]] <- get(.f, "package:base");
@@ -384,7 +385,7 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
-#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
 #' medication groups defined and this is \code{TRUE}, then the first event
 #' considered for the follow-up window start is relative to each medication group
 #' separately, otherwise (the default) it is relative to the patient.
@@ -3374,7 +3375,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
-#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
 #' medication groups defined and this is \code{TRUE}, then the first event
 #' considered for the follow-up window start is relative to each medication group
 #' separately, otherwise (the default) it is relative to the patient.
@@ -3542,7 +3543,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   event.interval.colname="event.interval", # contains number of days between the start of current event and the start of the next
                   gap.days.colname="gap.days", # contains the number of days when medication was not available
                   # Dealing with failed estimates:
-                  force.NA.CMA.for.failed.patients=TRUE, # force the failed patients to have NA CM estimate?
+                  force.NA.CMA.for.failed.patients=TRUE, # force the failed patients to have NA CMA estimates?
                   # Parallel processing:
                   parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[1], # parallel backend to use
                   parallel.threads="auto", # specification (or number) of parallel threads
@@ -4045,8 +4046,16 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
 #' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
-#' containing all observations \emph{not} covred by any of the explicitly defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param followup.window.start If a \emph{\code{Date}} object, it represents
 #' the actual start date of the follow-up window; if a \emph{string} it is the
 #' name of the column in \code{data} containing the start date of the follow-up
@@ -4061,7 +4070,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
-#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
 #' medication groups defined and this is \code{TRUE}, then the first event
 #' considered for the follow-up window start is relative to each medication group
 #' separately, otherwise (the default) it is relative to the patient.
@@ -4694,8 +4703,16 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
 #' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
-#' containing all observations \emph{not} covred by any of the explicitly defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -4714,7 +4731,7 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
-#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
 #' medication groups defined and this is \code{TRUE}, then the first event
 #' considered for the follow-up window start is relative to each medication group
 #' separately, otherwise (the default) it is relative to the patient.
@@ -5118,8 +5135,16 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
 #' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
-#' containing all observations \emph{not} covred by any of the explicitly defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -5138,7 +5163,7 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
-#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
 #' medication groups defined and this is \code{TRUE}, then the first event
 #' considered for the follow-up window start is relative to each medication group
 #' separately, otherwise (the default) it is relative to the patient.
@@ -5546,8 +5571,16 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
 #' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
-#' containing all observations \emph{not} covred by any of the explicitly defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -5566,7 +5599,7 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
-#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
 #' medication groups defined and this is \code{TRUE}, then the first event
 #' considered for the follow-up window start is relative to each medication group
 #' separately, otherwise (the default) it is relative to the patient.
@@ -6028,8 +6061,16 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
 #' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
-#' containing all observations \emph{not} covred by any of the explicitly defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -6048,7 +6089,7 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
-#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
 #' medication groups defined and this is \code{TRUE}, then the first event
 #' considered for the follow-up window start is relative to each medication group
 #' separately, otherwise (the default) it is relative to the patient.
@@ -6520,8 +6561,16 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' dose lower than 4. If \code{NULL}, no medication groups are defined. If
 #' medication groups are defined, there is one CMA estimate for each group;
 #' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
-#' containing all observations \emph{not} covred by any of the explicitly defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
 #' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -6540,7 +6589,7 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
-#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
 #' medication groups defined and this is \code{TRUE}, then the first event
 #' considered for the follow-up window start is relative to each medication group
 #' separately, otherwise (the default) it is relative to the patient.
@@ -7054,7 +7103,7 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
-#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
 #' medication groups defined and this is \code{TRUE}, then the first event
 #' considered for the follow-up window start is relative to each medication group
 #' separately, otherwise (the default) it is relative to the patient.
@@ -8326,7 +8375,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
-#' @followup.window.start.per.medication.group a \emph{logical}: if there are
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
 #' medication groups defined and this is \code{TRUE}, then the first event
 #' considered for the follow-up window start is relative to each medication group
 #' separately, otherwise (the default) it is relative to the patient.
@@ -9202,7 +9251,7 @@ plot_interactive_cma <- function(...)
 #                 "VitELow"   = "(CATEGORY == 'A11HA03' & PERDAY <= 500)",
 #                 "VitaComb"  = "({VitaShort} | {VitELow})",
 #                 "NotVita"   = "(!{Vitamins})");
-# save(med.events.ATC, med.groups, file="./data/medgroups.rda");
+# save(med.events.ATC, med.groups, file="./data/medgroups.rda", version=2); # save it backwards compatible with R >= 1.4.0
 
 #' Example of medication events with ATC codes.
 #'

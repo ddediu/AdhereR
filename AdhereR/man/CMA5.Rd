@@ -71,8 +71,18 @@ medication groups: \emph{A} which selects all events of type "medA", and
 dose lower than 4. If \code{NULL}, no medication groups are defined. If
 medication groups are defined, there is one CMA estimate for each group;
 moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
-containing all observations \emph{not} covred by any of the explicitly defined
+containing all observations \emph{not} covered by any of the explicitly defined
 groups.}
+
+\item{flatten.medication.groups}{\emph{Logical}, if \code{FALSE} (the default)
+then the \code{CMA} and \code{event.info} components of the object are lists
+with one medication group per element; otherwise, they are \code{data.frame}s
+with an extra column containing the medication group (its name is given by
+\code{medication.groups.colname}).}
+
+\item{medication.groups.colname}{a \emph{string} (defaults to ".MED_GROUP_ID")
+giving the name of the column storing the group name when
+\code{flatten.medication.groups} is \code{TRUE}.}
 
 \item{carry.only.for.same.medication}{\emph{Logical}, if \code{TRUE}, the
 carry-over applies only across medication of the same type.}
@@ -95,6 +105,11 @@ participant's first event; or \code{NA} if not defined.}
 \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 units that \code{followup.window.start} refers to (when a number), or
 \code{NA} if not defined.}
+
+\item{followup.window.start.per.medication.group}{a \emph{logical}: if there are
+medication groups defined and this is \code{TRUE}, then the first event
+considered for the follow-up window start is relative to each medication group
+separately, otherwise (the default) it is relative to the patient.}
 
 \item{followup.window.duration}{either a \emph{number} representing the
 duration of the follow-up window in the time units given in

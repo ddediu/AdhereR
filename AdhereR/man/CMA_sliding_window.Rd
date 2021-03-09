@@ -114,6 +114,11 @@ participant's first event; or \code{NA} if not defined.}
 units that \code{followup.window.start} refers to (when a number), or
 \code{NA} if not defined.}
 
+\item{followup.window.start.per.medication.group}{a \emph{logical}: if there are
+medication groups defined and this is \code{TRUE}, then the first event
+considered for the follow-up window start is relative to each medication group
+separately, otherwise (the default) it is relative to the patient.}
+
 \item{followup.window.duration}{either a \emph{number} representing the
 duration of the follow-up window in the time units given in
 \code{followup.window.duration.unit}, or a \emph{string} giving the column

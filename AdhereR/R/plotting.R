@@ -2306,7 +2306,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                            followup.window.start.per.medication.group=cma$followup.window.start.per.medication.group,
 
                            suppress.warnings=suppress.warnings,
-                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           force.NA.CMA.for.failed.patients=TRUE, # force the failed patients to have NA CMA estimates
                            parallel.backend="none", # make sure this runs sequentially!
                            parallel.threads=1,
                            .workhorse.function=.workhorse.function);
