@@ -34,9 +34,6 @@ Imports: AdhereR (>= 0.7),
     highlight (>= 0.4),
     clipr (>= 0.4),
     knitr (>= 1.20),
-    readODS (>= 1.6),
-    readxl (>= 1.2),
-    haven (>= 2.0),
     DBI (>= 1.0),
     RMariaDB (>= 1.0.5),
     RSQLite (>= 2.1),
@@ -44,6 +41,9 @@ Imports: AdhereR (>= 0.7),
 	rsvg (>= 1.3)
 Depends: R (>= 3.0)
 Suggests: rmarkdown (>= 1.1),
+    readODS (>= 1.6),
+    readxl (>= 1.2),
+    haven (>= 2.0),
     R.rsp (>= 0.40)
 VignetteBuilder: knitr, R.rsp
 Encoding: UTF-8

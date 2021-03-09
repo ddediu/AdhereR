@@ -32,11 +32,11 @@
 #' @import V8
 #' @importFrom clipr clipr_available write_clip
 #' @importFrom colourpicker colourInput
-#' @importFrom haven read_spss read_xpt read_sas read_stata
 #' @importFrom highlight highlight renderer_html
 #' @import knitr
-#' @importFrom readODS read_ods
-#' @importFrom readxl read_excel
+# #' @importFrom readODS read_ods
+# #' @importFrom readxl read_excel
+# #' @importFrom haven read_spss read_xpt read_sas read_stata
 #' @importFrom viridisLite magma inferno plasma viridis cividis
 NULL
 
