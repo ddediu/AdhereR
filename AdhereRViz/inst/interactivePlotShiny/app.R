@@ -76,7 +76,8 @@ ui <- fluidPage(
   # JavaScript ----
   shinyjs::useShinyjs(),
   shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}",
-                         functions=c("shinyjs.scroll_cma_compute_log")),
+                         #functions=c("shinyjs.scroll_cma_compute_log")),
+                         functions=c("scroll_cma_compute_log")),
   #shinyjs::extendShinyjs(text="shinyjs.show_hide_sections = function() {$('#follow_up_folding_bits').toggle();"),
 
   # APP TITLE ----
@@ -4961,6 +4962,15 @@ server <- function(input, output, session)
                                                                        date.format=.GlobalEnv$.plotting.params$date.format,
 
                                                                        ID=.GlobalEnv$.plotting.params$.patients.to.compute[i],
+
+                                                                       medication.groups=if( input$mg_use_medication_groups ){ .GlobalEnv$.plotting.params$medication.groups }else{ NULL },
+                                                                       medication.groups.separator.show=input$mg_plot_by_patient,
+                                                                       medication.groups.to.plot=.GlobalEnv$.plotting.params$medication.groups.to.plot,
+                                                                       medication.groups.separator.lty=input$plot_mg_separator_lty,
+                                                                       medication.groups.separator.lwd=input$plot_mg_separator_lwd,
+                                                                       medication.groups.separator.color=input$plot_mg_separator_color,
+                                                                       medication.groups.allother.label=input$plot_mg_allothers_label,
+
                                                                        cma=ifelse(input$cma_class == "simple",
                                                                                   input$cma_to_compute,
                                                                                   input$cma_class),
@@ -5046,7 +5056,15 @@ server <- function(input, output, session)
     shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
 
     # Return the results:
-    return (AdhereR::getCMA(res));
+    if( !input$mg_use_medication_groups )
+    {
+      # No medication groups:
+      return (AdhereR::getCMA(res));
+    } else
+    {
+      # Medication groups:
+      return (AdhereR::getCMA(res, flatten.medication.groups=TRUE));
+    }
   }
 
   # Collect computed CMA for several patients ----
