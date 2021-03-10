@@ -69,6 +69,7 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 )
 {
   # Make sure text is really a text:
+  text <- as.character(text);
   if( length(text) > 1 ) text <- paste0("[ ", paste0("'", as.character(text), "'", collapse="; "), " ]");
 
   # Add this new ewms info:

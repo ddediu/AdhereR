@@ -2897,7 +2897,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     {
       # Some error occurred when creating the plot...
       .report.ewms(msg, "error", ".plot.CMAs", "AdhereR");
-      par(old.par); # restore graphical params
+      try(par(old.par), silent=TRUE); # restore graphical params
       #assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
       plot.CMA.error(export.formats=export.formats,
                      export.formats.fileprefix=export.formats.fileprefix,

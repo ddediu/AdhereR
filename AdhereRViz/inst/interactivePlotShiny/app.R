@@ -1779,7 +1779,7 @@ ui <- fluidPage(
                     div(title='The width of the plotting area (in pixles)',
                         sliderInput(inputId="plot_width",
                                     label="Plot width",
-                                    min=0, max=5000, value=500, step=20, round=TRUE))
+                                    min=100, max=5000, value=500, step=20, round=TRUE))
              ),
 
              conditionalPanel(
@@ -1788,7 +1788,7 @@ ui <- fluidPage(
                       div(title='The height of the plotting area (in pixels)',
                           sliderInput(inputId="plot_height",
                                       label="height",
-                                      min=0, max=5000, value=300, step=20, round=TRUE))
+                                      min=60, max=5000, value=300, step=20, round=TRUE))
                )
              ),
              conditionalPanel(
