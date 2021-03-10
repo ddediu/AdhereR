@@ -2936,8 +2936,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       return (invisible(NULL));
     }
 
-    if( abs(par("usr")[2] - par("usr")[1]) / duration.total < 10*char.width && !suppress.warnings ) .report.ewms("The horizontal plotting space might be too small!", "warning", ".plot.CMAs", "AdhereR");
-    if( abs(par("usr")[4] - par("usr")[3]) / (vert.space.events + ifelse(is.cma.TS.or.SW && has.estimated.CMA, nrow(cmas), 0)) < 0.5*char.height && !suppress.warnings ) .report.ewms("The vertical plotting space might be too small!", "warning", ".plot.CMAs", "AdhereR");
+    if( abs(par("usr")[2] - par("usr")[1]) / duration.total < 1.0 && !suppress.warnings ) .report.ewms("The horizontal plotting space might be too small!", "warning", ".plot.CMAs", "AdhereR");
+    if( abs(par("usr")[4] - par("usr")[3]) / (vert.space.events + ifelse(is.cma.TS.or.SW && has.estimated.CMA, nrow(cmas), 0)) < 1.0 && !suppress.warnings ) .report.ewms("The vertical plotting space might be too small!", "warning", ".plot.CMAs", "AdhereR");
 
     # Save plot info:
     .last.cma.plot.info$baseR <- list(
