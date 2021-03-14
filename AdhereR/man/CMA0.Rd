@@ -61,7 +61,9 @@ if not defined.}
 
 \item{medication.groups}{A \emph{vector} of characters defining medication
 groups. The names of the vector are the medication group unique names, while
-the content defines them as logical expressions. For example,
+the content defines them as logical expressions. While the names can be any
+string of characters except "\}", it is recommended to stick to the rules for
+defining vector names in \code{R}. For example,
 \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 medication groups: \emph{A} which selects all events of type "medA", and
 \emph{B} which selects all events already defined by "A" but with a daily

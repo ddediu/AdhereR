@@ -762,6 +762,7 @@ med.groups <- c("Vitamins"  = "(CATEGORY_L2 == 'VITAMINS')",
 ```
 
 The `names` in the vector are the names of the various medication groups (e.g., "Vitamins" is the name of the first group, corresponding to all the vitamins), while the values of the vector are the actual definitions and use the same syntax, operators and conventions as any `R` *expression*.
+The name of a medication group can be pretty much any string of characters not containing "}", but it is recommended to keep them short, expressive and (as much as possible) free of non-alphanumeric symbols (in fact, the best recommendation is to stick to the rules for defining legal `R` variable and function names).
 Focussing on the first one, `(CATEGORY_L2 == 'VITAMINS')`, `CATEGORY_L2` refers to the `CATEGORY_L2` column in the `med.events.ATC` dataset, `'VITAMINS'` is a possible value that may appear in that column, and `(`, `)` and `==` have the usual interpretation in `R` (grouping and test of equality, respectively).
 In fact, this *is* translated internally into an expression that is evaluated on the `med.events.ATC` dataset, resulting in a vector of logical values, one per row, saying which events in `med.events.ATC` correspond to this medication group (`TRUE`, there are `r sum(med.events.ATC$CATEGORY_L2 == 'VITAMINS',na.rm=TRUE)` such events) and which not (`FALSE`, the remaining `r sum(!(med.events.ATC$CATEGORY_L2 == 'VITAMINS'),na.rm=TRUE)` events):
 

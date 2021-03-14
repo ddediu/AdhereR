@@ -219,7 +219,7 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
     }
 
     # Search for medication group references of the form {name} :
-    ss <- gregexpr("\\{[[:alpha:]]+\\}",s);
+    ss <- gregexpr("\\{[^(\\})]+\\}",s); #gregexpr("\\{[[:alpha:]]+\\}",s);
     if( ss[[1]][1] != (-1) )
     {
       # There's at least one group reference: replace it by the corresponding function call:
@@ -345,7 +345,9 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 #' if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
 #' groups. The names of the vector are the medication group unique names, while
-#' the content defines them as logical expressions. For example,
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
 #' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 #' medication groups: \emph{A} which selects all events of type "medA", and
 #' \emph{B} which selects all events already defined by "A" but with a daily
@@ -2976,7 +2978,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                              observation.window.duration.unit=observation.window.duration.unit,
                              date.format=date.format,
                              suppress.warnings=suppress.warnings);
-    if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+    if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
 
     # Convert to data.frame and return:
     if( force.NA.CMA.for.failed.patients )
@@ -3116,7 +3118,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                observation.window.duration.unit=observation.window.duration.unit,
                                date.format=date.format,
                                suppress.warnings=suppress.warnings);
-      if( is.null(tmp) ) return (NULL);
+      if( is.null(tmp) || (!is.null(tmp$CMA) && !inherits(tmp$CMA,"data.frame")) || is.null(tmp$event.info) ) return (NULL);
 
       if( !is.null(tmp$CMA) )
       {
@@ -3345,7 +3347,9 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' \code{data} containing the event duration (in days); must be present.
 #' @param medication.groups A \emph{vector} of characters defining medication
 #' groups. The names of the vector are the medication group unique names, while
-#' the content defines them as logical expressions. For example,
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
 #' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 #' medication groups: \emph{A} which selects all events of type "medA", and
 #' \emph{B} which selects all events already defined by "A" but with a daily
@@ -4040,7 +4044,9 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' \code{data} containing the event duration (in days); must be present.
 #' @param medication.groups A \emph{vector} of characters defining medication
 #' groups. The names of the vector are the medication group unique names, while
-#' the content defines them as logical expressions. For example,
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
 #' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 #' medication groups: \emph{A} which selects all events of type "medA", and
 #' \emph{B} which selects all events already defined by "A" but with a daily
@@ -4697,7 +4703,9 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
 #' groups. The names of the vector are the medication group unique names, while
-#' the content defines them as logical expressions. For example,
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
 #' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 #' medication groups: \emph{A} which selects all events of type "medA", and
 #' \emph{B} which selects all events already defined by "A" but with a daily
@@ -5129,7 +5137,9 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
 #' groups. The names of the vector are the medication group unique names, while
-#' the content defines them as logical expressions. For example,
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
 #' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 #' medication groups: \emph{A} which selects all events of type "medA", and
 #' \emph{B} which selects all events already defined by "A" but with a daily
@@ -5565,7 +5575,9 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
 #' groups. The names of the vector are the medication group unique names, while
-#' the content defines them as logical expressions. For example,
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
 #' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 #' medication groups: \emph{A} which selects all events of type "medA", and
 #' \emph{B} which selects all events already defined by "A" but with a daily
@@ -6055,7 +6067,9 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
 #' groups. The names of the vector are the medication group unique names, while
-#' the content defines them as logical expressions. For example,
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
 #' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 #' medication groups: \emph{A} which selects all events of type "medA", and
 #' \emph{B} which selects all events already defined by "A" but with a daily
@@ -6555,7 +6569,9 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
 #' groups. The names of the vector are the medication group unique names, while
-#' the content defines them as logical expressions. For example,
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
 #' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 #' medication groups: \emph{A} which selects all events of type "medA", and
 #' \emph{B} which selects all events already defined by "A" but with a daily
@@ -7051,7 +7067,9 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
 #' groups. The names of the vector are the medication group unique names, while
-#' the content defines them as logical expressions. For example,
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
 #' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 #' medication groups: \emph{A} which selects all events of type "medA", and
 #' \emph{B} which selects all events already defined by "A" but with a daily
@@ -7619,7 +7637,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              observation.window.duration.unit=observation.window.duration.unit,
                              date.format=date.format,
                              suppress.warnings=suppress.warnings);
-    if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+    if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
 
     # Construct the return object:
     class(ret.val) <- "CMA_per_episode";
@@ -7702,7 +7720,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                observation.window.duration.unit=observation.window.duration.unit,
                                date.format=date.format,
                                suppress.warnings=suppress.warnings);
-      if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+      if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
 
       # Convert to data.frame and return:
       tmp$CMA <- as.data.frame(tmp$CMA); setnames(tmp$CMA, 1, ID.colname);
@@ -8341,7 +8359,9 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
 #' groups. The names of the vector are the medication group unique names, while
-#' the content defines them as logical expressions. For example,
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
 #' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
 #' medication groups: \emph{A} which selects all events of type "medA", and
 #' \emph{B} which selects all events already defined by "A" but with a daily
@@ -8893,7 +8913,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                              observation.window.duration.unit=observation.window.duration.unit,
                              date.format=date.format,
                              suppress.warnings=suppress.warnings);
-    if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+    if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
 
     # Construct the return object:
     class(ret.val) <- "CMA_sliding_window";
@@ -8981,7 +9001,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                observation.window.duration.unit=observation.window.duration.unit,
                                date.format=date.format,
                                suppress.warnings=suppress.warnings);
-      if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
+      if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
 
       # Convert to data.frame and return:
       tmp$CMA.to.apply <- tmp$CMA$CMA.to.apply[1];
