@@ -69,6 +69,9 @@
   export.formats.height = NA,
   export.formats.width = NA,
   export.formats.save.svg.placeholder = TRUE,
+  export.formats.svg.placeholder.type = c("jpg", "png", "webp")[1],
+  export.formats.svg.placeholder.rsvg = TRUE,
+  export.formats.svg.placeholder.embed = FALSE,
   export.formats.directory = NA,
   generate.R.plot = TRUE
 )
@@ -229,8 +232,25 @@ for the exported formats (defaults to "AdhereR-plot").}
 desired dimensions (in pixels) for the exported figure (defaults to sane
 values if \code{NA}).}
 
-\item{export.formats.save.svg.placeholder}{a \emph{logical}, if TRUE, save a
-\code{JPG} placeholder for the \code{SVG} image.}
+\item{export.formats.save.svg.placeholder}{a \emph{logical}, if TRUE, save an
+image placeholder of type given by \code{export.formats.svg.placeholder.type}
+for the \code{SVG} image.}
+
+\item{export.formats.svg.placeholder.type}{a \emph{string}, giving the type of
+placeholder for the \code{SVG} image to save; can be "jpg" (the default),
+"png" or "webp".}
+
+\item{export.formats.svg.placeholder.rsvg}{a \emph{logical} specifying how the
+\code{SVG} placeholder is generated: exported from the SVG image using the
+\code{rsvg} package (\code{TRUE}, the default; identical to the SVG but slow),
+or using \code{base R} plotting (\code{FALSE}; might be slightly different from
+the SVG image but is faster).}
+
+\item{export.formats.svg.placeholder.embed}{a \emph{logical}, if \code{TRUE},
+embed the placeholder image in the HTML document (if any) using \code{base64}
+encoding, otherwise (the default) leave it as an external image file (works
+only when an \code{HTML} document is exported and only for \code{JPEG} or
+\code{PNG} images.}
 
 \item{export.formats.directory}{a \emph{string}; if exporting, which directory
 to export to; if \code{NA} (the default), creates the files in a temporary

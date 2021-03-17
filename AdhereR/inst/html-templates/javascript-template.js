@@ -784,6 +784,8 @@ window.onload = function() {
 
     // ... and replace them by the placeholder image and a short message:
     var item = document.createElement("img");
+    // The placeholder image is in either an external file (with path given in the svg_placeholder_file_name variable) or
+    // is embedded in this HTML document (the svg_placeholder_file_name contains its base64 encoding and type in the correct format):
     item.setAttribute("src", adh_svg.svg_placeholder_file_name);
     //item.setAttribute("height", "600");
     item.setAttribute("alt", "Adherence plot");

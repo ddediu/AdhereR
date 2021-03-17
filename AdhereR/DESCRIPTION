@@ -43,6 +43,7 @@ Depends: R (>= 3.0)
 Suggests: rmarkdown (>= 1.1),
     knitr (>= 1.20),
     R.rsp (>= 0.40),
+    base64(>= 2.0),
     AdhereRViz (>= 0.2)
 VignetteBuilder: knitr, R.rsp
 Encoding: UTF-8

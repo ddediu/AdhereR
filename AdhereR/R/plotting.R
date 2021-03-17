@@ -1005,7 +1005,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        plot.partial.CMAs.as.timeseries.col.dot="darkblue", plot.partial.CMAs.as.timeseries.col.interval="gray70", plot.partial.CMAs.as.timeseries.col.text="firebrick", # setting any of these to NA results in them not being plotted
                        plot.partial.CMAs.as.timeseries.interval.type=c("none", "segments", "arrows", "lines", "rectangles")[2], # how to show the covered intervals
                        plot.partial.CMAs.as.timeseries.lwd.interval=1, # line width for some types of intervals
-                       plot.partial.CMAs.as.timeseries.alpha.interval=0.25, # the transparency of the intervales (when drawn as rectangles)
+                       plot.partial.CMAs.as.timeseries.alpha.interval=0.25, # the transparency of the intervals (when drawn as rectangles)
                        plot.partial.CMAs.as.timeseries.show.0perc=TRUE, plot.partial.CMAs.as.timeseries.show.100perc=FALSE, #show the 0% and 100% lines?
                        plot.partial.CMAs.as.overlapping.alternate=TRUE, # should successive intervals be plotted low/high?
                        plot.partial.CMAs.as.overlapping.col.interval="gray70", plot.partial.CMAs.as.overlapping.col.text="firebrick", # setting any of these to NA results in them not being plotted
@@ -1024,23 +1024,15 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        export.formats=NULL,             # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
                        export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
                        export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
-                       export.formats.save.svg.placeholder=TRUE, # if TRUE, save a JPG placeholder for the SVG image
+                       export.formats.save.svg.placeholder=TRUE,
+                       export.formats.svg.placeholder.type=c("jpg", "png", "webp")[1],
+                       export.formats.svg.placeholder.rsvg=TRUE,
+                       export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                        export.formats.directory=NA,     # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                        generate.R.plot=TRUE,            # generate standard (base R) plot for plotting within R?
                        ...
 )
 {
-
-  # DEBUG: FORCE SVG PLOTTING ####
-  if( FALSE )
-  {
-   # Force debugging SVG plotting:
-   export.formats <- c("html");
-   export.formats.directory <- "~/Temp/tmp";
-   generate.R.plot <- TRUE;
-  }
-
-
   # What sorts of plots to generate (use short names for short if statements):
   .do.R <- generate.R.plot; .do.SVG <- (!is.null(export.formats) && any(c("svg", "html", "jpg", "png", "webp", "ps", "pdf") %in% export.formats));
   if( !.do.R && !.do.SVG )
@@ -1089,6 +1081,17 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
   # Overriding dangerous or aesthetic defaults:
   if( force.draw.text && !suppress.warnings ) .report.ewms("Forcing drawing of text elements even if too big or ugly!\n", "warning", ".plot.CMAs", "AdhereR");
+
+  # SVG placeholder:
+  if( export.formats.save.svg.placeholder && (length(export.formats.svg.placeholder.type) != 1 || !export.formats.svg.placeholder.type %in% c("jpg", "png", "webp")) )
+  {
+    if( !suppress.warnings ) .report.ewms("The SVG place holder can only be a jpg, png or webp!\n", "error", ".plot.CMAs", "AdhereR");
+    plot.CMA.error(export.formats=export.formats,
+                   export.formats.fileprefix=export.formats.fileprefix,
+                   export.formats.directory=export.formats.directory,
+                   generate.R.plot=generate.R.plot);
+    return (invisible(NULL));
+  }
 
 
   # Local functions for the various types of summary CMA plots:
@@ -4983,13 +4986,84 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
         if( export.formats.save.svg.placeholder )
         {
-          # Add the JPG placeholder's filename:
-          svg.placeholder.filename <- ifelse( is.na(export.formats.directory),
-                                              tempfile(paste0(export.formats.fileprefix,"-svg-placeholder"), fileext=".jpg"),
-                                              file.path(export.formats.directory, paste0(paste0(export.formats.fileprefix,"-svg-placeholder"),".jpg")) );
-          js.template <- c(js.template,
-                           "// The SVG placeholder's filename:",
-                           paste0('adh_svg["svg_placeholder_file_name"] = "',basename(svg.placeholder.filename),'";\n'));
+          # Check that base64 exists:
+          if( !requireNamespace("base64", quietly=TRUE) )
+          {
+            # Does not seem to:
+            .report.ewms("Package 'base64' required for emedding images in HTML documents does not seem to exist: we'll store the images outside the HTML document!\n", "warning", ".plot.CMAs", "AdhereR");
+            export.formats.svg.placeholder.embed <- FALSE;
+          }
+
+          if( !export.formats.svg.placeholder.embed )
+          {
+            # The SVG placeholder is an external file: add its filename:
+            svg.placeholder.filename <- ifelse( is.na(export.formats.directory),
+                                                tempfile(paste0(export.formats.fileprefix,"-svg-placeholder"), fileext=paste0(".",export.formats.svg.placeholder.type)),
+                                                file.path(export.formats.directory, paste0(paste0(export.formats.fileprefix,"-svg-placeholder"),paste0(".",export.formats.svg.placeholder.type))) );
+            js.template <- c(js.template,
+                             "// The SVG placeholder's filename:",
+                             paste0('adh_svg["svg_placeholder_file_name"] = "',basename(svg.placeholder.filename),'";\n'));
+          } else
+          {
+            # The SVG placeholder must be embedded in base_64 encoded-form into en <img> tag:
+            if( !(export.formats.svg.placeholder.type %in% c("jpg", "png")) )
+            {
+              .report.ewms("Can only embed a JPEG or PNG image as a placeholder for the SVG image: defaulting to JPEG!\n", "warning", ".plot.CMAs", "AdhereR");
+              export.formats.svg.placeholder.type <- "jpg";
+            }
+
+            # Base encode the placeholder:
+            # Need to covert the SVG to one of these, so we need to export it (if not already exported):
+            if( is.null(file.svg) )
+            {
+              file.svg <- tempfile(export.formats.fileprefix, fileext=".svg");
+              writeLines(c(svg.header, svg.str), file.svg, sep="");
+            }
+
+            # Convert the SVG:
+            bitmap <- rsvg::rsvg(file.svg,
+                                 height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                                 width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
+            svg.placeholder.tmpfile <- tempfile(paste0(export.formats.fileprefix,"-svg-placeholder"), fileext=paste0(".",export.formats.svg.placeholder.type));
+            svg.placeholder.end64.tmpfile <- paste0(svg.placeholder.tmpfile,"-enc64.txt");
+            if( export.formats.svg.placeholder.type == "jpg" )
+            {
+              jpeg::writeJPEG(bitmap, svg.placeholder.tmpfile, quality=0.90);
+            } else if( export.formats.svg.placeholder.type == "png" )
+            {
+              png::writePNG(bitmap, svg.placeholder.tmpfile, dpi=150);
+            }
+
+            # Encode it to base64:
+            base64::encode(svg.placeholder.tmpfile, svg.placeholder.end64.tmpfile, linebreaks=FALSE);
+
+            # Load it and embed it:
+            svg.placeholder.end64 <- try(readLines(svg.placeholder.end64.tmpfile), silent=TRUE);
+            if( inherits(svg.placeholder.end64, "try-error") )
+            {
+              .report.ewms("Failed embedding an image in the HTML document: reverting to having it as an external file!\n", "warning", ".plot.CMAs", "AdhereR");
+              export.formats.svg.placeholder.embed <- FALSE;
+              try(unlink(c(svg.placeholder.tmpfile, svg.placeholder.end64.tmpfile)), silent=TRUE); # clean up the temp files
+
+              # The SVG placeholder is an external file: add its filename:
+              svg.placeholder.filename <- ifelse( is.na(export.formats.directory),
+                                                  tempfile(paste0(export.formats.fileprefix,"-svg-placeholder"), fileext=paste0(".",export.formats.svg.placeholder.type)),
+                                                  file.path(export.formats.directory, paste0(paste0(export.formats.fileprefix,"-svg-placeholder"),paste0(".",export.formats.svg.placeholder.type))) );
+              js.template <- c(js.template,
+                               "// The SVG placeholder's filename:",
+                               paste0('adh_svg["svg_placeholder_file_name"] = "',basename(svg.placeholder.filename),'";\n'));
+            } else
+            {
+              js.template <- c(js.template,
+                               "// The SVG placeholder's content:",
+                               paste0('adh_svg["svg_placeholder_file_name"] = "data:image/',
+                                      ifelse(export.formats.svg.placeholder.type == "png", "png", "jpeg"),
+                                      ';base64,',svg.placeholder.end64,'";\n'));
+
+              # Clean up the temp files
+              try(unlink(c(svg.placeholder.tmpfile, svg.placeholder.end64.tmpfile)), silent=TRUE);
+            }
+          }
         }
 
         # Load the HTML template and replace generics by their actual values before saving it in the desired location:
@@ -5022,7 +5096,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                              paste0(paste0(svg.str.embedded, collapse=""), "\n"),
                              html.template, fixed=TRUE); # SVG
 
-        # Explort the self-contained HTML document:
+        # Export the self-contained HTML document:
         writeLines(html.template, file.html, sep="\n");
       }
 
@@ -5047,9 +5121,18 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
           if( export.formats.save.svg.placeholder && !is.null(svg.placeholder.filename) )
           {
-            # The JPG placeholder:
+            # The SVG placeholder:
             exported.file.names <- c(exported.file.names, svg.placeholder.filename);
-            jpeg::writeJPEG(bitmap, svg.placeholder.filename, quality=0.90);
+            if( export.formats.svg.placeholder.type == "jpg" )
+            {
+              jpeg::writeJPEG(bitmap, svg.placeholder.filename, quality=0.90);
+            } else if( export.formats.svg.placeholder.type == "png" )
+            {
+              png::writePNG(bitmap, svg.placeholder.filename, dpi=150);
+            } else if( export.formats.svg.placeholder.type == "webp" )
+            {
+              webp::write_webp(bitmap, svg.placeholder.filename, quality=90);
+            }
           }
 
           if( "jpg" %in% export.formats )
