@@ -148,7 +148,7 @@ var adh_svg = { // begin namespace
     if( !elem || elem.length == 0 ) {
       return undefined;
     } else {
-      if( elem.length > 1 ) elem = elem[0]; //assume that for arrays the first element is enough
+      if( elem.length >= 1 ) elem = elem[0]; //assume that for arrays the first element is enough
 
       if( adh_svg._hasAttribute(elem, attr) ) {
         return elem.getAttribute(attr);
