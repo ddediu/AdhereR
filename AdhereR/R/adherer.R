@@ -1006,6 +1006,13 @@ print.CMA0 <- function(x,                                                  # the
 #' encoding, otherwise (the default) leave it as an external image file (works
 #' only when an \code{HTML} document is exported and only for \code{JPEG} or
 #' \code{PNG} images.
+#' @param export.formats.html.template,export.formats.html.javascript,export.formats.html.css
+#' \emph{character strings} or \code{NULL} (the default) giving the path to the
+#' \code{HTML}, \code{JavaScript} and \code{CSS} templates, respectively, to be
+#' used when generating the HTML+CSS semi-interactive plots; when \code{NULL},
+#' the default ones included with the package will be used. If you decide to define
+#' new templates please use the default ones for inspiration and note that future
+#' version are not guaranteed to be backwards compatible!
 #' @param export.formats.directory a \emph{string}; if exporting, which directory
 #' to export to; if \code{NA} (the default), creates the files in a temporary
 #' directory.
@@ -1069,6 +1076,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       export.formats.svg.placeholder.type=c("jpg", "png", "webp")[1],
                       export.formats.svg.placeholder.rsvg=TRUE,
                       export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
+                      export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                       export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                       generate.R.plot=TRUE                   # generate standard (base R) plot for plotting within R?
 )
@@ -1142,6 +1150,9 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
              export.formats.svg.placeholder.rsvg=export.formats.svg.placeholder.rsvg,
              export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
+             export.formats.html.template=export.formats.html.template,
+             export.formats.html.javascript=export.formats.html.javascript,
+             export.formats.html.css=export.formats.html.css,
              export.formats.directory=export.formats.directory,
              generate.R.plot=generate.R.plot,
              suppress.warnings=suppress.warnings);
@@ -3256,6 +3267,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            export.formats.svg.placeholder.type=c("jpg", "png", "webp")[1],
                            export.formats.svg.placeholder.rsvg=TRUE,
                            export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
+                           export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                            export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                            generate.R.plot=TRUE,                  # generate standard (base R) plot for plotting within R?
                            ...
@@ -3336,6 +3348,9 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
              export.formats.svg.placeholder.rsvg=export.formats.svg.placeholder.rsvg,
              export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
+             export.formats.html.template=export.formats.html.template,
+             export.formats.html.javascript=export.formats.html.javascript,
+             export.formats.html.css=export.formats.html.css,
              export.formats.directory=export.formats.directory,
              generate.R.plot=generate.R.plot,
              suppress.warnings=suppress.warnings);
@@ -3922,6 +3937,13 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' encoding, otherwise (the default) leave it as an external image file (works
 #' only when an \code{HTML} document is exported and only for \code{JPEG} or
 #' \code{PNG} images.
+#' @param export.formats.html.template,export.formats.html.javascript,export.formats.html.css
+#' \emph{character strings} or \code{NULL} (the default) giving the path to the
+#' \code{HTML}, \code{JavaScript} and \code{CSS} templates, respectively, to be
+#' used when generating the HTML+CSS semi-interactive plots; when \code{NULL},
+#' the default ones included with the package will be used. If you decide to define
+#' new templates please use the default ones for inspiration and note that future
+#' version are not guaranteed to be backwards compatible!
 #' @param export.formats.directory a \emph{string}; if exporting, which directory
 #' to export to; if \code{NA} (the default), creates the files in a temporary
 #' directory.
@@ -3980,6 +4002,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       export.formats.svg.placeholder.rsvg=TRUE,
                       export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                       export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                      export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                       generate.R.plot=TRUE                   # generate standard (base R) plot for plotting within R?
 )
 {
@@ -4052,6 +4075,9 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
                  export.formats.svg.placeholder.rsvg=export.formats.svg.placeholder.rsvg,
                  export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
+                 export.formats.html.template=export.formats.html.template,
+                 export.formats.html.javascript=export.formats.html.javascript,
+                 export.formats.html.css=export.formats.html.css,
                  export.formats.directory=export.formats.directory,
                  generate.R.plot=generate.R.plot,
                  ...)
@@ -8186,6 +8212,13 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' encoding, otherwise (the default) leave it as an external image file (works
 #' only when an \code{HTML} document is exported and only for \code{JPEG} or
 #' \code{PNG} images.
+#' @param export.formats.html.template,export.formats.html.javascript,export.formats.html.css
+#' \emph{character strings} or \code{NULL} (the default) giving the path to the
+#' \code{HTML}, \code{JavaScript} and \code{CSS} templates, respectively, to be
+#' used when generating the HTML+CSS semi-interactive plots; when \code{NULL},
+#' the default ones included with the package will be used. If you decide to define
+#' new templates please use the default ones for inspiration and note that future
+#' version are not guaranteed to be backwards compatible!
 #' @param export.formats.directory a \emph{string}; if exporting, which directory
 #' to export to; if \code{NA} (the default), creates the files in a temporary
 #' directory.
@@ -8291,6 +8324,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  export.formats.svg.placeholder.type=c("jpg", "png", "webp")[1],
                                  export.formats.svg.placeholder.rsvg=TRUE,
                                  export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
+                                 export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                                  export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                                  generate.R.plot=TRUE,                  # generate standard (base R) plot for plotting within R?
                                  suppress.warnings=FALSE,         # suppress warnings?
@@ -8384,6 +8418,9 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
              export.formats.svg.placeholder.rsvg=export.formats.svg.placeholder.rsvg,
              export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
+             export.formats.html.template=export.formats.html.template,
+             export.formats.html.javascript=export.formats.html.javascript,
+             export.formats.html.css=export.formats.html.css,
              export.formats.directory=export.formats.directory,
              generate.R.plot=generate.R.plot,
              suppress.warnings=suppress.warnings);

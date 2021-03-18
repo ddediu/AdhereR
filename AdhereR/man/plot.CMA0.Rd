@@ -72,6 +72,9 @@
   export.formats.svg.placeholder.type = c("jpg", "png", "webp")[1],
   export.formats.svg.placeholder.rsvg = TRUE,
   export.formats.svg.placeholder.embed = FALSE,
+  export.formats.html.template = NULL,
+  export.formats.html.javascript = NULL,
+  export.formats.html.css = NULL,
   export.formats.directory = NA,
   generate.R.plot = TRUE
 )
@@ -251,6 +254,13 @@ embed the placeholder image in the HTML document (if any) using \code{base64}
 encoding, otherwise (the default) leave it as an external image file (works
 only when an \code{HTML} document is exported and only for \code{JPEG} or
 \code{PNG} images.}
+
+\item{export.formats.html.template, export.formats.html.javascript, export.formats.html.css}{\emph{character strings} or \code{NULL} (the default) giving the path to the
+\code{HTML}, \code{JavaScript} and \code{CSS} templates, respectively, to be
+used when generating the HTML+CSS semi-interactive plots; when \code{NULL},
+the default ones included with the package will be used. If you decide to define
+new templates please use the default ones for inspiration and note that future
+version are not guaranteed to be backwards compatible!}
 
 \item{export.formats.directory}{a \emph{string}; if exporting, which directory
 to export to; if \code{NA} (the default), creates the files in a temporary

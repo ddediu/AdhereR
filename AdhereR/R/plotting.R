@@ -1028,6 +1028,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        export.formats.svg.placeholder.type=c("jpg", "png", "webp")[1],
                        export.formats.svg.placeholder.rsvg=TRUE,
                        export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
+                       export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                        export.formats.directory=NA,     # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                        generate.R.plot=TRUE,            # generate standard (base R) plot for plotting within R?
                        ...
@@ -1039,6 +1040,13 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   {
     # Nothing to plot!
     return (invisible(NULL));
+  }
+
+  # Stuff not yet implemented;
+  if( !export.formats.svg.placeholder.rsvg )
+  {
+    if( !suppress.warnings ) .report.ewms("Using base R for the SVG placeholder is not yet implemented: falling back to using rsvg\n", "warning", ".plot.CMAs", "AdhereR");
+    export.formats.svg.placeholder.rsvg <- TRUE;
   }
 
 
@@ -2665,9 +2673,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     # There actually is a partial CMA to be potentially plotted:
     if( ("timeseries" %in% plot.partial.CMAs.as) && (plot.partial.CMAs.as.timeseries.vspace < 5) )
     {
-      .report.ewms(paste0("The minimum vertical space for the timeseries plots (plot.partial.CMAs.as.timeseries.vspace) is 5 lines, but it currently is only ",
-                     plot.partial.CMAs.as.timeseries.vspace,
-                     ": skipping timeseries plots...\n"), "warning", ".plot.CMAs", "AdhereR");
+      if( !suppress.warnings ) .report.ewms(paste0("The minimum vertical space for the timeseries plots (plot.partial.CMAs.as.timeseries.vspace) is 5 lines, but it currently is only ",
+                                                   plot.partial.CMAs.as.timeseries.vspace,
+                                                   ": skipping timeseries plots...\n"), "warning", ".plot.CMAs", "AdhereR");
       plot.partial.CMAs.as <- plot.partial.CMAs.as[ plot.partial.CMAs.as != "timeseries" ];
     }
 
@@ -2899,7 +2907,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                 "try-error"))
     {
       # Some error occurred when creating the plot...
-      .report.ewms(msg, "error", ".plot.CMAs", "AdhereR");
+      if( !suppress.warnings ) .report.ewms(msg, "error", ".plot.CMAs", "AdhereR");
       try(par(old.par), silent=TRUE); # restore graphical params
       #assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
       plot.CMA.error(export.formats=export.formats,
@@ -2921,15 +2929,16 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( abs(par("usr")[2] - par("usr")[1]) <= char.width * min.plot.size.in.characters.horiz ||
         abs(par("usr")[4] - par("usr")[3]) <= char.height * min.plot.size.in.characters.vert * (vert.space.events + ifelse(is.cma.TS.or.SW && has.estimated.CMA, nrow(cmas), 0)) )
     {
-      .report.ewms(paste0("Plotting area is too small (it must be at least ",
-                     min.plot.size.in.characters.horiz,
-                     " x ",
-                     min.plot.size.in.characters.vert,
-                     " characters per patient, but now it is only ",
-                     round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
-                     " x ",
-                     round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (vert.space.events + ifelse(is.cma.TS.or.SW && has.estimated.CMA, nrow(cmas), 0))),1),
-                     ")!\n"), "error", ".plot.CMAs", "AdhereR");
+      if( !suppress.warnings ) .report.ewms(paste0("Plotting area is too small (it must be at least ",
+                                                   min.plot.size.in.characters.horiz,
+                                                   " x ",
+                                                   min.plot.size.in.characters.vert,
+                                                   " characters per patient, but now it is only ",
+                                                   round(abs(par("usr")[2] - par("usr")[1]) / char.width,1),
+                                                   " x ",
+                                                   round(abs(par("usr")[4] - par("usr")[3]) / (char.height * (vert.space.events +
+                                                                                                                ifelse(is.cma.TS.or.SW && has.estimated.CMA, nrow(cmas), 0))),1),
+                                                   ")!\n"), "error", ".plot.CMAs", "AdhereR");
       par(old.par); # restore graphical params
       #assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
       plot.CMA.error(export.formats=export.formats,
@@ -4949,31 +4958,67 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                              file.path(export.formats.directory, paste0(export.formats.fileprefix,".html")) );
         exported.file.names <- c(exported.file.names, file.html);
 
-        # Load the CSS and JavaScript templates:
-        css.template.path <- system.file('html-templates/css-template.css', package='AdhereR');
-        if( is.null(css.template.path) || css.template.path=="" )
+        # Load the CSS template:
+        if( !is.null(export.formats.html.css) )
         {
-          .report.ewms("Cannot load the CSS template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
-          .last.cma.plot.info$SVG <- NULL;
-          assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
-          plot.CMA.error(export.formats=export.formats,
-                         export.formats.fileprefix=export.formats.fileprefix,
-                         export.formats.directory=export.formats.directory,
-                         generate.R.plot=FALSE);
-          return (invisible(NULL));
+          # Try to load the given template:
+          if( length(export.formats.html.css) != 1 || !file.exists(as.character(export.formats.html.css)) )
+          {
+            if( !suppress.warnings ) .report.ewms("The given CSS template '",as.character(export.formats.html.css),"' does not seem to exist: falling back to the default one!\n", "warning", ".plot.CMAs", "AdhereR");
+            export.formats.html.css <- NULL;
+          } else
+          {
+            css.template.path <- as.character(export.formats.html.css);
+          }
         }
-        js.template.path <- system.file('html-templates/javascript-template.js', package='AdhereR');
-        if( is.null(js.template.path) || js.template.path=="" )
+        if( is.null(export.formats.html.css) )
         {
-          .report.ewms("Cannot load the JavaScript template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
-          .last.cma.plot.info$SVG <- NULL;
-          assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
-          plot.CMA.error(export.formats=export.formats,
-                         export.formats.fileprefix=export.formats.fileprefix,
-                         export.formats.directory=export.formats.directory,
-                         generate.R.plot=FALSE);
-          return (invisible(NULL));
+          # Load the default CSS template:
+          css.template.path <- system.file('html-templates/css-template.css', package='AdhereR');
+          if( is.null(css.template.path) || css.template.path=="" )
+          {
+            if( !suppress.warnings ) .report.ewms("Cannot load the CSS template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+            .last.cma.plot.info$SVG <- NULL;
+            assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+            plot.CMA.error(export.formats=export.formats,
+                           export.formats.fileprefix=export.formats.fileprefix,
+                           export.formats.directory=export.formats.directory,
+                           generate.R.plot=FALSE);
+            return (invisible(NULL));
+          }
         }
+
+        # Load the JavaScript template:
+        if( !is.null(export.formats.html.javascript) )
+        {
+          # Try to load the given template:
+          if( length(export.formats.html.javascript) != 1 || !file.exists(as.character(export.formats.html.javascript)) )
+          {
+            if( !suppress.warnings ) .report.ewms("The given JavaScript template '",as.character(export.formats.html.javascript),"' does not seem to exist: falling back to the default one!\n", "warning", ".plot.CMAs", "AdhereR");
+            export.formats.html.javascript <- NULL;
+          } else
+          {
+            js.template.path <- as.character(export.formats.html.javascript);
+          }
+        }
+        if( is.null(export.formats.html.javascript) )
+        {
+          # Load the default JavaScript template:
+          js.template.path <- system.file('html-templates/javascript-template.js', package='AdhereR');
+          if( is.null(js.template.path) || js.template.path=="" )
+          {
+            if( !suppress.warnings ) .report.ewms("Cannot load the JavaScript template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+            .last.cma.plot.info$SVG <- NULL;
+            assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+            plot.CMA.error(export.formats=export.formats,
+                           export.formats.fileprefix=export.formats.fileprefix,
+                           export.formats.directory=export.formats.directory,
+                           generate.R.plot=FALSE);
+            return (invisible(NULL));
+          }
+        }
+
+        # Read the templates:
         css.template <- readLines(css.template.path);
         js.template  <- readLines(js.template.path);
 
@@ -4990,7 +5035,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           if( !requireNamespace("base64", quietly=TRUE) )
           {
             # Does not seem to:
-            .report.ewms("Package 'base64' required for emedding images in HTML documents does not seem to exist: we'll store the images outside the HTML document!\n", "warning", ".plot.CMAs", "AdhereR");
+            if( !suppress.warnings ) .report.ewms("Package 'base64' required for emedding images in HTML documents does not seem to exist: we'll store the images outside the HTML document!\n", "warning", ".plot.CMAs", "AdhereR");
             export.formats.svg.placeholder.embed <- FALSE;
           }
 
@@ -5008,7 +5053,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             # The SVG placeholder must be embedded in base_64 encoded-form into en <img> tag:
             if( !(export.formats.svg.placeholder.type %in% c("jpg", "png")) )
             {
-              .report.ewms("Can only embed a JPEG or PNG image as a placeholder for the SVG image: defaulting to JPEG!\n", "warning", ".plot.CMAs", "AdhereR");
+              if( !suppress.warnings ) .report.ewms("Can only embed a JPEG or PNG image as a placeholder for the SVG image: defaulting to JPEG!\n", "warning", ".plot.CMAs", "AdhereR");
               export.formats.svg.placeholder.type <- "jpg";
             }
 
@@ -5041,7 +5086,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             svg.placeholder.end64 <- try(readLines(svg.placeholder.end64.tmpfile), silent=TRUE);
             if( inherits(svg.placeholder.end64, "try-error") )
             {
-              .report.ewms("Failed embedding an image in the HTML document: reverting to having it as an external file!\n", "warning", ".plot.CMAs", "AdhereR");
+              if( !suppress.warnings ) .report.ewms("Failed embedding an image in the HTML document: reverting to having it as an external file!\n", "warning", ".plot.CMAs", "AdhereR");
               export.formats.svg.placeholder.embed <- FALSE;
               try(unlink(c(svg.placeholder.tmpfile, svg.placeholder.end64.tmpfile)), silent=TRUE); # clean up the temp files
 
@@ -5067,10 +5112,40 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         }
 
         # Load the HTML template and replace generics by their actual values before saving it in the desired location:
-        html.template.path <- system.file('html-templates/html-template.html', package='AdhereR');
-        if( is.null(html.template.path) || html.template.path=="" )
+        if( !is.null(export.formats.html.template) )
         {
-          .report.ewms("Cannot load the HTML template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+          # Try to load the given template:
+          if( length(export.formats.html.template) != 1 || !file.exists(as.character(export.formats.html.template)) )
+          {
+            if( !suppress.warnings ) .report.ewms("The given HTML template '",as.character(export.formats.html.template),"' does not seem to exist: falling back to the default one!\n", "warning", ".plot.CMAs", "AdhereR");
+            export.formats.html.template <- NULL;
+          } else
+          {
+            html.template.path <- as.character(export.formats.html.template);
+          }
+        }
+        if( is.null(export.formats.html.template) )
+        {
+          # Load the default HTML template:
+          html.template.path <- system.file('html-templates/html-template.html', package='AdhereR');
+          if( is.null(html.template.path) || html.template.path=="" )
+          {
+            if( !suppress.warnings ) .report.ewms("Cannot load the HTML template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+            .last.cma.plot.info$SVG <- NULL;
+            assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+            plot.CMA.error(export.formats=export.formats,
+                           export.formats.fileprefix=export.formats.fileprefix,
+                           export.formats.directory=export.formats.directory,
+                           generate.R.plot=FALSE);
+            return (invisible(NULL));
+          }
+        }
+        # Load it:
+        html.template <- readLines(html.template.path);
+        # Check place-holders and replace them with the actual values:
+        if( length(grep('<script type="text/javascript" src="PATH-TO-JS"></script>', html.template, fixed=TRUE)) != 1 )
+        {
+          if( !suppress.warnings ) .report.ewms("The HTML template seems corrupted: there should 1 and only 1 '<script type=\"text/javascript\" src=\"PATH-TO-JS\"></script>'!\n", "error", ".plot.CMAs", "AdhereR");
           .last.cma.plot.info$SVG <- NULL;
           assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
           plot.CMA.error(export.formats=export.formats,
@@ -5079,7 +5154,17 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                          generate.R.plot=FALSE);
           return (invisible(NULL));
         }
-        html.template <- readLines(html.template.path);
+        if( length(grep('<link rel="stylesheet" href="PATH-TO-CSS">', html.template, fixed=TRUE)) != 1 )
+        {
+          if( !suppress.warnings ) .report.ewms("The HTML template seems corrupted: there should 1 and only 1 '<link rel=\"stylesheet\" href=\"PATH-TO-CSS\">'!\n", "error", ".plot.CMAs", "AdhereR");
+          .last.cma.plot.info$SVG <- NULL;
+          assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+          plot.CMA.error(export.formats=export.formats,
+                         export.formats.fileprefix=export.formats.fileprefix,
+                         export.formats.directory=export.formats.directory,
+                         generate.R.plot=FALSE);
+          return (invisible(NULL));
+        }
         html.template <- sub('<script type="text/javascript" src="PATH-TO-JS"></script>',
                              paste0('<script type="text/javascript">\n', paste0(js.template, collapse="\n"), '\n</script>'),
                              html.template, fixed=TRUE); # JavaScript
@@ -5088,6 +5173,17 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                              html.template, fixed=TRUE); # CSS
 
         # SVG:
+        if( length(grep('<object id="adherence_plot" data="PATH-TO-IMAGE" type="image/svg+xml">Please use a modern browser!</object>', html.template, fixed=TRUE)) != 1 )
+        {
+          if( !suppress.warnings ) .report.ewms("The HTML template seems corrupted: there should 1 and only 1 '<object id=\"adherence_plot\" data=\"PATH-TO-IMAGE\" type=\"image/svg+xml\">Please use a modern browser!</object>'!\n", "error", ".plot.CMAs", "AdhereR");
+          .last.cma.plot.info$SVG <- NULL;
+          assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
+          plot.CMA.error(export.formats=export.formats,
+                         export.formats.fileprefix=export.formats.fileprefix,
+                         export.formats.directory=export.formats.directory,
+                         generate.R.plot=FALSE);
+          return (invisible(NULL));
+        }
         svg.str.embedded <- c('<svg id="adherence_plot" ', # add id and (possibly) the dimensions to the <svg> tag
                               if( TRUE ) 'height="600" ', # height (if defined)
                               if( FALSE ) 'width="600" ', # width (if defined)
@@ -5273,7 +5369,7 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
         css.template.path <- system.file('html-templates/css-template.css', package='AdhereR');
         if( is.null(css.template.path) || css.template.path=="" )
         {
-          .report.ewms("Cannot load the CSS template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+          if( !suppress.warnings ) .report.ewms("Cannot load the CSS template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
           .last.cma.plot.info$SVG <- NULL;
           assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
           plot.CMA.error(export.formats=export.formats,
@@ -5285,7 +5381,7 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
         js.template.path <- system.file('html-templates/javascript-template.js', package='AdhereR');
         if( is.null(js.template.path) || js.template.path=="" )
         {
-          .report.ewms("Cannot load the JavaScript template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+          if( !suppress.warnings ) .report.ewms("Cannot load the JavaScript template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
           .last.cma.plot.info$SVG <- NULL;
           assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
           plot.CMA.error(export.formats=export.formats,
@@ -5301,7 +5397,7 @@ plot.CMA.error <- function(cma=NA, patients.to.plot=NULL,
         html.template.path <- system.file('html-templates/html-template.html', package='AdhereR');
         if( is.null(html.template.path) || html.template.path=="" )
         {
-          .report.ewms("Cannot load the HTML template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
+          if( !suppress.warnings ) .report.ewms("Cannot load the HTML template -- please reinstall the AdhereR package!\n", "error", ".plot.CMAs", "AdhereR");
           .last.cma.plot.info$SVG <- NULL;
           assign(".last.cma.plot.info", .last.cma.plot.info, envir=.adherer.env); # save the plot infor into the environment
           plot.CMA.error(export.formats=export.formats,

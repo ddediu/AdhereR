@@ -84,6 +84,9 @@
   export.formats.svg.placeholder.rsvg = TRUE,
   export.formats.svg.placeholder.embed = FALSE,
   export.formats.directory = NA,
+  export.formats.html.template = NULL,
+  export.formats.html.javascript = NULL,
+  export.formats.html.css = NULL,
   generate.R.plot = TRUE
 )
 
@@ -279,6 +282,13 @@ only when an \code{HTML} document is exported and only for \code{JPEG} or
 \item{export.formats.directory}{a \emph{string}; if exporting, which directory
 to export to; if \code{NA} (the default), creates the files in a temporary
 directory.}
+
+\item{export.formats.html.template, export.formats.html.javascript, export.formats.html.css}{\emph{character strings} or \code{NULL} (the default) giving the path to the
+\code{HTML}, \code{JavaScript} and \code{CSS} templates, respectively, to be
+used when generating the HTML+CSS semi-interactive plots; when \code{NULL},
+the default ones included with the package will be used. If you decide to define
+new templates please use the default ones for inspiration and note that future
+version are not guaranteed to be backwards compatible!}
 
 \item{generate.R.plot}{a \emph{logical}, if \code{TRUE} (the default),
 generate the standard (base \code{R}) plot for plotting within \code{R}.}

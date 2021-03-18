@@ -776,7 +776,7 @@ window.onload = function() {
   if( !adh_svg.is_embedded_SVG_supported() ) {
     // No SVG support:
 
-    // Remove the SVG and assoctaed control elements:
+    // Remove the SVG and associated control elements:
     var item = document.getElementById(adh_svg.plot_id);
     item.parentNode.removeChild(item);
     item = document.getElementById("svg_controls");
