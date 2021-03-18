@@ -1692,13 +1692,19 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         for( i in 1:length(cols) )
         {
           med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
-          med.class.name.svg <- .map.category.to.class(med.class.name);
+          if( (is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data))) && length(cols) == 1 )
+          {
+            med.class.name.svg <- NA;
+          } else
+          {
+            med.class.name.svg <- .map.category.to.class(med.class.name);
+          }
           if( do.plot )
           {
             l2 <- c(l2,
                     .SVG.rect(x=x.origin + lmx, y=y.origin + lmy+lh-dims.chr.legend/2, width=3*dims.chr.legend, height=1*dims.chr.legend,
                               stroke="black", fill=cols[i], fill_opacity=0.5,
-                              class=paste0("legend-medication-class-rect", if(med.class.name != "<missing>") paste0("-",med.class.name.svg) )));
+                              class=paste0("legend-medication-class-rect", if(med.class.name != "<missing>" && !is.na(med.class.name.svg)) paste0("-",med.class.name.svg) )));
           }
           #med.class.name <- names(cols)[i]; med.class.name <- ifelse(is.na(med.class.name),"<missing>",med.class.name);
           if( print.dose || plot.dose )
@@ -1714,7 +1720,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             l2 <- c(l2,
                     .SVG.text(x=x.origin + lmx + 4*dims.chr.legend, y=y.origin + lmy+lh, text=med.class.name,
                               col="black", font_size=dims.chr.legend, h.align="left", v.align="center",
-                              class=paste0("legend-medication-class-label", if(med.class.name != "<missing>") paste0("-",med.class.name.svg) ), suppress.warnings=suppress.warnings));
+                              class=paste0("legend-medication-class-label", if(med.class.name != "<missing>" && !is.na(med.class.name.svg)) paste0("-",med.class.name.svg) ),
+                              suppress.warnings=suppress.warnings));
             # Save the info:
             .last.cma.plot.info$SVG$legend$components <<- rbind(.last.cma.plot.info$SVG$legend$components,
                                                                 data.frame("string"=med.class.name,
