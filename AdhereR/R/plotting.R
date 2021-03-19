@@ -3731,11 +3731,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
     {
       col <- .map.category.to.color(unspecified.category.label);
-      if( .do.SVG ) med.class.svg <- NA;
+      if( .do.SVG ){ med.class.svg <- NA; med.class.svg.name <- unspecified.category.label; }
     } else
     {
       col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
-      if( .do.SVG ) med.class.svg <- .map.category.to.class(cma$data[i,cma$medication.class.colname]);
+      if( .do.SVG ){ med.class.svg <- .map.category.to.class(cma$data[i,cma$medication.class.colname]); med.class.svg.name <- cma$data[i,cma$medication.class.colname]; }
     }
 
     if( .do.R ) # Rplot:
@@ -3765,12 +3765,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                    .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.START"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.START"],
                                pch=pch.start.event, col=col, cex=cex,
                                class=paste0("event-start",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                               tooltip=med.class.svg, suppress.warnings=suppress.warnings),
+                               tooltip=med.class.svg.name, suppress.warnings=suppress.warnings),
                    # The end of the event:
                    .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.END"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.END"],
                                pch=pch.end.event, col=col, cex=cex,
                                class=paste0("event-end",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                               tooltip=med.class.svg, suppress.warnings=suppress.warnings)
+                               tooltip=med.class.svg.name, suppress.warnings=suppress.warnings)
       );
     }
 
@@ -3825,7 +3825,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                height=dims.event.y,
                                stroke=col, fill=col, fill_opacity=0.2,
                                class=paste0("event-interval-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                               tooltip=med.class.svg));
+                               tooltip=med.class.svg.name));
         if( evinfo$gap.days[i] > 0 )
         {
           # Save the info:
@@ -3842,7 +3842,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                  height=dims.event.y,
                                  stroke=col, fill="none",
                                  class=paste0("event-interval-not-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                                 tooltip=med.class.svg));
+                                 tooltip=med.class.svg.name));
         }
       }
     }
@@ -3906,7 +3906,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                               connected=FALSE,
                               stroke=col, stroke_width=seg.lwd,
                               class=paste0("event-segment",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                              tooltip=med.class.svg, suppress.warnings=suppress.warnings)
+                              tooltip=med.class.svg.name, suppress.warnings=suppress.warnings)
       );
     }
 
@@ -3941,7 +3941,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                col=if(is.na(print.dose.col)) col else print.dose.col,
                                other_params=if(!is.na(print.dose.outline.col)) paste0(' stroke="',.SVG.color(print.dose.outline.col,return_string=TRUE),'" stroke-width="0.5"'),
                                class=paste0("event-dose-text",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                               tooltip=med.class.svg, suppress.warnings=suppress.warnings)
+                               tooltip=med.class.svg.name, suppress.warnings=suppress.warnings)
         );
       }
     }
