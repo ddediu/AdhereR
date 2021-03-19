@@ -646,6 +646,42 @@ var adh_svg = { // begin namespace
 
 
   /**
+   * Do the medication groups exist?
+   * @return {Boolean} true if the medication groups exist
+   */
+  exists_med_groups : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "medication-groups-separator-hline");
+    return !(!x || x.length < 1);
+  },
+
+  /**
+   * Are the medication groups visible?
+   * @return {Boolean} true if the medication groups are visible
+   */
+  is_visible_med_groups : function() {
+    svg = document.getElementById(adh_svg.plot_id);
+    x = adh_svg._getElementsByClassName(svg, "medication-groups-separator-hline");
+    if(!x || x.length < 1) return undefined;
+    return adh_svg.is_visible_svg_element(x);
+  },
+
+  /**
+   * Show/hide the medication groups.
+   * @param {Boolean} show medication groups if true, otherwise hide them.
+   * @return {None}
+   */
+  show_med_groups : function(show) {
+    svg = document.getElementById(adh_svg.plot_id);
+    x_hlines = adh_svg._getElementsByClassName(svg, "medication-groups-separator-hline");
+    x_vlines = adh_svg._getElementsByClassName(svg, "medication-groups-separator-vline");
+
+    if(x_hlines) adh_svg.show_svg_element(x_hlines, show);
+    if(x_vlines) adh_svg.show_svg_element(x_vlines, show);
+  },
+
+
+  /**
    * Are there medication classes defined?
    * @return {Boolean} true if there are medication classes, false otherwise
    */
@@ -798,6 +834,7 @@ window.onload = function() {
     return;
   }
 
+
   // Various set-up things:
   svg = document.getElementById(adh_svg.plot_id);
 
@@ -809,6 +846,7 @@ window.onload = function() {
   adh_svg.default_font_size_title = adh_svg.get_font_size_title(); // default title font sizes
   adh_svg.default_font_size_axis_names = adh_svg.get_font_size_axis_names(); // default axes names font sizes
   adh_svg.default_font_size_axis_labels = adh_svg.get_font_size_axis_labels(); // default axes labels font sizes
+
 
   // Make (parts of) the legend clickable:
   // The medication classes (if any):
@@ -838,7 +876,7 @@ window.onload = function() {
         node = document.createElement('span'); // the contaning <span>
         node.title = "Show/hide " + m[i]; // the tooltip (title)
         node.innerHTML = '<label id="label_toggle_class_' + adh_svg.get_id_for_medication_class(m[i]) + '"><input id="button_toggle_class_' + adh_svg.get_id_for_medication_class(m[i]) + '" type="checkbox" onclick=\'adh_svg.show_medication_class("' + m[i] + '", !adh_svg.is_visible_medication_class("' + m[i] + '"))\' checked="checked">' + m[i] + '</label> &nbsp;'; // the HTML content
-        tmp.appendChild(node); // ad it to the document
+        tmp.appendChild(node); // add it to the document
       }
     }
   } else
@@ -846,6 +884,7 @@ window.onload = function() {
     // Hide the medication classes controls:
     tmp = document.getElementById("medication_classes_div"); if(tmp) { tmp.style.display = 'none'; }
   }
+
   // The FUW (if any):
   l_rect = adh_svg._getElementsByClassName(svg, "legend-fuw-rect");
   for(j=0; j<l_rect.length; j++) {
@@ -857,6 +896,7 @@ window.onload = function() {
     l_label[j].style.cursor = "pointer";
     l_label[j].addEventListener("click", function(e){ adh_svg.show_fuw(!adh_svg.is_visible_fuw()); tmp = document.getElementById("button_toggle_fuw"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
+
   // The OW (if any):
   l_rect = adh_svg._getElementsByClassName(svg, "legend-ow-rect");
   for(j=0; j<l_rect.length; j++) {
@@ -868,6 +908,7 @@ window.onload = function() {
     l_label[j].style.cursor = "pointer";
     l_label[j].addEventListener("click", function(e){ adh_svg.show_ow(!adh_svg.is_visible_ow()); tmp = document.getElementById("button_toggle_ow"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
+
   // The "real" OW [CMA8] (if any):
   l_rect = adh_svg._getElementsByClassName(svg, "legend-ow-real-rect");
   for(j=0; j<l_rect.length; j++) {
@@ -879,6 +920,7 @@ window.onload = function() {
     l_label[j].style.cursor = "pointer";
     l_label[j].addEventListener("click", function(e){ adh_svg.show_ow_real(!adh_svg.is_visible_ow_real()); tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.checked = !tmp.checked; } }, false);
   }
+
 
   // (Un)check and (dis)able various components in the HTML document
   // the idea is to disable the check button and the label if the element does not exist in the SVG, and to enable it if the element exists and is visible...
@@ -960,6 +1002,14 @@ window.onload = function() {
   } else {
     tmp = document.getElementById("button_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
     tmp = document.getElementById("label_toggle_ow_real"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
+  }
+
+  if(adh_svg.exists_med_groups()) {
+    tmp = document.getElementById("button_toggle_med_groups"); if(tmp) { tmp.disabled = false; tmp.checked = adh_svg.is_visible_med_groups(); }
+    tmp = document.getElementById("label_toggle_med_groups"); if(tmp) { tmp.disabled = false; tmp.style = adh_svg.label_style_default; }
+  } else {
+    tmp = document.getElementById("button_toggle_med_groups"); if(tmp) { tmp.disabled = true; tmp.checked = false; }
+    tmp = document.getElementById("label_toggle_med_groups"); if(tmp) { tmp.disabled = true; tmp.style = adh_svg.label_style_disabled; }
   }
 }
 
