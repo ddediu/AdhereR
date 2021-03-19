@@ -21,7 +21,7 @@
   <body>
     <div id="svg_controls">
 
-      <h1>Image controls:</h1>
+      <h1>SVG manipulation:</h1>
 
       <div style="padding: 5px; margin: 5px;">
         <!-- Image size -->
@@ -123,9 +123,11 @@
 
     </div>
 
-    <!--img class="adherence_plot" src="PATH-TO-IMAGE"/-->
-    <!-- The SVG plot place-holder: make sure the line below appears *literally* as such in the HTML template! -->
-    <object id="adherence_plot" data="PATH-TO-IMAGE" type="image/svg+xml">Please use a modern browser!</object>
+    <div id="svg_image_div" style="overflow: scroll;">
+      <!--img class="adherence_plot" src="PATH-TO-IMAGE"/-->
+      <!-- The SVG plot place-holder: make sure the line below appears *literally* as such in the HTML template! -->
+      <object id="adherence_plot" data="PATH-TO-IMAGE" type="image/svg+xml">Please use a modern browser!</object>
+    </div>
     <br>
   </body>
 </html>
