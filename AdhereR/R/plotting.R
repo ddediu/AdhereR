@@ -5192,8 +5192,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           return (invisible(NULL));
         }
         svg.str.embedded <- c('<svg id="adherence_plot" ', # add id and (possibly) the dimensions to the <svg> tag
-                              if( TRUE ) 'height="600" ', # height (if defined)
-                              if( FALSE ) 'width="600" ', # width (if defined)
+                              if( FALSE ) 'height="600" ', # height (if defined)
+                              if( TRUE ) paste0('width="',(dims.plot.width / dims.chr.std),'" '), # width in "standard" charters
                               svg.str[-1]);
         html.template <- sub('<object id="adherence_plot" data="PATH-TO-IMAGE" type="image/svg+xml">Please use a modern browser!</object>',
                              paste0(paste0(svg.str.embedded, collapse=""), "\n"),

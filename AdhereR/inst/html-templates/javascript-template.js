@@ -842,11 +842,14 @@ window.onload = function() {
   tmp = document.getElementById("button_toggle_alt_bands");
   adh_svg.label_style_default = tmp ? tmp.style : "none"; // save the default lablel CSS style
   adh_svg.label_style_disabled = "color: #aaa;" // and this is the disabled lable look
-  img_dims = adh_svg.get_plot_size(); adh_svg.default_svg_width = (img_dims.w === undefined) ? "auto" : img_dims.w; adh_svg.default_svg_height = (img_dims.h === undefined) ? "auto" : img_dims.h; // default SVG size
   adh_svg.default_font_size_title = adh_svg.get_font_size_title(); // default title font sizes
   adh_svg.default_font_size_axis_names = adh_svg.get_font_size_axis_names(); // default axes names font sizes
   adh_svg.default_font_size_axis_labels = adh_svg.get_font_size_axis_labels(); // default axes labels font sizes
 
+
+  // The initial SVG size is in terms of "standard" characters: rescale it as 1 "standard" character -> 1.5em:
+  img_dims = adh_svg.get_plot_size(); adh_svg.set_plot_size((img_dims.w === undefined) ? "auto" : (img_dims.w*1.5 + "em"));
+  img_dims = adh_svg.get_plot_size(); adh_svg.default_svg_width = (img_dims.w === undefined) ? "auto" : img_dims.w; adh_svg.default_svg_height = (img_dims.h === undefined) ? "auto" : img_dims.h; // default SVG size
 
   // Make (parts of) the legend clickable:
   // The medication classes (if any):
