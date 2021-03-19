@@ -5203,7 +5203,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         writeLines(html.template, file.html, sep="\n");
       }
 
-      if( export.formats.save.svg.placeholder ||
+      if( (export.formats.save.svg.placeholder && !is.null(svg.placeholder.filename)) ||
           any(c("jpg", "png", "ps", "pdf", "webp") %in% export.formats) )
       {
         ## Export to flat file formats (PNG, JPG, PS, PDF or WEBP) ####
