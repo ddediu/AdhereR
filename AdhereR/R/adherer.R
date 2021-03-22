@@ -994,8 +994,8 @@ print.CMA0 <- function(x,                                                  # the
 #' image placeholder of type given by \code{export.formats.svg.placeholder.type}
 #'for the \code{SVG} image.
 #' @param export.formats.svg.placeholder.type a \emph{string}, giving the type of
-#' placeholder for the \code{SVG} image to save; can be "jpg" (the default),
-#' "png" or "webp".
+#' placeholder for the \code{SVG} image to save; can be "jpg",
+#' "png" (the default) or "webp".
 #' @param export.formats.svg.placeholder.rsvg a \emph{logical} specifying how the
 #' \code{SVG} placeholder is generated: exported from the SVG image using the
 #' \code{rsvg} package (\code{TRUE}, the default; identical to the SVG but slow),
@@ -1073,7 +1073,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
                       export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                       export.formats.save.svg.placeholder=TRUE,
-                      export.formats.svg.placeholder.type=c("jpg", "png", "webp")[1],
+                      export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
                       export.formats.svg.placeholder.rsvg=TRUE,
                       export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                       export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
@@ -3264,7 +3264,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
                            export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                            export.formats.save.svg.placeholder=TRUE,
-                           export.formats.svg.placeholder.type=c("jpg", "png", "webp")[1],
+                           export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
                            export.formats.svg.placeholder.rsvg=TRUE,
                            export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                            export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
@@ -3925,8 +3925,8 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' image placeholder of type given by \code{export.formats.svg.placeholder.type}
 #'for the \code{SVG} image.
 #' @param export.formats.svg.placeholder.type a \emph{string}, giving the type of
-#' placeholder for the \code{SVG} image to save; can be "jpg" (the default),
-#' "png" or "webp".
+#' placeholder for the \code{SVG} image to save; can be "jpg",
+#' "png" (the default) or "webp".
 #' @param export.formats.svg.placeholder.rsvg a \emph{logical} specifying how the
 #' \code{SVG} placeholder is generated: exported from the SVG image using the
 #' \code{rsvg} package (\code{TRUE}, the default; identical to the SVG but slow),
@@ -3998,7 +3998,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
                       export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                       export.formats.save.svg.placeholder=TRUE,
-                      export.formats.svg.placeholder.type=c("jpg", "png", "webp")[1],
+                      export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
                       export.formats.svg.placeholder.rsvg=TRUE,
                       export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                       export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
@@ -8200,8 +8200,8 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' image placeholder of type given by \code{export.formats.svg.placeholder.type}
 #'for the \code{SVG} image.
 #' @param export.formats.svg.placeholder.type a \emph{string}, giving the type of
-#' placeholder for the \code{SVG} image to save; can be "jpg" (the default),
-#' "png" or "webp".
+#' placeholder for the \code{SVG} image to save; can be "jpg",
+#' "png" (the default) or "webp".
 #' @param export.formats.svg.placeholder.rsvg a \emph{logical} specifying how the
 #' \code{SVG} placeholder is generated: exported from the SVG image using the
 #' \code{rsvg} package (\code{TRUE}, the default; identical to the SVG but slow),
@@ -8321,7 +8321,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
                                  export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                                  export.formats.save.svg.placeholder=TRUE,
-                                 export.formats.svg.placeholder.type=c("jpg", "png", "webp")[1],
+                                 export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
                                  export.formats.svg.placeholder.rsvg=TRUE,
                                  export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                                  export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG

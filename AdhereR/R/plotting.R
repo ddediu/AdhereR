@@ -72,7 +72,7 @@
                   "&#039;"="'",
                   "&lt;"="<",
                   "&gt;"=">");
-  if( length(grep("[&\\+\"'<>]", "acbma", fixed=FALSE)) == 0 ) return (s); # none found
+  if( length(grep("[&\\+\"'<>]", s, fixed=FALSE)) == 0 ) return (s); # none found
   # Replace them with the corresponding HTML entities:
   for (i in seq_along(spec.chars))
   {
@@ -1036,7 +1036,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
                        export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                        export.formats.save.svg.placeholder=TRUE,
-                       export.formats.svg.placeholder.type=c("jpg", "png", "webp")[1],
+                       export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
                        export.formats.svg.placeholder.rsvg=TRUE,
                        export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                        export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
@@ -5106,18 +5106,22 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             }
 
             # Convert the SVG:
-            bitmap <- rsvg::rsvg(file.svg,
-                                 height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
-                                 width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
-            svg.placeholder.tmpfile <- tempfile(paste0(export.formats.fileprefix,"-svg-placeholder"), fileext=paste0(".",export.formats.svg.placeholder.type));
-            svg.placeholder.end64.tmpfile <- paste0(svg.placeholder.tmpfile,"-enc64.txt");
+            svg.placeholder.png.tmpfile <- tempfile(paste0(export.formats.fileprefix,"-svg-placeholder"), fileext=".png");
+            rsvg::rsvg_png(file.svg,
+                           file=svg.placeholder.png.tmpfile,
+                           height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                           width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
             if( export.formats.svg.placeholder.type == "jpg" )
             {
-              jpeg::writeJPEG(bitmap, svg.placeholder.tmpfile, quality=0.90);
+              # Covert it to JPEG first:
+              svg.placeholder.tmpfile <- paste0(svg.placeholder.png.tmpfile,".jpg");
+              jpeg::writeJPEG(png::readPNG(svg.placeholder.png.tmpfile), svg.placeholder.tmpfile, quality=0.90);
             } else if( export.formats.svg.placeholder.type == "png" )
             {
-              png::writePNG(bitmap, svg.placeholder.tmpfile, dpi=150);
+              # Already exported:
+              svg.placeholder.tmpfile <- svg.placeholder.png.tmpfile;
             }
+            svg.placeholder.end64.tmpfile <- paste0(svg.placeholder.tmpfile,"-enc64.txt");
 
             # Encode it to base64:
             base64::encode(svg.placeholder.tmpfile, svg.placeholder.end64.tmpfile, linebreaks=FALSE);
