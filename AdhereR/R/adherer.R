@@ -996,11 +996,6 @@ print.CMA0 <- function(x,                                                  # the
 #' @param export.formats.svg.placeholder.type a \emph{string}, giving the type of
 #' placeholder for the \code{SVG} image to save; can be "jpg",
 #' "png" (the default) or "webp".
-#' @param export.formats.svg.placeholder.rsvg a \emph{logical} specifying how the
-#' \code{SVG} placeholder is generated: exported from the SVG image using the
-#' \code{rsvg} package (\code{TRUE}, the default; identical to the SVG but slow),
-#' or using \code{base R} plotting (\code{FALSE}; might be slightly different from
-#' the SVG image but is faster).
 #' @param export.formats.svg.placeholder.embed a \emph{logical}, if \code{TRUE},
 #' embed the placeholder image in the HTML document (if any) using \code{base64}
 #' encoding, otherwise (the default) leave it as an external image file (works
@@ -1074,7 +1069,6 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                       export.formats.save.svg.placeholder=TRUE,
                       export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
-                      export.formats.svg.placeholder.rsvg=TRUE,
                       export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                       export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                       export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
@@ -1148,7 +1142,6 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              export.formats.width=export.formats.width,
              export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
              export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
-             export.formats.svg.placeholder.rsvg=export.formats.svg.placeholder.rsvg,
              export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
              export.formats.html.template=export.formats.html.template,
              export.formats.html.javascript=export.formats.html.javascript,
@@ -3265,7 +3258,6 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                            export.formats.save.svg.placeholder=TRUE,
                            export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
-                           export.formats.svg.placeholder.rsvg=TRUE,
                            export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                            export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                            export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
@@ -3346,7 +3338,6 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              export.formats.width=export.formats.width,
              export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
              export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
-             export.formats.svg.placeholder.rsvg=export.formats.svg.placeholder.rsvg,
              export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
              export.formats.html.template=export.formats.html.template,
              export.formats.html.javascript=export.formats.html.javascript,
@@ -3927,11 +3918,6 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' @param export.formats.svg.placeholder.type a \emph{string}, giving the type of
 #' placeholder for the \code{SVG} image to save; can be "jpg",
 #' "png" (the default) or "webp".
-#' @param export.formats.svg.placeholder.rsvg a \emph{logical} specifying how the
-#' \code{SVG} placeholder is generated: exported from the SVG image using the
-#' \code{rsvg} package (\code{TRUE}, the default; identical to the SVG but slow),
-#' or using \code{base R} plotting (\code{FALSE}; might be slightly different from
-#' the SVG image but is faster).
 #' @param export.formats.svg.placeholder.embed a \emph{logical}, if \code{TRUE},
 #' embed the placeholder image in the HTML document (if any) using \code{base64}
 #' encoding, otherwise (the default) leave it as an external image file (works
@@ -3999,7 +3985,6 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                       export.formats.save.svg.placeholder=TRUE,
                       export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
-                      export.formats.svg.placeholder.rsvg=TRUE,
                       export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                       export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                       export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
@@ -4073,7 +4058,6 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  export.formats.width=export.formats.width,
                  export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
                  export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
-                 export.formats.svg.placeholder.rsvg=export.formats.svg.placeholder.rsvg,
                  export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
                  export.formats.html.template=export.formats.html.template,
                  export.formats.html.javascript=export.formats.html.javascript,
@@ -8202,11 +8186,6 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' @param export.formats.svg.placeholder.type a \emph{string}, giving the type of
 #' placeholder for the \code{SVG} image to save; can be "jpg",
 #' "png" (the default) or "webp".
-#' @param export.formats.svg.placeholder.rsvg a \emph{logical} specifying how the
-#' \code{SVG} placeholder is generated: exported from the SVG image using the
-#' \code{rsvg} package (\code{TRUE}, the default; identical to the SVG but slow),
-#' or using \code{base R} plotting (\code{FALSE}; might be slightly different from
-#' the SVG image but is faster).
 #' @param export.formats.svg.placeholder.embed a \emph{logical}, if \code{TRUE},
 #' embed the placeholder image in the HTML document (if any) using \code{base64}
 #' encoding, otherwise (the default) leave it as an external image file (works
@@ -8322,7 +8301,6 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                                  export.formats.save.svg.placeholder=TRUE,
                                  export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
-                                 export.formats.svg.placeholder.rsvg=TRUE,
                                  export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                                  export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                                  export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
@@ -8416,7 +8394,6 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              export.formats.width=export.formats.width,
              export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
              export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
-             export.formats.svg.placeholder.rsvg=export.formats.svg.placeholder.rsvg,
              export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
              export.formats.html.template=export.formats.html.template,
              export.formats.html.javascript=export.formats.html.javascript,

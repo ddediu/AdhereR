@@ -69,8 +69,7 @@
   export.formats.height = NA,
   export.formats.width = NA,
   export.formats.save.svg.placeholder = TRUE,
-  export.formats.svg.placeholder.type = c("jpg", "png", "webp")[1],
-  export.formats.svg.placeholder.rsvg = TRUE,
+  export.formats.svg.placeholder.type = c("jpg", "png", "webp")[2],
   export.formats.svg.placeholder.embed = FALSE,
   export.formats.html.template = NULL,
   export.formats.html.javascript = NULL,
@@ -240,14 +239,8 @@ image placeholder of type given by \code{export.formats.svg.placeholder.type}
 for the \code{SVG} image.}
 
 \item{export.formats.svg.placeholder.type}{a \emph{string}, giving the type of
-placeholder for the \code{SVG} image to save; can be "jpg" (the default),
-"png" or "webp".}
-
-\item{export.formats.svg.placeholder.rsvg}{a \emph{logical} specifying how the
-\code{SVG} placeholder is generated: exported from the SVG image using the
-\code{rsvg} package (\code{TRUE}, the default; identical to the SVG but slow),
-or using \code{base R} plotting (\code{FALSE}; might be slightly different from
-the SVG image but is faster).}
+placeholder for the \code{SVG} image to save; can be "jpg",
+"png" (the default) or "webp".}
 
 \item{export.formats.svg.placeholder.embed}{a \emph{logical}, if \code{TRUE},
 embed the placeholder image in the HTML document (if any) using \code{base64}

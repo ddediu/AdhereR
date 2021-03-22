@@ -1037,7 +1037,6 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                        export.formats.save.svg.placeholder=TRUE,
                        export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
-                       export.formats.svg.placeholder.rsvg=TRUE,
                        export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                        export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                        export.formats.directory=NA,     # if exporting, which directory to export to (if not give, creates files in the temporary directory)
@@ -1053,16 +1052,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     return (invisible(NULL));
   }
 
-  # Stuff not yet implemented;
-  if( !export.formats.svg.placeholder.rsvg )
-  {
-    if( !suppress.warnings ) .report.ewms("Using base R for the SVG placeholder is not yet implemented: falling back to using rsvg\n", "warning", ".plot.CMAs", "AdhereR");
-    export.formats.svg.placeholder.rsvg <- TRUE;
-  }
-
 
   #
-  # Initialise the SVG file content ####
+  # Initialize the SVG file content ####
   #
   # Things to remember about SVGs:
   #   - coordinates start top-left and go right and bottom
@@ -5254,10 +5246,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( export.formats.save.svg.placeholder ||
             any(c("jpg", "png","webp") %in% export.formats) )
         {
-          # For the bitmapped formats, render it once:
-          bitmap <- rsvg::rsvg(file.svg,
-                               height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
-                               width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
+          # # For the bitmapped formats, render it once:
+          # bitmap <- rsvg::rsvg(file.svg,
+          #                      height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+          #                      width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
 
           if( export.formats.save.svg.placeholder && !is.null(svg.placeholder.filename) )
           {
@@ -5265,13 +5257,27 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             exported.file.names <- c(exported.file.names, svg.placeholder.filename);
             if( export.formats.svg.placeholder.type == "jpg" )
             {
-              jpeg::writeJPEG(bitmap, svg.placeholder.filename, quality=0.90);
+              png2jpg.file <- tempfile(export.formats.fileprefix, fileext="-png.jpg")
+              rsvg::rsvg_png(file.svg,
+                             file=png2jpg.file,
+                             height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                             width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
+              jpeg::writeJPEG(png::readPNG(png2jpg.file), svg.placeholder.filename, quality=0.90);
+              #jpeg::writeJPEG(bitmap, svg.placeholder.filename, quality=0.90);
             } else if( export.formats.svg.placeholder.type == "png" )
             {
-              png::writePNG(bitmap, svg.placeholder.filename, dpi=150);
+              rsvg::rsvg_png(file.svg,
+                             file=svg.placeholder.filename,
+                             height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                             width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
+              #png::writePNG(bitmap, svg.placeholder.filename, dpi=150);
             } else if( export.formats.svg.placeholder.type == "webp" )
             {
-              webp::write_webp(bitmap, svg.placeholder.filename, quality=90);
+              rsvg::rsvg_webp(file.svg,
+                             file=svg.placeholder.filename,
+                             height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                             width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
+              #webp::write_webp(bitmap, svg.placeholder.filename, quality=90);
             }
           }
 
@@ -5282,7 +5288,13 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                 tempfile(export.formats.fileprefix, fileext=".jpg"),
                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".jpg")) );
             exported.file.names <- c(exported.file.names, file.jpg);
-            jpeg::writeJPEG(bitmap, file.jpg, quality=0.90);
+            png2jpg.file <- tempfile(export.formats.fileprefix, fileext="-png.jpg")
+            rsvg::rsvg_png(file.svg,
+                           file=png2jpg.file,
+                           height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                           width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
+            jpeg::writeJPEG(png::readPNG(png2jpg.file), file.jpg, quality=0.90);
+            #jpeg::writeJPEG(bitmap, file.jpg, quality=0.90);
           }
 
           if( "png" %in% export.formats )
@@ -5292,8 +5304,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                 tempfile(export.formats.fileprefix, fileext=".png"),
                                 file.path(export.formats.directory, paste0(export.formats.fileprefix,".png")) );
             exported.file.names <- c(exported.file.names, file.png);
-            #rsvg::rsvg_png(file.svg, file=file.png);
-            png::writePNG(bitmap, file.png, dpi=150);
+            rsvg::rsvg_png(file.svg,
+                           file=file.png,
+                           height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                           width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
+            #png::writePNG(bitmap, file.png, dpi=150);
           }
 
           if( "webp" %in% export.formats )
@@ -5303,8 +5318,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                  tempfile(export.formats.fileprefix, fileext=".webp"),
                                  file.path(export.formats.directory, paste0(export.formats.fileprefix,".webp")) );
             exported.file.names <- c(exported.file.names, file.webp);
-            #rsvg::rsvg_webp(file.svg, file=file.webp);
-            webp::write_webp(bitmap, file.webp, quality=90);
+            rsvg::rsvg_webp(file.svg,
+                            file=file.webp,
+                            height=if(!is.na(export.formats.height)) export.formats.height else dims.total.height * 2, # prepare for high DPI/quality
+                            width =if(!is.na(export.formats.width))  export.formats.width  else NULL);
+            #webp::write_webp(bitmap, file.webp, quality=90);
           }
         }
 
