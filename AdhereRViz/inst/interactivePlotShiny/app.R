@@ -191,8 +191,11 @@ ui <- fluidPage(
 
                                               shinyjs::hidden(div(id="mg_contents",
                                                                   # View the current medication groups definitions:
-                                                                  div(title="Click here to view the medication groups...",
-                                                                      actionButton("mg_view_button", label="View definitions!", icon=icon("eye-open", lib="glyphicon"))),
+                                                                  conditionalPanel(
+                                                                    condition="(input.mg_definitions_source == 'named vector')",
+                                                                    div(title="Click here to view the medication groups...",
+                                                                        actionButton("mg_view_button", label="View definitions!", icon=icon("eye-open", lib="glyphicon")))
+                                                                  ),
 
                                                                   # List the medication groups to show:
                                                                   div(title='Please select all the medication groups that should be plotted!',
@@ -1732,17 +1735,40 @@ ui <- fluidPage(
                                             conditionalPanel(
                                               condition="(input.mg_use_medication_groups)",
 
-                                              div(title='Load the medication groups from a named vector in memory',
-                                                  # From in-memory vector ----
-                                                  selectInput(inputId="mg_from_memory",
-                                                              label="Load named vector",
-                                                              choices=c("[none]"),
-                                                              selected="[none]")),
+                                              div(title='How to define the medication groups?',
+                                                  selectInput(inputId="mg_definitions_source",
+                                                              label="Medication groups from:",
+                                                              choices=c("named vector", "column in data"),
+                                                              selected="named vector")),
 
-                                              div(style="height: 0.50em;"),
+                                              conditionalPanel(
+                                                condition="(input.mg_definitions_source == 'named vector')",
 
-                                              div(title="Click here to check the selected vector...",
-                                                  actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon"))),
+                                                div(title='Load the medication groups from a named vector in memory',
+                                                    # From in-memory vector ----
+                                                    selectInput(inputId="mg_from_memory",
+                                                                label="Load named vector",
+                                                                choices=c("[none]"),
+                                                                selected="[none]")),
+
+                                                div(style="height: 0.50em;"),
+
+                                                div(title="Click here to check the selected vector...",
+                                                    actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon")))
+                                              ),
+
+                                              conditionalPanel(
+                                                condition="(input.mg_definitions_source == 'column in data')",
+
+                                                div(title='The medication groups are defined by a column in the data',
+                                                    # From column in the data ----
+                                                    shinyWidgets::pickerInput(inputId="mg_from_column",
+                                                                              label="Medication groups column",
+                                                                              choices=c("[none]"),
+                                                                              selected="[none]")),
+
+                                                div(style="height: 0.50em;")
+                                              ),
 
                                               hr(),
 
@@ -3038,6 +3064,8 @@ server <- function(input, output, session)
     shinyWidgets::updatePickerInput(session, "dataset_from_memory_medication_class", choices=c("[not defined]", x), selected="[not defined]", choicesOpt=list(subtext=c("", x.info)));
     shinyWidgets::updatePickerInput(session, "dataset_from_memory_daily_dose",       choices=c("[not defined]", x), selected="[not defined]", choicesOpt=list(subtext=c("", x.info)));
 
+    # Medication groups:
+    shinyWidgets::updatePickerInput(session, "mg_from_column", choices=x, selected=x[1], choicesOpt=list(subtext=x.info));
   })
 
   # Display a data.frame as a nice HTML table ----
@@ -3382,9 +3410,35 @@ server <- function(input, output, session)
 
     updateSelectInput(session, "compute_cma_patient_by_id", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$all.IDs[1]);
 
-    shinyWidgets::updatePickerInput(session, "mg_to_plot_list",
-                                    choices=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"),
-                                    selected=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"));
+    if( input$mg_definitions_source == 'named vector' )
+    {
+      shinyWidgets::updatePickerInput(session, "mg_to_plot_list",
+                                      choices=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"),
+                                      selected=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"));
+    } else if( input$mg_definitions_source == 'column in data' )
+    {
+      if( !is.null(.GlobalEnv$.plotting.params$data) )
+      {
+        mg_vals <- .GlobalEnv$.plotting.params$get.data.for.patients.fnc(.GlobalEnv$.plotting.params$all.IDs,
+                                                                         .GlobalEnv$.plotting.params$data,
+                                                                         idcol=.GlobalEnv$.plotting.params$ID.colname);
+        if( !is.null(mg_vals) && length(mg_vals) > 0 )
+        {
+          mg_vals <- unique(mg_vals[, input$mg_from_column]);
+          mg_vals <- mg_vals[ !is.na(mg_vals) ];
+          if( !is.null(mg_vals) && length(mg_vals) > 0 )
+          {
+            mg_vals <- sort(mg_vals);
+          }
+        }
+      } else
+      {
+        mg_vals <- NULL;
+      }
+      shinyWidgets::updatePickerInput(session, "mg_to_plot_list",
+                                      choices=c(mg_vals, "* (all others)"),
+                                      selected=c(mg_vals, "* (all others)"));
+    }
 
     #if( is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname) ) shinyjs::hide(id="dose_is_defined") else shinyjs::show(id="dose_is_defined");
     output$is_dose_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
@@ -4570,177 +4624,11 @@ server <- function(input, output, session)
                })
 
   # Validate a given medication groups definition and possibly load it ----
-  .validate.and.load.medication.groups <- function(mg, # the vector of definitions
+  .validate.and.load.medication.groups <- function(mg, # the vector of definitions or column name
                                                    d=NULL # the data.frame to which these definitions refer to (or NULL for no such checks)
   )
   {
-    if( FALSE ) # skip checks for now
-    {
-    # Check dataset dimensions:
-    all.IDs <- get.patients.fnc(d, ID.colname);
-    if( length(all.IDs) < min.npats || length(get.colnames.fnc(d)) < min.ncol )
-    {
-      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            div(paste0("Cannot load the selected dataset!\nPlease make sure your selection is valid and has at least ",min.ncol," column(s) and data for at least ",min.npats," patient(s)..."), style="color: red;"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return (invisible(NULL));
-    }
-
-    # Check if the column names refer to existing columns in the dataset:
-    if( is.na(ID.colname) || length(ID.colname) != 1 || ID.colname=="" || !(ID.colname %in% get.colnames.fnc(d)) )
-    {
-      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            div(paste0("Patient ID column '",ID.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return (invisible(NULL));
-    }
-
-    if( is.na(event.date.colname) || length(event.date.colname) != 1 || event.date.colname=="" || !(event.date.colname %in% get.colnames.fnc(d)) )
-    {
-      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            div(paste0("Event date column '",event.date.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return (invisible(NULL));
-    }
-
-    if( is.na(event.duration.colname) || length(event.duration.colname) != 1 || event.duration.colname=="" || !(event.duration.colname %in% get.colnames.fnc(d)) )
-    {
-      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            div(paste0("Event duration column '",event.duration.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return (invisible(NULL));
-    }
-
-    if( is.na(event.daily.dose.colname) || length(event.daily.dose.colname) != 1 || event.daily.dose.colname=="" )
-    {
-      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            div(paste0("Event duration column '",event.daily.dose.colname, "' must be a non-empty string..."), style="color: red;"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return (invisible(NULL));
-    } else if( event.daily.dose.colname == "[not defined]" )
-    {
-      event.daily.dose.colname <- NA; # not defined
-    } else if( !(event.daily.dose.colname %in% get.colnames.fnc(d)) )
-    {
-      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            div(paste0("Event duration column '",event.daily.dose.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."), style="color: red;"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return (invisible(NULL));
-    }
-
-    if( is.na(medication.class.colname) || length(medication.class.colname) != 1 || medication.class.colname=="" )
-    {
-      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            div(paste0("Treatment class column '",medication.class.colname, "' must be a non-empty string..."), style="color: red;"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return (invisible(NULL));
-    } else if( medication.class.colname == "[not defined]" )
-    {
-      medication.class.colname <- NA; # not defined
-    } else if( !(medication.class.colname %in% get.colnames.fnc(d)) )
-    {
-      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            div(paste0("Treatment class column '",medication.class.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."), style="color: red;"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return (invisible(NULL));
-    }
-
-    # Check if the column names are unique (i.e., do not repeat):
-    if( anyDuplicated(na.omit(c(ID.colname, event.date.colname, event.duration.colname, event.daily.dose.colname, medication.class.colname))) )
-    {
-      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            div("The selected column names must be unique!", style="color: red;"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return (invisible(NULL));
-    }
-
-    # More advanced checks of the column types:
-    if( inherits(d, "data.frame") ) # for data.frame's
-    {
-      d <- as.data.frame(d); # force it to a data.frame to avoid unexpected behaviours from derived classes
-      if( inherits(d[,event.date.colname], "Date") )
-      {
-        # It's a column of Dates: perfect!
-      } else if( is.factor(d[,event.date.colname]) || is.character(d[,event.date.colname]) )
-      {
-        # It's a factor or string: check if it conforms to the given date.format:
-        s <- na.omit(as.character(d[,event.date.colname]));
-        if( length(s) == 0 )
-        {
-          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                div(paste0("There are no non-missing dates in the '",event.date.colname,"' column!"), style="color: red;"),
-                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-          return (invisible(NULL));
-        }
-        tmp <- as.Date(s, format=input$dataset_from_memory_event_format);
-        if( all(is.na(tmp)) )
-        {
-          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                div(paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: all conversions failed!"), style="color: red;"),
-                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-          return (invisible(NULL));
-        } else if( any(is.na(tmp)) )
-        {
-          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                div(paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: ", length(is.na(tmp))," conversions failed!"), style="color: red;"),
-                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-          return (invisible(NULL));
-        }
-      } else
-      {
-        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              div(paste0("The event date column '",event.date.colname,"' must contain either objects of class 'Date' or correctly-formatted strings (or factor levels)!"), style="color: red;"),
-                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return (invisible(NULL));
-      }
-
-      if( !is.na(event.duration.colname) && (!is.numeric(d[,event.duration.colname]) || any(d[,event.duration.colname] < 0, na.rm=TRUE)) )
-      {
-        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              div(paste0("If given, the event duration column '",event.duration.colname,"' must contain non-negative numbers!"), style="color: red;"),
-                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return (invisible(NULL));
-      }
-
-      if( !is.na(event.daily.dose.colname) && (!is.numeric(d[,event.daily.dose.colname]) || any(d[,event.daily.dose.colname] < 0, na.rm=TRUE)) )
-      {
-        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              div(paste0("If given, the daily dose column '",event.daily.dose.colname,"' must contain non-negative numbers!"), style="color: red;"),
-                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-        return (invisible(NULL));
-      }
-    }
-
-    # Even more complex check: try to compute CMA0 on the first patient:
-    test.cma <- NULL;
-    test.res <- tryCatch(test.cma <- AdhereR::CMA0(data=get.data.for.patients.fnc(all.IDs[1], d, ID.colname),
-                                                   ID.colname=ID.colname,
-                                                   event.date.colname=event.date.colname,
-                                                   event.duration.colname=event.duration.colname,
-                                                   event.daily.dose.colname=event.daily.dose.colname,
-                                                   medication.class.colname=medication.class.colname,
-                                                   date.format=date.format),
-                         error=function(e) e, warning=function(w) w);
-    if( is.null(test.cma) || inherits(test.res, "error") )
-    {
-      # Some error occured!
-      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            div("There's something wrong with these data!\nI tried to create a CMA0 object and this is what I got back:\n"), div(as.character(test.res), style="color: red;"),
-                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      return (invisible(NULL));
-    } else
-    {
-      if( inherits(test.res, "warning") )
-      {
-        showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                              div("These data seem ok, but when I tried to create a CMA0 object I got some warnings:\n"), div(as.character(test.res), style="color: blue;"),
-                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-      }
-    }
-    }
-
-    ### Now, really load the data! ###
-    # Place the data in the .GlobalEnv$.plotting.params list:
+     # Place the data in the .GlobalEnv$.plotting.params list:
     .GlobalEnv$.plotting.params$medication.groups <- mg;
 
     # Force UI updating...
@@ -4750,35 +4638,73 @@ server <- function(input, output, session)
   # In-memory medication group definitions: validate and use ----
   observeEvent(input$mg_from_memory_button_use,
                {
-                 # Sanity checks:
-                 if( is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ||
-                     (!is.character(.GlobalEnv$.plotting.params$.inmemory.mg) && !is.factor(.GlobalEnv$.plotting.params$.inmemory.mg)) ||
-                     length(.GlobalEnv$.plotting.params$.inmemory.mg) < 1 )
+                 if( input$mg_definitions_source == 'named vector' )
                  {
-                   showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                         div(paste0("Cannot load the selected medication group definitions '",input$mg_from_memory, "' from memory!\nPlease make sure you selected a valid vector of definitions..."), style="color: red;"),
-                                         footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
-                   return (invisible(NULL));
-                 }
+                   # From a named vector in memory:
 
-                 # Checks:
-                 .validate.and.load.medication.groups(.GlobalEnv$.plotting.params$.inmemory.mg,
-                                                      .GlobalEnv$.plotting.params$data);
+                   # Sanity checks:
+                   if( is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ||
+                       (!is.character(.GlobalEnv$.plotting.params$.inmemory.mg) && !is.factor(.GlobalEnv$.plotting.params$.inmemory.mg)) ||
+                       length(.GlobalEnv$.plotting.params$.inmemory.mg) < 1 )
+                   {
+                     showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                           div(paste0("Cannot load the selected medication group definitions '",input$mg_from_memory, "' from memory!\nPlease make sure you selected a valid vector of definitions..."), style="color: red;"),
+                                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                     return (invisible(NULL));
+                   }
 
-                 # Let the world know this:
-                 .GlobalEnv$.plotting.params$.mg.type <- "in memory";
-                 .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments <- FALSE;
-                 if( input$mg_from_memory == "[none]" )
+                   # Checks:
+                   .validate.and.load.medication.groups(.GlobalEnv$.plotting.params$.inmemory.mg,
+                                                        .GlobalEnv$.plotting.params$data);
+
+                   # Let the world know this:
+                   .GlobalEnv$.plotting.params$.mg.type <- "in memory";
+                   .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments <- FALSE;
+                   if( input$mg_from_memory == "[none]" )
+                   {
+                     # How did we get here???
+                     return (invisible(NULL));
+                   } else if( input$mg_from_memory == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
+                   {
+                     # The special value pointing to the argument to plot_interactive_cma():
+                     .GlobalEnv$.plotting.params$.mg.name <- NA;
+                   } else
+                   {
+                     .GlobalEnv$.plotting.params$.mg.name <- input$mg_from_memory;
+                   }
+                 } else if( input$mg_definitions_source == 'column in data' )
                  {
-                   # How did we get here???
-                   return (invisible(NULL));
-                 } else if( input$mg_from_memory == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
-                 {
-                   # The special value pointing to the argument to plot_interactive_cma():
-                   .GlobalEnv$.plotting.params$.mg.name <- NA;
-                 } else
-                 {
-                   .GlobalEnv$.plotting.params$.mg.name <- input$mg_from_memory;
+                   # From column in the data:
+
+                   # Check if the column name refers to an existing column in the dataset:
+                   if( is.na(input$mg_from_column) || length(input$mg_from_column) != 1 || input$mg_from_column=="" ||
+                       !(input$mg_from_column %in% .GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)) )
+                   {
+                     showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                           div(paste0("The medication groups column '",ID.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
+                                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                     return (invisible(NULL));
+                   }
+
+                   # Validate and load the medication groups
+                   .validate.and.load.medication.groups(input$mg_from_column,
+                                                        .GlobalEnv$.plotting.params$data);
+
+                   # Let the world know this:
+                   .GlobalEnv$.plotting.params$.mg.type <- "column in data";
+                   .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments <- FALSE;
+                   if( input$mg_from_column == "[none]" )
+                   {
+                     # How did we get here???
+                     return (invisible(NULL));
+                   } else if( input$mg_from_column == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
+                   {
+                     # The special value pointing to the argument to plot_interactive_cma():
+                     .GlobalEnv$.plotting.params$.mg.name <- NA;
+                   } else
+                   {
+                     .GlobalEnv$.plotting.params$.mg.name <- input$mg_from_column;
+                   }
                  }
                })
 
