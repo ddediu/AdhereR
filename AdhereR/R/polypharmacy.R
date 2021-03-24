@@ -722,22 +722,22 @@ CMA_polypharmacy <- function(data = data,
       return (NULL);
     }
 
-  } else if(.check.medication.groups(medication.groups,
-                                     list.of.medication.classes = unique(data[[medication.class.colname]])))
-  {
-
-    if(is.null(medication.groups)){
-      medication.groups <- unique(data[[medication.class.colname]])
-    }
-
-    med.groups.dt <- as.data.table(.fill.medication.groups(medication.groups,
-                                                           list.of.medication.classes = unique(data[[medication.class.colname]]),
-                                                           already.checked = TRUE))
-
-    setnames(med.groups.dt, old = "class", new = medication.class.colname)
-
-    data.copy <- merge(data.copy, med.groups.dt, by = medication.class.colname)
-
+  # } else if(.check.medication.groups(medication.groups,
+  #                                    list.of.medication.classes = unique(data[[medication.class.colname]])))
+  # {
+  #
+  #   if(is.null(medication.groups)){
+  #     medication.groups <- unique(data[[medication.class.colname]])
+  #   }
+  #
+  #   med.groups.dt <- as.data.table(.fill.medication.groups(medication.groups,
+  #                                                          list.of.medication.classes = unique(data[[medication.class.colname]]),
+  #                                                          already.checked = TRUE))
+  #
+  #   setnames(med.groups.dt, old = "class", new = medication.class.colname)
+  #
+  #   data.copy <- merge(data.copy, med.groups.dt, by = medication.class.colname)
+  #
   } else {
     return (NULL);
   }
@@ -789,7 +789,7 @@ CMA_polypharmacy <- function(data = data,
 }
 
 #' @export
-getCMA.CMA_polypharmacy <- function(x)
+getCMA.CMA_polypharmacy <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA_polypharmacy") || !("CMA" %in% names(cma)) || is.null(cma$CMA) ) return (NULL);

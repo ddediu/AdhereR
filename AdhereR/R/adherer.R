@@ -24,6 +24,7 @@
 #' @import stats
 #' @import data.table
 #' @import utils
+#' @import methods
 NULL
 
 # Declare some variables as global to avoid NOTEs during package building:
@@ -68,6 +69,7 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 )
 {
   # Make sure text is really a text:
+  text <- as.character(text);
   if( length(text) > 1 ) text <- paste0("[ ", paste0("'", as.character(text), "'", collapse="; "), " ]");
 
   # Add this new ewms info:
@@ -142,98 +144,191 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 "med.events"
 
 
-# Check if the defined medication groups have issues
-# Returns TRUE if everything's ok, or FALSE otherwise (and if suppress.warnings==FALSE, generate a warning message explaining the issue):
-.check.medication.groups <- function(medication.groups, # the medication groups as a named list of vectors of medication classed (or NULL if nt given)
-                                     list.of.medication.classes=NULL, # the actual full list of all possible medication classes (or NULL if not given)
+# Check, parse and evaluate the medication groups:
+# The idea is to transform each group into a function and let R do the heavy lifting:
+# Returns a list with two components:
+#  - defs (contains the group names and definitions) and
+#  - obs (logical matrix saying for each observation (row) if it belongs to a group (column))
+# or NULL if error occurred:
+.apply.medication.groups <- function(medication.groups, # the medication groups
+                                     data, # the data on which to apply them
                                      suppress.warnings=FALSE)
 {
-  if( is.null(medication.groups) )
+  if( is.null(medication.groups) || length(medication.groups) == 0 )
   {
     # by definition, there's nothing wrong with NULL
-    return (TRUE);
+    return (list("groups"=NULL,
+                 "obs_in_groups"=NULL,
+                 "errors"=NULL));
   }
 
-  if( !inherits(medication.groups, "list") )
+  # Basic checks:
+  if( is.null(data) || !inherits(data, "data.frame") || nrow(data) == 0 )
   {
-    if( !suppress.warnings ) .report.ewms("The medication groups must be a list!\n", "error", ".check.medication.groups", "AdhereR");
-    return (FALSE);
+    if( !suppress.warnings ) .report.ewms("The data must be a non-emtpy data.frame (or derived) object!\n", "error", ".apply.medication.groups", "AdhereR");
+    return (NULL);
   }
+  data <- as.data.frame(data); # make sure we convert it to a data.frame
 
-  #if( length(names(medication.groups)) != length(medication.groups) || any(duplicated(names(medication.groups))) || ("" %in% names(medication.groups)) )
-  #{
-  #  if( !suppress.warnings ) .report.ewms("The medication groups must be a named list with unique and non-empty names!\n", "error", ".check.medication.groups", "AdhereR");
-  #  return (FALSE);
-  #}
-
-  if( !all(vapply(medication.groups, function(x) (inherits(x,"character") || inherits(x,"factor")), logical(1))) )
+  if( !(is.character(medication.groups) || is.factor(medication.groups)) )
   {
-    if( !suppress.warnings ) .report.ewms("The members of the medication groups must vectors of charcters (or factors)!\n", "error", ".check.medication.groups", "AdhereR");
-    return (FALSE);
-  }
-
-  if( any(is.na(v <- unlist(medication.groups))) || any(duplicated(v)) )
-  {
-    if( !suppress.warnings ) .report.ewms("The vectors in the medication groups must not contain NAs and their values must appear only once!\n", "error", ".check.medication.groups", "AdhereR");
-    return (FALSE);
-  }
-
-  if( !is.null(list.of.medication.classes) )
-  {
-    # The list of all possible medication classes is given
-    if( !(inherits(list.of.medication.classes, "character") || inherits(list.of.medication.classes, "factor")) )
-    {
-      if( !suppress.warnings ) .report.ewms("The list of all possible medication classes, if given, must be a vector of characters (or factors)!\n", "error", ".check.medication.groups", "AdhereR");
-      return (FALSE);
-    }
-
-    if( length((x <- setdiff(v, list.of.medication.classes))) > 0 )
-    {
-      if( !suppress.warnings ) .report.ewms(paste0("There are ",length(x)," medication classes given in the groups that are not in the list of all possible medication classes!\n"), "error", ".check.medication.groups", "AdhereR");
-      return (FALSE);
-    }
-  }
-
-  # All seems fine:
-  return (TRUE);
-}
-
-# Fill in the medication groups and return them as a data.frame in the long format (or NULL, if there are issues):
-.fill.medication.groups <- function(medication.groups, # the medication groups as a named list of vectors of medication classed (or NULL if nt given)
-                                    list.of.medication.classes=NULL, # the actual full list of all possible medication classes (or NULL if not given)
-                                    suppress.warnings=FALSE,
-                                    already.checked=FALSE) # were the conditions already checked (speed-up by avoiding superfluous checks)?
-{
-  if( !already.checked &&
-      !.check.medication.groups(medication.groups, list.of.medication.classes, suppress.warnings) )
-  {
-    # Some error:
+    if( !suppress.warnings ) .report.ewms("The medication groups must be a vector of characters!\n", "error", ".apply.medication.groups", "AdhereR");
     return (NULL);
   }
 
-  if( is.null(medication.groups) )
+  if( length(medication.groups) == 1 && (medication.groups %in% names(data)) )
   {
-    # All are part of the same group:
+    # It is a column in the data: transform it into the corresponding explicit definitions:
+    mg.vals <- unique(data[,medication.groups]); mg.vals <- mg.vals[!is.na(mg.vals)]; # the unique non-NA values
+    if( is.null(mg.vals) || length(mg.vals) == 0 )
+    {
+      if( !suppress.warnings ) .report.ewms("The column '",medication.groups,"' in the data must contain at least one non-missing value!\n", "error", ".apply.medication.groups", "AdhereR");
+      return (NULL);
+    }
+    mg.vals <- sort(mg.vals); # makes it easier to view if ordered
+    medication.groups.defs <- paste0('(',medication.groups,' == "',mg.vals,'")'); names(medication.groups.defs) <- mg.vals;
+    medication.groups <- medication.groups.defs;
+  }
+
+  if( length(names(medication.groups)) != length(medication.groups) || any(duplicated(names(medication.groups))) || ("" %in% names(medication.groups)) )
+  {
+    if( !suppress.warnings ) .report.ewms("The medication groups must be a named list with unique and non-empty names!\n", "error", ".apply.medication.groups", "AdhereR");
     return (NULL);
   }
 
-  # The data.frame containing the groups:
-  ret.val <- do.call(rbind, lapply(seq_along(medication.groups), function(i)
-    {
-      n <- names(medication.groups)[i]; v <- medication.groups[[i]];
-      if( is.null(n) || n == "" ) n <- paste0(as.character(v),collapse="+");
-      data.frame("group"=n, "class"=v);
-    }));
-  tmp <- setdiff(as.character(list.of.medication.classes), as.character(ret.val$class));
-  if( length(tmp) > 0 )
-  {
-    ret.val <- rbind(ret.val, data.frame("group"=tmp, "class"=tmp));
-  }
-  ret.val$group <- as.character(ret.val$group); ret.val$class <- as.character(ret.val$class);
-  ret.val <- ret.val[ order(ret.val$group, ret.val$class), ];
 
-  return (ret.val);
+  # The safe environment for evaluating the medication groups (no parent) containing only the needed variables and functions (as per https://stackoverflow.com/a/18391779):
+  safe_env <- new.env(parent = emptyenv());
+  # ... add the safe functions:
+  for( .f in c(getGroupMembers("Math"),
+               getGroupMembers("Arith"),
+               getGroupMembers("Logic"),
+               getGroupMembers("Compare"),
+               "(", "[", "!") )
+  {
+    safe_env[[.f]] <- get(.f, "package:base");
+  }
+  # ... and variables:
+  assign(".data", data, envir=safe_env); # the data
+  assign(".res", matrix(NA, nrow=nrow(data), ncol=length(medication.groups)), envir=safe_env); # matrix of results from evaluating the medication classes
+  assign(".evald", rep(FALSE, length(medication.groups)), envir=safe_env); # records which the medication groups were already evaluated (to speed up things)
+  assign(".errs", NULL, envir=safe_env); # possible errors encountered during the evaluation
+  # The safe eval function (use evalq to avoid searching in the current environment): evalq(expr, env = safe_env);
+
+  # Check, transform, parse and add the group definitions as functions to the .mg_safe_env_original environment to be later used in the safe evaluation environment:
+  mg <- data.frame("name"=names(medication.groups),
+                   "def"=medication.groups,
+                   "uid"=make.names(names(medication.groups), unique=TRUE, allow_=TRUE),
+                   "fnc_name"=NA); # convert the names to valid identifiers
+  mg$fnc_name <- paste0(".mg_fnc_", mg$uid);
+  for( i in 1:nrow(mg) )
+  {
+    # Cache the definition:
+    s <- mg$def[i];
+    if( is.na(s) || is.null(s) || s == "" )
+    {
+      # Empty definition!
+      if( !suppress.warnings ) .report.ewms(paste0("Error parsing the medication class definition '",mg$name[i],"': this definition is empty!\n"), "error", ".apply.medication.groups", "AdhereR");
+      return (NULL);
+    }
+
+    # Search for medication group references of the form {name} :
+    ss <- gregexpr("\\{[^(\\})]+\\}",s); #gregexpr("\\{[[:alpha:]]+\\}",s);
+    if( ss[[1]][1] != (-1) )
+    {
+      # There's at least one group reference: replace it by the corresponding function call:
+      ss_calls <- regmatches(s, ss)[[1]];
+      ss_calls_replaced <- vapply(ss_calls, function(x)
+      {
+        if( length(ii <- which(mg$name == substr(x, 2, nchar(x)-1))) != 1 )
+        {
+          if( !suppress.warnings ) .report.ewms(paste0("Error parsing the medication class definition '",mg$name[i],"': there is a call to the undefined medication class '",substr(x, 2, nchar(x)-1),"'!\n"), "error", ".apply.medication.groups", "AdhereR");
+          return (NA);
+        } else
+        {
+          return (paste0("safe_env$",mg$fnc_name[ii],"()"));
+        }
+      }, character(1));
+      if( anyNA(ss_calls_replaced) )
+      {
+        # Error parsing medication class definitions (the message should be already generated):
+        return (NULL);
+      }
+      regmatches(s, ss)[[1]] <- ss_calls_replaced;
+    }
+
+    # Make it into a function definition:
+    s_fnc <- paste0("function()
+                    {
+                      if( !safe_env$.evald[",i,"] )
+                      {
+                        # not already evaluated:
+                        tmp <- try(with(safe_env$.data, ",s,"), silent=TRUE);
+                        if( inherits(tmp, 'try-error') )
+                        {
+                          # fail gracefully and informatively:
+                          safe_env$.errs <- rbind(safe_env$.errs,
+                                                  data.frame('fnc'='",mg$fnc_name[i],"', 'error'=as.character(tmp)));
+                          stop('Error in ",mg$fnc_name[i],"');
+                        }
+                        # sanity checks:
+                        if( is.null(tmp) || !is.logical(tmp) || length(tmp) != nrow(safe_env$.data) )
+                        {
+                          # fail gracefully and informatively:
+                          safe_env$.errs <- rbind(safe_env$.errs,
+                                                  data.frame('fnc'='",mg$fnc_name[i],"', 'error'='Error: evaluation did not produce logical results'));
+                          stop('Error in ",mg$fnc_name[i],"');
+                        }
+                        safe_env$.res[,",i,"] <- tmp; safe_env$.evald[",i,"] <- TRUE;
+                      } # else, it should have already been evaluated!
+                      # return the value
+                      return (safe_env$.res[,",i,"]);
+                    }");
+
+    # Parse it:
+    s_parsed <- NULL;
+    try(s_parsed <- parse(text=s_fnc), silent=TRUE);
+    if( is.null(s_parsed) )
+    {
+      if( !suppress.warnings ) .report.ewms(paste0("Error parsing the medication class definition '",mg$name[i],"'!\n"), "error", ".apply.medication.groups", "AdhereR");
+      return (NULL);
+    }
+
+    # Add the function:
+    safe_env[[mg$fnc_name[i]]] <- eval(s_parsed);
+  }
+
+
+  # Evaluate the medication groups on the data:
+  for( i in 1:nrow(mg) )
+  {
+    # Call the corresponding function:
+    res <- NULL;
+    try(res <- eval(parse(text=paste0(mg$fnc_name[i],"()")), envir=safe_env), silent=TRUE); # the errors will be anyway recorded in the .errs variable in safe_env
+    if( is.null(res) || inherits(res, 'try-error') || !safe_env$.evald[i] )
+    {
+      # Evaluation error:
+      if( !is.null(safe_env$.errs) )
+      {
+        err_msgs <- unique(safe_env$.errs);
+        err_msgs$error <- vapply(err_msgs$error, function(s) trimws(strsplit(s,":",fixed=TRUE)[[1]][2]), character(1));
+        err_msgs$fnc <- vapply(err_msgs$fnc, function(s) mg$name[ mg$fnc_name == s ], character(1));
+        ss <- gregexpr(".mg_fnc_",err_msgs$error); regmatches(err_msgs$error, ss) <- "";
+        if( !suppress.warnings ) .report.ewms(paste0("Error(s) during the evaluation of medication class(es): ",paste0("'",err_msgs$error," (for ",err_msgs$fnc,")'",colapse=", "),"!\n"), "warning", ".apply.medication.groups", "AdhereR");
+      }
+      return (NULL);
+    }
+  }
+
+  # Retrieve the results and compute __ALL_OTHERS__:
+  groups_info <- cbind(rbind(mg[,c("name", "def")], c("__ALL_OTHERS__", "*all observations not included in the defined groups*")),
+                       "evaluated"=c(safe_env$.evald, TRUE)); rownames(groups_info) <- NULL;
+  obs_in_groups <- cbind(safe_env$.res, rowSums(!is.na(safe_env$.res) & safe_env$.res) == 0); colnames(obs_in_groups) <- c(mg$name, "__ALL_OTHERS__");
+
+  # ... and return them:
+  return (list("defs"=groups_info[,c("name", "def")], "obs"=obs_in_groups));
 }
+
 
 
 #' CMA0 constructor.
@@ -262,13 +357,28 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the classes/types/groups of medication, or \code{NA}
 #' if not defined.
-#' @param medication.groups A \emph{list of vectors} of vectors of medication
-#' class names; if (some of) these vectors are named, these names will be used
-#' the names of the classes, otherwise automatic names will be generated by
-#' concatenating their contents separated by "+". One examle could be,
-#' \code{list(c("A","B"), "G2"=c("C","D","E"))}. Class names that are not
-#' included in the list are considered to be their own group. If \code{NULL} (the
-#' default), there's a single group containing all the medications).
+#' @param medication.groups A \emph{vector} of characters defining medication
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
+#' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+#' medication groups: \emph{A} which selects all events of type "medA", and
+#' \emph{B} which selects all events already defined by "A" but with a daily
+#' dose lower than 4. If \code{NULL}, no medication groups are defined. If
+#' medication groups are defined, there is one CMA estimate for each group;
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
+#' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carryover.within.obs.window \emph{Logical}, if \code{TRUE} consider
 #' the carry-over within the observation window, or \code{NA} if not defined.
 #' @param carryover.into.obs.window \emph{Logical}, if \code{TRUE} consider the
@@ -293,6 +403,10 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -398,8 +512,9 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                  medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                  # Groups of medication classes:
-                 medication.groups=NULL, # a named list of vectors of medication class names; e.g., list("G1"=c("A","B"), "G2"=c("C","D","E")); class names not included in the list are considered to be their own group (by extension, NULL considers each class as its own group)
-                 # Various types medhods of computing gaps:
+                 medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                 flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
+                 # Various types methods of computing gaps:
                  carryover.within.obs.window=NA, # if TRUE consider the carry-over within the observation window (NA = undefined)
                  carryover.into.obs.window=NA, # if TRUE consider the carry-over from before the starting date of the observation window (NA = undefined)
                  carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
@@ -407,6 +522,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  # The follow-up window:
                  followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                  followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                 followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                  followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                  followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                  # The observation window (embedded in the follow-up window):
@@ -560,12 +676,6 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
       if( !suppress.warnings ) .report.ewms("The observation window duration unit is not recognized!\n", "error", "CMA0", "AdhereR")
       return (NULL);
     }
-    if( !.check.medication.groups(medication.groups,
-                                  list.of.medication.classes=if(!is.na(medication.class.colname)) {as.character(unique(data[,medication.class.colname]))} else {NULL},
-                                  suppress.warnings=suppress.warnings) )
-    {
-      return (NULL);
-    }
 
     # Arguments that should not have been passed:
     if( !suppress.warnings && !is.null(arguments.that.should.not.be.defined) )
@@ -586,22 +696,34 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
     return (NULL);
   }
 
+  # Parse, check and evaluate the medication groups (if any):
+  if( !is.null(medication.groups) )
+  {
+    if( is.null(mg <- .apply.medication.groups(medication.groups=medication.groups, data=data, suppress.warnings=suppress.warnings)) )
+    {
+      return (NULL);
+    }
+  } else
+  {
+    mg <- NULL;
+  }
+
   structure(list("data"=data,
                  "ID.colname"=ID.colname,
                  "event.date.colname"=event.date.colname,
                  "event.duration.colname"=event.duration.colname,
                  "event.daily.dose.colname"=event.daily.dose.colname,
                  "medication.class.colname"=medication.class.colname,
-                 "medication.groups"=.fill.medication.groups(medication.groups,
-                                                             list.of.medication.classes=if(!is.na(medication.class.colname)) {as.character(unique(data[,medication.class.colname]))} else {NULL},
-                                                             suppress.warnings=TRUE,
-                                                             already.checked=TRUE),
+                 "medication.groups"=mg,
+                 "flatten.medication.groups"=flatten.medication.groups,
+                 "medication.groups.colname"=medication.groups.colname,
                  "carryover.within.obs.window"=carryover.within.obs.window,
                  "carryover.into.obs.window"=carryover.into.obs.window,
                  "carry.only.for.same.medication"=carry.only.for.same.medication,
                  "consider.dosage.change"=consider.dosage.change,
                  "followup.window.start"=followup.window.start,
                  "followup.window.start.unit"=followup.window.start.unit,
+                 "followup.window.start.per.medication.group"=followup.window.start.per.medication.group,
                  "followup.window.duration"=followup.window.duration,
                  "followup.window.duration.unit"=followup.window.duration.unit,
                  "observation.window.start"=observation.window.start,
@@ -665,14 +787,14 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
 #'             );
 #' cma1;
 #' @export
-print.CMA0 <- function(x,                                     # the CMA0 (or derived) object
-                       ...,                                   # required for S3 consistency
-                       inline=FALSE,                          # print inside a line of text or as a separate, extended object?
-                       format=c("text", "latex", "markdown"), # the format to print to
-                       print.params=TRUE,                     # show the parameters?
-                       print.data=TRUE,                       # show the summary of the data?
-                       exclude.params=c("event.info"),        # if so, should I not print some?
-                       skip.header=FALSE,                     # should I print the generic header?
+print.CMA0 <- function(x,                                                  # the CMA0 (or derived) object
+                       ...,                                                # required for S3 consistency
+                       inline=FALSE,                                       # print inside a line of text or as a separate, extended object?
+                       format=c("text", "latex", "markdown"),              # the format to print to
+                       print.params=TRUE,                                  # show the parameters?
+                       print.data=TRUE,                                    # show the summary of the data?
+                       exclude.params=c("event.info", "real.obs.windows"), # if so, should I not print some?
+                       skip.header=FALSE,                                  # should I print the generic header?
                        cma.type=class(cma)[1]
 )
 {
@@ -706,8 +828,10 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
             {
               if( !is.null(cma[[p]]) )
               {
-                tmp <- cma[[p]]; tmp <- tmp[ order(tmp$group, tmp$class), ];
-                cat(paste0("    ",p," =  [ ",paste0(vapply(unique(tmp$group), function(s) paste0(s," (",paste0("'",tmp$class[tmp$group==s],"'",collapse=", "),") "), character(1)),collapse=", "),"]\n"));
+                cat(paste0("    ", p, " = ", nrow(cma[[p]]$defs), " [", ifelse(nrow(cma[[p]]$defs)<4, paste0("'",cma[[p]]$defs$name,"'", collapse=", "), paste0(paste0("'",cma[[p]]$defs$name[1:4],"'", collapse=", ")," ...")), "]\n"));
+              } else
+              {
+                cat(paste0("    ", p, " = <NONE>\n"));
               }
             } else if( !is.null(cma[[p]]) && length(cma[[p]]) > 0 && !is.na(cma[[p]]) )
             {
@@ -810,8 +934,16 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
-#' @param medication.groups Optionally, the groups of medications (by default,
-#' all are part of the same group).
+#' @param medication.groups.to.plot the names of the medication groups to plot or
+#' \code{NULL} (the default) for all.
+#' @param medication.groups.separator.show a \emph{boolean}, if \code{TRUE} (the
+#' default) visually mark the medication groups the belong to the same patient,
+#' using horizontal lines and alternating vertical lines.
+#' @param medication.groups.separator.lty,medication.groups.separator.lwd,medication.groups.separator.color
+#' graphical parameters (line type, line width and colour describing the visual
+#' marking og medication groups as beloning to the same patient.
+#' @param medication.groups.allother.label a \emph{string} giving the label to
+#' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param plot.events.vertically.displaced Should consecutive events be plotted
@@ -863,6 +995,39 @@ print.CMA0 <- function(x,                                     # the CMA0 (or der
 #' @param suppress.warnings \emph{Logical}: show or hide the warnings?
 #' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
 #' to plot.
+#' @param export.formats a \emph{string} giving the formats to export the figure
+#' to (by default \code{NULL}, meaning no exporting); can be any combination of
+#' "svg" (just an \code{SVG} file), "html" (\code{SVG} + \code{HTML} + \code{CSS}
+#' + \code{JavaScript}, all embedded within one \code{HTML} document), "jpg",
+#' "png", "webp", "ps" or "pdf".
+#' @param export.formats.fileprefix a \emph{string} giving the file name prefix
+#' for the exported formats (defaults to "AdhereR-plot").
+#' @param export.formats.height,export.formats.width \emph{numbers} giving the
+#' desired dimensions (in pixels) for the exported figure (defaults to sane
+#' values if \code{NA}).
+#' @param export.formats.save.svg.placeholder a \emph{logical}, if TRUE, save an
+#' image placeholder of type given by \code{export.formats.svg.placeholder.type}
+#'for the \code{SVG} image.
+#' @param export.formats.svg.placeholder.type a \emph{string}, giving the type of
+#' placeholder for the \code{SVG} image to save; can be "jpg",
+#' "png" (the default) or "webp".
+#' @param export.formats.svg.placeholder.embed a \emph{logical}, if \code{TRUE},
+#' embed the placeholder image in the HTML document (if any) using \code{base64}
+#' encoding, otherwise (the default) leave it as an external image file (works
+#' only when an \code{HTML} document is exported and only for \code{JPEG} or
+#' \code{PNG} images.
+#' @param export.formats.html.template,export.formats.html.javascript,export.formats.html.css
+#' \emph{character strings} or \code{NULL} (the default) giving the path to the
+#' \code{HTML}, \code{JavaScript} and \code{CSS} templates, respectively, to be
+#' used when generating the HTML+CSS semi-interactive plots; when \code{NULL},
+#' the default ones included with the package will be used. If you decide to define
+#' new templates please use the default ones for inspiration and note that future
+#' version are not guaranteed to be backwards compatible!
+#' @param export.formats.directory a \emph{string}; if exporting, which directory
+#' to export to; if \code{NA} (the default), creates the files in a temporary
+#' directory.
+#' @param generate.R.plot a \emph{logical}, if \code{TRUE} (the default),
+#' generate the standard (base \code{R}) plot for plotting within \code{R}.
 #' @param ... other possible parameters
 #' @examples
 #' cma0 <- CMA0(data=med.events,
@@ -897,13 +1062,15 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nonthing
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
-                      medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
+                      medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                      medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
+                      medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                       print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                       plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                       col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the contuniation lines connecting consecutive events
-                      col.na="lightgray",                    # color for mising data
+                      col.na="lightgray",                    # color for missing data
                       highlight.followup.window=TRUE, followup.window.col="green",
                       highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
@@ -911,7 +1078,16 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                       suppress.warnings=FALSE,               # suppress warnings?
-                      max.patients.to.plot=100               # maximum number of patients to plot
+                      max.patients.to.plot=100,              # maximum number of patients to plot
+                      export.formats=NULL,                   # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
+                      export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
+                      export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
+                      export.formats.save.svg.placeholder=TRUE,
+                      export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
+                      export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
+                      export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
+                      export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                      generate.R.plot=TRUE                   # generate standard (base R) plot for plotting within R?
 )
 {
   .plot.CMAs(x,
@@ -936,7 +1112,12 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              title=title,
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
-             medication.groups=medication.groups,
+             medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.separator.show=medication.groups.separator.show,
+             medication.groups.separator.lty=medication.groups.separator.lty,
+             medication.groups.separator.lwd=medication.groups.separator.lwd,
+             medication.groups.separator.color=medication.groups.separator.color,
+             medication.groups.allother.label=medication.groups.allother.label,
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=FALSE, # not for CMA0
@@ -970,16 +1151,62 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
+             export.formats=export.formats,
+             export.formats.fileprefix=export.formats.fileprefix,
+             export.formats.height=export.formats.height,
+             export.formats.width=export.formats.width,
+             export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
+             export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
+             export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
+             export.formats.html.template=export.formats.html.template,
+             export.formats.html.javascript=export.formats.html.javascript,
+             export.formats.html.css=export.formats.html.css,
+             export.formats.directory=export.formats.directory,
+             generate.R.plot=generate.R.plot,
              suppress.warnings=suppress.warnings);
+}
+
+
+#' Access the medication groups of a CMA object.
+#'
+#' Retrieve the medication groups and the observations they refer to (if any).
+#'
+#' @param x a CMA object.
+#' @return a \emph{list} with two members:
+#' \itemize{
+#'  \item \code{defs} A \code{data.frame} containing the names and definitions of
+#'  the medication classes; please note that there is an extra class
+#'  \emph{__ALL_OTHERS__} containing all the observations not selected by any of
+#'  the explicitly given medication classes.
+#'  \item \code{obs} A \code{logical matrix} where the columns are the medication
+#'  classes (the last being \emph{__ALL_OTHERS__}), and the rows the observations in
+#'  the x's data; element \eqn{(i,j)} is \code{TRUE} iff observation \eqn{j} was
+#'  selected by medication class \eqn{i}.
+#' }
+#' @export
+getMGs <- function(x) UseMethod("getMGs")
+#' @export
+getMGs.CMA0 <- function(x)
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA0") || is.null(cma$medication.groups) ) return (NULL);
+  return (cma$medication.groups);
 }
 
 
 #' Access the actual CMA estimate from a CMA object.
 #'
-#' Retreive the actual CMA estimate(s) encapsulated in a simple, per episode,
+#' Retrieve the actual CMA estimate(s) encapsulated in a simple, per episode,
 #' or sliding window CMA object.
 #'
 #' @param x a CMA object.
+#' @param flatten.medication.groups \emph{Logical}, if \code{TRUE} and there are
+#' medication groups defined, then the return value is flattened to a single
+#' \code{data.frame} with an extra column containing the medication group (its
+#' name is given by \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @return a \emph{data.frame} containing the CMA estimate(s).
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -1009,17 +1236,101 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
 #'                        );
 #' getCMA(cmaE);}
 #' @export
-getCMA <- function(x) UseMethod("getCMA")
+getCMA <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID") UseMethod("getCMA")
 #' @export
-getCMA.CMA0 <- function(x)
+getCMA.CMA0 <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA0") || !("CMA" %in% names(cma)) || is.null(cma$CMA) ) return (NULL);
-  return (cma$CMA);
+  if( inherits(cma$CMA, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$CMA);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$CMA);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$CMA), function(i) if(!is.null(cma$CMA[[i]])){rep(names(cma$CMA)[i], nrow(cma$CMA[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
 }
 
-# Restrict a CMA object to a subset of patients:
+
+
+
+#' Access the event info from a CMA object.
+#'
+#' Retrieve the event info encapsulated in a simple, per episode,
+#' or sliding window CMA object.
+#'
+#' @param x a CMA object.
+#' @param flatten.medication.groups \emph{Logical}, if \code{TRUE} and there are
+#' medication groups defined, then the return value is flattened to a single
+#' \code{data.frame} with an extra column containing the medication group (its
+#' name is given by \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
+#' @return a \emph{data.frame} containing the CMA estimate(s).
+#' @examples
+#' cma1 <- CMA1(data=med.events,
+#'              ID.colname="PATIENT_ID",
+#'              event.date.colname="DATE",
+#'              event.duration.colname="DURATION",
+#'              followup.window.start=30,
+#'              observation.window.start=30,
+#'              observation.window.duration=365,
+#'              date.format="%m/%d/%Y"
+#'             );
+#' getEventInfo(cma1);
+#' @export
+getEventInfo <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID") UseMethod("getEventInfo")
+#' @export
+getEventInfo.CMA0 <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA0") || !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (NULL);
+  if( inherits(cma$event.info, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$event.info);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$event.info);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$event.info), function(i) if(!is.null(cma$event.info[[i]])){rep(names(cma$event.info)[i], nrow(cma$event.info[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
+}
+
+
+#' Restrict a CMA object to a subset of patients.
+#'
+#' Restrict a CMA object to a subset of patients.
+#'
+#' @param cma a CMA object.
+#' @param patients a list of patient IDs to keep.
+#' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
+#' warnings.
+#' @return a CMA object containing only the information for the given patients.
+#' @examples
+#' cma1 <- CMA1(data=med.events,
+#'              ID.colname="PATIENT_ID",
+#'              event.date.colname="DATE",
+#'              event.duration.colname="DURATION",
+#'              followup.window.start=30,
+#'              observation.window.start=30,
+#'              observation.window.duration=365,
+#'              date.format="%m/%d/%Y"
+#'             );
+#' getCMA(cma1);
+#' cma1a <- subsetCMA(cma1, patients=c(1:3,7));
+#' cma1a; getCMA(cma1a);
+#' @export
 subsetCMA <- function(cma, patients, suppress.warnings) UseMethod("subsetCMA")
+#' @export
 subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
 {
   if( inherits(patients, "factor") ) patients <- as.character(patients);
@@ -1039,8 +1350,26 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
 
   ret.val <- cma;
   ret.val$data <- ret.val$data[ ret.val$data[,ret.val$ID.colname] %in% patients.to.keep, ];
-  if( !is.null(ret.val$event.info) ) ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ];
-  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) ) ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+  if( !is.null(ret.val$event.info) )
+  {
+    if( inherits(ret.val$event.info, "data.frame") )
+    {
+      ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ]; if( nrow(ret.val$event.info) == 0 ) ret.val$event.info <- NULL;
+    } else if( is.list(ret.val$event.info) && length(ret.val$event.info) > 0 )
+    {
+      ret.val$event.info <- lapply(ret.val$event.info, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
+  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) )
+  {
+    if( inherits(ret.val$CMA, "data.frame") )
+    {
+      ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+    } else if( is.list(ret.val$CMA) && length(ret.val$CMA) > 0 )
+    {
+      ret.val$CMA <- lapply(ret.val$CMA, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
   return (ret.val);
 }
 
@@ -1533,7 +1862,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                    # The description of the output (added) columns:
                                    event.interval.colname="event.interval", # contains number of days between the start of current event and the start of the next
                                    gap.days.colname="gap.days", # contains the number of days when medication was not available
-                                   # Various types medhods of computing gaps:
+                                   # Various types methods of computing gaps:
                                    carryover.within.obs.window=FALSE, # if TRUE consider the carry-over within the observation window
                                    carryover.into.obs.window=FALSE, # if TRUE consider the carry-over from before the starting date of the observation window
                                    carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type
@@ -1652,9 +1981,10 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     if( !suppress.warnings ) .report.ewms("The follow-up window start must be a single value, either a number, a Date object, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( is.null(followup.window.start.unit) || is.na(followup.window.start.unit) ||
+  if( is.null(followup.window.start.unit) ||
+      (is.na(followup.window.start.unit) && !(is.factor(followup.window.start) || is.character(followup.window.start))) ||
       length(followup.window.start.unit) != 1 ||
-      !(followup.window.start.unit %in% c("days", "weeks", "months", "years") ) )
+      ((is.factor(followup.window.start.unit) || is.character(followup.window.start.unit)) && !(followup.window.start.unit %in% c("days", "weeks", "months", "years"))) )
   {
     if( !suppress.warnings ) .report.ewms("The follow-up window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
@@ -1687,9 +2017,10 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     if( !suppress.warnings ) .report.ewms("The observation window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( is.null(observation.window.start.unit) || is.na(observation.window.start.unit) ||
+  if( is.null(observation.window.start.unit) ||
+      (is.na(observation.window.start.unit) && !(is.factor(observation.window.start) || is.character(observation.window.start))) ||
       length(observation.window.start.unit) != 1 ||
-      !(observation.window.start.unit %in% c("days", "weeks", "months", "years") ) )
+      ((is.factor(observation.window.start.unit) || is.character(observation.window.start.unit)) && !(observation.window.start.unit %in% c("days", "weeks", "months", "years"))) )
   {
     if( !suppress.warnings ) .report.ewms("The observation window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
@@ -1838,7 +2169,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: For a given patient, compute the gaps and return the required columns:
+    # Auxiliary internal function: For a given patient, compute the gaps and return the required columns:
     .process.patient <- function(data4ID)
     {
       # Number of events:
@@ -2369,7 +2700,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         event.duration.colname=NA, # the event duration in days
                                         event.daily.dose.colname=NA, # the prescribed daily dose
                                         medication.class.colname=NA, # the classes/types/groups of medication
-                                        # Various types medhods of computing gaps:
+                                        # Various types methods of computing gaps:
                                         carryover.within.obs.window=TRUE, # if TRUE consider the carry-over within the observation window
                                         carry.only.for.same.medication=TRUE, # if TRUE the carry-over applies only across medication of same type
                                         consider.dosage.change=TRUE, # if TRUE carry-over is adjusted to reflect changes in dosage
@@ -2475,7 +2806,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       # Cache things up:
@@ -2512,7 +2843,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         treatment.episodes[, episode.duration := as.numeric(data4ID$.FU.END.DATE[1] - episode.start[n.episodes]) -
           ifelse(end.episode.gap.days[n.episodes] < MAX.PERMISSIBLE.GAP[last.event], # duration of the last event of the last episode
                  0,
-                 end.episode.gap.days[n.episodes])]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum persmissible gap
+                 end.episode.gap.days[n.episodes])]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum permissible gap
         treatment.episodes[, episode.end := (episode.start + episode.duration)];
       } else
       {
@@ -2530,7 +2861,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
           # The last event with gap > maximum permissible is the last event for this patient:
           treatment.episodes <- data.table("episode.ID"=as.numeric(1:s.len),
                                            "episode.start"=c(data4ID$.DATE.as.Date[1],                # the 1st event in the follow-up window
-                                                             data4ID$.DATE.as.Date[s[-s.len]+1]), # the next event
+                                                             data4ID$.DATE.as.Date[s[-s.len]+1]),     # the next event
                                            "end.episode.gap.days"=c(gap.days.column[s]));             # the corresponding gap.days of the last event in this follow-up window
         }
         n.episodes <- nrow(treatment.episodes);
@@ -2538,7 +2869,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                                    as.numeric(data4ID$.FU.END.DATE[1] - episode.start[n.episodes]) -
                                                      ifelse(end.episode.gap.days[n.episodes] < MAX.PERMISSIBLE.GAP[last.event], # duration of the last event of the last episode
                                                             0,
-                                                            end.episode.gap.days[n.episodes]))]; # the last episode duration is the episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum persmissible gap
+                                                            end.episode.gap.days[n.episodes]))]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum permissible gap
         treatment.episodes[, episode.end := (episode.start + episode.duration)];
       }
       return (treatment.episodes);
@@ -2617,6 +2948,284 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 }
 
 
+# Shared code between multiple CMAs
+.cma.skeleton <- function(data,
+                          ret.val,
+                          cma.class.name,
+                          ID.colname,
+                          event.date.colname,
+                          event.duration.colname,
+                          event.daily.dose.colname,
+                          medication.class.colname,
+                          medication.groups.colname,
+                          flatten.medication.groups,
+                          followup.window.start.per.medication.group,
+                          event.interval.colname,
+                          gap.days.colname,
+                          carryover.within.obs.window,
+                          carryover.into.obs.window,
+                          carry.only.for.same.medication,
+                          consider.dosage.change,
+                          followup.window.start,
+                          followup.window.start.unit,
+                          followup.window.duration,
+                          followup.window.duration.unit,
+                          observation.window.start,
+                          observation.window.start.unit,
+                          observation.window.duration,
+                          observation.window.duration.unit,
+                          date.format,
+                          suppress.warnings,
+                          force.NA.CMA.for.failed.patients,
+                          parallel.backend,
+                          parallel.threads,
+                          .workhorse.function)
+{
+  # Convert to data.table, cache event date as Date objects, and key by patient ID and event date
+  data.copy <- data.table(data);
+  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
+  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+
+  # Are there medication groups?
+  if( is.null(mg <- getMGs(ret.val)) )
+  {
+    # Nope: do a single estimation on the whole dataset:
+
+    # Compute the workhorse function:
+    tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+                             parallel.backend=parallel.backend,
+                             parallel.threads=parallel.threads,
+                             data=data.copy,
+                             ID.colname=ID.colname,
+                             event.date.colname=event.date.colname,
+                             event.duration.colname=event.duration.colname,
+                             event.daily.dose.colname=event.daily.dose.colname,
+                             medication.class.colname=medication.class.colname,
+                             event.interval.colname=event.interval.colname,
+                             gap.days.colname=gap.days.colname,
+                             carryover.within.obs.window=carryover.within.obs.window,
+                             carryover.into.obs.window=carryover.into.obs.window,
+                             carry.only.for.same.medication=carry.only.for.same.medication,
+                             consider.dosage.change=consider.dosage.change,
+                             followup.window.start=followup.window.start,
+                             followup.window.start.unit=followup.window.start.unit,
+                             followup.window.duration=followup.window.duration,
+                             followup.window.duration.unit=followup.window.duration.unit,
+                             observation.window.start=observation.window.start,
+                             observation.window.start.unit=observation.window.start.unit,
+                             observation.window.duration=observation.window.duration,
+                             observation.window.duration.unit=observation.window.duration.unit,
+                             date.format=date.format,
+                             suppress.warnings=suppress.warnings);
+    if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
+
+    # Convert to data.frame and return:
+    if( force.NA.CMA.for.failed.patients )
+    {
+      # Make sure patients with failed CMA estimations get an NA estimate!
+      patids <- unique(data.copy[,get(ID.colname)]);
+      if( length(patids) > nrow(tmp$CMA) )
+      {
+        setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+      }
+    }
+    setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
+    ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
+    class(ret.val) <- c(cma.class.name, class(ret.val));
+    return (ret.val);
+
+  } else
+  {
+    # Yes
+    # Focus only on the non-trivial ones:
+    mg.to.eval <- (colSums(!is.na(mg$obs) & mg$obs) > 0);
+    if( sum(mg.to.eval) == 0 )
+    {
+      # None selects not even one observation!
+      .report.ewms(paste0("None of the medication classes (included __ALL_OTHERS__) selects any observation!\n"), "warning", cma.class.name, "AdhereR");
+      return (NULL);
+    }
+    mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
+
+    # How is the FUW to be estimated?
+    if( !followup.window.start.per.medication.group )
+    {
+      # The FUW and OW are estimated once per patient (i.e., all medication groups share the same FUW and OW):
+      # Call the compute.event.int.gaps() function and use the results:
+      event.info <- compute.event.int.gaps(data=as.data.frame(data.copy),
+                                           ID.colname=ID.colname,
+                                           event.date.colname=event.date.colname,
+                                           event.duration.colname=event.duration.colname,
+                                           event.daily.dose.colname=event.daily.dose.colname,
+                                           medication.class.colname=medication.class.colname,
+                                           event.interval.colname=event.interval.colname,
+                                           gap.days.colname=gap.days.colname,
+                                           carryover.within.obs.window=carryover.within.obs.window,
+                                           carryover.into.obs.window=carryover.into.obs.window,
+                                           carry.only.for.same.medication=carry.only.for.same.medication,
+                                           consider.dosage.change=consider.dosage.change,
+                                           followup.window.start=followup.window.start,
+                                           followup.window.start.unit=followup.window.start.unit,
+                                           followup.window.duration=followup.window.duration,
+                                           followup.window.duration.unit=followup.window.duration.unit,
+                                           observation.window.start=observation.window.start,
+                                           observation.window.start.unit=observation.window.start.unit,
+                                           observation.window.duration=observation.window.duration,
+                                           observation.window.duration.unit=observation.window.duration.unit,
+                                           date.format=date.format,
+                                           keep.window.start.end.dates=TRUE,
+                                           parallel.backend="none", # make sure this runs sequentially!
+                                           parallel.threads=1,
+                                           suppress.warnings=suppress.warnings,
+                                           return.data.table=FALSE);
+      if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
+
+      # Add the FUW and OW start dates to the data:
+      data.copy <- merge(data.copy, unique(event.info[,c(ID.colname, ".FU.START.DATE", ".OBS.START.DATE")]), by=ID.colname, all.x=TRUE, all.y=FALSE);
+      names(data.copy)[ names(data.copy) == ".FU.START.DATE" ]  <- ".FU.START.DATE.PER.PATIENT.ACROSS.MGS";
+      names(data.copy)[ names(data.copy) == ".OBS.START.DATE" ] <- ".OBS.START.DATE.PER.PATIENT.ACROSS.MGS";
+
+      # Adjust the corresponding params:
+      actual.followup.window.start         <- ".FU.START.DATE.PER.PATIENT.ACROSS.MGS";
+      actual.followup.window.start.unit    <- NA;
+      actual.observation.window.start      <- ".OBS.START.DATE.PER.PATIENT.ACROSS.MGS";
+      actual.observation.window.start.unit <- NA;
+    } else
+    {
+      # The FUW and OW are estimated separately for each medication group -- nothing to do...
+      actual.followup.window.start         <- followup.window.start;
+      actual.followup.window.start.unit    <- followup.window.start.unit;
+      actual.observation.window.start      <- observation.window.start;
+      actual.observation.window.start.unit <- observation.window.start.unit;
+    }
+
+    # Check if there are medication classes that refer to the same observations (they would result in the same estimates):
+    mb.obs.dupl <- duplicated(mb.obs, MARGIN=2);
+
+    # Estimate each separately:
+    tmp <- lapply(1:nrow(mg$defs), function(i)
+    {
+      # Check if these are to be evaluated:
+      if( !mg.to.eval[i] )
+      {
+        return (list("CMA"=NULL, "event.info"=NULL));
+      }
+
+      # Translate into the index of the classes to be evaluated:
+      ii <- sum(mg.to.eval[1:i]);
+
+      # Cache the selected observations:
+      mg.sel.obs <- mb.obs[,ii];
+
+      # Check if this is a duplicated medication class:
+      if( mb.obs.dupl[ii] )
+      {
+        # Find which one is the original:
+        for( j in 1:(ii-1) ) # ii=1 never should be TRUE
+        {
+          if( identical(mb.obs[,j], mg.sel.obs) )
+          {
+            # This is the original: return it and stop
+            return (c("identical.to"=j));
+          }
+        }
+      }
+
+      # Compute the workhorse function:
+      tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+                               parallel.backend=parallel.backend,
+                               parallel.threads=parallel.threads,
+                               data=data.copy[mg.sel.obs,], # apply it on the subset of observations covered by this medication class
+                               ID.colname=ID.colname,
+                               event.date.colname=event.date.colname,
+                               event.duration.colname=event.duration.colname,
+                               event.daily.dose.colname=event.daily.dose.colname,
+                               medication.class.colname=medication.class.colname,
+                               event.interval.colname=event.interval.colname,
+                               gap.days.colname=gap.days.colname,
+                               carryover.within.obs.window=carryover.within.obs.window,
+                               carryover.into.obs.window=carryover.into.obs.window,
+                               carry.only.for.same.medication=carry.only.for.same.medication,
+                               consider.dosage.change=consider.dosage.change,
+                               followup.window.start=actual.followup.window.start,
+                               followup.window.start.unit=actual.followup.window.start.unit,
+                               followup.window.duration=followup.window.duration,
+                               followup.window.duration.unit=followup.window.duration.unit,
+                               observation.window.start=actual.observation.window.start,
+                               observation.window.start.unit=actual.observation.window.start.unit,
+                               observation.window.duration=observation.window.duration,
+                               observation.window.duration.unit=observation.window.duration.unit,
+                               date.format=date.format,
+                               suppress.warnings=suppress.warnings);
+      if( is.null(tmp) || (!is.null(tmp$CMA) && !inherits(tmp$CMA,"data.frame")) || is.null(tmp$event.info) ) return (NULL);
+
+      if( !is.null(tmp$CMA) )
+      {
+        # Convert to data.frame and return:
+        if( force.NA.CMA.for.failed.patients )
+        {
+          # Make sure patients with failed CMA estimations get an NA estimate!
+          patids <- unique(data.copy[,get(ID.colname)]);
+          if( length(patids) > nrow(tmp$CMA) )
+          {
+            setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
+          }
+        }
+
+        setnames(tmp$CMA, c(ID.colname,"CMA")); tmp$CMA <- as.data.frame(tmp$CMA);
+      }
+      if( !is.null(tmp$event.info) )
+      {
+        tmp$event.info <- as.data.frame(tmp$event.info);
+      }
+      return (tmp);
+
+    });
+
+    # Set the names:
+    names(tmp) <- mg$defs$name;
+
+    # Solve the duplicates:
+    for( i in seq_along(tmp) )
+    {
+      if( is.numeric(tmp[[i]]) && length(tmp[[i]]) == 1 && names(tmp[[i]]) == "identical.to" ) tmp[[i]] <- tmp[[ tmp[[i]] ]];
+    }
+
+    # Rearrange these and return:
+    ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
+    ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
+    if( flatten.medication.groups && !is.na(medication.groups.colname) )
+    {
+      # Flatten the CMA:
+      tmp <- do.call(rbind, ret.val[["CMA"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["CMA"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["CMA"]]), function(i) if(!is.null(ret.val[["CMA"]][[i]])){rep(names(ret.val[["CMA"]])[i], nrow(ret.val[["CMA"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["CMA"]] <- tmp;
+      }
+
+      # ... and the event.info:
+      tmp <- do.call(rbind, ret.val[["event.info"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["event.info"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["event.info"]]), function(i) if(!is.null(ret.val[["event.info"]][[i]])){rep(names(ret.val[["event.info"]])[i], nrow(ret.val[["event.info"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["event.info"]] <- tmp;
+      }
+    }
+    class(ret.val) <- c(cma.class.name, class(ret.val));
+    return (ret.val);
+
+  }
+}
+
 
 ############################################################################################
 #
@@ -2637,7 +3246,9 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nothing
                            col.cats=rainbow,                      # single color or a function mapping the categories to colors
                            unspecified.category.label="drug",     # the label of the unspecified category of medication
-                           medication.groups=NULL,                # optionally, the groups of medications (implictely all are part of the same group)
+                           medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                           medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
+                           medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                            lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                            show.event.intervals=TRUE,             # show the actual prescription intervals
                            plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
@@ -2657,6 +3268,15 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                            suppress.warnings=FALSE,               # suppress warnings?
                            max.patients.to.plot=100,              # maximum number of patients to plot
+                           export.formats=NULL,                   # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
+                           export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
+                           export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
+                           export.formats.save.svg.placeholder=TRUE,
+                           export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
+                           export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
+                           export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
+                           export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                           generate.R.plot=TRUE,                  # generate standard (base R) plot for plotting within R?
                            ...
 )
 {
@@ -2682,7 +3302,12 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              title=title,
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
-             medication.groups=medication.groups,
+             medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.separator.show=medication.groups.separator.show,
+             medication.groups.separator.lty=medication.groups.separator.lty,
+             medication.groups.separator.lwd=medication.groups.separator.lwd,
+             medication.groups.separator.color=medication.groups.separator.color,
+             medication.groups.allother.label=medication.groups.allother.label,
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=show.event.intervals,
@@ -2722,6 +3347,18 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
+             export.formats=export.formats,
+             export.formats.fileprefix=export.formats.fileprefix,
+             export.formats.height=export.formats.height,
+             export.formats.width=export.formats.width,
+             export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
+             export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
+             export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
+             export.formats.html.template=export.formats.html.template,
+             export.formats.html.javascript=export.formats.html.javascript,
+             export.formats.html.css=export.formats.html.css,
+             export.formats.directory=export.formats.directory,
+             generate.R.plot=generate.R.plot,
              suppress.warnings=suppress.warnings);
 }
 
@@ -2755,6 +3392,28 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' the \code{date.format} parameter); must be present.
 #' @param event.duration.colname A \emph{string}, the name of the column in
 #' \code{data} containing the event duration (in days); must be present.
+#' @param medication.groups A \emph{vector} of characters defining medication
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
+#' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+#' medication groups: \emph{A} which selects all events of type "medA", and
+#' \emph{B} which selects all events already defined by "A" but with a daily
+#' dose lower than 4. If \code{NULL}, no medication groups are defined. If
+#' medication groups are defined, there is one CMA estimate for each group;
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
+#' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param followup.window.start If a \emph{\code{Date}} object, it represents
 #' the actual start date of the follow-up window; if a \emph{string} it is the
 #' name of the column in \code{data} containing the start date of the follow-up
@@ -2769,6 +3428,10 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -2872,6 +3535,13 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #'  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
 #'  estimates for each participant (the \code{ID.colname} column).
 #' }
+#' Please note that if \code{medication.groups} are defined and
+#' \code{flatten.medication.groups} is \code{FALSE}, then the \code{CMA}
+#' and \code{event.info} are named lists, each element containing the CMA and
+#' event.info corresponding to a single medication group (the element's name),
+#' but if \code{flatten.medication.groups} is \code{FALSE} then they are
+#' \code{data.frame}s with an extra column giving the medication group (the
+#' column's name is given by \code{medication.groups.colname}).
 #' @seealso CMAs 1 to 8 are described in:
 #'
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
@@ -2904,9 +3574,13 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -2922,7 +3596,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   event.interval.colname="event.interval", # contains number of days between the start of current event and the start of the next
                   gap.days.colname="gap.days", # contains the number of days when medication was not available
                   # Dealing with failed estimates:
-                  force.NA.CMA.for.failed.patients=TRUE, # force the failed patients to have NA CM estimate?
+                  force.NA.CMA.for.failed.patients=TRUE, # force the failed patients to have NA CMA estimates?
                   # Parallel processing:
                   parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[1], # parallel backend to use
                   parallel.threads="auto", # specification (or number) of parallel threads
@@ -2958,8 +3632,12 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=ID.colname,
                   event.date.colname=event.date.colname,
                   event.duration.colname=event.duration.colname,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -2973,7 +3651,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
   # The followup.window.start and observation.window.start might have been converted to Date:
   followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
 
-  # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
+  # The workhorse auxiliary function:
   .workhorse.function <- function(data=NULL,
                                   ID.colname=NULL,
                                   event.date.colname=NULL,
@@ -2998,7 +3676,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       # Force the selection, evaluation of promises and caching of the needed columns:
@@ -3060,16 +3738,10 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name="CMA1",
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -3090,22 +3762,16 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
 }
 
@@ -3189,6 +3855,16 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
+#' @param medication.groups.to.plot the names of the medication groups to plot or
+#' \code{NULL} (the default) for all.
+#' @param medication.groups.separator.show a \emph{boolean}, if \code{TRUE} (the
+#' default) visually mark the medication groups the belong to the same patient,
+#' using horizontal lines and alternating vertical lines.
+#' @param medication.groups.separator.lty,medication.groups.separator.lwd,medication.groups.separator.color
+#' graphical parameters (line type, line width and colour describing the visual
+#' marking og medication groups as beloning to the same patient.
+#' @param medication.groups.allother.label a \emph{string} giving the label to
+#' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param show.event.intervals \emph{Logical}, should the actual event intervals
@@ -3242,6 +3918,39 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' (e.g., \code{jpeg(...); ...; dev.off()}) and display it in a viewer.
 #' @param max.patients.to.plot \emph{Numeric}, the maximum patients to attempt
 #' to plot.
+#' @param export.formats a \emph{string} giving the formats to export the figure
+#' to (by default \code{NULL}, meaning no exporting); can be any combination of
+#' "svg" (just an \code{SVG} file), "html" (\code{SVG} + \code{HTML} + \code{CSS}
+#' + \code{JavaScript}, all embedded within one \code{HTML} document), "jpg",
+#' "png", "webp", "ps" or "pdf".
+#' @param export.formats.fileprefix a \emph{string} giving the file name prefix
+#' for the exported formats (defaults to "AdhereR-plot").
+#' @param export.formats.height,export.formats.width \emph{numbers} giving the
+#' desired dimensions (in pixels) for the exported figure (defaults to sane
+#' values if \code{NA}).
+#' @param export.formats.save.svg.placeholder a \emph{logical}, if TRUE, save an
+#' image placeholder of type given by \code{export.formats.svg.placeholder.type}
+#'for the \code{SVG} image.
+#' @param export.formats.svg.placeholder.type a \emph{string}, giving the type of
+#' placeholder for the \code{SVG} image to save; can be "jpg",
+#' "png" (the default) or "webp".
+#' @param export.formats.svg.placeholder.embed a \emph{logical}, if \code{TRUE},
+#' embed the placeholder image in the HTML document (if any) using \code{base64}
+#' encoding, otherwise (the default) leave it as an external image file (works
+#' only when an \code{HTML} document is exported and only for \code{JPEG} or
+#' \code{PNG} images.
+#' @param export.formats.html.template,export.formats.html.javascript,export.formats.html.css
+#' \emph{character strings} or \code{NULL} (the default) giving the path to the
+#' \code{HTML}, \code{JavaScript} and \code{CSS} templates, respectively, to be
+#' used when generating the HTML+CSS semi-interactive plots; when \code{NULL},
+#' the default ones included with the package will be used. If you decide to define
+#' new templates please use the default ones for inspiration and note that future
+#' version are not guaranteed to be backwards compatible!
+#' @param export.formats.directory a \emph{string}; if exporting, which directory
+#' to export to; if \code{NA} (the default), creates the files in a temporary
+#' directory.
+#' @param generate.R.plot a \emph{logical}, if \code{TRUE} (the default),
+#' generate the standard (base \code{R}) plot for plotting within \code{R}.
 #' @param ... other possible parameters
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -3267,6 +3976,9 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       show.cma=TRUE,                         # show the CMA type
                       col.cats=rainbow,                      # single color or a function mapping the categories to colors
                       unspecified.category.label="drug",     # the label of the unspecified category of medication
+                      medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                      medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
+                      medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                       lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                       show.event.intervals=TRUE,             # show the actual rpescription intervals
                       col.na="lightgray",                    # color for mising data
@@ -3283,7 +3995,16 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       force.draw.text=FALSE,                 # if true, always draw text even if too big or too small
                       min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
-                      max.patients.to.plot=100               # maximum number of patients to plot
+                      max.patients.to.plot=100,              # maximum number of patients to plot
+                      export.formats=NULL,                   # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
+                      export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
+                      export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
+                      export.formats.save.svg.placeholder=TRUE,
+                      export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
+                      export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
+                      export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                      export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
+                      generate.R.plot=TRUE                   # generate standard (base R) plot for plotting within R?
 )
 {
   .plot.CMA1plus(cma=x,
@@ -3305,6 +4026,12 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  show.cma=show.cma,
                  col.cats=col.cats,
                  unspecified.category.label=unspecified.category.label,
+                 medication.groups.to.plot=medication.groups.to.plot,
+                 medication.groups.separator.show=medication.groups.separator.show,
+                 medication.groups.separator.lty=medication.groups.separator.lty,
+                 medication.groups.separator.lwd=medication.groups.separator.lwd,
+                 medication.groups.separator.color=medication.groups.separator.color,
+                 medication.groups.allother.label=medication.groups.allother.label,
                  lty.event=lty.event,
                  lwd.event=lwd.event,
                  pch.start.event=pch.start.event,
@@ -3341,6 +4068,18 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
                  min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
                  max.patients.to.plot=max.patients.to.plot,
+                 export.formats=export.formats,
+                 export.formats.fileprefix=export.formats.fileprefix,
+                 export.formats.height=export.formats.height,
+                 export.formats.width=export.formats.width,
+                 export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
+                 export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
+                 export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
+                 export.formats.html.template=export.formats.html.template,
+                 export.formats.html.javascript=export.formats.html.javascript,
+                 export.formats.html.css=export.formats.html.css,
+                 export.formats.directory=export.formats.directory,
+                 generate.R.plot=generate.R.plot,
                  ...)
 }
 
@@ -3375,6 +4114,28 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' the \code{date.format} parameter); must be present.
 #' @param event.duration.colname A \emph{string}, the name of the column in
 #' \code{data} containing the event duration (in days); must be present.
+#' @param medication.groups A \emph{vector} of characters defining medication
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
+#' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+#' medication groups: \emph{A} which selects all events of type "medA", and
+#' \emph{B} which selects all events already defined by "A" but with a daily
+#' dose lower than 4. If \code{NULL}, no medication groups are defined. If
+#' medication groups are defined, there is one CMA estimate for each group;
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
+#' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param followup.window.start If a \emph{\code{Date}} object, it represents
 #' the actual start date of the follow-up window; if a \emph{string} it is the
 #' name of the column in \code{data} containing the start date of the follow-up
@@ -3389,6 +4150,10 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -3491,6 +4256,9 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #'  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
 #'  estimates for each participant (the \code{ID.colname} column).
 #' }
+#' Please note that if \code{medication.groups} are defined, then the \code{CMA}
+#' and \code{event.info} are named lists, each element containing the CMA and
+#' event.info corresponding to a single medication group (the element's name).
 #' @seealso CMAs 1 to 8 are defined in:
 #'
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
@@ -3524,9 +4292,13 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -3578,8 +4350,12 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=ID.colname,
                   event.date.colname=event.date.colname,
                   event.duration.colname=event.duration.colname,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -3618,7 +4394,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       sel.data4ID <- data4ID[ !.EVENT.STARTS.BEFORE.OBS.WINDOW & !.EVENT.STARTS.AFTER.OBS.WINDOW, ]; # select the events within the observation window only
@@ -3668,16 +4444,10 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA2","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -3698,24 +4468,17 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA2","CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
-  if( is.null(CMA) ) return (NULL);
 }
 
 #' @rdname print.CMA0
@@ -3738,9 +4501,13 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -3792,8 +4559,12 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=ID.colname,
                   event.date.colname=event.date.colname,
                   event.duration.colname=event.duration.colname,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -3811,8 +4582,17 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   arguments.that.should.not.be.defined=arguments.that.should.not.be.defined);
   if( is.null(ret.val) ) return (NULL); # some error upstream
 
-  # Cap CMA at 1.0:
-  ret.val$CMA$CMA <- pmin(1, ret.val$CMA$CMA);
+  # Cap the CMA at 1.0:
+  if( !is.null(ret.val$CMA) )
+  {
+    if( inherits(ret.val$CMA, "data.frame") )
+    {
+      ret.val$CMA$CMA <- pmin(1, ret.val$CMA$CMA);
+    } else if( is.list(ret.val$CMA) && length(ret.val$CMA) > 0 )
+    {
+      for( i in 1:length(ret.val$CMA) ) if( !is.null(ret.val$CMA[[i]]) ) ret.val$CMA[[i]]$CMA <- pmin(1, ret.val$CMA[[i]]$CMA);
+    }
+  }
 
   # Convert to data.frame and return:
   class(ret.val) <- c("CMA3", class(ret.val));
@@ -3838,9 +4618,13 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=NA, # the name of the column containing the unique patient ID (NA = undefined)
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -3892,8 +4676,12 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   ID.colname=ID.colname,
                   event.date.colname=event.date.colname,
                   event.duration.colname=event.duration.colname,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -3911,8 +4699,17 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   arguments.that.should.not.be.defined=arguments.that.should.not.be.defined);
   if( is.null(ret.val) ) return (NULL); # some error upstream
 
-  # Cap CMA at 1.0:
-  ret.val$CMA$CMA <- pmin(1, ret.val$CMA$CMA);
+  # Cap the CMA at 1.0:
+  if( !is.null(ret.val$CMA) )
+  {
+    if( inherits(ret.val$CMA, "data.frame") )
+    {
+      ret.val$CMA$CMA <- pmin(1, ret.val$CMA$CMA);
+    } else if( is.list(ret.val$CMA) && length(ret.val$CMA) > 0 )
+    {
+      for( i in 1:length(ret.val$CMA) ) if( !is.null(ret.val$CMA[[i]]) ) ret.val$CMA[[i]]$CMA <- pmin(1, ret.val$CMA[[i]]$CMA);
+    }
+  }
 
   # Convert to data.frame and return:
   class(ret.val) <- c("CMA4", class(ret.val));
@@ -3977,6 +4774,28 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the prescribed daily dose, or \code{NA} if not defined.
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
+#' @param medication.groups A \emph{vector} of characters defining medication
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
+#' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+#' medication groups: \emph{A} which selects all events of type "medA", and
+#' \emph{B} which selects all events already defined by "A" but with a daily
+#' dose lower than 4. If \code{NULL}, no medication groups are defined. If
+#' medication groups are defined, there is one CMA estimate for each group;
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
+#' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -3995,6 +4814,10 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -4103,6 +4926,9 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #'  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
 #'  estimates for each participant (the \code{ID.colname} column).
 #' }
+#' Please note that if \code{medication.groups} are defined, then the \code{CMA}
+#' and \code{event.info} are named lists, each element containing the CMA and
+#' event.info corresponding to a single medication group (the element's name).
 #' @seealso CMAs 1 to 8 are defined in:
 #'
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
@@ -4132,12 +4958,16 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                  # Various types medhods of computing gaps:
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
+                  # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -4191,8 +5021,12 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=medication.class.colname,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -4231,7 +5065,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       sel.data4ID <- data4ID[ !.EVENT.STARTS.BEFORE.OBS.WINDOW & !.EVENT.STARTS.AFTER.OBS.WINDOW, ]; # select the events within the observation window only
@@ -4281,16 +5115,10 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA5","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -4311,24 +5139,17 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA5","CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
-  if( is.null(CMA) ) return (NULL);
 }
 
 #' @rdname print.CMA0
@@ -4388,6 +5209,28 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the prescribed daily dose, or \code{NA} if not defined.
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
+#' @param medication.groups A \emph{vector} of characters defining medication
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
+#' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+#' medication groups: \emph{A} which selects all events of type "medA", and
+#' \emph{B} which selects all events already defined by "A" but with a daily
+#' dose lower than 4. If \code{NULL}, no medication groups are defined. If
+#' medication groups are defined, there is one CMA estimate for each group;
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
+#' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -4406,6 +5249,10 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -4514,6 +5361,9 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #'  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
 #'  estimates for each participant (the \code{ID.colname} column).
 #' }
+#' Please note that if \code{medication.groups} are defined, then the \code{CMA}
+#' and \code{event.info} are named lists, each element containing the CMA and
+#' event.info corresponding to a single medication group (the element's name).
 #' @seealso CMAs 1 to 8 are defined in:
 #'
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
@@ -4543,12 +5393,16 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                  # Various types medhods of computing gaps:
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
+                  # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -4602,8 +5456,12 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=medication.class.colname,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -4642,7 +5500,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       sel.data4ID <- data4ID[ !.EVENT.STARTS.BEFORE.OBS.WINDOW & !.EVENT.STARTS.AFTER.OBS.WINDOW, ]; # select the events within the observation window only
@@ -4692,16 +5550,10 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA6","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -4722,24 +5574,17 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA6","CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
-  if( is.null(CMA) ) return (NULL);
 }
 
 #' @rdname print.CMA0
@@ -4803,6 +5648,28 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the prescribed daily dose, or \code{NA} if not defined.
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
+#' @param medication.groups A \emph{vector} of characters defining medication
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
+#' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+#' medication groups: \emph{A} which selects all events of type "medA", and
+#' \emph{B} which selects all events already defined by "A" but with a daily
+#' dose lower than 4. If \code{NULL}, no medication groups are defined. If
+#' medication groups are defined, there is one CMA estimate for each group;
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
+#' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -4821,6 +5688,10 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -4929,6 +5800,16 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #'  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
 #'  estimates for each participant (the \code{ID.colname} column).
 #' }
+#' Please note that if \code{medication.groups} are defined, then the \code{CMA}
+#' and \code{event.info} are named lists, each element containing the CMA and
+#' event.info corresponding to a single medication group (the element's name).
+#' @seealso CMAs 1 to 8 are defined in:
+#'
+#' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
+#' (2012). Comparison of pharmacy-based measures of medication adherence.
+#' \emph{BMC Health Services Research}, \strong{12}, 155.
+#' \url{http://doi.org/10.1186/1472-6963-12-155}.
+#'
 #' @examples
 #' cma7 <- CMA7(data=med.events,
 #'              ID.colname="PATIENT_ID",
@@ -4951,12 +5832,16 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                  # Various types medhods of computing gaps:
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
+                  # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -5010,8 +5895,12 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=medication.class.colname,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -5050,7 +5939,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       # Select the events within the observation window:
@@ -5144,16 +6033,10 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA7","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -5174,24 +6057,17 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA7","CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
-  if( is.null(CMA) ) return (NULL);
 }
 
 #' @rdname print.CMA0
@@ -5265,6 +6141,28 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the prescribed daily dose, or \code{NA} if not defined.
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
+#' @param medication.groups A \emph{vector} of characters defining medication
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
+#' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+#' medication groups: \emph{A} which selects all events of type "medA", and
+#' \emph{B} which selects all events already defined by "A" but with a daily
+#' dose lower than 4. If \code{NULL}, no medication groups are defined. If
+#' medication groups are defined, there is one CMA estimate for each group;
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
+#' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -5283,6 +6181,10 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -5391,6 +6293,9 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #'  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
 #'  estimates for each participant (the \code{ID.colname} column).
 #' }
+#' Please note that if \code{medication.groups} are defined, then the \code{CMA}
+#' and \code{event.info} are named lists, each element containing the CMA and
+#' event.info corresponding to a single medication group (the element's name).
 #' @seealso CMAs 1 to 8 are defined in:
 #'
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
@@ -5420,12 +6325,16 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                  # Various types medhods of computing gaps:
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
+                  # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -5479,8 +6388,12 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=medication.class.colname,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -5519,7 +6432,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the new OW start date:
+    # Auxiliary internal function: Compute the new OW start date:
     .new.OW.start <- function(data4ID)
     {
       # Select the events that start before the observation window but end within it:
@@ -5592,16 +6505,10 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA$CMA, "event.info"=event.info)); # make sure to return the non-adjusted event.info prior to computing CMA7!
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA8","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -5622,23 +6529,46 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
+  # Save the real observation window as well:
+  if( !is.null(ret.val$event.info) )
   {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
+    if( inherits(ret.val$event.info, "data.frame") )
     {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE); setnames(tmp$CMA, 1, ID.colname);
+      ret.val[["real.obs.windows"]] <- unique(data.frame( ret.val$event.info[, ID.colname],
+                                                          "window.start"=ret.val$event.info$.OBS.START.DATE.UPDATED,
+                                                          "window.end"=NA));
+      setnames(ret.val$real.obs.windows, 1, ID.colname);
+    } else if( is.list(ret.val$event.info) && length(ret.val$event.info) > 0 )
+    {
+      ret.val[["real.obs.windows"]] <- lapply(ret.val$event.info, function(x)
+        {
+          if( is.null(x) ) return (NULL);
+          tmp <- unique(data.frame( x[, ID.colname],
+                                    "window.start"=x$.OBS.START.DATE.UPDATED,
+                                    "window.end"=NA));
+          setnames(tmp, 1, ID.colname);
+          return (tmp);
+        });
+      names(ret.val[["real.obs.windows"]]) <- names(ret.val$event.info);
+    } else
+    {
+      ret.val[["real.obs.windows"]] <- NULL;
     }
+  } else
+  {
+    ret.val[["real.obs.windows"]] <- NULL;
   }
-  ret.val[["CMA"]] <- as.data.frame(tmp$CMA); # names are fine cause this come directly from CMA7
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  ret.val[["real.obs.windows"]] <- unique(data.frame( ret.val$event.info[, ID.colname], "window.start"=ret.val$event.info$.OBS.START.DATE.UPDATED, "window.end"=NA)); setnames(ret.val$real.obs.windows, 1, ID.colname);
-  class(ret.val) <- c("CMA8","CMA1", class(ret.val));
+
   return (ret.val);
 }
 
@@ -5714,6 +6644,28 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the prescribed daily dose, or \code{NA} if not defined.
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
+#' @param medication.groups A \emph{vector} of characters defining medication
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
+#' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+#' medication groups: \emph{A} which selects all events of type "medA", and
+#' \emph{B} which selects all events already defined by "A" but with a daily
+#' dose lower than 4. If \code{NULL}, no medication groups are defined. If
+#' medication groups are defined, there is one CMA estimate for each group;
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
+#' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -5732,6 +6684,10 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -5840,6 +6796,9 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #'  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
 #'  estimates for each participant (the \code{ID.colname} column).
 #' }
+#' Please note that if \code{medication.groups} are defined, then the \code{CMA}
+#' and \code{event.info} are named lists, each element containing the CMA and
+#' event.info corresponding to a single medication group (the element's name).
 #' @examples
 #' cma9 <- CMA9(data=med.events,
 #'              ID.colname="PATIENT_ID",
@@ -5862,12 +6821,16 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                  # Various types medhods of computing gaps:
+                  # Groups of medication classes:
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
+                  # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                   consider.dosage.change=FALSE, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                   followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                  followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                   followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                   followup.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                   # The observation window (embedded in the follow-up window):
@@ -5921,8 +6884,12 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   medication.class.colname=medication.class.colname,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -5961,7 +6928,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                                   suppress.warnings=NULL
   )
   {
-    # Auxliary internal function: Compute the CMA for a given patient:
+    # Auxiliary internal function: Compute the CMA for a given patient:
     .process.patient <- function(data4ID)
     {
       n.events <- nrow(data4ID); # cache number of events
@@ -5985,7 +6952,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
       }
     }
 
-    # ATTENTION: this is done for an observation window that is identical to the follow-up window to accomodate events that overshoot the observation window!
+    # ATTENTION: this is done for an observation window that is identical to the follow-up window to accommodate events that overshoot the observation window!
     event.info <- compute.event.int.gaps(data=as.data.frame(data),
                                          ID.colname=ID.colname,
                                          event.date.colname=event.date.colname,
@@ -6003,7 +6970,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                                          followup.window.duration=followup.window.duration,
                                          followup.window.duration.unit=followup.window.duration.unit,
                                          observation.window.start=0, # force follow-up window start at 0!
-                                         observation.window.start.unit=followup.window.start.unit,
+                                         observation.window.start.unit="days",
                                          observation.window.duration=followup.window.duration,
                                          observation.window.duration.unit=followup.window.duration.unit,
                                          date.format=date.format,
@@ -6087,16 +7054,10 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
     return (list("CMA"=CMA, "event.info"=event.info));
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
-  data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
-  setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
+  ret.val <- .cma.skeleton(data=data,
+                           ret.val=ret.val,
+                           cma.class.name=c("CMA9","CMA1"),
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
                            ID.colname=ID.colname,
                            event.date.colname=event.date.colname,
                            event.duration.colname=event.duration.colname,
@@ -6117,22 +7078,16 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Convert to data.frame and return:
-  if( force.NA.CMA.for.failed.patients )
-  {
-    # Make sure patients with failed CMA estimations get an NA estimate!
-    patids <- unique(data.copy[,get(ID.colname)]);
-    if( length(patids) > nrow(tmp$CMA) )
-    {
-      setnames(tmp$CMA, 1, ".ID"); tmp$CMA <- merge(data.table(".ID"=patids, key=".ID"), tmp$CMA, all.x=TRUE);
-    }
-  }
-  setnames(tmp$CMA, c(ID.colname,"CMA")); ret.val[["CMA"]] <- as.data.frame(tmp$CMA);
-  ret.val[["event.info"]] <- as.data.frame(tmp$event.info);
-  class(ret.val) <- c("CMA9","CMA1", class(ret.val));
+                           flatten.medication.groups=flatten.medication.groups,
+                           followup.window.start.per.medication.group=followup.window.start.per.medication.group,
+
+                           suppress.warnings=suppress.warnings,
+                           force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
+                           parallel.backend=parallel.backend,
+                           parallel.threads=parallel.threads,
+                           .workhorse.function=.workhorse.function);
+
   return (ret.val);
 }
 
@@ -6188,6 +7143,28 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' \code{data} containing the prescribed daily dose, or \code{NA} if not defined.
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
+#' @param medication.groups A \emph{vector} of characters defining medication
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
+#' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+#' medication groups: \emph{A} which selects all events of type "medA", and
+#' \emph{B} which selects all events already defined by "A" but with a daily
+#' dose lower than 4. If \code{NULL}, no medication groups are defined. If
+#' medication groups are defined, there is one CMA estimate for each group;
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
+#' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type; valid only for
 #' CMAs 5 to 9, in which case it is coupled (i.e., the same value is used for
@@ -6224,6 +7201,10 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -6345,6 +7326,9 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #'      \item \code{CMA} the treatment episode's estimated CMA.
 #'    }
 #' }
+#' Please note that if \code{medication.groups} are defined, then the \code{CMA}
+#' and \code{event.info} are named lists, each element containing the CMA and
+#' event.info corresponding to a single medication group (the element's name).
 #' @seealso \code{\link{CMA_sliding_window}} is very similar, computing a
 #' "simple" CMA for each of a set of same-size sliding windows.
 #' The "simple" CMAs that can be computed comprise \code{\link{CMA1}},
@@ -6379,7 +7363,10 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              event.duration.colname=NA, # the event duration in days (NA = undefined)
                              event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                              medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                             # Various types medhods of computing gaps:
+                             # Groups of medication classes:
+                             medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                             flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
+                             # Various types methods of computing gaps:
                              carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = use the CMA's values)
                              consider.dosage.change=NA, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = use the CMA's values)
                              # Treatment episodes:
@@ -6390,6 +7377,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              # The follow-up window:
                              followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                              followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                             followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                              followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                              followup.window.duration.unit=c("days", "weeks", "months", "years")[1],# the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                              # The observation window (embedded in the follow-up window):
@@ -6469,12 +7457,16 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                   event.duration.colname=event.duration.colname,
                   event.daily.dose.colname=event.daily.dose.colname,
                   medication.class.colname=medication.class.colname,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   carryover.within.obs.window=carryover.within.obs.window,
                   carryover.into.obs.window=carryover.into.obs.window,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -6692,53 +7684,223 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
-                           ID.colname=ID.colname,
-                           event.date.colname=event.date.colname,
-                           event.duration.colname=event.duration.colname,
-                           event.daily.dose.colname=event.daily.dose.colname,
-                           medication.class.colname=medication.class.colname,
-                           event.interval.colname=event.interval.colname,
-                           gap.days.colname=gap.days.colname,
-                           carryover.within.obs.window=carryover.within.obs.window,
-                           carryover.into.obs.window=carryover.into.obs.window,
-                           carry.only.for.same.medication=carry.only.for.same.medication,
-                           consider.dosage.change=consider.dosage.change,
-                           followup.window.start=followup.window.start,
-                           followup.window.start.unit=followup.window.start.unit,
-                           followup.window.duration=followup.window.duration,
-                           followup.window.duration.unit=followup.window.duration.unit,
-                           observation.window.start=observation.window.start,
-                           observation.window.start.unit=observation.window.start.unit,
-                           observation.window.duration=observation.window.duration,
-                           observation.window.duration.unit=observation.window.duration.unit,
-                           date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Construct the return object:
-  class(ret.val) <- "CMA_per_episode";
-  ret.val$event.info <- as.data.frame(tmp$event.info);
-  ret.val$computed.CMA <- CMA.to.apply;
-  ret.val$summary <- summary;
-  ret.val$CMA <- as.data.frame(tmp$CMA);
-  setnames(ret.val$CMA, 1, ID.colname);
+  # Are there medication groups?
+  if( is.null(mg <- getMGs(ret.val)) )
+  {
+    # Nope: do a single estimation on the whole dataset:
 
-  return (ret.val);
+    # Compute the workhorse function:
+    tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+                             parallel.backend=parallel.backend,
+                             parallel.threads=parallel.threads,
+                             data=data.copy,
+                             ID.colname=ID.colname,
+                             event.date.colname=event.date.colname,
+                             event.duration.colname=event.duration.colname,
+                             event.daily.dose.colname=event.daily.dose.colname,
+                             medication.class.colname=medication.class.colname,
+                             event.interval.colname=event.interval.colname,
+                             gap.days.colname=gap.days.colname,
+                             carryover.within.obs.window=carryover.within.obs.window,
+                             carryover.into.obs.window=carryover.into.obs.window,
+                             carry.only.for.same.medication=carry.only.for.same.medication,
+                             consider.dosage.change=consider.dosage.change,
+                             followup.window.start=followup.window.start,
+                             followup.window.start.unit=followup.window.start.unit,
+                             followup.window.duration=followup.window.duration,
+                             followup.window.duration.unit=followup.window.duration.unit,
+                             observation.window.start=observation.window.start,
+                             observation.window.start.unit=observation.window.start.unit,
+                             observation.window.duration=observation.window.duration,
+                             observation.window.duration.unit=observation.window.duration.unit,
+                             date.format=date.format,
+                             suppress.warnings=suppress.warnings);
+    if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
+
+    # Construct the return object:
+    class(ret.val) <- "CMA_per_episode";
+    ret.val$event.info <- as.data.frame(tmp$event.info);
+    ret.val$computed.CMA <- CMA.to.apply;
+    ret.val$summary <- summary;
+    ret.val$CMA <- as.data.frame(tmp$CMA);
+    setnames(ret.val$CMA, 1, ID.colname);
+
+    return (ret.val);
+
+  } else
+  {
+    # Yes
+    # Focus only on the non-trivial ones:
+    mg.to.eval <- (colSums(!is.na(mg$obs) & mg$obs) > 0);
+    if( sum(mg.to.eval) == 0 )
+    {
+      # None selects not even one observation!
+      .report.ewms(paste0("None of the medication classes (included __ALL_OTHERS__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
+      return (NULL);
+    }
+    mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
+
+    # Check if there are medication classes that refer to the same observations (they would result in the same estimates):
+    mb.obs.dupl <- duplicated(mb.obs, MARGIN=2);
+
+    # Estimate each separately:
+    tmp <- lapply(1:nrow(mg$defs), function(i)
+    {
+      # Check if these are to be evaluated:
+      if( !mg.to.eval[i] )
+      {
+        return (list("CMA"=NULL, "event.info"=NULL));
+      }
+
+      # Translate into the index of the classes to be evaluated:
+      ii <- sum(mg.to.eval[1:i]);
+
+      # Cache the selected observations:
+      mg.sel.obs <- mb.obs[,ii];
+
+      # Check if this is a duplicated medication class:
+      if( mb.obs.dupl[ii] )
+      {
+        # Find which one is the original:
+        for( j in 1:(ii-1) ) # ii=1 never should be TRUE
+        {
+          if( identical(mb.obs[,j], mg.sel.obs) )
+          {
+            # This is the original: return it and stop
+            return (c("identical.to"=j));
+          }
+        }
+      }
+
+      # Compute the workhorse function:
+      tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+                               parallel.backend=parallel.backend,
+                               parallel.threads=parallel.threads,
+                               data=data.copy,
+                               ID.colname=ID.colname,
+                               event.date.colname=event.date.colname,
+                               event.duration.colname=event.duration.colname,
+                               event.daily.dose.colname=event.daily.dose.colname,
+                               medication.class.colname=medication.class.colname,
+                               event.interval.colname=event.interval.colname,
+                               gap.days.colname=gap.days.colname,
+                               carryover.within.obs.window=carryover.within.obs.window,
+                               carryover.into.obs.window=carryover.into.obs.window,
+                               carry.only.for.same.medication=carry.only.for.same.medication,
+                               consider.dosage.change=consider.dosage.change,
+                               followup.window.start=followup.window.start,
+                               followup.window.start.unit=followup.window.start.unit,
+                               followup.window.duration=followup.window.duration,
+                               followup.window.duration.unit=followup.window.duration.unit,
+                               observation.window.start=observation.window.start,
+                               observation.window.start.unit=observation.window.start.unit,
+                               observation.window.duration=observation.window.duration,
+                               observation.window.duration.unit=observation.window.duration.unit,
+                               date.format=date.format,
+                               suppress.warnings=suppress.warnings);
+      if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
+
+      # Convert to data.frame and return:
+      tmp$CMA <- as.data.frame(tmp$CMA); setnames(tmp$CMA, 1, ID.colname);
+      tmp$event.info <- as.data.frame(tmp$event.info);
+      return (tmp);
+
+    });
+
+    # Set the names:
+    names(tmp) <- mg$defs$name;
+
+    # Solve the duplicates:
+    for( i in seq_along(tmp) )
+    {
+      if( is.numeric(tmp[[i]]) && length(tmp[[i]]) == 1 && names(tmp[[i]]) == "identical.to" ) tmp[[i]] <- tmp[[ tmp[[i]] ]];
+    }
+
+    # Rearrange these and return:
+    ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
+    ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
+    ret.val$computed.CMA <- CMA.to.apply;
+    if( flatten.medication.groups && !is.na(medication.groups.colname) )
+    {
+      # Flatten the CMA:
+      tmp <- do.call(rbind, ret.val[["CMA"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["CMA"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["CMA"]]), function(i) if(!is.null(ret.val[["CMA"]][[i]])){rep(names(ret.val[["CMA"]])[i], nrow(ret.val[["CMA"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["CMA"]] <- tmp;
+      }
+
+      # ... and the event.info:
+      tmp <- do.call(rbind, ret.val[["event.info"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["event.info"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["event.info"]]), function(i) if(!is.null(ret.val[["event.info"]][[i]])){rep(names(ret.val[["event.info"]])[i], nrow(ret.val[["event.info"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["event.info"]] <- tmp;
+      }
+    }
+    class(ret.val) <- "CMA_per_episode";
+    ret.val$summary <- summary;
+    return (ret.val);
+
+  }
 }
 
 #' @export
-getCMA.CMA_per_episode <- function(x)
+getMGs.CMA_per_episode <- function(x)
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA_per_episode") || is.null(cma$medication.groups) ) return (NULL);
+  return (cma$medication.groups);
+}
+
+#' @export
+getCMA.CMA_per_episode <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA_per_episode") || !("CMA" %in% names(cma)) || is.null(cma$CMA) ) return (NULL);
-  return (cma$CMA);
+  if( inherits(cma$CMA, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$CMA);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$CMA);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$CMA), function(i) if(!is.null(cma$CMA[[i]])){rep(names(cma$CMA)[i], nrow(cma$CMA[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
 }
 
+#' @export
+getEventInfo.CMA_per_episode <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA_per_episode") || !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (NULL);
+  if( inherits(cma$event.info, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$event.info);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$event.info);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$event.info), function(i) if(!is.null(cma$event.info[[i]])){rep(names(cma$event.info)[i], nrow(cma$event.info[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
+}
+
+#' @export
 subsetCMA.CMA_per_episode <- function(cma, patients, suppress.warnings=FALSE)
 {
   if( inherits(patients, "factor") ) patients <- as.character(patients);
@@ -6758,8 +7920,26 @@ subsetCMA.CMA_per_episode <- function(cma, patients, suppress.warnings=FALSE)
 
   ret.val <- cma;
   ret.val$data <- ret.val$data[ ret.val$data[,ret.val$ID.colname] %in% patients.to.keep, ];
-  if( !is.null(ret.val$event.info) ) ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ];
-  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) ) ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+  if( !is.null(ret.val$event.info) )
+  {
+    if( inherits(ret.val$event.info, "data.frame") )
+    {
+      ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ]; if( nrow(ret.val$event.info) == 0 ) ret.val$event.info <- NULL;
+    } else if( is.list(ret.val$event.info) && length(ret.val$event.info) > 0 )
+    {
+      ret.val$event.info <- lapply(ret.val$event.info, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
+  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) )
+  {
+    if( inherits(ret.val$CMA, "data.frame") )
+    {
+      ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+    } else if( is.list(ret.val$CMA) && length(ret.val$CMA) > 0 )
+    {
+      ret.val$CMA <- lapply(ret.val$CMA, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
   return (ret.val);
 }
 
@@ -6802,6 +7982,15 @@ print.CMA_per_episode <- function(x,                                     # the C
             if( p == "CMA" )
             {
               cat(paste0("    ",p," = CMA results for ",nrow(cma[[p]])," patients\n"));
+            } else if( p == "medication.groups" )
+            {
+              if( !is.null(cma[[p]]) )
+              {
+                cat(paste0("    ", p, " = ", nrow(cma[[p]]$defs), " [", ifelse(nrow(cma[[p]]$defs)<4, paste0("'",cma[[p]]$defs$name,"'", collapse=", "), paste0(paste0("'",cma[[p]]$defs$name[1:4],"'", collapse=", ")," ...")), "]\n"));
+              } else
+              {
+                cat(paste0("    ", p, " = <NONE>\n"));
+              }
             } else if( !is.null(cma[[p]]) && length(cma[[p]]) > 0 && !is.na(cma[[p]]) )
             {
               cat(paste0("    ",p," = ",cma[[p]],"\n"));
@@ -6929,6 +8118,16 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.
 #' @param unspecified.category.label A \emph{string} giving the name of the
 #' unspecified (generic) medication category.
+#' @param medication.groups.to.plot the names of the medication groups to plot or
+#' \code{NULL} (the default) for all.
+#' @param medication.groups.separator.show a \emph{boolean}, if \code{TRUE} (the
+#' default) visually mark the medication groups the belong to the same patient,
+#' using horizontal lines and alternating vertical lines.
+#' @param medication.groups.separator.lty,medication.groups.separator.lwd,medication.groups.separator.color
+#' graphical parameters (line type, line width and colour describing the visual
+#' marking og medication groups as beloning to the same patient.
+#' @param medication.groups.allother.label a \emph{string} giving the label to
+#' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
 #' @param plot.events.vertically.displaced Should consecutive events be plotted
@@ -6994,6 +8193,39 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' to plot.
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param export.formats a \emph{string} giving the formats to export the figure
+#' to (by default \code{NULL}, meaning no exporting); can be any combination of
+#' "svg" (just an \code{SVG} file), "html" (\code{SVG} + \code{HTML} + \code{CSS}
+#' + \code{JavaScript}, all embedded within one \code{HTML} document), "jpg",
+#' "png", "webp", "ps" or "pdf".
+#' @param export.formats.fileprefix a \emph{string} giving the file name prefix
+#' for the exported formats (defaults to "AdhereR-plot").
+#' @param export.formats.height,export.formats.width \emph{numbers} giving the
+#' desired dimensions (in pixels) for the exported figure (defaults to sane
+#' values if \code{NA}).
+#' @param export.formats.save.svg.placeholder a \emph{logical}, if TRUE, save an
+#' image placeholder of type given by \code{export.formats.svg.placeholder.type}
+#'for the \code{SVG} image.
+#' @param export.formats.svg.placeholder.type a \emph{string}, giving the type of
+#' placeholder for the \code{SVG} image to save; can be "jpg",
+#' "png" (the default) or "webp".
+#' @param export.formats.svg.placeholder.embed a \emph{logical}, if \code{TRUE},
+#' embed the placeholder image in the HTML document (if any) using \code{base64}
+#' encoding, otherwise (the default) leave it as an external image file (works
+#' only when an \code{HTML} document is exported and only for \code{JPEG} or
+#' \code{PNG} images.
+#' @param export.formats.html.template,export.formats.html.javascript,export.formats.html.css
+#' \emph{character strings} or \code{NULL} (the default) giving the path to the
+#' \code{HTML}, \code{JavaScript} and \code{CSS} templates, respectively, to be
+#' used when generating the HTML+CSS semi-interactive plots; when \code{NULL},
+#' the default ones included with the package will be used. If you decide to define
+#' new templates please use the default ones for inspiration and note that future
+#' version are not guaranteed to be backwards compatible!
+#' @param export.formats.directory a \emph{string}; if exporting, which directory
+#' to export to; if \code{NA} (the default), creates the files in a temporary
+#' directory.
+#' @param generate.R.plot a \emph{logical}, if \code{TRUE} (the default),
+#' generate the standard (base \code{R}) plot for plotting within \code{R}.
 #' @param ... other parameters (to be passed to the estimation and plotting of
 #' the simple CMA)
 #'
@@ -7055,6 +8287,9 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  title=c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns"), # Vector of titles to show for and without alignment, or a single value for both, or NULL for nonthing
                                  col.cats=rainbow,                      # single color or a function mapping the categories to colors
                                  unspecified.category.label="drug",     # the label of the unspecified category of medication
+                                 medication.groups.to.plot=NULL,        # the names of the medication groups to plot (by default, all)
+                                 medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
+                                 medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                                  plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                                  print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
@@ -7084,6 +8319,15 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  force.draw.text=FALSE,           # if true, always draw text even if too big or too small
                                  min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                                  max.patients.to.plot=100,        # maximum number of patients to plot
+                                 export.formats=NULL,                   # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
+                                 export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
+                                 export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
+                                 export.formats.save.svg.placeholder=TRUE,
+                                 export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
+                                 export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
+                                 export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
+                                 export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                                 generate.R.plot=TRUE,                  # generate standard (base R) plot for plotting within R?
                                  suppress.warnings=FALSE,         # suppress warnings?
                                  ...
 )
@@ -7110,7 +8354,12 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              title=title,
              col.cats=col.cats,
              unspecified.category.label=unspecified.category.label,
-             #medication.groups=medication.groups,
+             medication.groups.to.plot=medication.groups.to.plot,
+             medication.groups.separator.show=medication.groups.separator.show,
+             medication.groups.separator.lty=medication.groups.separator.lty,
+             medication.groups.separator.lwd=medication.groups.separator.lwd,
+             medication.groups.separator.color=medication.groups.separator.color,
+             medication.groups.allother.label=medication.groups.allother.label,
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=FALSE, # per-episode and sliding windows might have overlapping intervals, so better not to show them at all
@@ -7162,6 +8411,18 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
              max.patients.to.plot=max.patients.to.plot,
+             export.formats=export.formats,
+             export.formats.fileprefix=export.formats.fileprefix,
+             export.formats.height=export.formats.height,
+             export.formats.width=export.formats.width,
+             export.formats.save.svg.placeholder=export.formats.save.svg.placeholder,
+             export.formats.svg.placeholder.type=export.formats.svg.placeholder.type,
+             export.formats.svg.placeholder.embed=export.formats.svg.placeholder.embed,
+             export.formats.html.template=export.formats.html.template,
+             export.formats.html.javascript=export.formats.html.javascript,
+             export.formats.html.css=export.formats.html.css,
+             export.formats.directory=export.formats.directory,
+             generate.R.plot=generate.R.plot,
              suppress.warnings=suppress.warnings);
 }
 
@@ -7199,6 +8460,28 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' \code{data} containing the prescribed daily dose, or \code{NA} if not defined.
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
+#' @param medication.groups A \emph{vector} of characters defining medication
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
+#' the content defines them as logical expressions. While the names can be any
+#' string of characters except "\}", it is recommended to stick to the rules for
+#' defining vector names in \code{R}. For example,
+#' \code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+#' medication groups: \emph{A} which selects all events of type "medA", and
+#' \emph{B} which selects all events already defined by "A" but with a daily
+#' dose lower than 4. If \code{NULL}, no medication groups are defined. If
+#' medication groups are defined, there is one CMA estimate for each group;
+#' moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+#' containing all observations \emph{not} covered by any of the explicitly defined
+#' groups.
+#' @param flatten.medication.groups \emph{Logical}, if \code{FALSE} (the default)
+#' then the \code{CMA} and \code{event.info} components of the object are lists
+#' with one medication group per element; otherwise, they are \code{data.frame}s
+#' with an extra column containing the medication group (its name is given by
+#' \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
 #' @param carry.only.for.same.medication \emph{Logical}, if \code{TRUE}, the
 #' carry-over applies only across medication of the same type.
 #' @param consider.dosage.change \emph{Logical}, if \code{TRUE}, the carry-over
@@ -7217,6 +8500,10 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 #' units that \code{followup.window.start} refers to (when a number), or
 #' \code{NA} if not defined.
+#' @param followup.window.start.per.medication.group a \emph{logical}: if there are
+#' medication groups defined and this is \code{TRUE}, then the first event
+#' considered for the follow-up window start is relative to each medication group
+#' separately, otherwise (the default) it is relative to the patient.
 #' @param followup.window.duration either a \emph{number} representing the
 #' duration of the follow-up window in the time units given in
 #' \code{followup.window.duration.unit}, or a \emph{string} giving the column
@@ -7340,6 +8627,9 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #'      \item \code{CMA} the window's estimated CMA.
 #'    }
 #' }
+#' Please note that if \code{medication.groups} are defined, then the \code{CMA}
+#' and \code{event.info} are named lists, each element containing the CMA and
+#' event.info corresponding to a single medication group (the element's name).
 #' @seealso \code{\link{CMA_per_episode}} is very similar, computing a "simple"
 #' CMA for each of the treatment episodes.
 #' The "simple" CMAs that can be computed comprise \code{\link{CMA1}},
@@ -7380,12 +8670,16 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                 event.duration.colname=NA, # the event duration in days (NA = undefined)
                                 event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                                 medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
-                                # Various types medhods of computing gaps:
+                                # Groups of medication classes:
+                                medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
+                                flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
+                                # Various types methods of computing gaps:
                                 carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
                                 consider.dosage.change=NA, # if TRUE carry-over is adjusted to reflect changes in dosage (NA = undefined)
                                 # The follow-up window:
                                 followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                                 followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                                followup.window.start.per.medication.group=FALSE, # if there are medication groups and this is TRUE, then the first event is relative to each medication group separately, otherwise is relative to the patient
                                 followup.window.duration=365*2, # the duration of the follow-up window in the time units given below (NA = undefined)
                                 followup.window.duration.unit=c("days", "weeks", "months", "years")[1],# the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)  (NA = undefined)
                                 # The observation window (embedded in the follow-up window):
@@ -7512,12 +8806,16 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                   event.duration.colname=event.duration.colname,
                   event.daily.dose.colname=event.daily.dose.colname,
                   medication.class.colname=medication.class.colname,
+                  medication.groups=medication.groups,
+                  flatten.medication.groups=flatten.medication.groups,
+                  medication.groups.colname=medication.groups.colname,
                   carryover.within.obs.window=carryover.within.obs.window,
                   carryover.into.obs.window=carryover.into.obs.window,
                   carry.only.for.same.medication=carry.only.for.same.medication,
                   consider.dosage.change=consider.dosage.change,
                   followup.window.start=followup.window.start,
                   followup.window.start.unit=followup.window.start.unit,
+                  followup.window.start.per.medication.group=followup.window.start.per.medication.group,
                   followup.window.duration=followup.window.duration,
                   followup.window.duration.unit=followup.window.duration.unit,
                   observation.window.start=observation.window.start,
@@ -7687,58 +8985,235 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
-  # Compute the workhorse function:
-  tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
-                           parallel.backend=parallel.backend,
-                           parallel.threads=parallel.threads,
-                           data=data.copy,
-                           ID.colname=ID.colname,
-                           event.date.colname=event.date.colname,
-                           event.duration.colname=event.duration.colname,
-                           event.daily.dose.colname=event.daily.dose.colname,
-                           medication.class.colname=medication.class.colname,
-                           event.interval.colname=event.interval.colname,
-                           gap.days.colname=gap.days.colname,
-                           carryover.within.obs.window=carryover.within.obs.window,
-                           carryover.into.obs.window=carryover.into.obs.window,
-                           carry.only.for.same.medication=carry.only.for.same.medication,
-                           consider.dosage.change=consider.dosage.change,
-                           followup.window.start=followup.window.start,
-                           followup.window.start.unit=followup.window.start.unit,
-                           followup.window.duration=followup.window.duration,
-                           followup.window.duration.unit=followup.window.duration.unit,
-                           observation.window.start=observation.window.start,
-                           observation.window.start.unit=observation.window.start.unit,
-                           observation.window.duration=observation.window.duration,
-                           observation.window.duration.unit=observation.window.duration.unit,
-                           date.format=date.format,
-                           suppress.warnings=suppress.warnings);
-  if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) ) return (NULL);
 
-  # Construct the return object:
-  class(ret.val) <- "CMA_sliding_window";
-  ret.val$event.info <- as.data.frame(tmp$event.info);
-  ret.val$computed.CMA <- as.character(tmp$CMA$CMA.to.apply[1]);
-  ret.val$sliding.window.start <- sliding.window.start;
-  ret.val$sliding.window.start.unit <- sliding.window.start.unit;
-  ret.val$sliding.window.duration <- sliding.window.duration;
-  ret.val$sliding.window.duration.unit <- sliding.window.duration.unit;
-  ret.val$sliding.window.step.duration <- sliding.window.step.duration;
-  ret.val$sliding.window.step.unit <- sliding.window.step.unit;
-  ret.val$sliding.window.no.steps <- sliding.window.no.steps;
-  ret.val$summary <- summary;
-  ret.val$CMA <- as.data.frame(tmp$CMA); setnames(ret.val$CMA, 1, ID.colname); ret.val$CMA <- ret.val$CMA[,-ncol(ret.val$CMA)];
-  return (ret.val);
+  # Are there medication groups?
+  if( is.null(mg <- getMGs(ret.val)) )
+  {
+    # Nope: do a single estimation on the whole dataset:
+
+    # Compute the workhorse function:
+    tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+                             parallel.backend=parallel.backend,
+                             parallel.threads=parallel.threads,
+                             data=data.copy,
+                             ID.colname=ID.colname,
+                             event.date.colname=event.date.colname,
+                             event.duration.colname=event.duration.colname,
+                             event.daily.dose.colname=event.daily.dose.colname,
+                             medication.class.colname=medication.class.colname,
+                             event.interval.colname=event.interval.colname,
+                             gap.days.colname=gap.days.colname,
+                             carryover.within.obs.window=carryover.within.obs.window,
+                             carryover.into.obs.window=carryover.into.obs.window,
+                             carry.only.for.same.medication=carry.only.for.same.medication,
+                             consider.dosage.change=consider.dosage.change,
+                             followup.window.start=followup.window.start,
+                             followup.window.start.unit=followup.window.start.unit,
+                             followup.window.duration=followup.window.duration,
+                             followup.window.duration.unit=followup.window.duration.unit,
+                             observation.window.start=observation.window.start,
+                             observation.window.start.unit=observation.window.start.unit,
+                             observation.window.duration=observation.window.duration,
+                             observation.window.duration.unit=observation.window.duration.unit,
+                             date.format=date.format,
+                             suppress.warnings=suppress.warnings);
+    if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
+
+    # Construct the return object:
+    class(ret.val) <- "CMA_sliding_window";
+    ret.val$event.info <- as.data.frame(tmp$event.info);
+    ret.val$computed.CMA <- as.character(tmp$CMA$CMA.to.apply[1]);
+    ret.val$sliding.window.start <- sliding.window.start;
+    ret.val$sliding.window.start.unit <- sliding.window.start.unit;
+    ret.val$sliding.window.duration <- sliding.window.duration;
+    ret.val$sliding.window.duration.unit <- sliding.window.duration.unit;
+    ret.val$sliding.window.step.duration <- sliding.window.step.duration;
+    ret.val$sliding.window.step.unit <- sliding.window.step.unit;
+    ret.val$sliding.window.no.steps <- sliding.window.no.steps;
+    ret.val$summary <- summary;
+    ret.val$CMA <- as.data.frame(tmp$CMA); setnames(ret.val$CMA, 1, ID.colname); ret.val$CMA <- ret.val$CMA[,-ncol(ret.val$CMA)];
+    return (ret.val);
+
+  } else
+  {
+    # Yes
+    # Focus only on the non-trivial ones:
+    mg.to.eval <- (colSums(!is.na(mg$obs) & mg$obs) > 0);
+    if( sum(mg.to.eval) == 0 )
+    {
+      # None selects not even one observation!
+      .report.ewms(paste0("None of the medication classes (included __ALL_OTHERS__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
+      return (NULL);
+    }
+    mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
+
+    # Check if there are medication classes that refer to the same observations (they would result in the same estimates):
+    mb.obs.dupl <- duplicated(mb.obs, MARGIN=2);
+
+    # Estimate each separately:
+    tmp <- lapply(1:nrow(mg$defs), function(i)
+    {
+      # Check if these are to be evaluated:
+      if( !mg.to.eval[i] )
+      {
+        return (list("CMA"=NULL, "event.info"=NULL, "CMA.to.apply"=NA));
+      }
+
+      # Translate into the index of the classes to be evaluated:
+      ii <- sum(mg.to.eval[1:i]);
+
+      # Cache the selected observations:
+      mg.sel.obs <- mb.obs[,ii];
+
+      # Check if this is a duplicated medication class:
+      if( mb.obs.dupl[ii] )
+      {
+        # Find which one is the original:
+        for( j in 1:(ii-1) ) # ii=1 never should be TRUE
+        {
+          if( identical(mb.obs[,j], mg.sel.obs) )
+          {
+            # This is the original: return it and stop
+            return (c("identical.to"=j));
+          }
+        }
+      }
+
+      # Compute the workhorse function:
+      tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
+                               parallel.backend=parallel.backend,
+                               parallel.threads=parallel.threads,
+                               data=data.copy,
+                               ID.colname=ID.colname,
+                               event.date.colname=event.date.colname,
+                               event.duration.colname=event.duration.colname,
+                               event.daily.dose.colname=event.daily.dose.colname,
+                               medication.class.colname=medication.class.colname,
+                               event.interval.colname=event.interval.colname,
+                               gap.days.colname=gap.days.colname,
+                               carryover.within.obs.window=carryover.within.obs.window,
+                               carryover.into.obs.window=carryover.into.obs.window,
+                               carry.only.for.same.medication=carry.only.for.same.medication,
+                               consider.dosage.change=consider.dosage.change,
+                               followup.window.start=followup.window.start,
+                               followup.window.start.unit=followup.window.start.unit,
+                               followup.window.duration=followup.window.duration,
+                               followup.window.duration.unit=followup.window.duration.unit,
+                               observation.window.start=observation.window.start,
+                               observation.window.start.unit=observation.window.start.unit,
+                               observation.window.duration=observation.window.duration,
+                               observation.window.duration.unit=observation.window.duration.unit,
+                               date.format=date.format,
+                               suppress.warnings=suppress.warnings);
+      if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
+
+      # Convert to data.frame and return:
+      tmp$CMA.to.apply <- tmp$CMA$CMA.to.apply[1];
+      tmp$CMA <- as.data.frame(tmp$CMA); setnames(tmp$CMA, 1, ID.colname); tmp$CMA <- tmp$CMA[,-ncol(tmp$CMA)];
+      tmp$event.info <- as.data.frame(tmp$event.info);
+      return (tmp);
+
+    });
+
+    # Set the names:
+    names(tmp) <- mg$defs$name;
+
+    # Solve the duplicates:
+    for( i in seq_along(tmp) )
+    {
+      if( is.numeric(tmp[[i]]) && length(tmp[[i]]) == 1 && names(tmp[[i]]) == "identical.to" ) tmp[[i]] <- tmp[[ tmp[[i]] ]];
+    }
+
+    # Rearrange these and return:
+    ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
+    ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
+    ret.val$computed.CMA <- unique(vapply(tmp, function(x) if(is.null(x) || is.na(x$CMA.to.apply)){return (NA_character_)}else{return(x$CMA.to.apply)}, character(1))); ret.val$computed.CMA <- ret.val$computed.CMA[ !is.na(ret.val$computed.CMA) ];
+    if( flatten.medication.groups && !is.na(medication.groups.colname) )
+    {
+      # Flatten the CMA:
+      tmp <- do.call(rbind, ret.val[["CMA"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["CMA"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["CMA"]]), function(i) if(!is.null(ret.val[["CMA"]][[i]])){rep(names(ret.val[["CMA"]])[i], nrow(ret.val[["CMA"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["CMA"]] <- tmp;
+      }
+
+      # ... and the event.info:
+      tmp <- do.call(rbind, ret.val[["event.info"]]);
+      if( is.null(tmp) || nrow(tmp) == 0 )
+      {
+        ret.val[["event.info"]] <- NULL;
+      } else
+      {
+        tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["event.info"]]), function(i) if(!is.null(ret.val[["event.info"]][[i]])){rep(names(ret.val[["event.info"]])[i], nrow(ret.val[["event.info"]][[i]]))}else{NULL})));
+        names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+        ret.val[["event.info"]] <- tmp;
+      }
+    }
+    class(ret.val) <- "CMA_sliding_window";
+    ret.val$sliding.window.start.unit <- sliding.window.start.unit;
+    ret.val$sliding.window.duration <- sliding.window.duration;
+    ret.val$sliding.window.duration.unit <- sliding.window.duration.unit;
+    ret.val$sliding.window.step.duration <- sliding.window.step.duration;
+    ret.val$sliding.window.step.unit <- sliding.window.step.unit;
+    ret.val$sliding.window.no.steps <- sliding.window.no.steps;
+    ret.val$summary <- summary;
+    return (ret.val);
+
+  }
 }
 
 #' @export
-getCMA.CMA_sliding_window <- function(x)
+getMGs.CMA_sliding_window <- function(x)
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA_sliding_window") || is.null(cma$medication.groups) ) return (NULL);
+  return (cma$medication.groups);
+}
+
+#' @export
+getCMA.CMA_sliding_window <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
 {
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA_sliding_window") || !("CMA" %in% names(cma)) || is.null(cma$CMA) ) return (NULL);
-  return (cma$CMA);
+  if( inherits(cma$CMA, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$CMA);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$CMA);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$CMA), function(i) if(!is.null(cma$CMA[[i]])){rep(names(cma$CMA)[i], nrow(cma$CMA[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
 }
 
+#' @export
+getEventInfo.CMA_sliding_window <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA_sliding_window") || !("event.info" %in% names(cma)) || is.null(cma$event.info) ) return (NULL);
+  if( inherits(cma$event.info, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$event.info);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$event.info);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$event.info), function(i) if(!is.null(cma$event.info[[i]])){rep(names(cma$event.info)[i], nrow(cma$event.info[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
+}
+
+#' @export
 subsetCMA.CMA_sliding_window <- function(cma, patients, suppress.warnings=FALSE)
 {
   if( inherits(patients, "factor") ) patients <- as.character(patients);
@@ -7752,7 +9227,26 @@ subsetCMA.CMA_sliding_window <- function(cma, patients, suppress.warnings=FALSE)
 
   ret.val <- cma;
   ret.val$data <- ret.val$data[ ret.val$data[,ret.val$ID.colname] %in% patients.to.keep, ];
-  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) ) ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+  if( !is.null(ret.val$event.info) )
+  {
+    if( inherits(ret.val$event.info, "data.frame") )
+    {
+      ret.val$event.info <- ret.val$event.info[ ret.val$event.info[,ret.val$ID.colname] %in% patients.to.keep, ]; if( nrow(ret.val$event.info) == 0 ) ret.val$event.info <- NULL;
+    } else if( is.list(ret.val$event.info) && length(ret.val$event.info) > 0 )
+    {
+      ret.val$event.info <- lapply(ret.val$event.info, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
+  if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) )
+  {
+    if( inherits(ret.val$CMA, "data.frame") )
+    {
+      ret.val$CMA <- ret.val$CMA[ ret.val$CMA[,ret.val$ID.colname] %in% patients.to.keep, ];
+    } else if( is.list(ret.val$CMA) && length(ret.val$CMA) > 0 )
+    {
+      ret.val$CMA <- lapply(ret.val$CMA, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
   return (ret.val);
 }
 
@@ -7824,3 +9318,104 @@ plot_interactive_cma <- function(...)
     }
   }
 }
+
+
+
+# # Create the medication groups example dataset med.groups from the drcomp dataset:
+# # DON'T RUN!
+# event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+#                                            presc.data = durcomp.prescribing,
+#                                            special.periods.data = durcomp.hospitalisation,
+#                                            ID.colname = "ID",
+#                                            presc.date.colname = "DATE.PRESC",
+#                                            disp.date.colname = "DATE.DISP",
+#                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+#                                            total.dose.colname = "TOTAL.DOSE",
+#                                            presc.daily.dose.colname = "DAILY.DOSE",
+#                                            presc.duration.colname = "PRESC.DURATION",
+#                                            visit.colname = "VISIT",
+#                                            split.on.dosage.change = TRUE,
+#                                            force.init.presc = TRUE,
+#                                            force.presc.renew = TRUE,
+#                                            trt.interruption = "continue",
+#                                            special.periods.method = "continue",
+#                                            date.format = "%Y-%m-%d",
+#                                            suppress.warnings = FALSE,
+#                                            return.data.table = FALSE);
+# med.events.ATC <- event_durations$event_durations[ !is.na(event_durations$event_durations$DURATION) & event_durations$event_durations$DURATION > 0,
+#                                                    c("ID", "DISP.START", "DURATION", "DAILY.DOSE", "ATC.CODE")];
+# names(med.events.ATC) <- c("PATIENT_ID", "DATE", "DURATION", "PERDAY", "CATEGORY");
+# # Groups from the ATC codes:
+# sort(unique(med.events.ATC$CATEGORY)); # all the ATC codes in the data
+# # Level 1:
+# med.events.ATC$CATEGORY_L1 <- vapply(substr(med.events.ATC$CATEGORY,1,1), switch, character(1),
+#                                      "A"="ALIMENTARY TRACT AND METABOLISM",
+#                                      "B"="BLOOD AND BLOOD FORMING ORGANS",
+#                                      "J"="ANTIINFECTIVES FOR SYSTEMIC USE",
+#                                      "R"="RESPIRATORY SYSTEM",
+#                                      "OTHER");
+# # Level 2:
+# med.events.ATC$CATEGORY_L2 <- vapply(substr(med.events.ATC$CATEGORY,1,3), switch, character(1),
+#                                      "A02"="DRUGS FOR ACID RELATED DISORDERS",
+#                                      "A05"="BILE AND LIVER THERAPY",
+#                                      "A09"="DIGESTIVES, INCL. ENZYMES",
+#                                      "A10"="DRUGS USED IN DIABETES",
+#                                      "A11"="VITAMINS",
+#                                      "A12"="MINERAL SUPPLEMENTS",
+#                                      "B02"="ANTIHEMORRHAGICS",
+#                                      "J01"="ANTIBACTERIALS FOR SYSTEMIC USE",
+#                                      "J02"="ANTIMYCOTICS FOR SYSTEMIC USE",
+#                                      "R03"="DRUGS FOR OBSTRUCTIVE AIRWAY DISEASES",
+#                                      "R05"="COUGH AND COLD PREPARATIONS",
+#                                      "OTHER");
+#
+# # Define groups of medications:
+# med.groups <- c("Vitamins"  = "(CATEGORY_L2 == 'VITAMINS')",
+#                 "VitaResp"  = "({Vitamins} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')",
+#                 "VitaShort" = "({Vitamins} & DURATION <= 30)",
+#                 "VitELow"   = "(CATEGORY == 'A11HA03' & PERDAY <= 500)",
+#                 "VitaComb"  = "({VitaShort} | {VitELow})",
+#                 "NotVita"   = "(!{Vitamins})");
+# save(med.events.ATC, med.groups, file="./data/medgroups.rda", version=2); # save it backwards compatible with R >= 1.4.0
+
+#' Example of medication events with ATC codes.
+#'
+#' An artificial dataset containing medication events (one per row) for 16
+#' patients (1564 events in total), containing ATC codes. This dataset is
+#' derived from the \code{durcomp} datasets using the \code{compute_event_durations}
+#' function. See @med.events for more details.
+#'
+#' @format A data frame with 1564 rows and 7 variables:
+#' \describe{
+#'   \item{PATIENT_ID}{the patient unique identifier.}
+#'   \item{DATE}{the medication event date.}
+#'   \item{DURATION}{the duration in days.}
+#'   \item{PERDAY}{the daily dosage.}
+#'   \item{CATEGORY}{the ATC code.}
+#'   \item{CATEGORY_L1}{explicitation of the first field of the ATC code (e.g.,
+#'   "A"="ALIMENTARY TRACT AND METABOLISM").}
+#'   \item{CATEGORY_L2}{explicitation of the first and second fields of the ATC
+#'   code (e.g., "A02"="DRUGS FOR ACID RELATED DISORDERS").}
+#' }
+"med.events.ATC"
+
+#' Example of medication groups.
+#'
+#' An example defining 6 medication groups for \code{med.events.ATC}.
+#' It is a \emph{named character vector}, where the names are the medication
+#' group unique \emph{names} (e.g., "Vitamines") and the elements are the medication
+#' group \emph{definitions} (e.g., "(CATEGORY_L2 == 'VITAMINS')").
+#' The definitions are \code{R} logical expressions using \emph{column names} and
+#' \emph{values} that appear in the dataset, as well as references to other
+#' medication groups using the construction \emph{"{NAME}"}.
+#'
+#' In the above example, "CATEGORY_L2" is a column name in the \code{med.events.ATC}
+#' dataset, and 'VITAMINS' one of its possible values, and which selects all events
+#' that have prescribed ATC codes "A11" (aka "VITAMINS").
+#' Another example is "NotVita" defined as "(!{Vitamines})", which selects all
+#' events that do not have Vitamines prescribed.
+#'
+#' For more details, please see the acompanying vignette.
+"med.groups"
+
+

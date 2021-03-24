@@ -11,10 +11,14 @@ CMA6(
   event.duration.colname = NA,
   event.daily.dose.colname = NA,
   medication.class.colname = NA,
+  medication.groups = NULL,
+  flatten.medication.groups = FALSE,
+  medication.groups.colname = ".MED_GROUP_ID",
   carry.only.for.same.medication = FALSE,
   consider.dosage.change = FALSE,
   followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
+  followup.window.start.per.medication.group = FALSE,
   followup.window.duration = 365 * 2,
   followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
   observation.window.start = 0,
@@ -57,6 +61,31 @@ the \code{date.format} parameter); must be present.}
 \item{medication.class.colname}{A \emph{string}, the name of the column in
 \code{data} containing the medication type, or \code{NA} if not defined.}
 
+\item{medication.groups}{A \emph{vector} of characters defining medication
+groups or the name of a column in \code{data} that defines such groups.
+The names of the vector are the medication group unique names, while
+the content defines them as logical expressions. While the names can be any
+string of characters except "\}", it is recommended to stick to the rules for
+defining vector names in \code{R}. For example,
+\code{c("A"="CATEGORY == 'medA'", "AA"="{A} & PERDAY < 4"} defines two
+medication groups: \emph{A} which selects all events of type "medA", and
+\emph{B} which selects all events already defined by "A" but with a daily
+dose lower than 4. If \code{NULL}, no medication groups are defined. If
+medication groups are defined, there is one CMA estimate for each group;
+moreover, there is a special group \emph{__ALL_OTHERS__} automatically defined
+containing all observations \emph{not} covered by any of the explicitly defined
+groups.}
+
+\item{flatten.medication.groups}{\emph{Logical}, if \code{FALSE} (the default)
+then the \code{CMA} and \code{event.info} components of the object are lists
+with one medication group per element; otherwise, they are \code{data.frame}s
+with an extra column containing the medication group (its name is given by
+\code{medication.groups.colname}).}
+
+\item{medication.groups.colname}{a \emph{string} (defaults to ".MED_GROUP_ID")
+giving the name of the column storing the group name when
+\code{flatten.medication.groups} is \code{TRUE}.}
+
 \item{carry.only.for.same.medication}{\emph{Logical}, if \code{TRUE}, the
 carry-over applies only across medication of the same type.}
 
@@ -78,6 +107,11 @@ participant's first event; or \code{NA} if not defined.}
 \emph{"weeks"}, \emph{"months"} or \emph{"years"}, and represents the time
 units that \code{followup.window.start} refers to (when a number), or
 \code{NA} if not defined.}
+
+\item{followup.window.start.per.medication.group}{a \emph{logical}: if there are
+medication groups defined and this is \code{TRUE}, then the first event
+considered for the follow-up window start is relative to each medication group
+separately, otherwise (the default) it is relative to the patient.}
 
 \item{followup.window.duration}{either a \emph{number} representing the
 duration of the follow-up window in the time units given in
@@ -201,6 +235,9 @@ with the following fields:
  \item \code{CMA} the \code{data.frame} containing the actual \code{CMA}
  estimates for each participant (the \code{ID.colname} column).
 }
+Please note that if \code{medication.groups} are defined, then the \code{CMA}
+and \code{event.info} are named lists, each element containing the CMA and
+event.info corresponding to a single medication group (the element's name).
 }
 \description{
 Constructs a CMA (continuous multiple-interval measures of medication

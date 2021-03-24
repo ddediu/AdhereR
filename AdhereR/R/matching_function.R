@@ -1922,6 +1922,8 @@ prune_event_durations <- function(data,
 #' @param disp.date.colname A \emph{string}, the name of the column in
 #' \code{events.data} containing the dispensation start date (in the format given in
 #' the \code{date.format} parameter).
+#' @param disp.start.colname,episode.start.colname,episode.end.colname column names in
+#' \code{events.data}.
 #' @param duration.colname A \emph{string}, the name of the column in
 #' \code{events.data} containing the duration of the medication event.
 #' @param days.before an \emph{integer}, the number of days before the start of a special period

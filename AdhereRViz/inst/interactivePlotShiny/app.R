@@ -76,7 +76,8 @@ ui <- fluidPage(
   # JavaScript ----
   shinyjs::useShinyjs(),
   shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}",
-                         functions=c("shinyjs.scroll_cma_compute_log")),
+                         #functions=c("shinyjs.scroll_cma_compute_log")),
+                         functions=c("scroll_cma_compute_log")),
   #shinyjs::extendShinyjs(text="shinyjs.show_hide_sections = function() {$('#follow_up_folding_bits').toggle();"),
 
   # APP TITLE ----
@@ -107,7 +108,10 @@ ui <- fluidPage(
            # PARAMS TAB ----
            shinyjs::hidden(div(id="sidebar_tabpanel_container", # start with these hidden...
              tabsetPanel(id="sidebar-tabpanel",
-                       tabPanel("Params", value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
+                         selected=ifelse(!is.null(.GlobalEnv$.plotting.params$data), "sidebar-params-tab", "sidebar-params-data"),
+
+                       tabPanel(span("Params", title="See the plot and adjust various parameters (type of CMA, patients, etc.)"),
+                                value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
                                 conditionalPanel(
                                   condition="!(output.is_dataset_defined)",
 
@@ -175,6 +179,58 @@ ui <- fluidPage(
                                                                 multiple=TRUE)),
 
                                                 hr()
+                                            ),
+
+                                            # Medication groups to plot ----
+                                            conditionalPanel(
+                                              condition="(output.is_mg_defined && input.mg_use_medication_groups)",
+
+                                              div(id='mg_section', style="cursor: pointer;",
+                                                  div(title='Chose which medication groups to plot', h4(id="medication_groups", "Medication groups"), style="color:DarkBlue;"),
+                                                  div(title='Click to unfold...', id="mg_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                              shinyjs::hidden(div(id="mg_contents",
+                                                                  # View the current medication groups definitions:
+                                                                  conditionalPanel(
+                                                                    condition="(input.mg_definitions_source == 'named vector')",
+                                                                    div(title="Click here to view the medication groups...",
+                                                                        actionButton("mg_view_button", label="View definitions!", icon=icon("eye-open", lib="glyphicon")))
+                                                                  ),
+
+                                                                  # List the medication groups to show:
+                                                                  div(title='Please select all the medication groups that should be plotted!',
+                                                                      shinyWidgets::pickerInput(inputId="mg_to_plot_list",
+                                                                                                label="Groups to plot:",
+                                                                                                choices=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"),
+                                                                                                #choices="<none>",
+                                                                                                options=list(`actions-box`=TRUE,
+                                                                                                             `select-all-text`  ="<b>ALL</b>",
+                                                                                                             `deselect-all-text`="<b>NONE</b>"),
+                                                                                                multiple = TRUE,
+                                                                                                selected=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"))),
+                                                                                                #selected="<none>")),
+
+                                                                  conditionalPanel(
+                                                                    condition="(input.mg_to_plot_list.length > 0)",
+
+                                                                    div(title='Apply the selected medication groups!',
+                                                                      actionButton(inputId="mg_plot_apply_button",
+                                                                                   label=strong("Show them!"),
+                                                                                   icon=icon("sunglasses", lib="glyphicon"),
+                                                                                   style="color:DarkBlue; border-color:DarkBlue;"),
+                                                                      style="float: center;")
+                                                                    ),
+
+                                                                  hr(),
+
+                                                                  div(title='Visually group the medication groups by patient?',
+                                                                      shinyWidgets::materialSwitch(inputId="mg_plot_by_patient",
+                                                                                                   label="Visually group by patient?",
+                                                                                                   value=TRUE, status="primary", right=TRUE)),
+
+                                                                  hr()
+
+                                              ))
                                             ),
 
                                             # Follow-up window ----
@@ -1219,8 +1275,44 @@ ui <- fluidPage(
 
                                                                     hr()
                                                                   )
+                                                                ),
 
-                                                                )
+                                                                conditionalPanel(
+                                                                  condition="(output.is_mg_defined && input.mg_use_medication_groups)",
+
+                                                                  div(title='Visually grouping medication groups within patients',
+                                                                      span(p("Medication groups"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                  div(title='The separator color',
+                                                                      colourpicker::colourInput(inputId="plot_mg_separator_color",
+                                                                                                label="Separator color",
+                                                                                                value="blue")),
+
+                                                                  div(title='The line style of the separator',
+                                                                      shinyWidgets::pickerInput(inputId="plot_mg_separator_lty", # using actual images
+                                                                                                label="Separator line style",
+                                                                                                multiple=FALSE,
+                                                                                                choices=names(line.types),
+                                                                                                choicesOpt=list(content=lapply(1:length(line.types),
+                                                                                                                               function(i)
+                                                                                                                                 HTML(paste0("<img src='",
+                                                                                                                                             line.types[i],
+                                                                                                                                             "' width=50 height=10/>",
+                                                                                                                                             names(line.types[i]))))),
+                                                                                                selected="solid")),
+
+                                                                  div(title='The line width of the separator',
+                                                                      numericInput(inputId="plot_mg_separator_lwd",
+                                                                                   label="Separator line width",
+                                                                                   value=2, min=0, max=NA, step=1)),
+
+                                                                  div(title='The label of the __ALL_OTHERS__ implicit medication group',
+                                                                      textInput(inputId="plot_mg_allothers_label",
+                                                                                   label="__ALL_OTHERS__ label",
+                                                                                   value="*"))
+
+                                            )
+
                                             )),
 
 
@@ -1249,7 +1341,8 @@ ui <- fluidPage(
                        ),
 
                        # DATA TAB ----
-                       tabPanel("Data", value="sidebar-params-data", icon=icon("hdd", lib="glyphicon"), fluid=TRUE,
+                       tabPanel(span("Data", title="Select the data source (in-memory data frame, file, SQL database)..."),
+                                value="sidebar-params-data", icon=icon("hdd", lib="glyphicon"), fluid=TRUE,
                                 wellPanel(id = "tPanel2", style = "overflow:scroll; max-height: 90vh; min-height: 50vh",
 
                                           # Datasource ----
@@ -1605,9 +1698,94 @@ ui <- fluidPage(
                                           # Allow last comma:
                                           NULL
                                 )
+                       ),
+
+                       # MEDICATION GROUPS TAB ----
+                       tabPanel(span("Groups", title="Define medication groups..."),
+                                value="sidebar-params-data", icon=icon("list", lib="glyphicon"), fluid=TRUE,
+                                conditionalPanel(
+                                  condition="!(output.is_dataset_defined)",
+
+
+                                  wellPanel(id = "tPanelnomg", style = "overflow:scroll; max-height: 90vh;",
+                                            div(h4("No datasource!"), style="color:DarkRed"),
+                                            br(),
+                                            div(span(span("There is no valid source of data defined (probably because the interactive Shiny plotting was invoked without passing a dataset).")), style="color: red;"),
+                                            hr(),
+                                            div(span("Please use the "),
+                                                span(icon("hdd",lib="glyphicon"),strong("Data"), style="color: darkblue"),
+                                                span(" tab to select a valid datesource!"))
+                                  )
+                                ),
+
+                                conditionalPanel(
+                                  condition="(output.is_dataset_defined)",
+
+                                  wellPanel(id = "tPanel3", style = "overflow:scroll; max-height: 90vh; min-height: 50vh",
+
+                                            # Source of medication groups ----
+                                            span(title='Define medication groups...',
+                                                 h4("Medication groups"), style="color:DarkBlue"),
+
+                                            div(title='Are there medication groups or not?',
+                                                shinyWidgets::materialSwitch(inputId="mg_use_medication_groups",
+                                                                             label=HTML("Use medication groups?"),
+                                                                             value=!is.null(.GlobalEnv$.plotting.params$medication.groups), status="primary", right=TRUE)),
+
+                                            conditionalPanel(
+                                              condition="(input.mg_use_medication_groups)",
+
+                                              div(title='How to define the medication groups?',
+                                                  selectInput(inputId="mg_definitions_source",
+                                                              label="Medication groups from:",
+                                                              choices=c("named vector", "column in data"),
+                                                              selected="named vector")),
+
+                                              conditionalPanel(
+                                                condition="(input.mg_definitions_source == 'named vector')",
+
+                                                div(title='Load the medication groups from a named vector in memory',
+                                                    # From in-memory vector ----
+                                                    selectInput(inputId="mg_from_memory",
+                                                                label="Load named vector",
+                                                                choices=c("[none]"),
+                                                                selected="[none]")),
+
+                                                div(style="height: 0.50em;"),
+
+                                                div(title="Click here to check the selected vector...",
+                                                    actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon")))
+                                              ),
+
+                                              conditionalPanel(
+                                                condition="(input.mg_definitions_source == 'column in data')",
+
+                                                div(title='The medication groups are defined by a column in the data',
+                                                    # From column in the data ----
+                                                    shinyWidgets::pickerInput(inputId="mg_from_column",
+                                                                              label="Medication groups column",
+                                                                              choices=c("[none]"),
+                                                                              selected="[none]")),
+
+                                                div(style="height: 0.50em;")
+                                              ),
+
+                                              hr(),
+
+                                              div(title='Validate and use the medication groups!',
+                                                  actionButton(inputId="mg_from_memory_button_use",
+                                                               label=strong("Use it!"),
+                                                               icon=icon("sunglasses", lib="glyphicon"),
+                                                               style="color:DarkBlue; border-color:DarkBlue;"),
+                                                  style="float: center;"),
+
+                                              hr()
+                                            )
+                                  )
+                                )
                        )
 
-           )))),
+             )))),
 
 
     # OUTPUT PANEL ----
@@ -1627,7 +1805,7 @@ ui <- fluidPage(
                     div(title='The width of the plotting area (in pixles)',
                         sliderInput(inputId="plot_width",
                                     label="Plot width",
-                                    min=0, max=5000, value=500, step=20, round=TRUE))
+                                    min=100, max=5000, value=500, step=20, round=TRUE))
              ),
 
              conditionalPanel(
@@ -1636,7 +1814,7 @@ ui <- fluidPage(
                       div(title='The height of the plotting area (in pixels)',
                           sliderInput(inputId="plot_height",
                                       label="height",
-                                      min=0, max=5000, value=300, step=20, round=TRUE))
+                                      min=60, max=5000, value=300, step=20, round=TRUE))
                )
              ),
              conditionalPanel(
@@ -1842,7 +2020,7 @@ ui <- fluidPage(
                                                          div(title="Define the range of positions (#) corresponding to the selected IDs...",
                                                              sliderInput(inputId="compute_cma_patient_by_group_range",
                                                                          label="Select range of ID positions (#)",
-                                                                         min=1, max=NA, step=1, value=c(1,1),
+                                                                         min=1, max=100, step=1, value=c(1,1),
                                                                          round=TRUE, width="100%"))
                                                   ),
 
@@ -1909,6 +2087,7 @@ server <- function(input, output, session)
                                             "event.duration.colname"=NA,
                                             "event.daily.dose.colname"=NA,
                                             "medication.class.colname"=NA,
+                                            "medication.groups"=NULL,
                                             "date.format"=NA,
                                             "align.all.patients"=FALSE,
                                             "align.first.event.at.zero"=FALSE,
@@ -1960,6 +2139,9 @@ server <- function(input, output, session)
   output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
   outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
+  output$is_mg_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.groups)});
+  outputOptions(output, "is_mg_defined", suspendWhenHidden = FALSE);
+
   #outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
 
   # Clean up at session end ----
@@ -1991,7 +2173,7 @@ server <- function(input, output, session)
                      " patients can be shown in an interactive plot: we kept only the first ",.GlobalEnv$.plotting.params$max.number.patients.to.plot,
                      " from those you selected!\n"));
     }
-    ## This check can be too constly during plotting (especially for database connections), so we don't do it for now assuming there's not too many events per patient anyway:
+    ## This check can be too costly during plotting (especially for database connections), so we don't do it for now assuming there's not too many events per patient anyway:
     #if( !is.null(n.events <- .GlobalEnv$.plotting.params$get.data.for.patients.fnc(patients.to.plot, .GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname)) &&
     #    nrow(n.events) > .GlobalEnv$.plotting.params$max.number.events.to.plot )
     #{
@@ -2014,6 +2196,15 @@ server <- function(input, output, session)
                                                          date.format=.GlobalEnv$.plotting.params$date.format,
 
                                                          ID=patients.to.plot,
+
+                                                         medication.groups=if( input$mg_use_medication_groups ){ .GlobalEnv$.plotting.params$medication.groups }else{ NULL },
+                                                         medication.groups.separator.show=input$mg_plot_by_patient,
+                                                         medication.groups.to.plot=.GlobalEnv$.plotting.params$medication.groups.to.plot,
+                                                         medication.groups.separator.lty=input$plot_mg_separator_lty,
+                                                         medication.groups.separator.lwd=input$plot_mg_separator_lwd,
+                                                         medication.groups.separator.color=input$plot_mg_separator_color,
+                                                         medication.groups.allother.label=input$plot_mg_allothers_label,
+
                                                          cma=ifelse(input$cma_class == "simple",
                                                                     input$cma_to_compute,
                                                                     input$cma_class),
@@ -2114,6 +2305,7 @@ server <- function(input, output, session)
                                                          title=if(input$show_plot_title) {c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns")} else {NULL},
                                                          min.plot.size.in.characters.horiz=input$min_plot_size_in_characters_horiz,
                                                          min.plot.size.in.characters.vert=input$min_plot_size_in_characters_vert,
+
                                                          get.colnames.fnc=.GlobalEnv$.plotting.params$get.colnames.fnc,
                                                          get.patients.fnc=.GlobalEnv$.plotting.params$get.patients.fnc,
                                                          get.data.for.patients.fnc=.GlobalEnv$.plotting.params$get.data.for.patients.fnc
@@ -2125,7 +2317,7 @@ server <- function(input, output, session)
   # renderPlot() ----
   output$distPlot <- renderPlot({
 
-      rv$toggle.me; # make the plot aware of forced updates to the UI (for example, when chainging the dataset)
+      rv$toggle.me; # make the plot aware of forced updates to the UI (for example, when changing the dataset)
 
       msgs <- ""; # the output messages
       res <- NULL; # the result of plotting
@@ -2392,7 +2584,7 @@ server <- function(input, output, session)
       r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
       r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
       r_code <<- paste0(r_code, "# \"", paste0(class(.GlobalEnv$.plotting.params$data),collapse=","), "\", and it has the structure:\n");
-      r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.GlobalEnv$.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n\n");
+      r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.GlobalEnv$.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n");
     } else
     {
       # The dataset was manually selected, so we know quite a bit about it:
@@ -2443,6 +2635,50 @@ server <- function(input, output, session)
                         "");
       r_code <<- paste0(r_code, "# These data has ", length(.GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)), " columns, ",
                                 "and contains info for ", length(unique(.GlobalEnv$.plotting.params$get.patients.fnc(.GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname))), " patients.\n");
+    }
+
+    # The medication group:
+    if( !is.null(.GlobalEnv$.plotting.params$medication.groups) && input$mg_use_medication_groups )
+    {
+      # Defined:
+      r_code <<- paste0(r_code, "# \n",
+                        "# There are medication groups defined: we denote them here as MGs.\n");
+      if( input$mg_definitions_source == 'named vector' &&
+          (length(.GlobalEnv$.plotting.params$medication.groups) > 1 ||
+           (length(.GlobalEnv$.plotting.params$medication.groups) == 1 &&
+            !(.GlobalEnv$.plotting.params$medication.groups %in% .GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)))) )
+      {
+        # Vector defining the medication groups:
+        if( .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments )
+        {
+          # The medication groups came as the `medication.groups` argument to `plot_interactive_cam()`, so we don't know it's "name":
+          r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
+          r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
+          r_code <<- paste0(r_code, "# \"", paste0(class(.GlobalEnv$.plotting.params$medication.groups),collapse=","), "\", and has ",length(.GlobalEnv$.plotting.params$medication.groups)," elements:\n");
+        } else
+        {
+          # The medication groups were manually selected, so we know quite a bit about them:
+          r_code <<- paste0(r_code, "# The medication groups are defined using an object already\n",
+                            "# in memory under the name '",.GlobalEnv$.plotting.params$.mg.name,"'.\n",
+                            "# Assuming this object still exists with the same name, then:\n");
+          r_code <<- paste0(r_code, "# it is of type \"", paste0(class(.GlobalEnv$.plotting.params$medication.groups),collapse=","), "\"\n",
+                            "# and has ",length(.GlobalEnv$.plotting.params$medication.groups)," elements:\n");
+        }
+        # The elements are the same:
+        r_code <<- paste0(r_code, "# c(\n");
+        r_code <<- paste0(r_code,
+                          paste0("#   '",names(.GlobalEnv$.plotting.params$medication.groups),"' = '",.GlobalEnv$.plotting.params$medication.groups,"'",collapse=",\n"),
+                          "\n");
+        r_code <<- paste0(r_code, "#  );\n",
+                          "# \n");
+      } else
+      {
+        # Column name:
+        r_code <<- paste0(r_code, "# The medication groups are defined by column\n");
+        r_code <<- paste0(r_code, "# '",.GlobalEnv$.plotting.params$medication.groups,"'\n");
+        r_code <<- paste0(r_code, "# in the data.\n");
+        r_code <<- paste0(r_code, "# \n");
+      }
     }
 
     # The accessor functions:
@@ -2500,6 +2736,11 @@ server <- function(input, output, session)
     # The parameters:
     r_code <<- paste0(r_code, "data=.data.for.selected.patients.,\n");
     if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", 'CMA="',input$cma_to_compute_within_complex,'",\n');
+    if( !is.null(.GlobalEnv$.plotting.params$medication.groups) && input$mg_use_medication_groups )
+    {
+      # Medication groups defined:
+      r_code <<- paste0(r_code, cma_fnc_body_indent, " medication.groups=MGs, ### don't forget to put here your REAL medication groups! ###\n");
+    }
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # not relevant for a particular CMA type, we\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # nevertheless pass them as they will be ignored)\n");
@@ -2608,7 +2849,20 @@ server <- function(input, output, session)
                      "lwd.event.max.dose"=input$lwd_event_max_dose,
                      "plot.dose.lwd.across.medication.classes"=input$plot_dose_lwd_across_medication_classes,
                      "min.plot.size.in.characters.horiz"=input$min_plot_size_in_characters_horiz,
-                     "min.plot.size.in.characters.vert"=input$min_plot_size_in_characters_vert);
+                     "min.plot.size.in.characters.vert"=input$min_plot_size_in_characters_vert,
+                     "medication.groups.to.plot"=ifelse(!is.null(.GlobalEnv$.plotting.params$medication.groups) && input$mg_use_medication_groups,
+                                                        paste0("c(",
+                                                               paste0('"',
+                                                                      ifelse(input$mg_to_plot_list=="* (all others)","__ALL_OTHERS__",input$mg_to_plot_list),
+                                                                      '"',collapse=","),
+                                                               ")"),
+                                                        "NULL"),
+                     "medication.groups.separator.show"=input$mg_plot_by_patient,
+                     "medication.groups.separator.lty"=paste0('"',input$plot_mg_separator_lty,'"'),
+                     "medication.groups.separator.lwd"=input$plot_mg_separator_lwd,
+                     "medication.groups.separator.color"=paste0('"',input$plot_mg_separator_color,'"'),
+                     "medication.groups.allother.label"=paste0('"',input$plot_mg_allothers_label,'"')
+    );
     r_code <<- paste0(r_code, paste0("         ", names(params.plot), "=", params.plot, collapse=",\n"), "\n");
     r_code <<- paste0(r_code, "    );\n");
     r_code <<- paste0(r_code, "}\n");
@@ -2617,18 +2871,20 @@ server <- function(input, output, session)
     #cat(r_code);
 
     tryCatch(showModal(modalDialog(div(div(HTML("<p>This is the <code>R</code> that would generate the plot currently seen. You can copy it to the clipboard using the <i>Copy to clipboard</i> button.</p>
-                                                <p>Please note that the parameter value <b><code>DATA</code></b> <i>must be replaced</i> by the actual data you passed to the Shiny interactive plot function!</p>")),
-                                       div(HTML(gsub('<span class="symbol">DATA</span>','<span class="symbol_data">DATA</span>',
-                                                     highlight::highlight(parse.output=parse(text=r_code),
-                                                                          renderer=highlight::renderer_html(document=TRUE,
-                                                                                                            stylesheet=file.path(system.file('interactivePlotShiny',
-                                                                                                                                             package='AdhereRViz'),
-                                                                                                                                 "r-code-highlight.css")),
-                                                                          show_line_numbers=FALSE,
-                                                                          output=NULL),
+                                                <p>Please note that the parameter values <b><code>DATA</code></b> and <b><code>MGs</code></b> <i>must be replaced</i> by the actual data and medication groups (if the case) you passed to the Shiny interactive plot function!</p>")),
+                                       div(HTML(gsub('<span class="symbol">MGs</span>','<span class="symbol_data">MGs</span>',
+                                                     gsub('<span class="symbol">DATA</span>','<span class="symbol_data">DATA</span>',
+                                                          highlight::highlight(parse.output=parse(text=r_code),
+                                                                               renderer=highlight::renderer_html(document=TRUE,
+                                                                                                                 stylesheet=file.path(system.file('interactivePlotShiny',
+                                                                                                                                                  package='AdhereRViz'),
+                                                                                                                                      "r-code-highlight.css")),
+                                                                               show_line_numbers=FALSE,
+                                                                               output=NULL),
+                                                          fixed=TRUE),
                                                      fixed=TRUE)),
-                                       #div(HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
-                                           style="max-height: 50vh; overflow-x: scroll; overflow-y: scroll;")), # overflow: auto;
+                                           #div(HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
+                                           style="max-height: 50vh; overflow-x: scroll; overflow-y: scroll; white-space: nowrap;")), # overflow: auto;
                                    title=HTML("The <code>R</code> code for the current plot..."),
                                    footer = tagList(actionButton("copy_code", "Copy to clipboard", icon=icon("copy", lib="glyphicon")),
                                                     modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
@@ -2662,6 +2918,7 @@ server <- function(input, output, session)
     shinyjs::toggle(id=paste0(id,"_unfold_icon"), anim=anim, animType=animType); # the unfolding icon
     shinyjs::toggle(id=paste0(id,"_contents"),    anim=anim, animType=animType); # the section content
   }
+  shinyjs::onclick("mg_section",               function(e){.toggle.all.sections("mg");})
   shinyjs::onclick("follow_up_section",        function(e){.toggle.all.sections("follow_up");})
   shinyjs::onclick("general_settings_section", function(e){.toggle.all.sections("general_settings");})
   shinyjs::onclick("observation_section",      function(e){.toggle.all.sections("observation");})
@@ -2681,7 +2938,7 @@ server <- function(input, output, session)
   .recursively.list.objects.in.memory <- function(..., # inspired from http://adv-r.had.co.nz/Environments.html#env-recursion
                                                   env = parent.frame(),
                                                   of.class="data.frame", # if NULL, no type testing (all go)
-                                                  min.nrow=1, min.ncol=3,
+                                                  min.nrow=1, min.ncol=3, # NA if not relevant
                                                   return.dimensions=TRUE,
                                                   consider.derived.classes=TRUE)
   {
@@ -2702,7 +2959,13 @@ server <- function(input, output, session)
           x <- get(s, envir=env); # get the actual object
           if( (!consider.derived.classes && (of.class %in% class(x))) || (consider.derived.classes && inherits(x, of.class)) )
           {
-            return (nrow(x) >= min.nrow && ncol(x) >= min.ncol);
+            if( !is.na(min.nrow) && !is.na(min.ncol) )
+            {
+              return (nrow(x) >= min.nrow && ncol(x) >= min.ncol);
+            } else
+            {
+              return (TRUE);
+            }
           } else
           {
             return (FALSE);
@@ -2713,7 +2976,12 @@ server <- function(input, output, session)
 
       # Recursive processing:
       all.objects <- c(all.objects,
-                       .recursively.list.objects.in.memory(..., env = parent.env(env), of.class=of.class, consider.derived.classes=consider.derived.classes));
+                       .recursively.list.objects.in.memory(...,
+                                                           env = parent.env(env),
+                                                           of.class=of.class,
+                                                           min.nrow=min.nrow, min.ncol=min.ncol,
+                                                           return.dimensions=return.dimensions,
+                                                           consider.derived.classes=consider.derived.classes));
       # Return the list of objects:
       return (all.objects);
     }
@@ -2810,6 +3078,8 @@ server <- function(input, output, session)
     shinyWidgets::updatePickerInput(session, "dataset_from_memory_medication_class", choices=c("[not defined]", x), selected="[not defined]", choicesOpt=list(subtext=c("", x.info)));
     shinyWidgets::updatePickerInput(session, "dataset_from_memory_daily_dose",       choices=c("[not defined]", x), selected="[not defined]", choicesOpt=list(subtext=c("", x.info)));
 
+    # Medication groups:
+    shinyWidgets::updatePickerInput(session, "mg_from_column", choices=x, selected=x[1], choicesOpt=list(subtext=x.info));
   })
 
   # Display a data.frame as a nice HTML table ----
@@ -3148,18 +3418,50 @@ server <- function(input, output, session)
   # Force updating the Shiny UI using the new data ----
   .force.update.UI <- function()
   {
-    updateSelectInput(session, "cma_class", selected="simple");
-    updateSelectInput(session, "cma_to_compute", selected=.GlobalEnv$.plotting.params$cma.class);
+    updateSelectInput(session, "cma_class", selected=.GlobalEnv$.plotting.params$cma.class);
+    #updateSelectInput(session, "cma_to_compute", selected=.GlobalEnv$.plotting.params$cma.class);
     updateSelectInput(session, "patient", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$ID);
 
     updateSelectInput(session, "compute_cma_patient_by_id", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$all.IDs[1]);
+
+    if( input$mg_definitions_source == 'named vector' )
+    {
+      shinyWidgets::updatePickerInput(session, "mg_to_plot_list",
+                                      choices=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"),
+                                      selected=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"));
+    } else if( input$mg_definitions_source == 'column in data' )
+    {
+      if( !is.null(.GlobalEnv$.plotting.params$data) )
+      {
+        mg_vals <- .GlobalEnv$.plotting.params$get.data.for.patients.fnc(.GlobalEnv$.plotting.params$all.IDs,
+                                                                         .GlobalEnv$.plotting.params$data,
+                                                                         idcol=.GlobalEnv$.plotting.params$ID.colname);
+        if( !is.null(mg_vals) && length(mg_vals) > 0 )
+        {
+          mg_vals <- unique(mg_vals[, input$mg_from_column]);
+          mg_vals <- mg_vals[ !is.na(mg_vals) ];
+          if( !is.null(mg_vals) && length(mg_vals) > 0 )
+          {
+            mg_vals <- sort(mg_vals);
+          }
+        }
+      } else
+      {
+        mg_vals <- NULL;
+      }
+      shinyWidgets::updatePickerInput(session, "mg_to_plot_list",
+                                      choices=c(mg_vals, "* (all others)"),
+                                      selected=c(mg_vals, "* (all others)"));
+    }
 
     #if( is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname) ) shinyjs::hide(id="dose_is_defined") else shinyjs::show(id="dose_is_defined");
     output$is_dose_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
     output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
 
     rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not change any UI elements)
+
     output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)}); # now a dataset is defined!
+    output$is_mg_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.groups)}); # and medication groups!
   }
 
 
@@ -4103,6 +4405,337 @@ server <- function(input, output, session)
     .update.patients.IDs.table();
   })
 
+
+  # Basic checks for a putative vector containing medication group definitions:
+  .check.basic.mg.definition <- function(v)
+  {
+    return (!( is.null(v) ||                            # must be non-NULL
+                 (!is.character(v) && !is.factor(v)) || # must be a vector of characters or factors
+                 length(v) == 0 ||                      # of at least length 1
+                 length(v <- v[!is.na(v)]) == 0 ||      # and with at least 1 non-NA element
+                 is.null(names(v)) ||                   # must have names
+                 "" %in% names(v) ||                    # that are non-empty
+                 any(duplicated(names(v))) ));          # and unique
+  }
+
+
+  # In-memory medication groups: get the list of appropriate vectors objects all the way to the base environment ----
+  .list.mg.from.memory <- function()
+  {
+    # List all the character or factor vectors currently in memory:
+    x <- sort(c(.recursively.list.objects.in.memory(of.class="character", min.nrow=NA, min.ncol=NA, return.dimensions=FALSE),
+                .recursively.list.objects.in.memory(of.class="factor", min.nrow=NA, min.ncol=NA, return.dimensions=FALSE)));
+
+    if( is.null(x) || length(x) == 0 )
+    {
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("There are no fitting medication group definitions in memory!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+    } else
+    {
+      # Check that they meet the basic requirements for medication group definitions:
+      s <- vapply(x, function(v) .check.basic.mg.definition(get(v)), logical(1));
+      if( !any(s) )
+      {
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There are no fitting medication group definitions in memory!", style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      } else
+      {
+        # Keep only these:
+        x <- x[s];
+
+        # If defined, add the medication groups sent to the Shiny plotting function:
+        if( !is.null(.GlobalEnv$.plotting.params) &&
+            !is.null(.GlobalEnv$.plotting.params$medication.groups) &&
+            (is.character(.GlobalEnv$.plotting.params$medication.groups) || is.factor(.GlobalEnv$.plotting.params$medication.groups)))
+        {
+          if( .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments )
+          {
+            # Add the function argument as well:
+            x <- c("<<'medication.groups' argument to plot_interactive_cma() call>>", x);
+          }
+        }
+        updateSelectInput(session, "mg_from_memory", choices=x, selected=x[1]);
+        .update.mg.inmemory();
+      }
+    }
+  }
+
+  # In-memory vector: update the selections ----
+  .update.mg.inmemory <- function()
+  {
+    # Set the vector:
+    .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
+    if( input$mg_from_memory == "[none]" || input$mg_from_memory == "" )
+    {
+      # Initialisation:
+      .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
+    } else if( input$mg_from_memory == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
+    {
+      # The special value pointing to the argument to plot_interactive_cma():
+      .GlobalEnv$.plotting.params$.inmemory.mg <- .GlobalEnv$.plotting.params$medication.groups;
+    } else
+    {
+      try(.GlobalEnv$.plotting.params$.inmemory.mg <- get(input$mg_from_memory), silent=TRUE);
+      if( inherits(.GlobalEnv$.plotting.params$.inmemory.mg, "try-error") ) .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
+    }
+
+    # Sanity checks:
+    if( (input$mg_from_memory != "[none]") &&
+        (is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ||
+         (!is.character(.GlobalEnv$.plotting.params$.inmemory.mg) && !is.factor(.GlobalEnv$.plotting.params$.inmemory.mg)) ||
+         length(.GlobalEnv$.plotting.params$.inmemory.mg) < 1 ))
+    {
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected medication group definitions '",input$mg_from_memory, "' from memory!"), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return (invisible(NULL));
+    }
+
+    # Update the relevant UI elements:
+    updateRadioButtons(session, "mg_list_of_groups",
+                       choices=if( is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ) {"<EMPTY>"} else {names(.GlobalEnv$.plotting.params$.inmemory.mg)},
+                       selected=NULL);
+  }
+
+  observeEvent(input$mg_from_memory,
+               {
+                 .update.mg.inmemory();
+               })
+
+  # Display a vector of medication groups nicely as HTML ----
+  .show.medication.groups.as.HTML <- function(mg, # the vector to show
+                                              max.entries=200, # if NA, show all
+                                              escape=TRUE)
+  {
+    if( !.check.basic.mg.definition(mg) )
+    {
+      return ("<b>The given medication group definitions are empty of the wrong type!</b>");
+    }
+
+    # Highlight things in the definitions using HTML tags:
+    # The calls:
+    for( s in names(mg) )
+    {
+      mg <- gsub(paste0("{",s,"}"), paste0("{<b><i>",s,"</i></b>}"), mg, fixed=TRUE);
+    }
+    # The names:
+    names(mg) <- paste0("<b><i>",names(mg),"</i></b>");
+
+    # This is a pretty basic thing that tweaks the output of knitr::kable...
+    d <- data.frame("Name"=names(mg), "Definition"=mg);
+    d.as.html <- knitr::kable(d[1:min(max.entries,nrow(d),na.rm=TRUE),], format="html",
+                              align="l",
+                              col.names=names(d), #col.names=paste0("\U2007\U2007",names(d),"\U2007\U2007"),
+                              row.names=FALSE);
+
+    # Put back the HTML tags:
+    d.as.html <- gsub("&lt;/i&gt;", "</i>",
+                      gsub("&lt;i&gt;", "<i>",
+                           gsub("&lt;/b&gt;", "</b>",
+                                gsub("&lt;b&gt;", "<b>",
+                                     d.as.html,
+                                     fixed=TRUE),
+                                fixed=TRUE),
+                           fixed=TRUE),
+                      fixed=TRUE);
+
+    # The data.frame info in a nice HTML format:
+    d.info <- paste0("There are ", nrow(d), " medication groups defined.");
+
+    if( length(s <- strsplit(d.as.html, "<table", fixed=TRUE)[[1]]) > 1 )
+    {
+      # Found the <table> tag: add its class and caption:
+      d.as.html <- paste0(s[1],
+                          paste0("<table class='peekAtMGTable'",
+                                 "<caption style='caption-side: top;'>", d.info,"</caption", # > is already in s[2] because of <table
+                                 s[-1]));
+
+      # Add the CSS:
+      d.as.html <- paste0(d.as.html, "\n\n
+                          <style>
+                            table.peekAtMGTable {
+                              border: 1px solid #1C6EA4;
+                              background-color: #fbfcfc;
+                              #width: 100%;
+                              text-align: left;
+                              border-collapse: collapse;
+                              #white-space: nowrap;
+                            }
+                            table.peekAtMGTable td, table.peekAtMGTable th {
+                              border: 1px solid #AAAAAA;
+                              padding: 0.2em 0.5em;
+                            }
+                            table.peekAtMGTable tbody td {
+                              font-size: 13px;
+                            }
+                            table.peekAtMGTable tr:nth-child(even) {
+                              background: #f0f3f4;
+                            }
+                            table.peekAtMGTable thead {
+                              background: #1C6EA4;
+                              background: -moz-linear-gradient(top, #5592bb 0%, #327cad 66%, #1C6EA4 100%);
+                              background: -webkit-linear-gradient(top, #5592bb 0%, #327cad 66%, #1C6EA4 100%);
+                              background: linear-gradient(to bottom, #5592bb 0%, #327cad 66%, #1C6EA4 100%);
+                              border-bottom: 2px solid #444444;
+                            }
+                            table.peekAtMGTable thead th {
+                              font-size: 15px;
+                              font-weight: bold;
+                              color: #FFFFFF;
+                              border-left: 2px solid #D0E4F5;
+                            }
+                            table.peekAtMGTable thead th:first-child {
+                              border-left: none;
+                            }
+                          </style>\n");
+    }
+
+    return (d.as.html);
+  }
+
+  # In-memory medication groups: peek ----
+  observeEvent(input$mg_from_memory_peek_button,
+               {
+                 # Sanity checks:
+                 if( is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ||
+                     (!is.character(.GlobalEnv$.plotting.params$.inmemory.mg) && !is.factor(.GlobalEnv$.plotting.params$.inmemory.mg)) ||
+                     length(.GlobalEnv$.plotting.params$.inmemory.mg) < 1 )
+                 {
+                   showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                         div(paste0("Cannot load the selected medication group definitions '",input$mg_from_memory, "' from memory!\nPlease make sure you selected a valid vector of definitions..."), style="color: red;"),
+                                         footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                   return (invisible(NULL));
+                 }
+
+                 showModal(modalDialog(title="AdhereR: the selected in-memory medication group definitions ...",
+                                       div(HTML(.show.medication.groups.as.HTML(.GlobalEnv$.plotting.params$.inmemory.mg)),
+                                           style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
+                                       footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+
+               })
+
+  # View the currently selected medication group definitions ----
+  observeEvent(input$mg_view_button,
+               {
+                 # Sanity checks:
+                 if( is.null(.GlobalEnv$.plotting.params$medication.groups) ||
+                     (!is.character(.GlobalEnv$.plotting.params$medication.groups) && !is.factor(.GlobalEnv$.plotting.params$medication.groups)) ||
+                     length(.GlobalEnv$.plotting.params$medication.groups) < 1 )
+                 {
+                   showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                         div(paste0("The medication group definitions seems to be of the wrong type or empty!\n"), style="color: red;"),
+                                         footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                   return (invisible(NULL));
+                 }
+
+                 showModal(modalDialog(title="AdhereR: the medication group definitions ...",
+                                       div(HTML(.show.medication.groups.as.HTML(.GlobalEnv$.plotting.params$medication.groups)),
+                                           style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
+                                       footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+
+               })
+
+  # Validate a given medication groups definition and possibly load it ----
+  .validate.and.load.medication.groups <- function(mg, # the vector of definitions or column name
+                                                   d=NULL # the data.frame to which these definitions refer to (or NULL for no such checks)
+  )
+  {
+     # Place the data in the .GlobalEnv$.plotting.params list:
+    .GlobalEnv$.plotting.params$medication.groups <- mg;
+    .GlobalEnv$.plotting.params$medication.groups.to.plot <- NULL;
+
+    # Force UI updating...
+    .force.update.UI();
+  }
+
+  # In-memory medication group definitions: validate and use ----
+  observeEvent(input$mg_from_memory_button_use,
+               {
+                 if( input$mg_definitions_source == 'named vector' )
+                 {
+                   # From a named vector in memory:
+
+                   # Sanity checks:
+                   if( is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ||
+                       (!is.character(.GlobalEnv$.plotting.params$.inmemory.mg) && !is.factor(.GlobalEnv$.plotting.params$.inmemory.mg)) ||
+                       length(.GlobalEnv$.plotting.params$.inmemory.mg) < 1 )
+                   {
+                     showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                           div(paste0("Cannot load the selected medication group definitions '",input$mg_from_memory, "' from memory!\nPlease make sure you selected a valid vector of definitions..."), style="color: red;"),
+                                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                     return (invisible(NULL));
+                   }
+
+                   # Checks:
+                   .validate.and.load.medication.groups(.GlobalEnv$.plotting.params$.inmemory.mg,
+                                                        .GlobalEnv$.plotting.params$data);
+
+                   # Let the world know this:
+                   .GlobalEnv$.plotting.params$.mg.type <- "in memory";
+                   .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments <- FALSE;
+                   if( input$mg_from_memory == "[none]" )
+                   {
+                     # How did we get here???
+                     return (invisible(NULL));
+                   } else if( input$mg_from_memory == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
+                   {
+                     # The special value pointing to the argument to plot_interactive_cma():
+                     .GlobalEnv$.plotting.params$.mg.name <- NA;
+                   } else
+                   {
+                     .GlobalEnv$.plotting.params$.mg.name <- input$mg_from_memory;
+                   }
+                 } else if( input$mg_definitions_source == 'column in data' )
+                 {
+                   # From column in the data:
+
+                   # Check if the column name refers to an existing column in the dataset:
+                   if( is.na(input$mg_from_column) || length(input$mg_from_column) != 1 || input$mg_from_column=="" ||
+                       !(input$mg_from_column %in% .GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)) )
+                   {
+                     showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                           div(paste0("The medication groups column '",ID.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
+                                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                     return (invisible(NULL));
+                   }
+
+                   # Validate and load the medication groups
+                   .validate.and.load.medication.groups(input$mg_from_column,
+                                                        .GlobalEnv$.plotting.params$data);
+
+                   # Let the world know this:
+                   .GlobalEnv$.plotting.params$.mg.type <- "column in data";
+                   .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments <- FALSE;
+                   if( input$mg_from_column == "[none]" )
+                   {
+                     # How did we get here???
+                     return (invisible(NULL));
+                   } else if( input$mg_from_column == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
+                   {
+                     # The special value pointing to the argument to plot_interactive_cma():
+                     .GlobalEnv$.plotting.params$.mg.name <- NA;
+                   } else
+                   {
+                     .GlobalEnv$.plotting.params$.mg.name <- input$mg_from_column;
+                   }
+                 }
+               })
+
+  # Show selected medication groups ----
+  observeEvent(input$mg_plot_apply_button,
+               {
+                 # Sanity checks:
+
+                 # Let the world know this:
+                 .GlobalEnv$.plotting.params$medication.groups.to.plot <- input$mg_to_plot_list;
+
+                 # Re-plot things:
+                 rv$toggle.me <- !rv$toggle.me; # make the plotting aware of the changes
+               })
+
+
   # CMA computation for multiple patients ----
   # Allow the user to break it and show progress (inspired by https://gist.github.com/jcheng5/1659aff15904a0c4ffcd4d0c7788f789 )
   # The CMA computation main UI ----
@@ -4270,6 +4903,15 @@ server <- function(input, output, session)
                                                                        date.format=.GlobalEnv$.plotting.params$date.format,
 
                                                                        ID=.GlobalEnv$.plotting.params$.patients.to.compute[i],
+
+                                                                       medication.groups=if( input$mg_use_medication_groups ){ .GlobalEnv$.plotting.params$medication.groups }else{ NULL },
+                                                                       medication.groups.separator.show=input$mg_plot_by_patient,
+                                                                       medication.groups.to.plot=.GlobalEnv$.plotting.params$medication.groups.to.plot,
+                                                                       medication.groups.separator.lty=input$plot_mg_separator_lty,
+                                                                       medication.groups.separator.lwd=input$plot_mg_separator_lwd,
+                                                                       medication.groups.separator.color=input$plot_mg_separator_color,
+                                                                       medication.groups.allother.label=input$plot_mg_allothers_label,
+
                                                                        cma=ifelse(input$cma_class == "simple",
                                                                                   input$cma_to_compute,
                                                                                   input$cma_class),
@@ -4355,7 +4997,15 @@ server <- function(input, output, session)
     shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
 
     # Return the results:
-    return (AdhereR::getCMA(res));
+    if( !input$mg_use_medication_groups )
+    {
+      # No medication groups:
+      return (AdhereR::getCMA(res));
+    } else
+    {
+      # Medication groups:
+      return (AdhereR::getCMA(res, flatten.medication.groups=TRUE));
+    }
   }
 
   # Collect computed CMA for several patients ----
@@ -4549,9 +5199,10 @@ server <- function(input, output, session)
     }
   )
 
-  # Make sure the UI is properly updated for ech new session ----
+  # Make sure the UI is properly updated for each new session ----
   isolate(
   {
+    .list.mg.from.memory();
     .force.update.UI();
     removeModal();
     shinyjs::show(id="sidebar_tabpanel_container");

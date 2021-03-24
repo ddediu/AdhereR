@@ -41,6 +41,9 @@ name(s) of the column(s) in the \code{events.data} identify medication classes.}
 \code{events.data} containing the dispensation start date (in the format given in
 the \code{date.format} parameter).}
 
+\item{disp.start.colname, episode.start.colname, episode.end.colname}{column names in
+\code{events.data}.}
+
 \item{duration.colname}{A \emph{string}, the name of the column in
 \code{events.data} containing the duration of the medication event.}
 
