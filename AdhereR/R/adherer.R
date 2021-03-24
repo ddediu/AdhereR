@@ -8873,7 +8873,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
         # Compute the step size to optimally cover the duration (possibly adjust the number of steps, too):
         sliding.window.step.duration.in.days <- (sliding.duration / (sliding.window.no.steps - 1));
         sliding.window.step.duration.in.days <- max(1, min(sliding.window.duration.in.days, sliding.window.step.duration.in.days)); # make sure we don't overdue it
-        sliding.window.no.steps <- min(((sliding.duration / sliding.window.step.duration.in.days) + 1), sliding.duration); # ajust the number of steps just in case
+        sliding.window.no.steps <- min(((sliding.duration / sliding.window.step.duration.in.days) + 1), sliding.duration); # adjust the number of steps just in case
       } else
       {
         # Only one sliding window:
