@@ -591,6 +591,7 @@ ON patients.`id` = event_patients.`patient_id`;
 
 Since `AdhereRViz` version 0.2/`AdhereR` version 0.7, *medication groups* can be defined and used for interactive plotting.
 For ore details about medication groups, please see the vignette "AdhereR: Adherence to Medications" in package `AdhereR`, but, fundamentally, they are named vectors of characters where the names are the unique names of groups of medication defined using `R`-like expressions that describe with of the events in the dataset are covered by a given medication group.
+Alternatively, one can use a *column* in the data itself to define the medication groups.
 
 Medication groups can be passed with the `medication.groups` argument to the `plot_interactive_cma()` function, or can be interactively loaded through a new panel `Groups` of the user interface (please note that a valid dataset must have already been loaded):
 

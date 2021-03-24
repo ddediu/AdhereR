@@ -2642,29 +2642,43 @@ server <- function(input, output, session)
     {
       # Defined:
       r_code <<- paste0(r_code, "# \n",
-                                "# There are medication groups defined: we denote them here as MGs.\n");
-      if( .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments )
+                        "# There are medication groups defined: we denote them here as MGs.\n");
+      if( input$mg_definitions_source == 'named vector' &&
+          (length(.GlobalEnv$.plotting.params$medication.groups) > 1 ||
+           (length(.GlobalEnv$.plotting.params$medication.groups) == 1 &&
+            !(.GlobalEnv$.plotting.params$medication.groups %in% .GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)))) )
       {
-        # The medication groups came as the `medication.groups` argument to `plot_interactive_cam()`, so we don't know it's "name":
-        r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
-        r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
-        r_code <<- paste0(r_code, "# \"", paste0(class(.GlobalEnv$.plotting.params$medication.groups),collapse=","), "\", and has ",length(.GlobalEnv$.plotting.params$medication.groups)," elements:\n");
+        # Vector defining the medication groups:
+        if( .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments )
+        {
+          # The medication groups came as the `medication.groups` argument to `plot_interactive_cam()`, so we don't know it's "name":
+          r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
+          r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
+          r_code <<- paste0(r_code, "# \"", paste0(class(.GlobalEnv$.plotting.params$medication.groups),collapse=","), "\", and has ",length(.GlobalEnv$.plotting.params$medication.groups)," elements:\n");
+        } else
+        {
+          # The medication groups were manually selected, so we know quite a bit about them:
+          r_code <<- paste0(r_code, "# The medication groups are defined using an object already\n",
+                            "# in memory under the name '",.GlobalEnv$.plotting.params$.mg.name,"'.\n",
+                            "# Assuming this object still exists with the same name, then:\n");
+          r_code <<- paste0(r_code, "# it is of type \"", paste0(class(.GlobalEnv$.plotting.params$medication.groups),collapse=","), "\"\n",
+                            "# and has ",length(.GlobalEnv$.plotting.params$medication.groups)," elements:\n");
+        }
+        # The elements are the same:
+        r_code <<- paste0(r_code, "# c(\n");
+        r_code <<- paste0(r_code,
+                          paste0("#   '",names(.GlobalEnv$.plotting.params$medication.groups),"' = '",.GlobalEnv$.plotting.params$medication.groups,"'",collapse=",\n"),
+                          "\n");
+        r_code <<- paste0(r_code, "#  );\n",
+                          "# \n");
       } else
       {
-        # The medication groups were manually selected, so we know quite a bit about them:
-        r_code <<- paste0(r_code, "# The medication groups are defined using an object already\n",
-                                  "# in memory under the name '",.GlobalEnv$.plotting.params$.mg.name,"'.\n",
-                                  "# Assuming this object still exists with the same name, then:\n\n");
-        r_code <<- paste0(r_code, "# it is of type \"", paste0(class(.GlobalEnv$.plotting.params$medication.groups),collapse=","), "\"\n",
-                                  "# and has ",length(.GlobalEnv$.plotting.params$medication.groups)," elements:\n");
+        # Column name:
+        r_code <<- paste0(r_code, "# The medication groups are defined by column\n");
+        r_code <<- paste0(r_code, "# '",.GlobalEnv$.plotting.params$medication.groups,"'\n");
+        r_code <<- paste0(r_code, "# in the data.\n");
+        r_code <<- paste0(r_code, "# \n");
       }
-      # The elements are the same:
-      r_code <<- paste0(r_code, "# c(\n");
-      r_code <<- paste0(r_code,
-                        paste0("#   '",names(.GlobalEnv$.plotting.params$medication.groups),"' = '",.GlobalEnv$.plotting.params$medication.groups,"'",collapse=",\n"),
-                        "\n");
-      r_code <<- paste0(r_code, "#  );\n",
-                                "# \n");
     }
 
     # The accessor functions:
@@ -4630,6 +4644,7 @@ server <- function(input, output, session)
   {
      # Place the data in the .GlobalEnv$.plotting.params list:
     .GlobalEnv$.plotting.params$medication.groups <- mg;
+    .GlobalEnv$.plotting.params$medication.groups.to.plot <- NULL;
 
     # Force UI updating...
     .force.update.UI();

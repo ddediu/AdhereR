@@ -101,7 +101,8 @@ globalVariables(c("patientID", "selectedCMA", "carry.only.for.same.medication", 
 #' \code{data} containing the classes/types/groups of medication, or \code{NA}
 #' if not defined.
 #' @param medication.groups A \emph{named character vector} defining the
-#' medication classes or \code{NULL} if none (the default).
+#' medication classes, the name of a column in the data the defines the groups,
+#' or \code{NULL} if none (the default).
 #' @param date.format A \emph{string} giving the format of the dates used in the
 #' \code{data} and the other parameters; see the \code{format} parameters of the
 #' \code{\link[base]{as.Date}} function for details (NB, this concerns only the

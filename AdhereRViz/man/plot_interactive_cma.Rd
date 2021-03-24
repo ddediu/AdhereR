@@ -77,7 +77,8 @@ defined.}
 if not defined.}
 
 \item{medication.groups}{A \emph{named character vector} defining the
-medication classes or \code{NULL} if none (the default).}
+medication classes, the name of a column in the data the defines the groups,
+or \code{NULL} if none (the default).}
 
 \item{date.format}{A \emph{string} giving the format of the dates used in the
 \code{data} and the other parameters; see the \code{format} parameters of the
