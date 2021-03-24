@@ -86,7 +86,8 @@ the \code{date.format} parameter); must be present.}
 \code{data} containing the event duration (in days); must be present.}
 
 \item{medication.groups}{A \emph{vector} of characters defining medication
-groups. The names of the vector are the medication group unique names, while
+groups or the name of a column in \code{data} that defines such groups.
+The names of the vector are the medication group unique names, while
 the content defines them as logical expressions. While the names can be any
 string of characters except "\}", it is recommended to stick to the rules for
 defining vector names in \code{R}. For example,

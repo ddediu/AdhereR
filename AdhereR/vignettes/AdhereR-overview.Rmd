@@ -853,6 +853,35 @@ If desired, the parameter `medication.groups.to.plot` can be used to explicitly 
 
 Medication groups work in the same way across all simple and complex CMAs, an are included in the interactive `Shiny` interface as well.
 
+As a special case, the `medication.groups` parameter can simply be the name of a column in the `data` that define the medication groups through its values.
+For example,
+
+```{r eval=FALSE}
+cma0_types <- CMA0(data=med.events.ATC,
+                   ID.colname="PATIENT_ID",
+                   event.date.colname="DATE",
+                   event.duration.colname="DURATION",
+                   event.daily.dose.colname="PERDAY",
+                   medication.class.colname="CATEGORY",
+                   medication.groups="CATEGORY_L1",
+                   #flatten.medication.groups=TRUE,
+                   #followup.window.start.per.medication.group=TRUE,
+                   followup.window.start=0,
+                   observation.window.start=0,
+                   observation.window.duration=365,
+                   date.format="%m/%d/%Y");
+```
+
+defines `r length(unique(med.events.ATC$CATEGORY_L1))` medication groups `r paste0('"',sort(unique(med.events.ATC$CATEGORY_L1)),'"',collapse=", ")` using the `CATEGORY_L1` column in the example `med.events.ATC` dataset.
+Behind the scenes, this is simply expanded into the medication group definitions:
+
+```{r echo=FALSE}
+tmp <- sort(unique(med.events.ATC$CATEGORY_L1));
+cat(paste0("c(",
+           paste0('"',tmp,'"',' = "(CATEGORY_L1 == \'',tmp,'\')"',collapse=",\n  "),
+           ");"));
+```
+
 Please note that if no medication groups are defined (the default), then *nothing* changes in the behaviour of the package (so it is fully backwards compatible).
 
 

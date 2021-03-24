@@ -408,6 +408,27 @@ plot(cma1_mg,
      show.legend=FALSE);
 
 ## ----eval=FALSE---------------------------------------------------------------
+#  cma0_types <- CMA0(data=med.events.ATC,
+#                     ID.colname="PATIENT_ID",
+#                     event.date.colname="DATE",
+#                     event.duration.colname="DURATION",
+#                     event.daily.dose.colname="PERDAY",
+#                     medication.class.colname="CATEGORY",
+#                     medication.groups="CATEGORY_L1",
+#                     #flatten.medication.groups=TRUE,
+#                     #followup.window.start.per.medication.group=TRUE,
+#                     followup.window.start=0,
+#                     observation.window.start=0,
+#                     observation.window.duration=365,
+#                     date.format="%m/%d/%Y");
+
+## ----echo=FALSE---------------------------------------------------------------
+tmp <- sort(unique(med.events.ATC$CATEGORY_L1));
+cat(paste0("c(",
+           paste0('"',tmp,'"',' = "(CATEGORY_L1 == \'',tmp,'\')"',collapse=",\n  "),
+           ");"));
+
+## ----eval=FALSE---------------------------------------------------------------
 #  cmaW3 <- CMA_sliding_window(CMA="CMA1",
 #                              data=med.events,
 #                              ID.colname="PATIENT_ID",

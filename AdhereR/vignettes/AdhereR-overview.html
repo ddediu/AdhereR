@@ -12,7 +12,7 @@
 
 <meta name="author" content="Alexandra L. Dima, Dan Dediu &amp; Samuel Allemann" />
 
-<meta name="date" content="2021-03-14" />
+<meta name="date" content="2021-03-24" />
 
 <title>AdhereR: Adherence to Medications</title>
 
@@ -140,7 +140,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <h1 class="title toc-ignore">AdhereR: Adherence to Medications</h1>
 <h4 class="author">Alexandra L. Dima, Dan Dediu &amp; Samuel Allemann</h4>
-<h4 class="date">2021-03-14</h4>
+<h4 class="date">2021-03-24</h4>
 
 
 <div id="TOC">
@@ -1690,6 +1690,25 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <p>The medication groups are ordered within patients, and visually grouped using alternating thick blue lines (which can be controlled through the parameters <code>medication.groups.separator.show</code>, <code>medication.groups.separator.lty</code>, <code>medication.groups.separator.lwd</code> and <code>medication.groups.separator.color</code>); likewise, the name of the special <code>__ALL_OTHERS__</code> groups can be controlled with the <code>medication.groups.allother.label</code> parameter (defaults to &quot;*&quot;). Only the medication groups that contain at least one event are shown for each patient. If desired, the parameter <code>medication.groups.to.plot</code> can be used to explicitly list the names of the medication groups to include in the plot (by default, all).</p>
 <p>Medication groups work in the same way across all simple and complex CMAs, an are included in the interactive <code>Shiny</code> interface as well.</p>
+<p>As a special case, the <code>medication.groups</code> parameter can simply be the name of a column in the <code>data</code> that define the medication groups through its values. For example,</p>
+<div class="sourceCode" id="cb57"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>cma0_types <span class="ot">&lt;-</span> <span class="fu">CMA0</span>(<span class="at">data=</span>med.events.ATC,</span>
+<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">ID.colname=</span><span class="st">&quot;PATIENT_ID&quot;</span>,</span>
+<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">event.date.colname=</span><span class="st">&quot;DATE&quot;</span>,</span>
+<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">event.duration.colname=</span><span class="st">&quot;DURATION&quot;</span>,</span>
+<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">event.daily.dose.colname=</span><span class="st">&quot;PERDAY&quot;</span>,</span>
+<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">medication.class.colname=</span><span class="st">&quot;CATEGORY&quot;</span>,</span>
+<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a>                   <span class="at">medication.groups=</span><span class="st">&quot;CATEGORY_L1&quot;</span>,</span>
+<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a>                   <span class="co">#flatten.medication.groups=TRUE,</span></span>
+<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a>                   <span class="co">#followup.window.start.per.medication.group=TRUE,</span></span>
+<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a>                   <span class="at">followup.window.start=</span><span class="dv">0</span>,</span>
+<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a>                   <span class="at">observation.window.start=</span><span class="dv">0</span>,</span>
+<span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a>                   <span class="at">observation.window.duration=</span><span class="dv">365</span>,</span>
+<span id="cb57-13"><a href="#cb57-13" aria-hidden="true" tabindex="-1"></a>                   <span class="at">date.format=</span><span class="st">&quot;%m/%d/%Y&quot;</span>);</span></code></pre></div>
+<p>defines 4 medication groups “ALIMENTARY TRACT AND METABOLISM”, “ANTIINFECTIVES FOR SYSTEMIC USE”, “BLOOD AND BLOOD FORMING ORGANS”, “RESPIRATORY SYSTEM” using the <code>CATEGORY_L1</code> column in the example <code>med.events.ATC</code> dataset. Behind the scenes, this is simply expanded into the medication group definitions:</p>
+<pre><code>## c(&quot;ALIMENTARY TRACT AND METABOLISM&quot; = &quot;(CATEGORY_L1 == &#39;ALIMENTARY TRACT AND METABOLISM&#39;)&quot;,
+##   &quot;ANTIINFECTIVES FOR SYSTEMIC USE&quot; = &quot;(CATEGORY_L1 == &#39;ANTIINFECTIVES FOR SYSTEMIC USE&#39;)&quot;,
+##   &quot;BLOOD AND BLOOD FORMING ORGANS&quot; = &quot;(CATEGORY_L1 == &#39;BLOOD AND BLOOD FORMING ORGANS&#39;)&quot;,
+##   &quot;RESPIRATORY SYSTEM&quot; = &quot;(CATEGORY_L1 == &#39;RESPIRATORY SYSTEM&#39;)&quot;);</code></pre>
 <p>Please note that if no medication groups are defined (the default), then <em>nothing</em> changes in the behaviour of the package (so it is fully backwards compatible).</p>
 </div>
 <div id="working-with-very-large-databases" class="section level2">
@@ -1987,24 +2006,24 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>The <code>macOS</code> laptop is running <code>macOS High Sierra 10.13.4</code>, <code>R 3.4.3</code>, <code>openssh</code> (installed through <a href="https://brew.sh/">homebrew</a>) and we set up passwordless ssh access to <code>workhorse</code> (see, for example, the tutorial <a href="http://www.linuxproblem.org/art_9.html">here</a>). The <code>Windows 10</code> desktop is running <code>Microsoft Windows 10 Pro 1709 64 bits</code> with <code>openssh</code> installed vias <a href="http://www.cygwin.com/">Cygwin</a> (also with passwordless ssh access to <code>workhorse</code>) and <code>Microsoft R Open 3.4.3</code>.</p>
 <p>All machines have the latest version of <code>AdhereR</code> and <code>snow</code> installed.</p>
 <p>With these, we can, for example do:</p>
-<div class="sourceCode" id="cb57"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb57-1"><a href="#cb57-1" aria-hidden="true" tabindex="-1"></a>cmaW3 <span class="ot">&lt;-</span> <span class="fu">CMA_sliding_window</span>(<span class="at">CMA=</span><span class="st">&quot;CMA1&quot;</span>,</span>
-<span id="cb57-2"><a href="#cb57-2" aria-hidden="true" tabindex="-1"></a>                            <span class="at">data=</span>med.events,</span>
-<span id="cb57-3"><a href="#cb57-3" aria-hidden="true" tabindex="-1"></a>                            <span class="at">ID.colname=</span><span class="st">&quot;PATIENT_ID&quot;</span>,</span>
-<span id="cb57-4"><a href="#cb57-4" aria-hidden="true" tabindex="-1"></a>                            <span class="at">event.date.colname=</span><span class="st">&quot;DATE&quot;</span>,</span>
-<span id="cb57-5"><a href="#cb57-5" aria-hidden="true" tabindex="-1"></a>                            <span class="at">event.duration.colname=</span><span class="st">&quot;DURATION&quot;</span>,</span>
-<span id="cb57-6"><a href="#cb57-6" aria-hidden="true" tabindex="-1"></a>                            <span class="at">event.daily.dose.colname=</span><span class="st">&quot;PERDAY&quot;</span>,</span>
-<span id="cb57-7"><a href="#cb57-7" aria-hidden="true" tabindex="-1"></a>                            <span class="at">medication.class.colname=</span><span class="st">&quot;CATEGORY&quot;</span>,</span>
-<span id="cb57-8"><a href="#cb57-8" aria-hidden="true" tabindex="-1"></a>                            <span class="at">carry.only.for.same.medication=</span><span class="cn">FALSE</span>,</span>
-<span id="cb57-9"><a href="#cb57-9" aria-hidden="true" tabindex="-1"></a>                            <span class="at">consider.dosage.change=</span><span class="cn">FALSE</span>,</span>
-<span id="cb57-10"><a href="#cb57-10" aria-hidden="true" tabindex="-1"></a>                            <span class="at">sliding.window.duration=</span><span class="dv">30</span>,</span>
-<span id="cb57-11"><a href="#cb57-11" aria-hidden="true" tabindex="-1"></a>                            <span class="at">sliding.window.step.duration=</span><span class="dv">30</span>,</span>
-<span id="cb57-12"><a href="#cb57-12" aria-hidden="true" tabindex="-1"></a>                            <span class="at">parallel.backend=</span><span class="st">&quot;snow&quot;</span>, <span class="co"># make clear we want to use snow</span></span>
-<span id="cb57-13"><a href="#cb57-13" aria-hidden="true" tabindex="-1"></a>                            <span class="at">parallel.threads=</span><span class="fu">c</span>(<span class="fu">rep</span>(</span>
-<span id="cb57-14"><a href="#cb57-14" aria-hidden="true" tabindex="-1"></a>                              <span class="fu">list</span>(<span class="fu">list</span>(<span class="at">host=</span><span class="st">&quot;user@workhorse&quot;</span>, <span class="co"># host (and user)</span></span>
-<span id="cb57-15"><a href="#cb57-15" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">rscript=</span><span class="st">&quot;/usr/local/bin/Rscript&quot;</span>, <span class="co"># Rscript location</span></span>
-<span id="cb57-16"><a href="#cb57-16" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">snowlib=</span><span class="st">&quot;/usr/local/lib64/R/library/&quot;</span>) <span class="co"># snow package location</span></span>
-<span id="cb57-17"><a href="#cb57-17" aria-hidden="true" tabindex="-1"></a>                                   ),</span>
-<span id="cb57-18"><a href="#cb57-18" aria-hidden="true" tabindex="-1"></a>                              <span class="dv">2</span>))) <span class="co"># two remote threads</span></span></code></pre></div>
+<div class="sourceCode" id="cb59"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb59-1"><a href="#cb59-1" aria-hidden="true" tabindex="-1"></a>cmaW3 <span class="ot">&lt;-</span> <span class="fu">CMA_sliding_window</span>(<span class="at">CMA=</span><span class="st">&quot;CMA1&quot;</span>,</span>
+<span id="cb59-2"><a href="#cb59-2" aria-hidden="true" tabindex="-1"></a>                            <span class="at">data=</span>med.events,</span>
+<span id="cb59-3"><a href="#cb59-3" aria-hidden="true" tabindex="-1"></a>                            <span class="at">ID.colname=</span><span class="st">&quot;PATIENT_ID&quot;</span>,</span>
+<span id="cb59-4"><a href="#cb59-4" aria-hidden="true" tabindex="-1"></a>                            <span class="at">event.date.colname=</span><span class="st">&quot;DATE&quot;</span>,</span>
+<span id="cb59-5"><a href="#cb59-5" aria-hidden="true" tabindex="-1"></a>                            <span class="at">event.duration.colname=</span><span class="st">&quot;DURATION&quot;</span>,</span>
+<span id="cb59-6"><a href="#cb59-6" aria-hidden="true" tabindex="-1"></a>                            <span class="at">event.daily.dose.colname=</span><span class="st">&quot;PERDAY&quot;</span>,</span>
+<span id="cb59-7"><a href="#cb59-7" aria-hidden="true" tabindex="-1"></a>                            <span class="at">medication.class.colname=</span><span class="st">&quot;CATEGORY&quot;</span>,</span>
+<span id="cb59-8"><a href="#cb59-8" aria-hidden="true" tabindex="-1"></a>                            <span class="at">carry.only.for.same.medication=</span><span class="cn">FALSE</span>,</span>
+<span id="cb59-9"><a href="#cb59-9" aria-hidden="true" tabindex="-1"></a>                            <span class="at">consider.dosage.change=</span><span class="cn">FALSE</span>,</span>
+<span id="cb59-10"><a href="#cb59-10" aria-hidden="true" tabindex="-1"></a>                            <span class="at">sliding.window.duration=</span><span class="dv">30</span>,</span>
+<span id="cb59-11"><a href="#cb59-11" aria-hidden="true" tabindex="-1"></a>                            <span class="at">sliding.window.step.duration=</span><span class="dv">30</span>,</span>
+<span id="cb59-12"><a href="#cb59-12" aria-hidden="true" tabindex="-1"></a>                            <span class="at">parallel.backend=</span><span class="st">&quot;snow&quot;</span>, <span class="co"># make clear we want to use snow</span></span>
+<span id="cb59-13"><a href="#cb59-13" aria-hidden="true" tabindex="-1"></a>                            <span class="at">parallel.threads=</span><span class="fu">c</span>(<span class="fu">rep</span>(</span>
+<span id="cb59-14"><a href="#cb59-14" aria-hidden="true" tabindex="-1"></a>                              <span class="fu">list</span>(<span class="fu">list</span>(<span class="at">host=</span><span class="st">&quot;user@workhorse&quot;</span>, <span class="co"># host (and user)</span></span>
+<span id="cb59-15"><a href="#cb59-15" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">rscript=</span><span class="st">&quot;/usr/local/bin/Rscript&quot;</span>, <span class="co"># Rscript location</span></span>
+<span id="cb59-16"><a href="#cb59-16" aria-hidden="true" tabindex="-1"></a>                                        <span class="at">snowlib=</span><span class="st">&quot;/usr/local/lib64/R/library/&quot;</span>) <span class="co"># snow package location</span></span>
+<span id="cb59-17"><a href="#cb59-17" aria-hidden="true" tabindex="-1"></a>                                   ),</span>
+<span id="cb59-18"><a href="#cb59-18" aria-hidden="true" tabindex="-1"></a>                              <span class="dv">2</span>))) <span class="co"># two remote threads</span></span></code></pre></div>
 <p>where we use <code>parallel.backend=&quot;snow&quot;</code> and we specify the <code>workhorse</code> node(s) we want to use. Here, <code>parallel.threads</code> is a list of host specifications (one per thread), each a list contaning the <code>host</code> (possibly with the username for ssh access), <code>rscript</code> (the location on the remote host of <code>Rscript</code>) and <code>snowlib</code> (the location on the remote host of the <code>snow</code> package, usually the location where the <code>R</code> packages are installed). In this exmple, we create 2 such identical hosts (using <code>rep(..., 2)</code>) which measn that we will have two parallel threads running on <code>workhorse</code>. If everything is fine, the results should be returned to the user as usual.</p>
 <p><em>NB1.</em> This procedure was tested only on <code>Linux</code> hosts, but it should <em>in principle</em> also work with <code>Windows</code> hosts as well (but the setup is currently much more complex and apparently less reliable; moreover, in most high-performance production environments we expect <code>Linux</code> rather that <code>Windows</code> compute nodes).</p>
 <!-- Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format: -->

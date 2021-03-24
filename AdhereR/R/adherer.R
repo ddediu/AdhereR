@@ -176,6 +176,20 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
     return (NULL);
   }
 
+  if( length(medication.groups) == 1 && (medication.groups %in% names(data)) )
+  {
+    # It is a column in the data: transform it into the corresponding explicit definitions:
+    mg.vals <- unique(data[,medication.groups]); mg.vals <- mg.vals[!is.na(mg.vals)]; # the unique non-NA values
+    if( is.null(mg.vals) || length(mg.vals) == 0 )
+    {
+      if( !suppress.warnings ) .report.ewms("The column '",medication.groups,"' in the data must contain at least one non-missing value!\n", "error", ".apply.medication.groups", "AdhereR");
+      return (NULL);
+    }
+    mg.vals <- sort(mg.vals); # makes it easier to view if ordered
+    medication.groups.defs <- paste0('(',medication.groups,' == "',mg.vals,'")'); names(medication.groups.defs) <- mg.vals;
+    medication.groups <- medication.groups.defs;
+  }
+
   if( length(names(medication.groups)) != length(medication.groups) || any(duplicated(names(medication.groups))) || ("" %in% names(medication.groups)) )
   {
     if( !suppress.warnings ) .report.ewms("The medication groups must be a named list with unique and non-empty names!\n", "error", ".apply.medication.groups", "AdhereR");
@@ -344,7 +358,8 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 #' \code{data} containing the classes/types/groups of medication, or \code{NA}
 #' if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
-#' groups. The names of the vector are the medication group unique names, while
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
 #' the content defines them as logical expressions. While the names can be any
 #' string of characters except "\}", it is recommended to stick to the rules for
 #' defining vector names in \code{R}. For example,
@@ -497,7 +512,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                  medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                  # Groups of medication classes:
-                 medication.groups=NULL, # a named vector of medication group definitions or NULL
+                 medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                  flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                  # Various types methods of computing gaps:
                  carryover.within.obs.window=NA, # if TRUE consider the carry-over within the observation window (NA = undefined)
@@ -2828,7 +2843,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         treatment.episodes[, episode.duration := as.numeric(data4ID$.FU.END.DATE[1] - episode.start[n.episodes]) -
           ifelse(end.episode.gap.days[n.episodes] < MAX.PERMISSIBLE.GAP[last.event], # duration of the last event of the last episode
                  0,
-                 end.episode.gap.days[n.episodes])]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum persmissible gap
+                 end.episode.gap.days[n.episodes])]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum permissible gap
         treatment.episodes[, episode.end := (episode.start + episode.duration)];
       } else
       {
@@ -2846,7 +2861,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
           # The last event with gap > maximum permissible is the last event for this patient:
           treatment.episodes <- data.table("episode.ID"=as.numeric(1:s.len),
                                            "episode.start"=c(data4ID$.DATE.as.Date[1],                # the 1st event in the follow-up window
-                                                             data4ID$.DATE.as.Date[s[-s.len]+1]), # the next event
+                                                             data4ID$.DATE.as.Date[s[-s.len]+1]),     # the next event
                                            "end.episode.gap.days"=c(gap.days.column[s]));             # the corresponding gap.days of the last event in this follow-up window
         }
         n.episodes <- nrow(treatment.episodes);
@@ -2854,7 +2869,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                                    as.numeric(data4ID$.FU.END.DATE[1] - episode.start[n.episodes]) -
                                                      ifelse(end.episode.gap.days[n.episodes] < MAX.PERMISSIBLE.GAP[last.event], # duration of the last event of the last episode
                                                             0,
-                                                            end.episode.gap.days[n.episodes]))]; # the last episode duration is the episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum persmissible gap
+                                                            end.episode.gap.days[n.episodes]))]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum permissible gap
         treatment.episodes[, episode.end := (episode.start + episode.duration)];
       }
       return (treatment.episodes);
@@ -3378,7 +3393,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' @param event.duration.colname A \emph{string}, the name of the column in
 #' \code{data} containing the event duration (in days); must be present.
 #' @param medication.groups A \emph{vector} of characters defining medication
-#' groups. The names of the vector are the medication group unique names, while
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
 #' the content defines them as logical expressions. While the names can be any
 #' string of characters except "\}", it is recommended to stick to the rules for
 #' defining vector names in \code{R}. For example,
@@ -3559,7 +3575,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   # Groups of medication classes:
-                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                   flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
@@ -4099,7 +4115,8 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' @param event.duration.colname A \emph{string}, the name of the column in
 #' \code{data} containing the event duration (in days); must be present.
 #' @param medication.groups A \emph{vector} of characters defining medication
-#' groups. The names of the vector are the medication group unique names, while
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
 #' the content defines them as logical expressions. While the names can be any
 #' string of characters except "\}", it is recommended to stick to the rules for
 #' defining vector names in \code{R}. For example,
@@ -4276,7 +4293,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   # Groups of medication classes:
-                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                   flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
@@ -4485,7 +4502,7 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   # Groups of medication classes:
-                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                   flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
@@ -4602,7 +4619,7 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   event.date.colname=NA, # the start date of the event in the date.format format (NA = undefined)
                   event.duration.colname=NA, # the event duration in days (NA = undefined)
                   # Groups of medication classes:
-                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                   flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # The follow-up window:
                   followup.window.start=0, # if a number is the earliest event per participant date plus number of units, or a Date object, or a column name in data (NA = undefined)
@@ -4758,7 +4775,8 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
-#' groups. The names of the vector are the medication group unique names, while
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
 #' the content defines them as logical expressions. While the names can be any
 #' string of characters except "\}", it is recommended to stick to the rules for
 #' defining vector names in \code{R}. For example,
@@ -4941,7 +4959,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                   # Groups of medication classes:
-                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                   flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
@@ -5192,7 +5210,8 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
-#' groups. The names of the vector are the medication group unique names, while
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
 #' the content defines them as logical expressions. While the names can be any
 #' string of characters except "\}", it is recommended to stick to the rules for
 #' defining vector names in \code{R}. For example,
@@ -5375,7 +5394,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                   # Groups of medication classes:
-                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                   flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
@@ -5630,7 +5649,8 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
-#' groups. The names of the vector are the medication group unique names, while
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
 #' the content defines them as logical expressions. While the names can be any
 #' string of characters except "\}", it is recommended to stick to the rules for
 #' defining vector names in \code{R}. For example,
@@ -5813,7 +5833,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                   # Groups of medication classes:
-                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                   flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
@@ -6122,7 +6142,8 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
-#' groups. The names of the vector are the medication group unique names, while
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
 #' the content defines them as logical expressions. While the names can be any
 #' string of characters except "\}", it is recommended to stick to the rules for
 #' defining vector names in \code{R}. For example,
@@ -6305,7 +6326,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                   # Groups of medication classes:
-                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                   flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
@@ -6624,7 +6645,8 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
-#' groups. The names of the vector are the medication group unique names, while
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
 #' the content defines them as logical expressions. While the names can be any
 #' string of characters except "\}", it is recommended to stick to the rules for
 #' defining vector names in \code{R}. For example,
@@ -6800,7 +6822,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                   medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                   # Groups of medication classes:
-                  medication.groups=NULL, # a named vector of medication group definitions or NULL
+                  medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                   flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                   # Various types methods of computing gaps:
                   carry.only.for.same.medication=FALSE, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
@@ -7122,7 +7144,8 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
-#' groups. The names of the vector are the medication group unique names, while
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
 #' the content defines them as logical expressions. While the names can be any
 #' string of characters except "\}", it is recommended to stick to the rules for
 #' defining vector names in \code{R}. For example,
@@ -7341,7 +7364,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                              medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                              # Groups of medication classes:
-                             medication.groups=NULL, # a named vector of medication group definitions or NULL
+                             medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                              flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                              # Various types methods of computing gaps:
                              carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = use the CMA's values)
@@ -8438,7 +8461,8 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' @param medication.class.colname A \emph{string}, the name of the column in
 #' \code{data} containing the medication type, or \code{NA} if not defined.
 #' @param medication.groups A \emph{vector} of characters defining medication
-#' groups. The names of the vector are the medication group unique names, while
+#' groups or the name of a column in \code{data} that defines such groups.
+#' The names of the vector are the medication group unique names, while
 #' the content defines them as logical expressions. While the names can be any
 #' string of characters except "\}", it is recommended to stick to the rules for
 #' defining vector names in \code{R}. For example,
@@ -8647,7 +8671,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                 event.daily.dose.colname=NA, # the prescribed daily dose (NA = undefined)
                                 medication.class.colname=NA, # the classes/types/groups of medication (NA = undefined)
                                 # Groups of medication classes:
-                                medication.groups=NULL, # a named vector of medication group definitions or NULL
+                                medication.groups=NULL, # a named vector of medication group definitions, the name of a column in the data that defines the groups, or NULL
                                 flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID", # if medication.groups were defined, return CMAs and event.info as single data.frame?
                                 # Various types methods of computing gaps:
                                 carry.only.for.same.medication=NA, # if TRUE the carry-over applies only across medication of same type (NA = undefined)
