@@ -2631,6 +2631,11 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 #' if \emph{percent}, then  \code{maximum.permissible.gap} is interpreted as a
 #' percent (can be greater than 100\%) of the duration of the current
 #' prescription.
+#' @param maximum.permissible.gap.append.to.episode.proportion a \emph{number}
+#' giving the proportion of the \code{maximum.permissible.gap} to append at the
+#' end of an episode with a gap larger than the \code{maximum.permissible.gap};
+#' varies between 0.0 (no addition, the default) and 1.0 (the full
+#' \code{maximum.permissible.gap} is added).
 #' @param followup.window.start If a \emph{\code{Date}} object it is the actual
 #' start date of the follow-up window; if a \emph{string} it is the name of the
 #' column in \code{data} containing the start date of the follow-up window; if a
@@ -2709,6 +2714,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                                         maximum.permissible.gap=90, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                                         maximum.permissible.gap.unit=c("days", "weeks", "months", "years", "percent")[1], # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days), "years" (fixed at 365 days), or "percent", in which case maximum.permissible.gap is interpreted as a percent (can be > 100%) of the duration of the current prescription
+                                        maximum.permissible.gap.append.to.episode.proportion=0.0, # the proportion of the maximum permissible gap to append at the end of an episode with a gap larger than the maximum permissible gap, between 0.0 (no addition, the default) and 1.0 (the full maximum permissible gap is added)
                                         # The follow-up window:
                                         followup.window.start=0, # if a number is the earliest event per participant date + number of units, otherwise a date.format date
                                         followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)
@@ -2769,7 +2775,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     return (NULL);
   }
 
-  # Convert maximum permissible gap units into days or proprtion:
+  # Convert maximum permissible gap units into days or proportion:
   maximum.permissible.gap.as.percent <- FALSE; # is the maximum permissible gap a percent of the current duration?
   maximum.permissible.gap <- switch(maximum.permissible.gap.unit,
                                     "days" = maximum.permissible.gap,
@@ -2780,6 +2786,14 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                     {if(!suppress.warnings) .report.ewms(paste0("Unknown maximum.permissible.gap.unit '",maximum.permissible.gap.unit,"': assuming you meant 'days'."), "warning", "compute.treatment.episodes", "AdhereR");  maximum.permissible.gap;} # otherwise force it to "days"
                                    );
   if( maximum.permissible.gap < 0 ) maximum.permissible.gap <- 0; # make sure this is positive
+
+  # Check maximum.permissible.gap.append.to.episode.proportion:
+  if( !is.numeric(maximum.permissible.gap.append.to.episode.proportion) || length(maximum.permissible.gap.append.to.episode.proportion) != 1 ||
+      maximum.permissible.gap.append.to.episode.proportion < 0.0 || maximum.permissible.gap.append.to.episode.proportion > 1.0 )
+  {
+    if( !suppress.warnings ) .report.ewms("'maximum.permissible.gap.append.to.episode.proportion' must be a number between 0.0 and 1.0!\n", "error", "compute.treatment.episodes", "AdhereR");
+    return (NULL);
+  }
 
   # The workhorse auxiliary function: For a given (subset) of data, compute the event intervals and gaps:
   .workhorse.function <- function(data=NULL,
@@ -2839,11 +2853,12 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         treatment.episodes <- data.table("episode.ID"=as.numeric(1),
                                          "episode.start"=data4ID$.DATE.as.Date[1],
                                          "end.episode.gap.days"=gap.days.column[last.event]);
+        gap.correction <- (maximum.permissible.gap.append.to.episode.proportion * MAX.PERMISSIBLE.GAP[last.event]);
         n.episodes <- nrow(treatment.episodes);
         treatment.episodes[, episode.duration := as.numeric(data4ID$.FU.END.DATE[1] - episode.start[n.episodes]) -
           ifelse(end.episode.gap.days[n.episodes] < MAX.PERMISSIBLE.GAP[last.event], # duration of the last event of the last episode
                  0,
-                 end.episode.gap.days[n.episodes])]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum permissible gap
+                 end.episode.gap.days[n.episodes] + gap.correction)]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode, minus the gap after the last episode plus a proportion of the maximum permissible gap only if the gap is longer than the maximum permissible gap
         treatment.episodes[, episode.end := (episode.start + episode.duration)];
       } else
       {
@@ -2858,6 +2873,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                                                     gap.days.column[last.event]));   # the corresponding gap.days of the last event in this follow-up window
           episode.gap.smaller.than.max <- c(gap.days.column[s] <= MAX.PERMISSIBLE.GAP[s],
                                             gap.days.column[last.event] <= MAX.PERMISSIBLE.GAP[last.event]);
+          gap.correction <- (maximum.permissible.gap.append.to.episode.proportion * MAX.PERMISSIBLE.GAP[c(s, last.event)]);
         } else
         {
           # The last event with gap > maximum permissible is the last event for this patient:
@@ -2866,16 +2882,17 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                                              data4ID$.DATE.as.Date[s[-s.len]+1]),     # the next event
                                            "end.episode.gap.days"=c(gap.days.column[s]));             # the corresponding gap.days of the last event in this follow-up window
           episode.gap.smaller.than.max <- c(gap.days.column[s] <= MAX.PERMISSIBLE.GAP[s]);
+          gap.correction <- (maximum.permissible.gap.append.to.episode.proportion * MAX.PERMISSIBLE.GAP[s]);
         }
         n.episodes <- nrow(treatment.episodes);
         treatment.episodes[, episode.duration := c(as.numeric(episode.start[2:n.episodes] - episode.start[1:(n.episodes-1)]) - # start date of next episode minus start date of current episode
                                                      ifelse(episode.gap.smaller.than.max[1:(n.episodes-1)],
                                                             0,
-                                                            end.episode.gap.days[1:(n.episodes-1)]), # minus the start date of the current episode, minus the gap after the current episode if the gap is larger than the maximum permissible gap (i.e., not for changes of medication or dosage)
+                                                            end.episode.gap.days[1:(n.episodes-1)] - gap.correction[1:(n.episodes-1)]), # minus the start date of the current episode, minus the gap after the current episode plus a proportion of the maximum permissible gap only if the gap is larger than the maximum permissible gap (i.e., not for changes of medication or dosage)
                                                    as.numeric(data4ID$.FU.END.DATE[1] - episode.start[n.episodes]) -
                                                      ifelse(episode.gap.smaller.than.max[n.episodes], # duration of the last event of the last episode
                                                             0,
-                                                            end.episode.gap.days[n.episodes]))]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum permissible gap
+                                                            end.episode.gap.days[n.episodes] - gap.correction[n.episodes]))]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode plus a proportion of the maximum permissible gap only if the gap is longer than the maximum permissible gap
         treatment.episodes[, episode.end := (episode.start + episode.duration)];
       }
       return (treatment.episodes);
@@ -7193,6 +7210,11 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' if \emph{percent}, then  \code{maximum.permissible.gap} is interpreted as a
 #' percent (can be greater than 100\%) of the duration of the current
 #' prescription.
+#' @param maximum.permissible.gap.append.to.episode.proportion a \emph{number}
+#' giving the proportion of the \code{maximum.permissible.gap} to append at the
+#' end of an episode with a gap larger than the \code{maximum.permissible.gap};
+#' varies between 0.0 (no addition, the default) and 1.0 (the full
+#' \code{maximum.permissible.gap} is added).
 #' @param followup.window.start If a \emph{\code{Date}} object, it represents
 #' the actual start date of the follow-up window; if a \emph{string} it is the
 #' name of the column in \code{data} containing the start date of the follow-up
@@ -7380,6 +7402,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                              maximum.permissible.gap=180, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                              maximum.permissible.gap.unit=c("days", "weeks", "months", "years", "percent")[1], # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days), "years" (fixed at 365 days), or "percent", in which case maximum.permissible.gap is interpreted as a percent (can be > 100%) of the duration of the current prescription
+                             maximum.permissible.gap.append.to.episode.proportion=0.0, # the proportion of the maximum permissible gap to append at the end of an episode with a gap larger than the maximum permissible gap, between 0.0 (no addition, the default) and 1.0 (the full maximum permissible gap is added)
                              # The follow-up window:
                              followup.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
                              followup.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
@@ -7535,6 +7558,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                                dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
                                                maximum.permissible.gap=maximum.permissible.gap,
                                                maximum.permissible.gap.unit=maximum.permissible.gap.unit,
+                                               maximum.permissible.gap.append.to.episode.proportion=maximum.permissible.gap.append.to.episode.proportion,
                                                followup.window.start=followup.window.start,
                                                followup.window.start.unit=followup.window.start.unit,
                                                followup.window.duration=followup.window.duration,

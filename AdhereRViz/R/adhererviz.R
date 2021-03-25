@@ -708,6 +708,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 dosage.change.means.new.treatment.episode=FALSE, # does a change in dosage automatically start a new treatment episode?
                                 maximum.permissible.gap=180, # if a number, is the duration in units of max. permissible gaps between treatment episodes
                                 maximum.permissible.gap.unit="days", # time units; can be "days", "weeks" (fixed at 7 days), "months" (fixed at 30 days) or "years" (fixed at 365 days)
+                                maximum.permissible.gap.append.to.episode.proportion=0.0, # the proportion of the maximum permissible gap to append at the end of an episode with a gap larger than the maximum permissible gap, between 0.0 (no addition, the default) and 1.0 (the full maximum permissible gap is added)
 
                                 # Sliding window:
                                 sliding.window.start=0, # if a number is the earliest event per participant date + number of units, or a Date object, or a column name in data (NA = undefined)
@@ -808,6 +809,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                  "dosage.change.means.new.treatment.episode=",dosage.change.means.new.treatment.episode,", ",
                  "maximum.permissible.gap=",maximum.permissible.gap,", ",
                  "maximum.permissible.gap.unit=",maximum.permissible.gap.unit,", ",
+                 "maximum.permissible.gap.append.to.episode.proportion=",maximum.permissible.gap.append.to.episode.proportion,", ",
                  "sliding.window.start=",sliding.window.start,", ",
                  "sliding.window.start.unit=",sliding.window.start.unit,", ",
                  "sliding.window.duration=",sliding.window.duration,", ",
@@ -855,7 +857,8 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                (!identical(pp$cma.to.apply, cma.to.apply) ||
                 !identical(pp$medication.change.means.new.treatment.episode, medication.change.means.new.treatment.episode) ||
                 !identical(pp$dosage.change.means.new.treatment.episode, dosage.change.means.new.treatment.episode) ||
-                !identical(pp$maximum.permissible.gap.unit, maximum.permissible.gap.unit))) ||
+                !identical(pp$maximum.permissible.gap.unit, maximum.permissible.gap.unit) ||
+                !identical(pp$maximum.permissible.gap.append.to.episode.proportion, maximum.permissible.gap.append.to.episode.proportion))) ||
               (cma == "siding window" && # sliding window specifically
                (!identical(pp$cma.to.apply, cma.to.apply) ||
                 !identical(pp$sliding.window.start, sliding.window.start) ||
@@ -918,6 +921,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
         "medication.change.means.new.treatment.episode"=medication.change.means.new.treatment.episode,
         "dosage.change.means.new.treatment.episode"=dosage.change.means.new.treatment.episode,
         "maximum.permissible.gap.unit"=maximum.permissible.gap.unit,
+        "maximum.permissible.gap.append.to.episode.proportion"=maximum.permissible.gap.append.to.episode.proportion,
         # Sliding window
         "sliding.window.start"=sliding.window.start,
         "sliding.window.start.unit"=sliding.window.start.unit,
@@ -995,6 +999,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                                   dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
                                                   maximum.permissible.gap=maximum.permissible.gap,
                                                   maximum.permissible.gap.unit=maximum.permissible.gap.unit,
+                                                  maximum.permissible.gap.append.to.episode.proportion=maximum.permissible.gap.append.to.episode.proportion,
                                                   sliding.window.start=sliding.window.start,
                                                   sliding.window.start.unit=sliding.window.start.unit,
                                                   sliding.window.duration=sliding.window.duration,
