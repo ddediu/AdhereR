@@ -215,7 +215,7 @@ cma9 <- CMA9(data=ExamplePats, # we're estimating CMA9 now!
              date.format="%m/%d/%Y");
 plot(cma9, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%"----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%", warning=FALSE----
 cmaE <- CMA_per_episode(CMA="CMA9", # apply the simple CMA9 to each treatment episode
                         data=ExamplePats,
                         ID.colname="PATIENT_ID",

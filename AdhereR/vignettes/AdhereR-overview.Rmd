@@ -237,6 +237,10 @@ Notes:
 1. just the number of gap days **after** the end of the episode can be computed by keeping all values larger than the permissible gap and by replacing the others by 0,
 2. when medication change represents a new treatment episode, the previous episode ends when the last supply is finished (irrespective of the length of gap compared to a maximum permissible gap); any days before the date of the new medication supply are considered a gap. This maintains consistence with the computation of gaps between episodes (whether they are constructed based on the maximum permissible gap rule or the medication change rule).
 
+In some scenarios, it is important to imagine that the episodes also **include** the maximum permissible gap when the gap is larger than this maximum (i.e., not when a new episode is due to a change in treatment or dose before this maximum permissible gap was exceeded).
+In fact, it is conceivable that a **proportion** of the maximum permissible gap (and not necessarily the entire maximum permissible gap) is included.
+To ver these scenarios, `compute.treatment.episodes()` has a parameter, `maximum.permissible.gap.append.to.episode.proportion` which represents the proportion of the maximum permissible gap included in the episodes: 0.0 (the default) means that the episodes end as described above), 1.0 means that 100% of maximum permissible gap is appended at the end of the episodes, while intermediate values specify what percentage (`maximum.permissible.gap.append.to.episode.proportion`*100%) of the maximum permissible gap is appended at the end of the episodes.
+
 This output can be used on its own to study causes and consequences of medication persistence (e.g. by using episode duration in time-to-event analyses). 
 This function is also a basis for the `CMA_per_episode` class, which is described later in the vignette.
 
@@ -535,7 +539,7 @@ The `CMA_per_episode` values can also be transformed into percentages and rounde
 Plots now include an extra section at the top, where each episode is shown as a horizontal bar of length equal to the episode duration, and the corresponding CMA estimates are given both as percentage (rounded to 1 decimal) and as a grey area. 
 An extra area on the right of the plot displays the distribution of all CMA values for the whole FUW as a histogram or as smoothed kernel density (see [Figure 11](#Figure-11)).
 
-```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%"}
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%", warning=FALSE}
 cmaE <- CMA_per_episode(CMA="CMA9", # apply the simple CMA9 to each treatment episode
                         data=ExamplePats,
                         ID.colname="PATIENT_ID",

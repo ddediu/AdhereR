@@ -361,6 +361,7 @@ This section is shown only for **CMA per episodes** and concerns the way treatme
   - **Treat. change starts new episode?**: does changing the treatment class trigger a new episode?
   - **Dose change starts new episode?**: does changing the dose trigger a new episode?
   - **Max. gap duration**: the duration of a gap above which a new episode is triggered; the gap can be in units (**Max. gap duration unit**) of days, weeks, months or years, or as a percent of the last prescription
+  - **Append gap?**: should (part of) the maximum permissible gap be added to the episodes with a gap larger than this maximum? If "no" (the default), nothing is added, if "yes" then 100% of the maximum permissible gap is appended at the end of the episodes, and if "partially...", a new sliding control appears, allowing the user to chose the percent of the maximum permissible gap to be added, between 0% (nothing) to 100% (all of it)
   - **Plot CMA as histogram?**: should the distribution of CMA estimates across episodes for a given participant be plotted as a histogram or as a barplot 
 
 
