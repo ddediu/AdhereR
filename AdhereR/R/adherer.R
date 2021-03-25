@@ -2856,6 +2856,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                                              data4ID$.DATE.as.Date[s+1]),            # the next event
                                            "end.episode.gap.days"=c(gap.days.column[s],              # the corresponding gap.days of the last event in this episode
                                                                     gap.days.column[last.event]));   # the corresponding gap.days of the last event in this follow-up window
+          episode.gap.smaller.than.max <- c(gap.days.column[s] <= MAX.PERMISSIBLE.GAP[s],
+                                            gap.days.column[last.event] <= MAX.PERMISSIBLE.GAP[last.event]);
         } else
         {
           # The last event with gap > maximum permissible is the last event for this patient:
@@ -2863,11 +2865,15 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                            "episode.start"=c(data4ID$.DATE.as.Date[1],                # the 1st event in the follow-up window
                                                              data4ID$.DATE.as.Date[s[-s.len]+1]),     # the next event
                                            "end.episode.gap.days"=c(gap.days.column[s]));             # the corresponding gap.days of the last event in this follow-up window
+          episode.gap.smaller.than.max <- c(gap.days.column[s] <= MAX.PERMISSIBLE.GAP[s]);
         }
         n.episodes <- nrow(treatment.episodes);
-        treatment.episodes[, episode.duration := c(as.numeric(episode.start[2:n.episodes] - episode.start[1:(n.episodes-1)]) - end.episode.gap.days[1:(n.episodes-1)], # the episode duration is the start date of the next episode minus the start date of the current episode minus the gap after the current episode
+        treatment.episodes[, episode.duration := c(as.numeric(episode.start[2:n.episodes] - episode.start[1:(n.episodes-1)]) - # start date of next episode minus start date of current episode
+                                                     ifelse(episode.gap.smaller.than.max[1:(n.episodes-1)],
+                                                            0,
+                                                            end.episode.gap.days[1:(n.episodes-1)]), # minus the start date of the current episode, minus the gap after the current episode if the gap is larger than the maximum permissible gap (i.e., not for changes of medication or dosage)
                                                    as.numeric(data4ID$.FU.END.DATE[1] - episode.start[n.episodes]) -
-                                                     ifelse(end.episode.gap.days[n.episodes] < MAX.PERMISSIBLE.GAP[last.event], # duration of the last event of the last episode
+                                                     ifelse(episode.gap.smaller.than.max[n.episodes], # duration of the last event of the last episode
                                                             0,
                                                             end.episode.gap.days[n.episodes]))]; # the last episode duration is the end date of the follow-up window minus the start date of the last episode minus the gap after the last episode only if the gap is longer than the maximum permissible gap
         treatment.episodes[, episode.end := (episode.start + episode.duration)];
