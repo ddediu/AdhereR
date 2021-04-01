@@ -7807,7 +7807,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
       tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
                                parallel.backend=parallel.backend,
                                parallel.threads=parallel.threads,
-                               data=data.copy,
+                               data=data.copy[mg.sel.obs,], # apply it on the subset of observations covered by this medication class
                                ID.colname=ID.colname,
                                event.date.colname=event.date.colname,
                                event.duration.colname=event.duration.colname,
@@ -9113,7 +9113,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
       tmp <- .compute.function(.workhorse.function, fnc.ret.vals=2,
                                parallel.backend=parallel.backend,
                                parallel.threads=parallel.threads,
-                               data=data.copy,
+                               data=data.copy[mg.sel.obs,], # apply it on the subset of observations covered by this medication class
                                ID.colname=ID.colname,
                                event.date.colname=event.date.colname,
                                event.duration.colname=event.duration.colname,
