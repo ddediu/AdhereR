@@ -3007,6 +3007,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   # Convert to data.table, cache event date as Date objects, and key by patient ID and event date
   data.copy <- data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
+  data.copy$..ORIGINAL.ROW.ORDER.. <- 1:nrow(data.copy); # preserve the original order of the rows (needed for medication groups)
   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Are there medication groups?
@@ -3060,15 +3061,19 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
   } else
   {
     # Yes
+
+    # Make sure the group's observations reflect the potentially new order of the observations in the data:
+    mb.obs <- mg$obs[data.copy$..ORIGINAL.ROW.ORDER.., ];
+
     # Focus only on the non-trivial ones:
-    mg.to.eval <- (colSums(!is.na(mg$obs) & mg$obs) > 0);
+    mg.to.eval <- (colSums(!is.na(mb.obs) & mb.obs) > 0);
     if( sum(mg.to.eval) == 0 )
     {
       # None selects not even one observation!
       .report.ewms(paste0("None of the medication classes (included __ALL_OTHERS__) selects any observation!\n"), "warning", cma.class.name, "AdhereR");
       return (NULL);
     }
-    mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
+    mb.obs <- mb.obs[,mg.to.eval]; # keep only the non-trivial ones
 
     # How is the FUW to be estimated?
     if( !followup.window.start.per.medication.group )
@@ -7712,6 +7717,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
   data.copy <- data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
+  data.copy$..ORIGINAL.ROW.ORDER.. <- 1:nrow(data.copy); # preserve the original order of the rows (needed for medication groups)
   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
 
@@ -7761,15 +7767,19 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
   } else
   {
     # Yes
+
+    # Make sure the group's observations reflect the potentially new order of the observations in the data:
+    mb.obs <- mg$obs[data.copy$..ORIGINAL.ROW.ORDER.., ];
+
     # Focus only on the non-trivial ones:
-    mg.to.eval <- (colSums(!is.na(mg$obs) & mg$obs) > 0);
+    mg.to.eval <- (colSums(!is.na(mb.obs) & mb.obs) > 0);
     if( sum(mg.to.eval) == 0 )
     {
       # None selects not even one observation!
       .report.ewms(paste0("None of the medication classes (included __ALL_OTHERS__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
       return (NULL);
     }
-    mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
+    mb.obs <- mb.obs[,mg.to.eval]; # keep only the non-trivial ones
 
     # Check if there are medication classes that refer to the same observations (they would result in the same estimates):
     mb.obs.dupl <- duplicated(mb.obs, MARGIN=2);
@@ -9010,9 +9020,10 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                                  "years"=sliding.window.step.duration * 365,
                                                  sliding.window.step.duration);
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
+  # Convert to data.table, cache event date as Date objects, and key by patient ID and event date
   data.copy <- data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
+  data.copy$..ORIGINAL.ROW.ORDER.. <- 1:nrow(data.copy); # preserve the original order of the rows (needed for medication groups)
   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
 
@@ -9067,15 +9078,19 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
   } else
   {
     # Yes
+
+    # Make sure the group's observations reflect the potentially new order of the observations in the data:
+    mb.obs <- mg$obs[data.copy$..ORIGINAL.ROW.ORDER.., ];
+
     # Focus only on the non-trivial ones:
-    mg.to.eval <- (colSums(!is.na(mg$obs) & mg$obs) > 0);
+    mg.to.eval <- (colSums(!is.na(mb.obs) & mb.obs) > 0);
     if( sum(mg.to.eval) == 0 )
     {
       # None selects not even one observation!
       .report.ewms(paste0("None of the medication classes (included __ALL_OTHERS__) selects any observation!\n"), "warning", "CMA1", "AdhereR");
       return (NULL);
     }
-    mb.obs <- mg$obs[,mg.to.eval]; # keep only the non-trivial ones
+    mb.obs <- mb.obs[,mg.to.eval]; # keep only the non-trivial ones
 
     # Check if there are medication classes that refer to the same observations (they would result in the same estimates):
     mb.obs.dupl <- duplicated(mb.obs, MARGIN=2);
