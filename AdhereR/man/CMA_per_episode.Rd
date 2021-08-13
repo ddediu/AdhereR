@@ -22,7 +22,7 @@ CMA_per_episode(
   dosage.change.means.new.treatment.episode = FALSE,
   maximum.permissible.gap = 180,
   maximum.permissible.gap.unit = c("days", "weeks", "months", "years", "percent")[1],
-  maximum.permissible.gap.append.to.episode.proportion = 0,
+  maximum.permissible.gap.append.to.episode = FALSE,
   followup.window.start = 0,
   followup.window.start.unit = c("days", "weeks", "months", "years")[1],
   followup.window.start.per.medication.group = FALSE,
@@ -129,11 +129,11 @@ if \emph{percent}, then  \code{maximum.permissible.gap} is interpreted as a
 percent (can be greater than 100\%) of the duration of the current
 prescription.}
 
-\item{maximum.permissible.gap.append.to.episode.proportion}{a \emph{number}
-giving the proportion of the \code{maximum.permissible.gap} to append at the
+\item{maximum.permissible.gap.append.to.episode}{a \emph{logical} value
+specifying of the \code{maximum.permissible.gap} should be append at the
 end of an episode with a gap larger than the \code{maximum.permissible.gap};
-varies between 0.0 (no addition, the default) and 1.0 (the full
-\code{maximum.permissible.gap} is added).}
+\code{FALSE} (the default) mean no addition, while \code{TRUE} mean that the
+full \code{maximum.permissible.gap} is added.}
 
 \item{followup.window.start}{If a \emph{\code{Date}} object, it represents
 the actual start date of the follow-up window; if a \emph{string} it is the

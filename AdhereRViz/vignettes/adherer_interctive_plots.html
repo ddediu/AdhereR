@@ -12,7 +12,7 @@
 
 <meta name="author" content="Dan Dediu ddediu@gmail.com" />
 
-<meta name="date" content="2021-03-25" />
+<meta name="date" content="2021-08-13" />
 
 <title>AdhereR: Interactive plotting (and more) with Shiny</title>
 
@@ -40,6 +40,7 @@
 pre > code.sourceCode { white-space: pre; position: relative; }
 pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
 div.sourceCode { margin: 1em 0; }
 pre.sourceCode { margin: 0; }
@@ -140,7 +141,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <h1 class="title toc-ignore">AdhereR: Interactive plotting (and more) with Shiny</h1>
 <h4 class="author">Dan Dediu <a href="mailto:ddediu@gmail.com" class="email">ddediu@gmail.com</a></h4>
-<h4 class="date">2021-03-25</h4>
+<h4 class="date">2021-08-13</h4>
 
 
 <div id="TOC">
@@ -559,7 +560,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><strong>Treat. change starts new episode?</strong>: does changing the treatment class trigger a new episode?</li>
 <li><strong>Dose change starts new episode?</strong>: does changing the dose trigger a new episode?</li>
 <li><strong>Max. gap duration</strong>: the duration of a gap above which a new episode is triggered; the gap can be in units (<strong>Max. gap duration unit</strong>) of days, weeks, months or years, or as a percent of the last prescription</li>
-<li><strong>Append gap?</strong>: should (part of) the maximum permissible gap be added to the episodes with a gap larger than this maximum? If “no” (the default), nothing is added, if “yes” then 100% of the maximum permissible gap is appended at the end of the episodes, and if “partially…”, a new sliding control appears, allowing the user to chose the percent of the maximum permissible gap to be added, between 0% (nothing) to 100% (all of it)</li>
+<li><strong>Append gap?</strong>: should the maximum permissible gap be added to the episodes with a gap larger than this maximum? If “no” (the default), nothing is added, if “yes” then the maximum permissible gap is appended at the end of the episodes</li>
 <li><strong>Plot CMA as histogram?</strong>: should the distribution of CMA estimates across episodes for a given participant be plotted as a histogram or as a barplot</li>
 </ul>
 </div>

@@ -4,9 +4,9 @@
 
   - this introduces the concept of "medication groups" which represent subsets of observations for which CMAs can be computed and which are grouped together in the plots; this prompted massive changes in the output of the various `CMA` functions and in the plotting when medication groups are defined, but is full backward-compatible when no medication groups are defined (the default).
   
-  - `compute.treatment.episodes()` and, in consequence, `CMA_per_episode()`, have a new argument, `maximum.permissible.gap.append.to.episode.proportion`, which specifies the proportion of the maximum permissible gap that is appended to the episodes (0.0 by default, maximum 1.0).
+  - `compute.treatment.episodes()` and, in consequence, `CMA_per_episode()`, have a new argument, `maximum.permissible.gap.append.to.episode`, which specifies if the maximum permissible gap is to be appended to the episodes (FALSE by default).
   
-  - the Shiny (>= 0.2) interactive interface is aware of medication groups and `maximum.permissible.gap.append.to.episode.proportion`.
+  - the Shiny (>= 0.2) interactive interface is aware of medication groups and `maximum.permissible.gap.append.to.episode`.
   
   - better and faster `SVG` plotting, better semi-interactive `HTML`+`SVG`+`JavaScript`+`CSS` output, which can be used for display in any standard modern web browser without online R processing (i.e., overnight batch-mode generation of the plots and CMA estimates for later display and further processing).
   

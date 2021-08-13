@@ -1,6 +1,6 @@
 # AdhereRViz 0.2
 
-In sync with `AdhereR` 0.7, implements medication groups and `maximum.permissible.gap.append.to.episode.proportion` for `CMA_per_episode`, plus some small bug fixes and enhancements.
+In sync with `AdhereR` 0.7, implements medication groups and `maximum.permissible.gap.append.to.episode` for `CMA_per_episode`, plus some small bug fixes and enhancements.
 
 
 # AdhereRViz 0.1

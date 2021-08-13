@@ -421,20 +421,10 @@ ui <- fluidPage(
                                                                                    value=0, min=0, max=NA, step=1)),
 
                                                                   # Append max gap duration?
-                                                                  div(title='Append the maximum permissinble gap (or a proportion thereof) to the episodes?',
-                                                                      selectInput(inputId="maximum_permissible_gap_append",
-                                                                                  label="Append gap?",
-                                                                                  choices=c("no", "yes", "partially..."),
-                                                                                  selected="no")),
-
-                                                                  # Append proportion of gap (advanced):
-                                                                  conditionalPanel(
-                                                                    condition="input.maximum_permissible_gap_append == 'partially...'",
-                                                                    div(title='What percent of the maximum permissible gap to add? 0% mean none ("no"), 100% means all ("yes")',
-                                                                        sliderInput(inputId="maximum_permissible_gap_append_percent",
-                                                                                    label="% max. gap duration to append",
-                                                                                    min=0, max=100, value=0, step=5, round=FALSE))
-                                                                  ),
+                                                                  div(title='Append the maximum permissible gap to the episodes?',
+                                                                      shinyWidgets::materialSwitch(inputId="maximum_permissible_gap_append",
+                                                                                                   label="Append gap?",
+                                                                                                   value=FALSE, status="primary", right=TRUE)),
 
                                                                   # Plot CMA as histogram
                                                                   div(title='Show the distribution of estimated CMAs across episodes as a histogram or barplot?',
@@ -2247,10 +2237,7 @@ server <- function(input, output, session)
                                                          dosage.change.means.new.treatment.episode=input$dosage_change_means_new_treatment_episode,
                                                          maximum.permissible.gap=as.numeric(input$maximum_permissible_gap),
                                                          maximum.permissible.gap.unit=input$maximum_permissible_gap_unit,
-                                                         maximum.permissible.gap.append.to.episode.proportion=switch(input$maximum_permissible_gap_append,
-                                                                                                                 "no"=0.0,
-                                                                                                                 "yes"=1.0,
-                                                                                                                 "partially..."=input$maximum_permissible_gap_append_percent / 100.0),
+                                                         maximum.permissible.gap.append.to.episode=input$maximum_permissible_gap_append,
                                                          sliding.window.start=as.numeric(input$sliding_window_start),
                                                          sliding.window.start.unit=input$sliding_window_start_unit,
                                                          sliding.window.duration=as.numeric(input$sliding_window_duration),
@@ -2789,10 +2776,7 @@ server <- function(input, output, session)
                                        "dosage.change.means.new.treatment.episode"=input$dosage_change_means_new_treatment_episode,
                                        "maximum.permissible.gap"=input$maximum_permissible_gap,
                                        "maximum.permissible.gap.unit"=paste0('"',input$maximum_permissible_gap_unit,'"'),
-                                       "maximum.permissible.gap.append.to.episode.proportion"=switch(input$maximum_permissible_gap_append,
-                                                                                                 "no"=0.0,
-                                                                                                 "yes"=1.0,
-                                                                                                 "partially..."=input$maximum_permissible_gap_append_percent/100.0)),
+                                       "maximum.permissible.gap.append.to.episode"=input$maximum_permissible_gap_append),
                        "sliding.window"=c("sliding.window.start"=as.numeric(input$sliding_window_start),
                                           "sliding.window.start.unit"=paste0('"',input$sliding_window_start_unit,'"'),
                                           "sliding.window.duration"=input$sliding_window_duration,
