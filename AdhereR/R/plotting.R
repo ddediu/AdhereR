@@ -67,6 +67,7 @@
 # and HTMLdecode()/HTMLencode() in package "textutils"
 .SVG.specialchars.2.XMLentities <- function(s)
 {
+  s <- as.character(s); # make sure s is a string
   spec.chars <- c("&amp;"="&",
                   "&quot;"='"',
                   "&#039;"="'",
