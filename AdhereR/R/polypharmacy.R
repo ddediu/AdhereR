@@ -48,9 +48,8 @@ globalVariables(c(".PATIENT.MED.ID", ".new.ID", ".obs.duration", "EVENT.ID", "ID
 #' dosage (the actual column names are defined in the
 #' following four parameters).
 #' @param medication.groups A \emph{string} with the name of the column containing the medication
-#' groups, or a *list of vectors* with medication class names (from \code{medication.class.colname})
-#'  belonging to the same treatment groupf multiple medication classes should belong to the same
-#'  treatment group, they can be differentiated here (important to investigate treatment switches)
+#' groups. If multiple medication classes should belong to the same treatment group, they can be
+#' differentiated here (important to investigate treatment switches)
 #' @param CMA.to.apply A \emph{string} giving the name of the CMA function (1 to
 #' 9) that will be computed for each treatment group.
 #' @param aggregate.first \emph{Logical}, if \code{TRUE}, aggregate across treatment groups before
@@ -494,7 +493,7 @@ CMA_polypharmacy <- function(data = data,
       CMA_per_group <- as.data.table(getCMA(CMA_all_by_group))
 
       # merge back original ID and group and sort by original ID
-      CMA_per_group <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), CMA_per_group)
+      CMA_per_group <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), CMA_per_group, by = ID.colname)
       setkeyv(CMA_per_group, "PATIENT_ID")
 
       # CMA_per_group <- lapply(CMA_all_by_group, FUN = function(x){
@@ -588,7 +587,7 @@ CMA_polypharmacy <- function(data = data,
       CMA_per_day <- as.data.table(getCMA(CMA_full_per_day))
 
       # merge back original ID and group and sort by original ID
-      CMA_per_day <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), CMA_per_day)
+      CMA_per_day <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), CMA_per_day, by = ID.colname)
       setkeyv(CMA_per_day, "PATIENT_ID")
 
       if(CMA.to.apply == "CMA9") {
@@ -605,7 +604,7 @@ CMA_polypharmacy <- function(data = data,
       event_info <- as.data.table(CMA_full_per_day$event.info)
 
       # merge back original ID and group and sort by original ID
-      event_info <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), event_info)
+      event_info <- merge(unique(data.2[,c(ID.colname, "PATIENT_ID", "group"), with = FALSE]), event_info, by = ID.colname)
       setkeyv(event_info, "PATIENT_ID")
 
       # merge event_info to CMA_per_day
@@ -725,19 +724,19 @@ CMA_polypharmacy <- function(data = data,
   # } else if(.check.medication.groups(medication.groups,
   #                                    list.of.medication.classes = unique(data[[medication.class.colname]])))
   # {
-  #
+  # 
   #   if(is.null(medication.groups)){
   #     medication.groups <- unique(data[[medication.class.colname]])
   #   }
-  #
+  # 
   #   med.groups.dt <- as.data.table(.fill.medication.groups(medication.groups,
   #                                                          list.of.medication.classes = unique(data[[medication.class.colname]]),
   #                                                          already.checked = TRUE))
-  #
+  # 
   #   setnames(med.groups.dt, old = "class", new = medication.class.colname)
-  #
+  # 
   #   data.copy <- merge(data.copy, med.groups.dt, by = medication.class.colname)
-  #
+
   } else {
     return (NULL);
   }
