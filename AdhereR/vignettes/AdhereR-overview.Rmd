@@ -1,0 +1,1114 @@
+---
+title: "AdhereR: Adherence to Medications"
+author: "Alexandra L. Dima, Dan Dediu & Samuel Allemann"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette: 
+    toc: yes
+    toc_depth: 4
+fig_caption: yes
+vignette: >
+  %\VignetteEncoding{UTF-8}
+  %\VignetteIndexEntry{AdhereR: Adherence to Medications}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+# Various Rmarkdown output options:
+# center figures and reduce their file size:
+knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg"); 
+```
+
+Estimating the *adherence to medications* from *electronic healthcare data* (EHD) has been central to research and clinical practice across clinical conditions. 
+For example, large retrospective database studies may estimate the prevalence of non-adherence in specific patient groups and model its potential predictors and impact on health outcomes, while clinicians may have access to individual patient records that flag up possible non-adherence for further clinical investigation and intervention. 
+Yet, adherence measurement is a matter of controversy. 
+Many methodological studies show that the same data can generate different prevalence estimates under different parametrisations ([Greevy *et al.*, 2011](#Ref-Greevy2011); [Gardarsdottir *et al.*, 2010](#Ref-Gardarsdottir2010); [Souverein *et al.*, *in press*](#Ref-SouvereinInPress); [Vollmer *et al.*, 2012](#Ref-Vollmer2012); [Van Wijk *et al.*, 2006](#Ref-VanWijk2006)). 
+
+These parametrisation choices are usually not transparently reported in published empirical studies, and adherence algorithms are either developed ad-hoc or for proprietary software. 
+This lack of transparency and standardization has been one of the main methodological barriers against the development of a solid evidence base on adherence from EHD, and may lead to misinformed clinical decisions.
+
+Here we describe `AdhereR` (version 0.1.0), an R package that aims to facilitate the computing of adherence from EHD, as well as the transparent reporting of the chosen calculations. 
+It contains a set of `R` `S3` *classes* and *functions* that *compute*, *summarize* and *plot* various estimates of adherence. 
+A hypothetical dataset of medication events is included for demonstration and testing purposes. 
+In this vignette, we start by defining the terms used in `AdhereR`. 
+We then use medication records of two patients in the included dataset to illustrate the various decisions required and their impact on estimates, starting with the visualization of medication events, computation of persistence (treatment episode length), and computation of adherence (9 functions available in 3 versions: simple, per-treatment-episode, and sliding-window). 
+Visualizations for each function are illustrated, and the interactive visualization function is presented.
+
+While we tested the package relatively extensively, we cannot guarantee that bugs and errors do not exist, and we encourage the users to contact us with suggestions, bug reports, comments (or even just to share their experiences using the package) either by e-mail (to Dan <ddediu@gmail.com> or Alexandra <alexadima@gmail.com>) or using GitHub's reporting mechanism at our repository <https://github.com/ddediu/AdhereR>, which contains the full source code of the package (including this vignette). 
+
+
+## Definitions
+<a name="Section-definitions"></a>
+
+Adherence to medications is described as a process consisting of 3 successive elements/stages: *initiation*, *implementation*, and *discontinuation* [(Vrijens et al., 2012)](#Ref-Vrijens2012). 
+After initiating treatment (first medication intake), a patient would continue with implementing the regimen for a time period, ideally equal to the recommended time necessary for achieving therapeutic benefits; the quality of implementation is commonly labelled *adherence* and broadly operationalized as a *ratio of medication quantity used versus prescribed in a time period*. 
+If patients discontinue medication earlier than the recommended time period, the period before discontinuation is described as *persistence*, in contrast to the following period of *non-persistence*. 
+
+The ideal measurement of this process would record the prescription moment and every medication intake with an exact time-stamp. 
+This would allow, for example, to describe adherence to a twice-daily medication prescribed for 1 year in maximum detail: how long was the delay between prescription and the moment of the first medication intake, whether each of the two prescribed administrations per day corresponded to an intake event and at what time, how much medication was taken versus prescribed on any time interval while the patient persisted with treatment, any specific implementation patterns (e.g. missing or delaying the first daily dose), and when exactly the last medication intake event took place during that year. 
+While this level of detail can be obtained by careful use of *electronic monitoring devices*, electronic healthcare data usually include much less information.
+
+*Administrative claims* or *pharmacy databases* record *medication dispensation events*, including patient identifier, date of event, type of medication, and quantity dispensed, and less frequently daily dosage recommended. 
+The same information may be available for prescription events in *electronic medical records* used in health care organizations (e.g primary care practices, secondary care centers). 
+In between two dispensing or prescribing events, we don't know whether and how medication has been used. 
+What we do know is that, if taken as prescribed, the medication supplied at the first event would have lasted a number of days. 
+If the time interval between the two events is longer than this number it is likely that the patient ran out of medication before re-supplying or used less during that time.
+If the interval is substantially longer or there is no second event, then the patient has probably finished the supply at some point and then discontinued medication. 
+Thus, EHD-based algorithms estimate medication adherence and persistence based on the availability of current supply, under four main assumptions: 
+
+- the regimen requires the use of a fixed daily dosage of medication (if medication is to be taken as needed, a ratio cannot be computed)
+- all medication supplied for that patient in that period of time is recorded and the patient does not use medication from other sources (if the patient uses other medication, adherence and/or persistence will be underestimated)
+- the medication supplied is used by the patient it has been supplied for (if other persons use the medication, adherence and/or persistence will be overestimated)
+- medication is supposed to be supplied at least two times during that period (if all medication is supplied once at the beginning of the treatment, there are no differences between patients regarding the supply patterns and all patients would be 100% covered for the whole treatment period)
+
+(Several other assumptions apply to individual algorithms, and will be discussed later.)
+
+
+`AdhereR` was developed to compute adherence and persistence estimates from EHD based on the principles described above. 
+The current version is based on a single data source, therefore an algorithm for initiation (time interval between first prescription and first dispensing event) is not implemented (it is a time difference calculation easy to implement in with basic R functions). 
+The following terms and definitions are used:
+
+- *Adherence* (*implementation*) = the extent to which a patient's medication use corresponds to prescribed use,
+- *CMA* = continuous multiple-interval measures of medication availability/gaps, representing various indicators of the quality of implementation,
+- *Medication event* = prescribing or dispensing record of a given medication for a given patient; usually includes the patient's unique identifier, an event date, and a duration, 
+- *Duration* = number of days the quantity of supplied medication would last if used as recommended,
+- *Quantity* = number of doses supplied at a medication event,
+- *Daily dosage* = number of doses recommended to be taken daily,
+- *Medication type* = classification performed by the researcher depending on study aims, e.g. based on therapeutic use, mechanism of action, chemical molecule or pharmaceutical formulation,
+- *Follow-up window* (FUW) = the total period for which relevant medication events are recorded for included patients,
+- *Observation window* (OW) = the period within the FUW for which adherence or persistence is computed,
+- *Persistence* = the length of time during which the patient continues to use medication, before discontinuing for a time period longer than a pre-specified permissible gap,
+- *Treatment episode* = a period of active medication use, represented by the number of consecutive days between a first medication supply event and the moment when the supply of the last medication event was finished (in a row of consecutive medication events where the interval between any two consecutive events is lower than the duration of the first plus a researcher-defined permissible gap),
+- *Permissible gap* = a researcher-defined value representing the maximum number of days between the end of the supply from one medication event and the start of the following one that can be considered as continuous medication use.
+
+
+## Data preparation and example dataset 
+
+`AdhereR` requires a dataset of medication events over a FUW of sufficient length in relation to the recommended treatment duration. 
+To our knowledge, no research has been performed to date on the relationship between FUW length and recommended treatment duration. 
+`AdhereR` offers the opportunity for answering such methodological questions, but we would hypothesize that the FUW duration also depends on the duration of medication events (shorter durations would allow shorter FUW windows to be informative).
+
+The minimum necessary dataset includes 3 variables for each medication event: *patient unique identifier*, *event date*, and *duration*. 
+*Daily dosage* and *medication type* are optional.`AdhereR` is thus designed to use datasets that have already been extracted from EHD and prepared for calculation. 
+These preliminary steps depend to a large extent on the specific database used and the type of medication and research design. 
+Several general guidelines can be consulted ([Arnet *et al.*, 2016](#Ref-Arnet2016); [Peterson *et al.*, 2007](#Ref-Peterson2007)), as well as database-specific documentation. 
+In essence, these steps should entail:
+
+- selecting medication events applicable to the research question based on relevant time intervals and medication codes,
+- coding medication type depending on clinical considerations, for example coding different therapeutic classes in polypharmacy studies, 
+- checking plausible values and correcting any deviations,
+- handling missing data. 
+
+For demonstration purposes, we included in `AdhereR` a hypothetical dataset of 1080 medication events from 100 patients in a 2-year FUW. Five variables are included in this dataset: 
+
+- patient unique identifier (`PATIENT_ID`), 
+- event date (`DATE`; from 6 July 2030 to 3 September 2044, in the "mm/dd/yyyy" format), 
+- daily dosage (`PERDAY`; median 4, range 2-20 doses per day), 
+- medication type (`CATEGORY`; 50.8% medA and 49.2% medB), and 
+- duration (`DURATION`; median 50, range 20-150 days). 
+
+[Table 1](#Table-1) shows the medication events of two example patients: 19 medication events related to two medication types (`medA` and `medB`). 
+They were selected to represent two different medication histories. 
+Patient `37` had a stable daily dosage but event duration changes with medication change. 
+Patient `76` had a more variable pattern, including medication, daily dosage and duration changes. 
+
+```{r, echo=TRUE, results='asis'}
+# Load the AdhereR library:
+library(AdhereR);
+
+# Select the two patients with IDs 37 and 76 from the built-in dataset "med.events":
+ExamplePats <- med.events[med.events$PATIENT_ID %in% c(37, 76), ];
+# Display them as pretty markdown table:
+knitr::kable(ExamplePats, caption = "<a name=\"Table-1\"></a>**Table 1.** Medication events for two example patients");
+```
+
+## Visualization of patient records
+
+A first step towards deciding which algorithm is appropriate for these data is to explore medication histories visually. 
+We do this by creating an object of type `CMA0` for the two example patients, and plotting it. 
+This type of plots can of course be created for a much bigger subsample of patients and saved as as a `JPEG`, `PNG`, `TIFF`, `EPS` or `PDF` file using `R`'s plotting system for data exploration.
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1\"></a>**Figure 1.** Medication histories - two example patients", fig.height=6, fig.width=8, out.width="100%"}
+# Create an object "cma0" of the most basic CMA type, "CMA0":
+cma0 <- CMA0(data=ExamplePats, # use the two selected patients
+             ID.colname="PATIENT_ID", # the name of the column containing the IDs
+             event.date.colname="DATE", # the name of the column containing the event date
+             event.duration.colname="DURATION", # the name of the column containing the duration
+             event.daily.dose.colname="PERDAY", # the name of the column containing the dosage
+             medication.class.colname="CATEGORY", # the name of the column containing the category
+             followup.window.start=0,  # FUW start in days since earliest event
+             observation.window.start=182, # OW start in days since earliest event
+             observation.window.duration=365, # OW duration in days
+             date.format="%m/%d/%Y"); # date format (mm/dd/yyyy)
+# Plot the object (CMA0 shows the actual event data only):
+plot(cma0, # the object to plot
+     align.all.patients=TRUE); # align all patients for easier comparison
+```
+
+We can see that patient `76` had an interruption of more than 100 days between the second and third `medB` supply and several situations of new supply acquired while the previous supply was not exhausted. 
+Patient `37` had shorter gaps between consecutive events, but very little overlap in supplies. 
+For patient `76`, the switch to `medB` happened while the `medA` supply was still available, then a switch back to `medA` happened later, at the end of the second year. 
+For patient `37`, there was a single medication switch (to `medB`) without an overlap at that point.
+
+Sometimes it is useful to also see the daily dose:
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1a\"></a>**Figure 1 (a).** Same plot as in **Figure 1**, but also showing the daily doses as numbers and as line thickness", fig.height=6, fig.width=8, out.width="100%"}
+# Same plot as above but also showing the daily doses:
+plot(cma0, # the object to plot
+     print.dose=TRUE, plot.dose=TRUE,
+     align.all.patients=TRUE); # align all patients for easier comparison
+```
+
+These observations highlight several decision points in calculating persistence and adherence, which need to be informed by the clinical context of the study:
+
+- what OW is relevant for calculating adherence and persistence? 
+Both patients have been on treatment during the 2 years, they had a substantial number of events of relatively short duration, and variable delays between the end of a supply and the next event. 
+Thus, their adherence might have oscillated substantially during this period. 
+We could compute adherence and/or persistence for the full 2-year period, or consider shorter intervals; 
+- is the largest interruption seen in patient `76` an indication of non-persistence, or of lower adherence over that time interval? 
+If the medication is likely to be used rarely despite daily use recommendations, such an interval might indicate a period of low adherence. 
+If usual adherence rates are close to 100% when used, that delay is likely to indicate a treatment gap and needs to be treated as such, and the last 2 events as reinitiation of treatment (new treatment episode);
+- is the switch from `medA` to `medB` an indicator of a new treatment episode? 
+If `medA` and `medB` are two alternative formulations of the same chemical molecule, there might be clinical arguments for considering them as part of the same treatment episode (e.g. the pharmacist provided an alternative option to a product unavailable at the moment). 
+If they are two distinct drug classes with different mechanisms of action and recommendations of use, it may be more appropriate to consider that patient `76` has had 3 treatment episodes and patient `37` one episode; 
+- is it necessary to consider carry-over of oversupply from previous events? 
+For patient `37` this seems to matter very little, as there is little overlap between event durations, but patient `76` has substantial overlaps. 
+If available medication is not likely to be either overused or discarded at every new medication event, it is important to control for carry-over;
+- it is necessary to consider carry-over also when medication changes? Patient `76` has changed from `medA` to `medB` while still having a large supply of `medA` available.
+Was the patient more likely to discard the remaining `medA` the moment of receiving `medB` or finish it before starting the `medB` supply? 
+If they are two alternative formulations and `medB` was (for example) given because `medA` was not in stock at the moment, probably this came with a recommendation to finish the available supply. 
+If they are two distinct drug classes and the switch happens usually after assessment of therapeutic versus side effects, probably this came with a recommendation to stop using `medA`.
+
+These decisions therefore need to be taken based on a good understanding of the pharmacological properties of the medication studied, and the most plausible clinical decision-making in routine care. 
+This information can be collected from an advisory committee with relevant expertise (e.g. based on consensus protocols), or (even better) qualitative or survey research on the routine practices in prescribing, dispensing and using that specific medication. 
+Of course, this is not always possible -- a second-best option (or even complementary option, if consensus is not reached) is to compare systematically the effects of different analysis choices on the hypotheses tested (e.g. as sensitivity analyses).
+
+
+## Persistence -- treatment episodes
+
+An essential first decision is to distinguish between persistence with treatment and quality of implementation (once the patient started treatment -- which, as explained above, is assumed in situations when we have only one data source of prescribing or dispensing events). 
+The function `compute.treatment.episodes()` was developed for this purpose. 
+We provide below an example of how this function can be used.
+
+Let's imagine that `medA` and `medB` are two different types of medication, and clinicians in our advisory committee agree that whenever a health care professional changes the type of medication supplied this should be considered as a new treatment episode; we will specify this as setting the parameter `medication.change.means.new.treatment.episode` to `TRUE`. 
+
+They also agree that a minumum of 6 months (180 days) need to pass after the end of a medication supply (taken as prescribed) without receiving a new supply in order to be reasonably confident that the patient has discontinued/interrupted the treatment -- they can conclude this for example based on an approximate calculation considering that specific medication is usually supplied for 1-2 months, daily dosage is usually 2 to 4 pills a day, and patients often use as low as 1/4 of the recommended dose in a given interval. 
+We will specify this as `maximum.permissible.gap = 180`, and `maximum.permissible.gap.unit = "days"`. 
+(If in another scenario the clinical information we obtain suggests that the permissible gap should depend on the duration of the last supply, for example 6 times that interval should go by before a discontinuation becoming likely, we can specify this as `maximum.permissible.gap = 600`, and `maximum.permissible.gap.unit = "percent"`.)
+
+We might also have some clinical confirmation that usually people finish existing supply before starting the new one (`carryover.within.obs.window = TRUE`), but of course only for the same medication if `medA` and `medB` are supplied with a recommendation to start a new treatment immediately (`carry.only.for.same.medication = TRUE`), take the existing supply based on the new dosage recommendations if these change (`consider.dosage.change = TRUE`).
+
+The rest of the parameters specify the name of the dataset (here `ExamplePats`), names of the variables in the dataset (here based on the demo dataset, described above), and the FUW (here the whole 2-year window).
+
+```{r, echo=TRUE, results='asis'}
+# Compute the treatment episodes for the two patients:
+TEs3<- compute.treatment.episodes(ExamplePats,
+                                  ID.colname="PATIENT_ID",
+                                  event.date.colname="DATE",
+                                  event.duration.colname="DURATION",
+                                  event.daily.dose.colname="PERDAY",
+                                  medication.class.colname="CATEGORY",
+                                  carryover.within.obs.window = TRUE, # carry-over into the OW
+                                  carry.only.for.same.medication = TRUE, # & only for same type
+                                  consider.dosage.change = TRUE, # dosage change starts new episode...
+                                  medication.change.means.new.treatment.episode = TRUE, # & type change
+                                  maximum.permissible.gap = 180, # & a gap longer than 180 days
+                                  maximum.permissible.gap.unit = "days", # unit for the above (days)
+                                  followup.window.start = 0, # 2-years FUW starts at earliest event
+                                  followup.window.start.unit = "days",
+                                  followup.window.duration = 365 * 2,
+                                  followup.window.duration.unit = "days",
+                                  date.format = "%m/%d/%Y");
+knitr::kable(TEs3, 
+             caption = "<a name=\"Table-2\"></a>**Table 2.** Example output `compute.treatment.episodes()` function");
+```
+
+The function produces a dataset as the one shown in [Table 2](#Table-2). 
+It includes each treatment episode for each patient (here 2 episodes for patient `37` and 3 for patient `76`) and records the patient ID, episode number, date of episode start, gap days at the end of or after the treatment episode, duration of episode, and episode end date:
+
+- the date of the episode start is taken as the first medication event for a particular medication, 
+- the end of the episode is taken as the day when the last supply of that medication finished (if a medication change happened, or if a period longer than the permissible gap preceded the next medication event) or the end of the FUW (if no other medication event followed until the end of the FUW),
+- the number of end episode gap days represents either the number of days **after** the end of the treatment episode (if medication changed, or if a period longer than the permissible gap preceded the next medication event) or **at** the end of (and within) the episode, i.e. the number of days after the last supply finished (if no other medication event followed until the end of the FUW),
+- the duration of the episode is the interval between the episode start and episode end (and may include the gap days at the end, in the latter condition described above).
+
+Notes: 
+
+1. just the number of gap days **after** the end of the episode can be computed by keeping all values larger than the permissible gap and by replacing the others by 0,
+2. when medication change represents a new treatment episode, the previous episode ends when the last supply is finished (irrespective of the length of gap compared to a maximum permissible gap); any days before the date of the new medication supply are considered a gap. This maintains consistence with the computation of gaps between episodes (whether they are constructed based on the maximum permissible gap rule or the medication change rule).
+
+In some scenarios, it is important to imagine that the episodes also **include** the maximum permissible gap when the gap is larger than this maximum (i.e., not when a new episode is due to a change in treatment or dose before this maximum permissible gap was exceeded).
+To allow such scenarios, `compute.treatment.episodes()` has a logical parameter, `maximum.permissible.gap.append.to.episode`, which, when set to `TRUE` appends the maximum permissible gap at the end of the episodes (its default value `FALSE` means that the episodes end as described above).
+
+This output can be used on its own to study causes and consequences of medication persistence (e.g. by using episode duration in time-to-event analyses). 
+This function is also a basis for the `CMA_per_episode` class, which is described later in the vignette.
+
+
+## Adherence -- continuous multiple interval measures of medication availability/gaps (CMA)
+
+Let's consider another scenario: `medA` and `medB` are alternative formulations of the same chemical molecule, and clinicians agree that they can be used by patients within the same treatment episode. 
+In this case, both patients had a single treatment episode for the whole duration of the follow-up ([Table 3](#Table-3)). 
+We can therefore compute adherence for any observation window (OW) within these 2 years without any concern that we might confuse quality of implementation with (non-)persistence. 
+
+```{r, echo=TRUE, results='asis'}
+# Compute the treatment episodes for the two patients
+# but now a change in medication type does not start a new episode:
+TEs4<- compute.treatment.episodes(ExamplePats,
+                                  ID.colname="PATIENT_ID",
+                                  event.date.colname="DATE",
+                                  event.duration.colname="DURATION",
+                                  event.daily.dose.colname="PERDAY",
+                                  medication.class.colname="CATEGORY",
+                                  carryover.within.obs.window = TRUE, 
+                                  carry.only.for.same.medication = TRUE,
+                                  consider.dosage.change = TRUE,
+                                  medication.change.means.new.treatment.episode = FALSE, # here
+                                  maximum.permissible.gap = 180,
+                                  maximum.permissible.gap.unit = "days",
+                                  followup.window.start = 0,
+                                  followup.window.start.unit = "days",
+                                  followup.window.duration = 365 * 2,
+                                  followup.window.duration.unit = "days",
+                                  date.format = "%m/%d/%Y");
+# Pretty print the events:
+knitr::kable(TEs4, 
+             caption = "<a name=\"Table-3\"></a>**Table 3.** Alternative scenario output `compute.treatment.episodes()` function");
+```
+
+Once we clarified that we indeed measure quality of implementation and not (non)-persistence, several `CMA` classes can be used to compute this specific component of adherence. 
+We will discuss first in turn the *simple* `CMA` classes, then present the more complex (or *iterated*) `CMA_per_episode` and `CMA_sliding_window` ones.
+
+
+### The simple CMAs
+
+A first decision to consider when calculating the quality of implementation is what is the appropriate observation window -- when it should start and how long it should last? 
+We can see for example that patient `76` had some periods of regular (even overlapping) supplies, and periods when there were some large delays between consecutive medication events. 
+Thus, estimating adherence for a whole 2-year period might be too coarse-grained to mean anything for how patients actually managed their treatment at any particular moment.
+As mentioned earlier in the [Definitions section](#Section-definitions), EHD don't have good granularity to start with, so we need to do the best with what we've got -- and compressing all this information into a single estimate might not be the best solution, at least not the obvious first choice. 
+On the other hand, due to the low granularity, we cannot target very short observation windows either because we simply don't know what happened every day. 
+This decision needs to be informed again by information collected from the advisory committee or qualitative/quantitative studies in the target population. 
+It also needs to take into account the average duration of medication supply from one event, and the average time interval between two events -- which can be examined in exploratory plots ([Figure 1](#Figure-1)) -- and the research question and design of the study. 
+For example, if we expect that the quality of implementation reduces in time from the start of a treatment episode, medication is usually supplied for one month, and patients can take up to 4 times as much to use up their supplies, we might want to consider comparing successive 4-month OWs. 
+If we want to examine quality of implementation 6 months before a clinical event (on the clinical assumption that how a patient takes medication in previous 6 months may impact on the probability of a health event occurring or not), we might want to consider an OW start 6 months before the event, and a 6-month duration. 
+The posibilities here are endless, and research on the impact of different analysis choices on substantive results is still scarce. 
+When the consensus is not reached based on the available information, one or more parametrisations can be compared -- and formulated as research questions. 
+
+For demonstration purposes, let's imagine a scenario when an adherence intervention takes place 6 months (182 days) after the start of the treatment episode, and we hypothesize that it will improve the quality of implementation in the next year (365 days) in the intervention group compared to the control group. 
+We can specify this as `followup.window.start=0`, `observation.window.start=182`, and `observation.window.duration=365` (we can of course divide this interval into shorter windows and compare the two groups in terms of longitudinal changes in adherence, as we shall see later, but for the moment let's stick to a global 1-year estimate). 
+We have 9 CMA classes that can produce very different estimates of the quality of implementation, the first eight have been described by [Vollmer and colleagues (2012)](#Ref-Vollmer2012) as applied to randomized controlled trials. 
+We implemented them in `AdhereR` based on the authors' description, and in essence are defined by 4 parameters:
+
+1) how is the OW delimited (whether time intervals before the first event and after the last event are considered),
+2) whether CMA values are capped at 100%,
+3) whether medication oversupply is carried over to the next event interval, and 
+4) whether medication available before a first event is considered in supply calculations or OW definition.
+
+#### CMA1
+*CMA1* is the simplest method, often described in the literature as the *medication possession ratio* (MPR). 
+It simply adds up the duration of all medication events within the OW, excluding the last event, and divides this by the number of days between the first and last event (multiplied by 100 to obtain a percentage). 
+Thus, it can be higher than 1 (or 100% adherence) and, if the OW does not start and end with a medication event for all patients, it can actually refer to different lengths of time within the OW for different patients. 
+For example, for patient `76` below CMA1 is computed for the period starting with the first event in the highlighted interval and ending at the date if the last event -- thus, it considers only 4 events with considerable overlaps and results in a CMA1 of 140%, indicating overuse.
+
+Creating an object of class `CMA1` with various parameters automatically performs the estimation of CMA1 for all the patients in the dataset; moreover, the object is smart enough to allow the appropriate printing and plotting.
+The object includes all the parameter values with which it was created, as well as the `CMA` `data.frame`, which is the main result, with two columns: patient ID and the corresponding CMA estimate. 
+The CMA estimates appear as ratios, but can be trivially transformed into percentages and rounded, as we did for patient `76` below (rounded to 2 decimals). 
+The plots show the CMA as percentage rounded to 1 decimal.
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-2\"></a>**Figure 2.** Simple CMA 1", fig.height=5, fig.width=7, out.width="100%"}
+# Create the CMA1 object with the given parameters:
+cma1 <- CMA1(data=ExamplePats,
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             followup.window.start=0, observation.window.start=182, 
+             observation.window.duration=365,
+             date.format="%m/%d/%Y");
+# Display the summary:
+cma1
+# Display the estimated CMA table:
+cma1$CMA
+# and equivalently using an accessor function:
+getCMA(cma1);
+# Compute the CMA value for patient 76, as percentage rounded at 2 digits:
+round(cma1$CMA[cma1$CMA$PATIENT_ID== 76, 2]*100, 2)
+# Plot the CMA:
+# The legend shows the actual duration, the days covered and gap days, 
+# the drug (medication) type, the FUW and OW, and the estimated CMA.
+plot(cma1, 
+     patients.to.plot=c("76"), # plot only patient 76 
+     legend.x=520); # place the legend in a nice way
+```
+
+#### CMA2
+Thus, CMA1 assumes that there is a treatment episode within the OW (shorter or equal to the OW) when the patient used the medication, and every new medication event happened when the previous supply finished (possibly due to overuse). 
+These assumptions rarely fit with real life use patterns. 
+One limitation is not considering the last event -- which represents almost a half of the OW in the case of patient `76`. 
+
+To address this limitation, *CMA2* includes the duration of the last event in the numerator and the period from the last event to the end of the OW in the denominator. 
+Thus, the estimate [Figure 3](#Figure-3) is 77.9%, more in line with the medication history of this patient in the year after the intervention.
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-3\"></a>**Figure 3.** Simple CMA 2", fig.height=5, fig.width=7, out.width="100%"}
+cma2 <- CMA2(data=ExamplePats, # we're estimating CMA2 now!
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             followup.window.start=0, observation.window.start=182, 
+             observation.window.duration=365,
+             date.format="%m/%d/%Y");
+plot(cma2, 
+     patients.to.plot=c("76"),  
+     show.legend=FALSE); # don't show legend to avoid clutter (see above)
+```
+
+#### CMA3 and CMA4
+Both CMA1 and CMA2 can be higher that 1 (100% adherence) based on the assumption that medication supply is finished until the last event (CMA1) or the end of the OW (CMA2).
+But sometimes this is not plausible, because patients can refill their supply earlier (for example when going on holidays) and overuse is a less frequent behaviour for some medications (when side effects are considerable for overuse, or medications are expensive). 
+Or it may be that it does not matter whether patients use 100% or more that 100% of their medication, the therapeutic effect is the same with no risks or side effects.
+Again, this is a matter of inquiry to the advisory committee or investigation in the target population.
+
+If it is likely that implementation does not exceed 100% (or does not make a difference if it does), *CMA3* and *CMA4* below adjust for this by capping CMA1 and CMA2 respectively to 100%. 
+As shown in [Figures 4](#Figure-4) and [5](#Figure-5), CMA3 is now capped at 100%, and CMA4 remains the same as CMA2 (because it was already lower than 100%). 
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-4\"></a>**Figure 4.** Simple CMA 3", fig.height=5, fig.width=7, out.width="100%"}
+cma3 <- CMA3(data=ExamplePats, # we're estimating CMA3 now!
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             followup.window.start=0, observation.window.start=182, 
+             observation.window.duration=365,
+             date.format="%m/%d/%Y");
+plot(cma3, patients.to.plot=c("76"), show.legend=FALSE);
+```
+
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5.** Simple CMA 4", fig.height=5, fig.width=7, out.width="100%"}
+cma4 <- CMA4(data=ExamplePats, # we're estimating CMA4 now!
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             followup.window.start=0, observation.window.start=182, 
+             observation.window.duration=365,
+             date.format="%m/%d/%Y");
+plot(cma4,patients.to.plot=c("76"), show.legend=FALSE);
+```
+
+#### CMA5 and CMA6
+All CMAs from 1 to 4 have a major limitation: they don't take into account the *timing* of the events. 
+But if there is a large gap between two events it is more likely that the person had used the medication less than prescribed at least in part of that interval. 
+Just capping the values as in CMA3 and CMA4 does not account for that likely reduction in adherence -- two patients with the same quantity of supply will have the same percentage of adherence even if one has had substantial delays in supply at some points and the other supplied in time.
+
+To adjust for this, *CMA5* and *CMA6* provide alternative calculations to CMA1 and CMA2 respectively. 
+Thus, we instead calculate the number of gap days, extract it from the total time interval, and divide this value by the total time interval (first to last event in CMA5, and first event to end of OW in CMA6). 
+By considering the gaps, we now need to decide whether to control for how any remaining supply is used when a new supply is obtained. 
+Two additional parameters are included here: `carry.only.for.same.medication` and `consider.dosage.change`. 
+Both are set here as `FALSE`, to specify the fact that carry over should always happen irrespective of what medication is supplied, and that the duration of the remaining supply should be modified if the dosage recommendations are changed with a new medication event. 
+As shown in [Figures 6](#Figure-6) and [7](#Figure-7), these alternative calculations do not make any difference for patient `76`, because there are no gaps between the 5 events in the OW highighted. 
+There could be, however, situations in which large gaps between some events in the OW result in lower CMA estimates when considering timing of events.
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6.** Simple CMA 5", fig.height=5, fig.width=7, out.width="100%"}
+cma5 <- CMA5(data=ExamplePats, # we're estimating CMA5 now!
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             event.daily.dose.colname="PERDAY",
+             medication.class.colname="CATEGORY",
+             carry.only.for.same.medication=FALSE, # carry-over across medication types
+             consider.dosage.change=FALSE, # don't consider canges in dosage
+             followup.window.start=0, observation.window.start=182, 
+             observation.window.duration=365,
+             date.format="%m/%d/%Y");
+plot(cma5,patients.to.plot=c("76"), show.legend=FALSE);
+```
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-7\"></a>**Figure 7.** Simple CMA 6", fig.height=5, fig.width=7, out.width="100%"}
+cma6 <- CMA6(data=ExamplePats, # we're estimating CMA6 now!
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             event.daily.dose.colname="PERDAY",
+             medication.class.colname="CATEGORY",
+             carry.only.for.same.medication=FALSE,
+             consider.dosage.change=FALSE,
+             followup.window.start=0, observation.window.start=182, 
+             observation.window.duration=365,
+             date.format="%m/%d/%Y");
+plot(cma6,patients.to.plot=c("76"), show.legend=FALSE);
+```
+
+Sometimes it is useful to also see the daily dose:
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1a\"></a>**Figure 7 (a).** Same plot as in **Figure 7**, but also showing the daily doses as numbers and as line thickness", fig.height=6, fig.width=8, out.width="100%"}
+# Same plot as above but also showing the daily doses:
+plot(cma6, # the object to plot
+     patients.to.plot=c("76"), # plot only patient 76 
+     print.dose=TRUE, plot.dose=TRUE,
+     legend.x=520); # place the legend in a nice way
+```
+
+#### CMA7
+All CMAs so far have another limitation: they do not consider the interval between the start of the OW and the first event within the OW. 
+For situations in which the OW start coincides with the treatment episode start, this limitation has no consequences. 
+But in scenarios like ours (OW starts during the episode) this has two major drowbacks. 
+First, the time interval for calculating CMA is not the same for all patients; this can result in biases, for example if the intervention group tends to refill sooner after the intervention moment than the control group, the control group might seem more adherent but it is because CMA is calculated on a shorter time interval within the following year. 
+And second, if there is any medication supply left from before the OW start, this is not considered (so CMA may be underestimated). 
+
+*CMA7* addresses this limitation by extending the nominator to the whole OW interval, and by considering carry over both from before and within the OW. 
+The same paremeters are available to specify whether this depends on the type of medication and considers dosage changes (applied now to both types of carry over). 
+[Figure 8](#Figure-8) shows how considering the period at the OW start and the prior supply reduces CMA7 to 69%, due to the gap visible in the medication history plot between the event before the OW and the first event within the OW.
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-8\"></a>**Figure 8.** Simple CMA 7", fig.height=5, fig.width=7, out.width="100%"}
+cma7 <- CMA7(data=ExamplePats, # we're estimating CMA7 now!
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             event.daily.dose.colname="PERDAY",
+             medication.class.colname="CATEGORY",
+             carry.only.for.same.medication=FALSE,
+             consider.dosage.change=FALSE,
+             followup.window.start=0, observation.window.start=182, 
+             observation.window.duration=365,
+             date.format="%m/%d/%Y");
+plot(cma7, patients.to.plot=c("76"), show.legend=FALSE);
+```
+
+#### CMA8
+When entering a randomized controlled trial involving a new medication, a patient on ongoing treatment may be more likely to finish the current supply before starting the trial medication. 
+In these situations, it may be more appropriate to consider a lagged start of the OW (even if this results in a different denominator for trial participants). 
+Let's consider this different scenario for patient `76`: at day 374, a new treatment (`medB`) starts and we need to estimate CMA for the next 294 days (until the next medication change). 
+But there is still some `medA` left, so it is likely that the patient finished this first. 
+[Figure 9](#Figure-9) shows how the OW is shortened with the number of days it would have taken to finish the remaining `medA` (assuming use as prescribed); *CMA8* is quite low 36.1%, given the long gaps between medB events.
+In a future version, it might be interesting to implement the possibility to also move the end of OW so that its length is preserved.
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-9\"></a>**Figure 9.** Simple CMA 8", fig.height=5, fig.width=7, out.width="100%"}
+cma8 <- CMA8(data=ExamplePats, # we're estimating CMA8 now!
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             event.daily.dose.colname="PERDAY",
+             medication.class.colname="CATEGORY",
+             carry.only.for.same.medication=FALSE,
+             consider.dosage.change=FALSE,
+             followup.window.start=0, observation.window.start=374, 
+             observation.window.duration=294,
+             date.format="%m/%d/%Y");
+plot(cma8, patients.to.plot=c("76"), show.legend=FALSE);
+# The value for patient 76, rounded at 2 digits
+round(cma8$CMA[cma8$CMA$PATIENT_ID== 76, 2]*100, 2);
+```
+
+#### CMA9
+The previous 8 CMAs were described by [Vollmer and colleagues (2012)](#Ref-Vollmer2012) in relation to randomized controlled trials, and may apply to many observational designs as well. 
+However, they all rely on an assumption that might not hold for longitudinal cohort studies with multiple repeated measures: the medication is used as prescribed until current supply ends. 
+In CMA7, this may introduce additional variation in adherence estimates depending on where the start of the OW is located relative to the last event before the OW and the first event within the OW: an OW start closer to the first event in the OW generates lower estimates for the same number of gap days between the two events. 
+To address this, *CMA9* first computes a ratio of days’ supply for each event in the FUW (until the next event or FUW end), then weighs all days in the OW by their corresponding ratio to generate an average CMA value for the OW.
+
+For the same scenario as in CMA1 to CMA7, [Figure 10](#Figure-10) shows the estimate for CMA9, which is higher than for CMA7 (70.6% versus 69%). 
+This value would be the same no matter if the OW starts slightly earlier or later, because CMA9 considers the same intervals between events (the one starting before and the one ending after the OW). 
+Thus, it depends less on the actual date when the OW starts.
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-10\"></a>**Figure 10.** Simple CMA 9", fig.height=5, fig.width=7, out.width="100%"}
+cma9 <- CMA9(data=ExamplePats, # we're estimating CMA9 now!
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             event.daily.dose.colname="PERDAY",
+             medication.class.colname="CATEGORY",
+             carry.only.for.same.medication=FALSE,
+             consider.dosage.change=FALSE,
+             followup.window.start=0, observation.window.start=182, 
+             observation.window.duration=365,
+             date.format="%m/%d/%Y");
+plot(cma9, patients.to.plot=c("76"), show.legend=FALSE);
+```
+
+
+### The iterated CMAs
+
+We introduce here two complex (or iterated) CMAs that share the property that they apply a given single CMA iteratively to a set of sub-periods (or windows), defined in various ways.
+
+#### CMA per episode
+
+When we calculated the persistence and implementation above, we first defined the *treatment episodes*, and then computed the CMAs within the episode. 
+The `CMA_per_episode` class allows us to do this in one single step. 
+In our intervention scenario, both example patients had a 2-year treatment episode and we computed the various simple CMAs for a 1-year period within this longer episode.
+But if we consider that medication change triggers a new treatment episode, patient `76` would have 3 episodes. 
+`CMA_per_episode` can compute any of the 9 simple CMAs for all treatment episodes for all patients.
+
+As with the simple CMAs, the `CMA_per_episode` class contains a list that includes all the parameter values, as well as a `CMA` `data.frame` (with all columns of the `compute.treatment.episodes()` output table, plus a new column with the CMA values). 
+The `CMA_per_episode` values can also be transformed into percentages and rounded, as we did for patient `76` below (rounded to 2 decimals). 
+Plots now include an extra section at the top, where each episode is shown as a horizontal bar of length equal to the episode duration, and the corresponding CMA estimates are given both as percentage (rounded to 1 decimal) and as a grey area. 
+An extra area on the right of the plot displays the distribution of all CMA values for the whole FUW as a histogram or as smoothed kernel density (see [Figure 11](#Figure-11)).
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%", warning=FALSE}
+cmaE <- CMA_per_episode(CMA="CMA9", # apply the simple CMA9 to each treatment episode
+                        data=ExamplePats,
+                        ID.colname="PATIENT_ID",
+                        event.date.colname="DATE",
+                        event.duration.colname="DURATION",
+                        event.daily.dose.colname="PERDAY",
+                        medication.class.colname="CATEGORY",
+                        carryover.within.obs.window = TRUE,
+                        carry.only.for.same.medication = FALSE,
+                        consider.dosage.change = FALSE, # conditions on treatment episodes
+                        medication.change.means.new.treatment.episode = TRUE,
+                        maximum.permissible.gap = 180,
+                        maximum.permissible.gap.unit = "days",
+                        followup.window.start=0,
+                        followup.window.start.unit = "days",
+                        followup.window.duration = 365 * 2,
+                        followup.window.duration.unit = "days",
+                        observation.window.start=0,
+                        observation.window.start.unit = "days",
+                        observation.window.duration=365*2,
+                        observation.window.duration.unit = "days",
+                        date.format="%m/%d/%Y",
+                        parallel.backend="none",
+                        parallel.threads=1);
+# Summary:
+cmaE;
+# The CMA estimates table:
+cmaE$CMA
+getCMA(cmaE); # as above but using accessor function
+# The values for patient 76 only, rounded at 2 digits:
+round(cmaE$CMA[cmaE$CMA$PATIENT_ID== 76, 7]*100, 2);
+# Plot:
+plot(cmaE, patients.to.plot=c("76"), show.legend=FALSE);
+```
+
+
+#### Sliding-window CMA
+
+When discussing the issue of granularity earlier, we mentioned that estimating adherence for a whole 2-year period might be too coarse-grained to be clinically relevant, and that shorter intervals may be more appropriate, for example in studies that aim to investigate how the quality of implementation varies in time during a long-term treatment episode. 
+In such cases, we might want to compare successive intervals, for example 4-month intervals. 
+`CMA_sliding_window` allows us to compute any of the 9 simple CMAs for repeated time intervals (*sliding windows*) within an OW. 
+A similar output is produced as for `CMA_per_episode`, including a CMA table (with patient ID, window ID, window start and end dates, and the CMA estimate). 
+[Figure 12](#Figure-12) shows the results of CMA9 for patient `76`: 6 sliding windows of 4 months, among which 2 have a CMA higher than 80%, two have values around 60% and two around 40%, suggesting a variable quality of implementation. 
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-12\"></a>**Figure 12.** Sliding window CMA 9", fig.height=5, fig.width=7, out.width="100%"}
+cmaW <- CMA_sliding_window(CMA.to.apply="CMA9", # apply the simple CMA9 to each sliding window
+                           data=ExamplePats,
+                           ID.colname="PATIENT_ID",
+                           event.date.colname="DATE",
+                           event.duration.colname="DURATION",
+                           event.daily.dose.colname="PERDAY",
+                           medication.class.colname="CATEGORY",
+                           carry.only.for.same.medication=FALSE,
+                           consider.dosage.change=FALSE,
+                           followup.window.start=0,
+                           observation.window.start=0,
+                           observation.window.duration=365*2,
+                           sliding.window.start=0, # sliding windows definition
+                           sliding.window.start.unit="days",
+                           sliding.window.duration=120,
+                           sliding.window.duration.unit="days",
+                           sliding.window.step.duration=120,
+                           sliding.window.step.unit="days",
+                           date.format="%m/%d/%Y",
+                           parallel.backend="none",
+                           parallel.threads=1);
+# Summary:
+cmaW;
+# The CMA estimates table:
+cmaW$CMA
+getCMA(cmaW); # as above but using accessor function
+# The values for patient 76 only, rounded at 2 digits
+round(cmaW$CMA[cmaW$CMA$PATIENT_ID== 76, 5]*100, 2);
+# Plot:
+plot(cmaW, patients.to.plot=c("76"), show.legend=FALSE);
+```
+
+The sliding windows can also overlap, as illustrated below. 
+This can for example be used to estimate the variation of adherence (implementation) during an episode. 
+[Figure 13](#Figure-13) shows 21 sliding windows of 4 month for patient `76`, in steps of 1 month. 
+The patient's quality of implementation oscillated between 37% and 100% during the 2 years of follow-up. 
+This output can be further analyzed in relation to patterns of health status if such data are available for the same time period. 
+
+```{r, echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-13\"></a>**Figure 13.** Sliding window CMA 9", fig.height=5, fig.width=7, out.width="100%"}
+cmaW1 <- CMA_sliding_window(CMA.to.apply="CMA9",
+                           data=ExamplePats,
+                           ID.colname="PATIENT_ID",
+                           event.date.colname="DATE",
+                           event.duration.colname="DURATION",
+                           event.daily.dose.colname="PERDAY",
+                           medication.class.colname="CATEGORY",
+                           carry.only.for.same.medication=FALSE,
+                           consider.dosage.change=FALSE,
+                           followup.window.start=0,
+                           observation.window.start=0,
+                           observation.window.duration=365*2,
+                           sliding.window.start=0, # different sliding windows
+                           sliding.window.start.unit="days",
+                           sliding.window.duration=120,
+                           sliding.window.duration.unit="days",
+                           sliding.window.step.duration=30,
+                           sliding.window.step.unit="days",
+                           date.format="%m/%d/%Y",
+                           parallel.backend="none",
+                           parallel.threads=1);
+# Plot:
+plot(cmaW1, patients.to.plot=c("76"), show.legend=FALSE);
+```
+
+
+## Interactive plotting
+<a name="Section-interactive-plotting"></a>
+
+During the exploratory phases of data analysis, it is sometimes extremely useful to be able to plot interactively various views of the data using different parameter settings.
+We have implemented such interactive plotting of medication histories and (simple and iterative) CMA estimates within [`RStudio`](https://www.rstudio.com) and outside it (using [`Shiny`](https://shiny.rstudio.com/); this is the default as it very flexible and independent of running `AdhereR` within `RStudio`) through the `plot_interactive_cma()` function. 
+This function is generic and interactive, and can be given a large set of parameters (including the dataset on which to work) or it can interactively acquire these parameters directly from the user.
+
+Please note that this interactive plotting is actually implemented in a different package, `AdhereRViz` (which extends `AdhereR`); for more info, please see the vignette [AdhereR: Interactive plotting (and more) with Shiny](https://cran.r-project.org/package=AdhereRViz/vignettes/adherer_interctive_plots.html) from package `AdhereRViz`.
+
+
+## Computing event duration from prescription, dispensing, and hospitalization data
+<a name="Section-compute-event-duration"></a>
+
+Computation of CMAs requires a supply duration for medications dispensed to patients. 
+If medications are not supplied for fixed durations but as a quantity that may last for various durations based on the prescribed dose, the supply duration has to be calculated based on dispensed and prescribed doses.
+Treatments may be interrupted and resumed at later times, for which existing supplies may or may not be taken into account. 
+Patients may be hospitalized or incarcerated, and may not use their own supplies during these periods. 
+The function `compute_event_durations` calculates the supply durations, taking into account the aforementioned situations and offering parameters for flexible adjustments.
+
+
+## Computing time to initiation
+<a name="Section-compute-time-to-initiation"></a>
+
+The period between the first prescription event and the first dose administration may impact health outcomes differently than omitting doses once on treatment or interrupting medication for longer periods of time. 
+Primary non-adherence (not acquiring the first prescription) or delayed initiation may have a negative impact on health outcomes. 
+The function `time_to_initiation` calculates the time between the first prescription and the first dispensing event, taking into account multiple variables to differentiate between treatments.
+
+
+## Defining medication groups
+<a name="Section-defining-medication-groups"></a>
+
+The main idea behind *medication groups* is that there might be meaningful ways of grouping medications both for the computation of CMAs and their plotting.
+For example, a patient might receive medication for treating a hart conditions and medication for a dermatological condition, and we might want to investigate the patient's patterns of adherence to each of these two broad types (or groups) of medication separately.
+However, the mechanism for defining such groups much be flexible enough to allow, for example, the same medication to belong to two groups based on dose, duration or other characteristics.
+Therefore, we implemented this using a very flexible yet powerful and intuitive mechanism that can use any type of information associated to the actual events.
+
+To illustrate, we will use the data that comes with the package: `med.events.ATC` and `med.groups`.
+`med.events.ATC` is a `data.frame` with `r nrow(med.events.ATC)` events (one per row) for `r length(unique(med.events.ATC$PATIENT_ID))` patients, containing the patient's unique identifier (column `PATIENT_ID`), the event date (`DATE`) and duration (`DURATION`), and the medication's [ATC code](https://www.whocc.no/atc/structure_and_principles/) (column `CATEGORY`), further detailing its first two levels: level 1 (one letter giving the anatomical main group, e.g., "A" for "Alimentary tract and metabolism"; column `CATEGORY_L1`) and level 2 (the therapeutic subgroup, e.g., "A02" for "Drugs for acid related disorders"):
+
+```{r, echo=FALSE}
+knitr::kable(head(med.events.ATC, n=5), row.names=FALSE,
+             caption="First 5 lines of the `med.events.ATC` dataset.");
+```
+
+In fact, `med.events.ATC` is derived from the `durcomp` data as follows:
+
+```{r, eval=FALSE}
+event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+                                           presc.data = durcomp.prescribing,
+                                           special.periods.data = durcomp.hospitalisation,
+                                           ID.colname = "ID",
+                                           presc.date.colname = "DATE.PRESC",
+                                           disp.date.colname = "DATE.DISP",
+                                           medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+                                           total.dose.colname = "TOTAL.DOSE",
+                                           presc.daily.dose.colname = "DAILY.DOSE",
+                                           presc.duration.colname = "PRESC.DURATION",
+                                           visit.colname = "VISIT",
+                                           split.on.dosage.change = TRUE,
+                                           force.init.presc = TRUE,
+                                           force.presc.renew = TRUE,
+                                           trt.interruption = "continue",
+                                           special.periods.method = "continue",
+                                           date.format = "%Y-%m-%d",
+                                           suppress.warnings = FALSE,
+                                           return.data.table = FALSE);
+med.events.ATC <- event_durations$event_durations[ !is.na(event_durations$event_durations$DURATION) & 
+                                                     event_durations$event_durations$DURATION > 0,
+                                         c("ID", "DISP.START", "DURATION", "DAILY.DOSE", "ATC.CODE")];
+names(med.events.ATC) <- c("PATIENT_ID", "DATE", "DURATION", "PERDAY", "CATEGORY");
+# Groups from the ATC codes:
+sort(unique(med.events.ATC$CATEGORY)); # all the ATC codes in the data
+# Level 1:
+med.events.ATC$CATEGORY_L1 <- vapply(substr(med.events.ATC$CATEGORY,1,1), switch, character(1),
+                                     "A"="ALIMENTARY TRACT AND METABOLISM",
+                                     "B"="BLOOD AND BLOOD FORMING ORGANS",
+                                     "J"="ANTIINFECTIVES FOR SYSTEMIC USE",
+                                     "R"="RESPIRATORY SYSTEM",
+                                     "OTHER");
+# Level 2:
+med.events.ATC$CATEGORY_L2 <- vapply(substr(med.events.ATC$CATEGORY,1,3), switch, character(1),
+                                     "A02"="DRUGS FOR ACID RELATED DISORDERS",
+                                     "A05"="BILE AND LIVER THERAPY",
+                                     "A09"="DIGESTIVES, INCL. ENZYMES",
+                                     "A10"="DRUGS USED IN DIABETES",
+                                     "A11"="VITAMINS",
+                                     "A12"="MINERAL SUPPLEMENTS",
+                                     "B02"="ANTIHEMORRHAGICS",
+                                     "J01"="ANTIBACTERIALS FOR SYSTEMIC USE",
+                                     "J02"="ANTIMYCOTICS FOR SYSTEMIC USE",
+                                     "R03"="DRUGS FOR OBSTRUCTIVE AIRWAY DISEASES",
+                                     "R05"="COUGH AND COLD PREPARATIONS",
+                                     "OTHER");
+```
+
+For this dataset, we could define the following medication groups:
+
+- *Vitamins*:  all 'VITAMINS' (i.e., all medications of ATC subgroup "A11"),
+- *VitaResp*:  groups all *Vitamins* and medications referring to the 'RESPIRATORY SYSTEM' (ATC group "R"),
+- *VitaShort*: all *Vitamins* administered for less than 31 days,
+- *VitELow*: 	 tocopherol (vit E) (ATC code "A11HA03") at doses lower or equal to 500mg,
+- *VitaComb*:  groups *VitaShort* and *VitELow* (i.e., vitamines for less than 31 days and tocopherol at at most 500mg),
+- *NotVita*:   all non-*Vitamins*.
+
+These are defined in `med.groups`, which is a named vector of characters:
+
+```{r eval=FALSE}
+med.groups <- c("Vitamins"  = "(CATEGORY_L2 == 'VITAMINS')",
+                "VitaResp"  = "({Vitamins} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')",
+                "VitaShort" = "({Vitamins} & DURATION <= 30)",
+                "VitELow"   = "(CATEGORY == 'A11HA03' & PERDAY <= 500)",
+                "VitaComb"  = "({VitaShort} | {VitELow})",
+                "NotVita"   = "(!{Vitamins})");
+```
+
+The `names` in the vector are the names of the various medication groups (e.g., "Vitamins" is the name of the first group, corresponding to all the vitamins), while the values of the vector are the actual definitions and use the same syntax, operators and conventions as any `R` *expression*.
+The name of a medication group can be pretty much any string of characters not containing "}", but it is recommended to keep them short, expressive and (as much as possible) free of non-alphanumeric symbols (in fact, the best recommendation is to stick to the rules for defining legal `R` variable and function names).
+Focussing on the first one, `(CATEGORY_L2 == 'VITAMINS')`, `CATEGORY_L2` refers to the `CATEGORY_L2` column in the `med.events.ATC` dataset, `'VITAMINS'` is a possible value that may appear in that column, and `(`, `)` and `==` have the usual interpretation in `R` (grouping and test of equality, respectively).
+In fact, this *is* translated internally into an expression that is evaluated on the `med.events.ATC` dataset, resulting in a vector of logical values, one per row, saying which events in `med.events.ATC` correspond to this medication group (`TRUE`, there are `r sum(med.events.ATC$CATEGORY_L2 == 'VITAMINS',na.rm=TRUE)` such events) and which not (`FALSE`, the remaining `r sum(!(med.events.ATC$CATEGORY_L2 == 'VITAMINS'),na.rm=TRUE)` events):
+
+```{r, echo=FALSE}
+knitr::kable(head(med.events.ATC[med.events.ATC$CATEGORY_L2 == 'VITAMINS',], n=5), row.names=FALSE,
+             caption="First 5 events in `med.events.ATC` corresponding to the *Vitamins* medication group.");
+```
+
+A special notation is used to "make reference" to another named medication group, by surrounding the medication group's name by `{` and `}`: the second medication group "VitaResp" si defined as `({Vitamins} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')`, where `{Vitamins}` simply refers to the events corresponding to the "Vitamins" group discussed above; internally, the "Vitamins" group is evaluated and its vector of logicals is combined using `|` (OR) with the vector of logicals corresponding to `CATEGORY_L1 == 'RESPIRATORY SYSTEM'`:
+
+```{r, echo=FALSE}
+knitr::kable(head(med.events.ATC[med.events.ATC$CATEGORY_L2 == 'VITAMINS' | med.events.ATC$CATEGORY_L1 == 'RESPIRATORY SYSTEM',], n=5), row.names=FALSE,
+             caption="First 5 events in `med.events.ATC` corresponding to the *VitaResp* medication group.");
+```
+
+This mechanism is very flexible and extensible, allowing, for example, tests involving the duration ("VitaShort") and the dosage ("VitELow"), and the combination of several defined groups ("VitaComb").
+However, it is important to remember that:
+
+a) these must be well-formed and meaningful expressions,
+b) using column names and values in the dataset containing the events,
+c) and/or other groups between `{` and `}`,
+d) and must evaluate to valid logical vectors of the same length as the number of events (rows) in the dataset.
+
+By default, an extra special medication group `__ALL_OTHERS__` is automatically computed, including all events that are not covered by any of the explicitly defined medication groups (if any).
+
+Please note that, for security reasons, this evaluation is performed in a separate environment where only certain functions and operators are allowed (the functions in the `Math`, `Arith`, `Logic` and `Compare` groups, and the operators `(`, `[` and `!`).
+
+With these, definitions of medication groups can be passed to all CMA functions using the `medication.groups` parameter:
+
+```{r}
+cma1_mg <- CMA1(data=med.events.ATC,
+                ID.colname="PATIENT_ID",
+                event.date.colname="DATE",
+                event.duration.colname="DURATION",
+                event.daily.dose.colname="PERDAY",
+                medication.class.colname="CATEGORY",
+                medication.groups=med.groups,
+                followup.window.start=0,
+                observation.window.start=0,
+                observation.window.duration=365,
+                date.format="%m/%d/%Y");
+cma1_mg; # print it
+```
+
+There is a new function, `getMGs()`, which returns the medication groups for a CMA object (if none, `NULL`); this is a list with two members (here, for `getMGs(cma1_mg)`):
+
+- `def`, which contains the definitions of the medication groups (+ `__ALL_OTHERS__`) as a `data.frame` with columns `name` and `def`:
+```{r echo=FALSE}
+getMGs(cma1_mg)$def;
+```
+
+- `obs`, which is logical `matrix` with as many rows as the dataset on which the CMA was estimated (here, `med.events.ATC`) and as many columns as medication groups (including `__ALL_OTHERS__`); a value of `TRUE` means that the corresponding event in the dataset is selected by the corresponding medication group (here, its first 10 rows):
+```{r echo=FALSE}
+head(getMGs(cma1_mg)$obs, n=10);
+```
+
+The `getCMA()` function works as before, except that now, by default, it returns a list with as many entries as there are medication groups (+ `__ALL_OTHERS__`), each containing its own CMA estimates:
+
+```{r}
+getCMA(cma1_mg);
+```
+
+Thus, patient `2` has a `CMA1` of ~1.77 for "Vitamins", of ~1.76 for "VitaResp", none  (`NA`) for "VitaShort", "VitELow" and "VitaComb", of ~2.76 for "NotVita".
+Here, as can also be seen in the `obs` component of `getMGs(cma1_mg)`, the default `__ALL_OTHERS__` did not select any events, results in an empty CMA estimate for it.
+
+Sometimes, however, this structuring of the CMAs as a list may not be desirable, in which case the parameter `flatten.medication.groups = TRUE` comes in handy:
+
+```{r}
+getCMA(cma1_mg, flatten.medication.groups=TRUE);
+```
+
+(It can also be directly passed to the CMA function.)
+
+Please note that, by default, all medication groups belonging to one patient share the same follow-up and observation windows, but this can be changed by setting the parameter  `followup.window.start.per.medication.group = TRUE` so that each medication group has its own follow-up and observation windows.
+
+The medication groups also affect the plotting:
+
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** CMA 1 with medication groups.", fig.height=9, fig.width=9, out.width="100%"}
+plot(cma1_mg,
+     #medication.groups.to.plot=c("VitaResp", "VitaShort", "VitaComb"),
+     patients.to.plot=1:3,
+     show.legend=FALSE);
+```
+
+The medication groups are ordered within patients, and visually grouped using alternating thick blue lines (which can be controlled through the parameters `medication.groups.separator.show`, `medication.groups.separator.lty`, `medication.groups.separator.lwd` and `medication.groups.separator.color`); likewise, the name of the special `__ALL_OTHERS__` groups can be controlled with the `medication.groups.allother.label` parameter (defaults to "*").
+Only the medication groups that contain at least one event are shown for each patient.
+If desired, the parameter `medication.groups.to.plot` can be used to explicitly list the names of the medication groups to include in the plot (by default, all).
+
+Medication groups work in the same way across all simple and complex CMAs, an are included in the interactive `Shiny` interface as well.
+
+As a special case, the `medication.groups` parameter can simply be the name of a column in the `data` that define the medication groups through its values.
+For example,
+
+```{r eval=FALSE}
+cma0_types <- CMA0(data=med.events.ATC,
+                   ID.colname="PATIENT_ID",
+                   event.date.colname="DATE",
+                   event.duration.colname="DURATION",
+                   event.daily.dose.colname="PERDAY",
+                   medication.class.colname="CATEGORY",
+                   medication.groups="CATEGORY_L1",
+                   #flatten.medication.groups=TRUE,
+                   #followup.window.start.per.medication.group=TRUE,
+                   followup.window.start=0,
+                   observation.window.start=0,
+                   observation.window.duration=365,
+                   date.format="%m/%d/%Y");
+```
+
+defines `r length(unique(med.events.ATC$CATEGORY_L1))` medication groups `r paste0('"',sort(unique(med.events.ATC$CATEGORY_L1)),'"',collapse=", ")` using the `CATEGORY_L1` column in the example `med.events.ATC` dataset.
+Behind the scenes, this is simply expanded into the medication group definitions:
+
+```{r echo=FALSE}
+tmp <- sort(unique(med.events.ATC$CATEGORY_L1));
+cat(paste0("c(",
+           paste0('"',tmp,'"',' = "(CATEGORY_L1 == \'',tmp,'\')"',collapse=",\n  "),
+           ");"));
+```
+
+Please note that if no medication groups are defined (the default), then *nothing* changes in the behaviour of the package (so it is fully backwards compatible).
+
+
+
+## Working with very large databases
+<a name="Section-working-with-databases"></a>
+
+`AdhereR` can use data stored in a variety of "classical" `RDBMS`'s (Relational Database Management Systems), such as [`MySQL`](https://www.mysql.com/) or [`SQLite`](https://www.sqlite.org/index.html), either through explicit [`SQL`](https://en.wikipedia.org/wiki/SQL) queries or transparently through [`dbplyr`](https://db.rstudio.com/dplyr/), or in other systems, such as the [`Apache Hadoop`](https://hadoop.apache.org/).
+Thus, `AdhereR` can access (very) large quantities of data stored in various formats and using different backends, and can process it ranging from single-threaded set-ups on a client machine to large heterogeneous distributed clusters (using, for example, various explicit parallel processing frameworks or `Hadoop`'s `MapReduce` framework).
+All these are detailed in a dedicated vignette *"Using `AdhereR` with various database technologies for processing very large datasets"*.
+
+
+## Using `AdhereR` from other programming languages and platforms
+<a name="Section-calling-adherer-from-other"></a>
+
+`AdhereR` can be transparently used from other programming languages than `R` (such as `Python`) or platforms (such as `Stata`) by implementing a startdized interface defined for these purposes.
+A working implementation for `Python 3` is included in the package (and inteded also as a hands-on guide to further implementations) and is described in detailed in a dedicated vignette *"Calling AdhereR from Python3"*.
+
+
+## Technical details
+
+Here we overview some technical details, including the main `S3` classes and functions (probably useful for scripting and extension), our treatment of dates and durations, and the issue of performance and parallelism (useful for large datasets).
+
+
+### Main `S3` classes and functions
+
+The `S3` class `CMA0` is the most basic object, basically encapsulating the dataset and desired parameter values; it should not be normally used directly (except for plotting the event data as such), but it is the foundation for the other classes.
+A `CMA0` (and derived) object can print itself (the output is optimized either for text, LaTeX or Markdown), can plot itself (with various parameters controlling exactly how), and offers the accessor function `getCMA()` for easy access to the CMA estimate.
+Please note that these CMAs all work for datasets that contain more than one patient, and the estimates are computed for each patient independently, and the plotting can display more than one patient (in this case the patients are plotted on top of each other vertically), as shown in [Figure 1](#Figure-1).
+
+The simple CMAs are implemented by the `S3` classes `CMA1` -- `CMA9`, that are derived from `CMA0` and reload its methods.
+Thus, one can easily implement a new simple CMA by extending the base `CMA0` class.
+
+The iterative CMAs, in contrast, are not derived from `CMA0` but use internally such a simple CMA to perform their computations.
+For the moment, they can *not* be extended to new simple CMAs derived from `CMA0`, but, if needed, such a mechanism could be implemented.
+
+The most important functions are:
+
+- `compute.event.int.gaps()`: for a given event database, this computes the gap days and event intervals in various scenarious, and while it should not in general be directly used, it is exported in case a use scenario requires this explicit computation;
+- `compute.treatment.episodes()`: this computes the treatment episodes for each patient in various scenarios;
+- `getCMA()`: getter functions, giving access to the estimated CMAs;
+- `plot_interactive_cma()`: plots interactively within RStudio (see the [Interactive plotting section](#Section-interactive-plotting)).
+
+
+### Calendar dates and durations
+
+A potentially confusing (but very powerful and flexible) aspect of our implementation concerns our treatment of dates and durations.
+
+First, the *duration of an event* is given in a *column* in the dataset containing, for each event, its duration (as a positive integer) in *days*.
+However, *other durations* (such as for FUW or the sliding windows) are given as positive integers representing the number of *units*; these units can be "days" (the default), "weeks", "months", or "years".
+
+The *date of an event* is given in a *column* in the dataset containing, for each event, its start date as a string (`character`) in the format given by the `date.format` parameter (by default, mm/dd/yyyy).
+The *start* of the FUW, OW and sliding windows can be given either as the number (integer) of *units* ("days", "weeks", "months", or "years") since the first recorded event for the patient, or as an object of *class `Date`* representing the actual calendar start date, or a string (`character`) giving a *column name* in the dataset containing, per patient, either the calendar start date as `Date` object (i.e., this column must be of type `Date`) or as the number of units if the column has type `numeric`.
+While this might be confusing, it allows greater flexibility in specifying the start dates; the most important pitfall is in passing a date as a string (type `character`) which will result in an error as there is no such column in the dataset -- make sure it is converted to a `Date` object by using, for example, `as.Date()`!
+However, for most scenarios, the default of giving the number of units since the earliest event is more than enough and is the recommended (and most carefully tested) way.
+
+
+### Performance, parallelism and implementation
+
+While currently implemented in pure `R`, we have extensively profiled and optimized our code to allow the processing of large databases even on consumer-grade hardware.
+For example, [Table 4](#Table-4) below gives the running times (single-threaded and two parallel multicore threads -- see below for details) for a database of 13,922 unique patients and 112,984 prescriptions of all CMAs described here, on an Apple MacBook Air 11" (7,1; early 2015) with 8Go RAM (DDR3 @ 1600MHz) and a Core i7-5650U CPU (2 cores, 4 threads with hyperthreading @ 2.20GHz, Turbo Boost to 3.10GHz), using MacOS X "El Capitan" (10.11.6), `R` 3.3.1 (64 bits) and `RStudio` 1.0.44.
+[Table 5](#Table-5) below shows the running times (single-threaded and four parallel multicore threads) for a very large database of 500,000 unique patients and 4,058,110 prescriptions (generated by repeatedly concatenating the database described above and uniquely renaming the participants) of all CMAs described here, on a desktop computer with 16Go RAM and a Core i7-3770 CPU (4 cores, 8 threads with hyperthreading @ 3.40GHz, Turbo Boost to 3.90GHz), using OpenSuse 13.2 (Linux kernel 3.16.7) and `R` 3.3.2 (64 bits).
+[Table 6](#Table-6) shows the same information as [Table 5](#Table-5), but on a high-end desktop computer with 32Go RAM and a Core i7-4790K CPU (4 cores, 8 threads with hyperthreading @ 4.00GHz, Turbo Boost to 4.40GHz), running Windows 10 Professional 64 bits (version 1607) and `R` 3.2.4 (64 bits); as dicusssed below, the "multicore" backend is currently not available on Windows.
+
+As these benchmarking results show, a database close to the median sample sizes in the literature (median 10,265 patients versus our 13,922 patients; [Sattler *et al.*, 2011](#Ref-Sattler2011)) can be processed almost in real-time on a consumer laptop, while very large databases (half a million patients) require tens of minutes to a few hours on a mid-to-high end desktop computers, especially when making use of parallel processing.
+Interestingly, Linux seems to have a small but measurable performance advantage over Windows (despite the slightly lower-end hardware) and the "multicore" backend becomes preferable to the "snow" backend for very large databases (probably due to the data transmission and collection overheads), but not by a very large margin.
+Therefore, for very large databases, we recommend Linux on a multi-core/multi-CPU mechine with enough RAM and the "multicore" backend.
+
+
+| CMA             | Single-threaded | Two threads (multicore) | Two threads (snow) |
+|-----------------|----------------:|------------------------:|-------------------:|
+| CMA 1           |      40.8 (0.7) |              20.8 (0.4) |         22.0 (0.4) |
+| CMA 2           |      41.2 (0.7) |              21.7 (0.4) |         24.4 (0.4) |
+| CMA 3           |      39.3 (0.7) |              20.4 (0.3) |         22.9 (0.4) |
+| CMA 4           |      40.2 (0.7) |              21.3 (0.4) |         23.0 (0.4) |
+| CMA 5           |      56.6 (0.9) |              29.7 (0.5) |         31.5 (0.5) |
+| CMA 6           |      58.0 (1.0) |              30.9 (0.5) |         32.5 (0.5) |
+| CMA 7           |      55.5 (0.9) |              28.9 (0.5) |         30.6 (0.5) |
+| CMA 8           |     131.8 (2.2) |              72.5 (1.2) |         71.6 (1.2) |
+| CMA 9           |     159.4 (2.7) |              85.2 (1.4) |         86.5 (1.4) |
+| per episode     |     263.9 (4.4) |             139.0 (2.3) |        139.7 (2.3) |
+| sliding window  |    643.6 (10.7) |             347.9 (5.8) |        339.5 (5.7) |
+
+Table: <a name="Table-4"></a>**Table 4.** Performance as running times (single- and two-threaded, multicore and snow respectively) when computing CMAs for a large database with 13,922 patients with 112,983 events on a consumer-grade MacBook Air laptop running MacOSX El Capitan. The times shown are "real" (i.e., clock) running times in seconds (as reported by `R`’s `system.time()` function) and minutes. In all cases, the FUW and OW are identical at 2 years long. CMAs per episode (with gap=180 days) and sliding window (length=180 days, step=90 days) used CMA1 for each episode/window. Please note that the multicore and snow times are slightly longer than half the single-core times due to various data transmission and collection overheads. 
+
+
+| CMA             |                Single-threaded |      Four threads (multicore) |           Four threads (snow) |
+|-----------------|-------------------------------:|------------------------------:|------------------------------:|
+| CMA 1           |                  1839.7 (30.6) |                  577.0  (9.6) |                  755.5 (12.6) |
+| CMA 2           |                  1779.0 (29.7) |                  490.1  (8.2) |                  915.7 (15.3) |
+| CMA 3           |                  1680.6 (28.0) |                  458.5  (7.6) |                  608.3 (10.1) |
+| CMA 4           |                  1778.9 (30.0) |                  489.0  (8.2) |                  644.5 (10.7) |
+| CMA 5           |                  2500.7 (41.7) |                  683.3 (11.4) |                  866.2 (14.4) |
+| CMA 6           |                  2599.8 (43.3) |                  714.5 (11.9) |                 1123.8 (18.7) |
+| CMA 7           |                  2481.2 (41.4) |                  679.4 (11.3) |                  988.1 (16.5) |
+| CMA 8           |     5998.0 (100.0 = 1.7 hours) |                 1558.1 (26.0) |                 2019.6 (33.7) |
+| CMA 9           |     7039.7 (117.3 = 1.9 hours) |                 1894.7 (31.6) |                 3002.7 (50.0) |
+| per episode     |    11548.5 (192.5 = 3.2 hours) |                 3030.5 (50.5) |                 3994.2 (66.6) |
+| sliding window  |    27651.3 (460.8 = 7.7 hours) |    7198.3 (120.0 = 2.0 hours) |   12288.8 (204.8 = 3.4 hours) |
+
+Table: <a name="Table-5"></a>**Table 5.** Performance as running times (single- and two-threaded, multicore and snow respectively) when computing CMAs for a very large large database with 500,000 patients with 4,058,110 events on a mid/high-range consumer desktop running OpenSuse 13.2 Linux. The times shown are "real" (i.e., clock) running times in seconds (as reported by `R`’s `system.time()` function), minutes and, if large enough, hours. In all cases, the FUW and OW are identical at 2 years long. CMAs per episode (with gap=180 days) and sliding window (length=180 days, step=90 days) used CMA1 for each episode/window. Please note that the multicore and especially the snow times are slightly longer than a quarter the single-core times due to various data transmission and collection overheads. 
+
+
+| CMA             |                Single-threaded |           Four threads (snow) |
+|-----------------|-------------------------------:|------------------------------:|
+| CMA 1           |                  2070.9 (34.5) |                  653.1 (10.9) |
+| CMA 2           |                  2098.9 (35.0) |                  667.5 (13.4) |
+| CMA 3           |                  2013.8 (33.6) |                  661.5 (22.0) |
+| CMA 4           |                  2094.4 (34.9) |                  685.2 (11.4) |
+| CMA 5           |                  2823.4 (47.1) |                  881.0 (14.7) |
+| CMA 6           |                  2909.0 (48.5) |                  910.3 (15.2) |
+| CMA 7           |                  2489.1 (41.5) |                  772.6 (12.9) |
+| CMA 8           |     5982.5  (99.7 = 1.7 hours) |                 1810.1 (30.2) |
+| CMA 9           |     6030.2 (100.5 = 1.7 hours) |                 2142.1 (35.7) |
+| per episode     |    10717.1 (178.6 = 3.0 hours) |                 3877.2 (64.6) |
+| sliding window  |    25769.5 (429.5 = 7.2 hours) |    9353.6 (155.9 = 2.6 hours) |
+
+Table: <a name="Table-6"></a>**Table 6.** Performance as running times (single- and two-threaded, multicore and snow respectively) when computing CMAs for a very large large database with 500,000 patients with 4,058,110 events on a high-end desktop computer running Windows 10. The times shown are "real" (i.e., clock) running times in seconds (as reported by `R`’s `system.time()` function), minutes and, if large enough, hours. In all cases, the FUW and OW are identical at 2 years long. CMAs per episode (with gap=180 days) and sliding window (length=180 days, step=90 days) used CMA1 for each episode/window. Please note that the snow times are longer than a quarter the single-core times due to various data transmission and collection overheads. 
+
+Concerning *parallelism*, if run on a multi-core/multi-processor machine or cluster, `AdhereR` gives the user the possibility to use (completely transparently) two parallel backends: *multicore* (available on Linux, \*BSD and MacOS, but currently not on Microsoft Windows) and *snow* (Simple Network of Workstations, available on all platforms; in fact, this can use various types of backends, see the documentation in package `snow` for details).
+Parallelism is available through the `parallel.backend` and `parallel.threads` parameters, where the first controlls the actual backend to use ("none" -- the default, uses a single thread --, "multicore", and several versions of snow: "snow", "snow(SOCK)", "snow(MPI)", "snow(NWS)") and the second the number of desired parallel threads ("auto" defaults to the reported number of cores for "multicore" or 2 otherwise, and to 2 for "snow") or a more complex specification of the nodes for "snow" (see the `snow` package documentation for details and [Appendix I: Distributing computations on remote Linux hosts]).
+The implementation uses `mclapply` (in package `parallel`) and `parLapply` (package `snow`), is completely hidden from the user, and tries to pre-allocate whole chunks of patients to the CPUs/cores in order to reduce the various overheads (such as data transfer).
+In general, for "multicore" and "snow" with nodes on the local machine, do not use more than the number of physical cores in the system, and be mindful of the various overheads involved, meaning that the gains, while substantial especially for large databases, will be very slightly lower than the expected 1/#threads (as a corrolary, it might not be a good idea to paralellize very small datasets).
+Also, memory might be of concern when parallelizing, as at least parts of `R`'s environment will be replicated across threads/processes; this, in turn, for large environments and systems low on RAM, might result in massive performance loss due to swapping (or even result in crashes).
+For more information on parallelism in `R` please see, for example, [CRAN Task View: High-Performance and Parallel Computing with R](https://CRAN.R-project.org/view=HighPerformanceComputing) and the various blogposts and books on the matter.
+
+Conceptually, we exploited various optimization techniques (see, for example, Hadley Wickham's [Advanced R](http://adv-r.had.co.nz/) and other blogposts on profiling and optimizing `R` code), but the two most important architectural decisions are to (a) extensively use [`data.table`](http://r-datatable.com/) and (b) to pre-allocate chunks of participants for parallel processing.
+The general framework is to define a "workhorse" function that can process a set of participants and returns one `data.frame` or `data.table` (or several, in which case they must be encapsulated in a `list()`), workhorse function that is transparently called for the whole dataset (if `parallel.backend` is "none"), or in parallel for subsets of the whole dataset of roughly 1/`parallel.threads` size (for "multicore" and "snow"), in the latter case the results being transparently recombined (even if multiple results are returned in a `list()`).
+Internally, the workhorse functions tend to make extensive use of the `data.table` "reference semantics" (the `:=` operator) to perform in-place changes and avoid unnecessary copying of objects, `key`s for fast indexing, search and selection, and the `by` grouping mechanism, allowing the application of a specialized function to each individual patient (or episode or sliding window, as needed).
+We decided to keep everything "pure `R`" (so there is so far no `C++` code) and the code is extensively commented and hopefully clear to understand, change and extend.
+
+
+## Conclusions
+
+'AdhereR' was developed to facilitate flexible and comprehensive analyses of adherence to medication from electronic healthcare data. All objects included in this package ('compute.treatment.episodes', 'CMA1' to 'CMA9', and their 'CMA_per_episode' and CMA_sliding_window versions) can be adapted to various research questions and designs, and we provided here only a few examples of the vast range of possibilities for use. Depending on the type of medication, study population, length of follow-up, etc., the various alternative parametrizations may lead to substantial differences or negligible variation. Very little evidence is available on the impact of these choices in specific scenarios. This package makes it easy to integrate such methodological investigations into data analysis plans, and to communicate these to the scientific community.
+
+We have also aimed to facilitate replicability. Thus, summaries of functions include all parameter values and are easily printed for transparent reporting (for example in an appendix or a supplementary online material). The calculation of adherence values via 'AdhereR' can also be integrated in larger data analysis scripts and made available in a data repository for future use in similar studies, freely-available or with specific access rights. This allows other research teams to use the same parametrizations (for example if studying the same type of medication in different populations), and thus increase homogeneity of studies for the benefit of later meta-analytic efforts. If these parametrizations are complemented by justifications of each decision based on clinical and/or research evidence in specific clinical areas, they can be subject to discussion and clinical consensus building and thus represent transparent and easily-implementable guidelines for EHD-based adherence research in those areas. In this situation, comparisons across medications can also take into account any differences in analysis choices, and general rules derived for adherence calculation across domains. 
+
+## References
+
+<a name="Ref-Arnet2016"></a>Arnet I., Kooij M.J., Messerli M., Hersberger K.E., Heerdink E.R., Bouvy M. (2016) [Proposal of Standardization to Assess Adherence With Medication Records Methodology Matters](https://pubmed.ncbi.nlm.nih.gov/26917817/). *The Annals of Pharmacotherapy* **50**(5):360–8. [doi:10.1177/1060028016634106](http://dx.doi.org/10.1177/1060028016634106).
+
+<a name="Ref-Gardarsdottir2010"></a>Gardarsdottir H., Souverein P.C., Egberts T.C.G., Heerdink E.R. (2010) [Construction of drug treatment episodes from drug-dispensing histories is influenced by the gap length](https://pubmed.ncbi.nlm.nih.gov/19880282/). *J Clin Epidemiol.* **63**(4):422–7. [doi:10.1016/j.jclinepi.2009.07.001](http://dx.doi.org/10.1016/j.jclinepi.2009.07.001).
+
+<a name="Ref-Greevy2011"></a>Greevy R.A., Huizinga M.M., Roumie C.L., Grijalva C.G., Murff H., Liu X., Griffin, M.R. (2011). [Comparisons of Persistence and Durability Among Three Oral Antidiabetic Therapies Using Electronic Prescription-Fill Data: The Impact of Adherence Requirements and Stockpiling](https://pubmed.ncbi.nlm.nih.gov/22048232/). *Clinical Pharmacology & Therapeutics* **90**(6):813–819. [doi:10.1038/clpt.2011.228](http://dx.doi.org/10.1038/clpt.2011.228).
+
+<a name="Ref-Peterson2007"></a>Peterson A.M., Nau D.P., Cramer J.A., Benner J., Gwadry-Sridhar F., Nichol M. (2007) [A checklist for medication compliance and persistence studies using retrospective databases](https://pubmed.ncbi.nlm.nih.gov/17261111/). *Value in Health: Journal of the International Society for Pharmacoeconomics and Outcomes Research* **10**(1):3–12. [doi:10.1111/j.1524-4733.2006.00139.x](http://dx.doi.org/10.1111/j.1524-4733.2006.00139.x).
+
+<a name="Ref-SouvereinInPress"></a>Souverein PC, Koster ES, Colice G, van Ganse E, Chisholm A, Price D, et al. (*in press*) [Inhaled Corticosteroid Adherence Patterns in a Longitudinal Asthma Cohort.](https://www.sciencedirect.com/science/article/abs/pii/S2213219816304238) *J Allergy Clin Immunol Pract*. [doi:10.1016/j.jaip.2016.09.022](http://dx.doi.org/10.1016/j.jaip.2016.09.022).
+
+<a name="Ref-Vollmer2012"></a>Vollmer W.M., Xu M., Feldstein A., Smith D., Waterbury A., Rand C. (2012) [Comparison of pharmacy-based measures of medication adherence](https://pubmed.ncbi.nlm.nih.gov/22691240/). *BMC Health Services Research* **12**(1):155. [doi:10.1186/1472-6963-12-155](http://dx.doi.org/10.1186/1472-6963-12-155).
+
+<a name="Ref-Vrijens2012"></a>Vrijens B., De Geest S., Hughes D.A., Przemyslaw K., Demonceau J., Ruppar T., Dobbels F., Fargher E., Morrison V., Lewek P., Matyjaszczyk M., Mshelia C., Clyne W., Aronson J.K., Urquhart J.; ABC Project Team (2012) [A new taxonomy for describing and defining adherence to medications](https://pubmed.ncbi.nlm.nih.gov/22486599/). *British Journal of Clinical Pharmacology* **73**(5):691–705. [doi:10.1111/j.1365-2125.2012.04167.x](http://dx.doi.org/10.1111/j.1365-2125.2012.04167.x).
+
+<a name="Ref-VanWijk2006"></a>Van Wijk B.L.G., Klungel O.H., Heerdink E.R., de Boer A. (2006). [Refill persistence with chronic medication assessed from a pharmacy database was influenced by method of calculation](https://pubmed.ncbi.nlm.nih.gov/16360556/). *Journal of Clinical Epidemiology* **59**(1), 11–17. [doi:10.1016/j.jclinepi.2005.05.005](http://dx.doi.org/10.1016/j.jclinepi.2005.05.005).
+
+<a name="Ref-Sattler2013"></a>Sattler E., Lee J., Perri M. (2011). [Medication (Re)fill Adherence Measures Derived from Pharmacy Claims Data in Older Americans: A Review of the Literature](https://pubmed.ncbi.nlm.nih.gov/23553512/). *Drugs  & Aging* **30**(6), 383–99. [doi:10.1007/s40266-013-0074-z](http://dx.doi.org/10.1007/s40266-013-0074-z).
+
+
+## Appendix I: Distributing computations on remote Linux hosts
+
+For example, we show here how to compute CMA1 on a remote `Linux` machine from `macOS` and `Windows 10` hosts.
+
+The Linux machine (hostname `workhorse`) runs `Ubuntu 16.04` (64 bits) with `R 3.4.1` manually compiled and installed in `/usr/local/lib64/R`, and an `OpenSSH` server allowing access to the user `user`.
+
+The `macOS` laptop is running `macOS High Sierra 10.13.4`, `R 3.4.3`, `openssh` (installed through [homebrew](https://brew.sh/)) and we set up passwordless ssh access to `workhorse` (see, for example, the tutorial [here](http://www.linuxproblem.org/art_9.html)).
+The `Windows 10` desktop is running `Microsoft Windows 10 Pro 1709 64 bits` with `openssh` installed vias [Cygwin](http://www.cygwin.com/) (also with passwordless ssh access to `workhorse`) and `Microsoft R Open 3.4.3`.
+
+All machines have the latest version of `AdhereR` and `snow` installed.
+
+With these, we can, for example do:
+
+```{r eval=FALSE}
+cmaW3 <- CMA_sliding_window(CMA="CMA1",
+                            data=med.events,
+                            ID.colname="PATIENT_ID",
+                            event.date.colname="DATE",
+                            event.duration.colname="DURATION",
+                            event.daily.dose.colname="PERDAY",
+                            medication.class.colname="CATEGORY",
+                            carry.only.for.same.medication=FALSE,
+                            consider.dosage.change=FALSE,
+                            sliding.window.duration=30,
+                            sliding.window.step.duration=30,
+                            parallel.backend="snow", # make clear we want to use snow
+                            parallel.threads=c(rep(
+                              list(list(host="user@workhorse", # host (and user)
+                                        rscript="/usr/local/bin/Rscript", # Rscript location
+                                        snowlib="/usr/local/lib64/R/library/") # snow package location
+                                   ),
+                              2))) # two remote threads
+```
+
+where we use `parallel.backend="snow"` and we specify the `workhorse` node(s) we want to use.
+Here, `parallel.threads` is a list of host specifications (one per thread), each a list contaning the `host` (possibly with the username for ssh access), `rscript` (the location on the remote host of `Rscript`) and `snowlib` (the location on the remote host of the `snow` package, usually the location where the `R` packages are installed).
+In this exmple, we create 2 such identical hosts (using `rep(..., 2)`) which measn that we will have two parallel threads running on `workhorse`.
+If everything is fine, the results should be returned to the user as usual.
+
+*NB1.* This procedure was tested only on `Linux` hosts, but it should *in principle* also work with `Windows` hosts as well (but the setup is currently much more complex and apparently less reliable; moreover, in most high-performance production environments we expect `Linux` rather that `Windows` compute nodes).
+
+
+<!-- Vignettes are long form documentation commonly included in packages. Because they are part of the distribution of the package, they need to be as compact as possible. The `html_vignette` output type provides a custom style sheet (and tweaks some options) to ensure that the resulting html is as small as possible. The `html_vignette` format: -->
+
+<!-- - Never uses retina figures -->
+<!-- - Has a smaller default figure size -->
+<!-- - Uses a custom CSS stylesheet instead of the default Twitter Bootstrap style -->
+
+<!-- ## Vignette Info -->
+
+<!-- Note the various macros within the `vignette` section of the metadata block above. These are required in order to instruct R how to build the vignette. Note that you should change the `title` field and the `\VignetteIndexEntry` to match the title of your vignette. -->
+
+<!-- ## Styles -->
+
+<!-- The `html_vignette` template includes a basic CSS theme. To override this theme you can specify your own CSS in the document metadata as follows: -->
+
+<!--     output:  -->
+<!--       rmarkdown::html_vignette: -->
+<!--         css: mystyles.css -->
+
+
+<!-- ## More Examples -->
+
+<!-- You can write math expressions, e.g. $Y = X\beta + \epsilon$, footnotes^[A footnote here.] -->
+<!-- Also a quote using `>`: -->
+
+<!-- > "He who gives up [code] safety for [code] speed deserves neither." -->
+<!-- ([via](https://twitter.com/hadleywickham/status/504368538874703872)) -->

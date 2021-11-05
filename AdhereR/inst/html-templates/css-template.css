@@ -1,0 +1,33 @@
+/* The CSS associated with the SVG */
+
+body {
+  margin: 25px;
+  background-color: rgb(240,240,240);
+  font-family: arial, sans-serif;
+  font-size: 14px;
+}
+
+h1 {
+  color: blue;
+}
+
+p {
+  color: red;
+}
+
+/*svg {
+    pointer-events: none;
+}*/
+
+#svg_controls {
+  float: top;
+  /*height: 20%;*/
+  overflow: auto;
+  resize: both;
+}
+
+#svg_image_div {
+  /*height: 75%;*/
+  overflow: auto;
+  resize: both;
+}
