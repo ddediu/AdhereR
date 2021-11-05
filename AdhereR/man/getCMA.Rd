@@ -4,16 +4,29 @@
 \alias{getCMA}
 \title{Access the actual CMA estimate from a CMA object.}
 \usage{
-getCMA(x)
+getCMA(
+  x,
+  flatten.medication.groups = FALSE,
+  medication.groups.colname = ".MED_GROUP_ID"
+)
 }
 \arguments{
 \item{x}{a CMA object.}
+
+\item{flatten.medication.groups}{\emph{Logical}, if \code{TRUE} and there are
+medication groups defined, then the return value is flattened to a single
+\code{data.frame} with an extra column containing the medication group (its
+name is given by \code{medication.groups.colname}).}
+
+\item{medication.groups.colname}{a \emph{string} (defaults to ".MED_GROUP_ID")
+giving the name of the column storing the group name when
+\code{flatten.medication.groups} is \code{TRUE}.}
 }
 \value{
 a \emph{data.frame} containing the CMA estimate(s).
 }
 \description{
-Retreive the actual CMA estimate(s) encapsulated in a simple, per episode,
+Retrieve the actual CMA estimate(s) encapsulated in a simple, per episode,
 or sliding window CMA object.
 }
 \examples{

@@ -34,7 +34,7 @@ However, because this interactive user interface covers a rather particular set 
 
 ## Overview
 
-We use [`Shiny`](https://shiny.rstudio.com/), which allows us to build a *self-contained app* that can be run locally or remotely inside a standard *web browser* (such as [Firefox](https://www.mozilla.org/en-US/firefox/), [Google Chrome](https://www.google.com/chrome/), [Safari](https://www.apple.com/lae/safari/), [Internet Explorer](http://microsoft.com/ie), [Edge](https://www.microsoft.com/en-us/windows/microsoft-edge) or [Opera](https://www.opera.com/)) on multiple *Operating Systems* (such as [Microsoft Windows](https://www.microsoft.com/en-us/windows), Apple's [macOS](https://www.apple.com/lae/macos) and [iOS](https://www.apple.com/lae/ios), Google's [Android](https://www.android.com/), and several flavors of Linux -- e.g., [Debian](https://www.debian.org/), [Ubuntu](https://www.ubuntu.com/), [Fedora](https://getfedora.org/en/), [RedHat](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux), [CentOS](https://www.centos.org/), [Arch](https://www.archlinux.org/)... -- and BSD -- e.g., [FreeBSD](https://www.freebsd.org/) or [TrueOS](https://www.trueos.org/)) and *devices* ranging from desktop and laptop computers to mobile phones and tablets.
+We use [`Shiny`](https://shiny.rstudio.com/), which allows us to build a *self-contained app* that can be run locally or remotely inside a standard *web browser* (such as [Firefox](https://www.mozilla.org/en-US/firefox/), [Google Chrome](https://www.google.com/chrome/), [Safari](https://www.apple.com/lae/safari/), [Internet Explorer](https://en.wikipedia.org/wiki/Internet_Explorer), [Edge](https://www.microsoft.com/en-us/edge) or [Opera](https://www.opera.com/)) on multiple *Operating Systems* (such as [Microsoft Windows](https://www.microsoft.com/en-us/windows), Apple's [macOS]https://en.wikipedia.org/wiki/MacOS) and [iOS](https://en.wikipedia.org/wiki/IOS), Google's [Android](https://www.android.com/), and several flavors of Linux -- e.g., [Debian](https://www.debian.org/), [Ubuntu](https://ubuntu.com/), [Fedora](https://getfedora.org/en/), [RedHat](https://www.redhat.com/en/technologies/linux-platforms/enterprise-linux), [CentOS](https://www.centos.org/), [Arch](https://archlinux.org/)... -- and BSD -- e.g., [FreeBSD](https://www.freebsd.org/)) and *devices* ranging from desktop and laptop computers to mobile phones and tablets.
 The app's interface uses *standard controls and paradigms*, ensuring a similar user experience across browsers, platforms and devices.
 
 
@@ -361,6 +361,7 @@ This section is shown only for **CMA per episodes** and concerns the way treatme
   - **Treat. change starts new episode?**: does changing the treatment class trigger a new episode?
   - **Dose change starts new episode?**: does changing the dose trigger a new episode?
   - **Max. gap duration**: the duration of a gap above which a new episode is triggered; the gap can be in units (**Max. gap duration unit**) of days, weeks, months or years, or as a percent of the last prescription
+  - **Append gap?**: should the maximum permissible gap be added to the episodes with a gap larger than this maximum? If "no" (the default), nothing is added, if "yes" then the maximum permissible gap is appended at the end of the episodes
   - **Plot CMA as histogram?**: should the distribution of CMA estimates across episodes for a given participant be plotted as a histogram or as a barplot 
 
 
@@ -572,7 +573,7 @@ New UI elements become visible, most being virtually identical to those used for
 
 For example, when using the `MySQL` database described in the vignette [*Using AdhereR with various database technologies for processing very large datasets*](https://CRAN.R-project.org/package=AdhereR/vignettes/AdhereR-overview.html) in package `AdhereR`, we can create, for example, a `view` (named `testview`) that brings together these data in the needed format with the following `SQL` commands in `MySQL Workbench`:
 
-```{SQL eval=FALSE}
+```{sql eval=FALSE}
 USE med_events;
 
 CREATE VIEW `testview` AS 
@@ -585,6 +586,39 @@ ON event_patients.`id` = event_info.`id`
 JOIN patients
 ON patients.`id` = event_patients.`patient_id`;
 ```
+
+
+### Defining and using *medication groups* {#ui-medicationgroups}
+
+Since `AdhereRViz` version 0.2/`AdhereR` version 0.7, *medication groups* can be defined and used for interactive plotting.
+For ore details about medication groups, please see the vignette "AdhereR: Adherence to Medications" in package `AdhereR`, but, fundamentally, they are named vectors of characters where the names are the unique names of groups of medication defined using `R`-like expressions that describe with of the events in the dataset are covered by a given medication group.
+Alternatively, one can use a *column* in the data itself to define the medication groups.
+
+Medication groups can be passed with the `medication.groups` argument to the `plot_interactive_cma()` function, or can be interactively loaded through a new panel `Groups` of the user interface (please note that a valid dataset must have already been loaded):
+
+![**Loading medication groups.** The **Groups** tab allows the interactive selection of medication groups from already defined named character (or factor) vectors in memory (here, the pre-defined example `med.groups` from the `AdhereR` package). The switch allows us to instantly ignore or apply any medication groups that may have been defined.](shiny-groups-panel-1.jpg)
+
+![**Inspecting medication groups.** Clicking on the "Check it!" button in the **Groups** tab allows the inspection of the currently selected vector contaning medication group definitions (here, the pre-defined example `med.groups` from the `AdhereR` package).](shiny-groups-panel-2.jpg)
+
+Pressing the "Use it!" button load the selected medication group definitions; please make sure they are correct and fit the currently loaded dataset!
+If the loading goes well, the plotting is automatically updated to reflect the medication groups:
+
+![**Plotting medication groups.** `CMA1` for patients "1" and "2" in the example dataset `med.events.ATC` using the example medication groups `med.groups` from the `AdhereR` package.](shiny-medgroups-plot.jpg)
+
+The main differences to a plot without medication groups are:
+
+- any given patient may be "split" into several medication groups (here, patient "1" is split into "1 [NoVita]" and "1 [VitaResp]")
+- only those medication groups that have at least one event are shown, and only those patients with at least one medication group with at least one event are shown,
+- the medication groups belonging to a patient may be shown grouped using thick blue lines (but this can be changed at will).
+
+These apply not only to simple CMAs, but also to sliding windows and per episode (not shown).
+
+Various options related to plotting the medication groups can be changed in the using the new "Medication groups" user interface, probably the most important being the medication groups to be included in the plot:
+
+![**Selecting which of the defined medication groups to plot.** We may plot only a subset of all the defined medication groups, including the implicitly defined `__ALL_OTHERS__` (here shown as "* (all others)*) that includes all events not selected by any of the explicitely defined groups. Don't forget to press the "Show them!" button to apply your changes.](shiny-medgroups-select.jpg)
+
+
+
 
 
 ## References

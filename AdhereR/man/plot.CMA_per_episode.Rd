@@ -19,8 +19,6 @@
   legend.bkg.opacity = 0.5,
   legend.cex = 0.75,
   legend.cex.title = 1,
-  legend.medication.truncate = 15,
-  legend.medication.truncate.side = c("left", "center", "right")[2],
   cex = 1,
   cex.axis = 0.75,
   cex.lab = 1,
@@ -31,6 +29,12 @@
     "Event patterns"),
   col.cats = rainbow,
   unspecified.category.label = "drug",
+  medication.groups.to.plot = NULL,
+  medication.groups.separator.show = TRUE,
+  medication.groups.separator.lty = "solid",
+  medication.groups.separator.lwd = 2,
+  medication.groups.separator.color = "blue",
+  medication.groups.allother.label = "*",
   lty.event = "solid",
   lwd.event = 2,
   pch.start.event = 15,
@@ -81,17 +85,23 @@
   observation.window.opacity = 0.3,
   alternating.bands.cols = c("white", "gray95"),
   bw.plot = FALSE,
-  min.plot.size.in.characters.horiz = 10,
-  min.plot.size.in.characters.vert = 0.25,
+  force.draw.text = FALSE,
+  min.plot.size.in.characters.horiz = 0,
+  min.plot.size.in.characters.vert = 0,
   max.patients.to.plot = 100,
-  suppress.warnings = FALSE,
   export.formats = NULL,
   export.formats.fileprefix = "AdhereR-plot",
   export.formats.height = NA,
   export.formats.width = NA,
   export.formats.save.svg.placeholder = TRUE,
+  export.formats.svg.placeholder.type = c("jpg", "png", "webp")[2],
+  export.formats.svg.placeholder.embed = FALSE,
+  export.formats.html.template = NULL,
+  export.formats.html.javascript = NULL,
+  export.formats.html.css = NULL,
   export.formats.directory = NA,
   generate.R.plot = TRUE,
+  suppress.warnings = FALSE,
   ...
 )
 
@@ -109,8 +119,6 @@
   legend.bkg.opacity = 0.5,
   legend.cex = 0.75,
   legend.cex.title = 1,
-  legend.medication.truncate = 15,
-  legend.medication.truncate.side = c("left", "center", "right")[2],
   cex = 1,
   cex.axis = 0.75,
   cex.lab = 1,
@@ -121,6 +129,12 @@
     "Event patterns"),
   col.cats = rainbow,
   unspecified.category.label = "drug",
+  medication.groups.to.plot = NULL,
+  medication.groups.separator.show = TRUE,
+  medication.groups.separator.lty = "solid",
+  medication.groups.separator.lwd = 2,
+  medication.groups.separator.color = "blue",
+  medication.groups.allother.label = "*",
   lty.event = "solid",
   lwd.event = 2,
   pch.start.event = 15,
@@ -171,17 +185,23 @@
   observation.window.opacity = 0.3,
   alternating.bands.cols = c("white", "gray95"),
   bw.plot = FALSE,
-  min.plot.size.in.characters.horiz = 10,
-  min.plot.size.in.characters.vert = 0.25,
+  force.draw.text = FALSE,
+  min.plot.size.in.characters.horiz = 0,
+  min.plot.size.in.characters.vert = 0,
   max.patients.to.plot = 100,
-  suppress.warnings = FALSE,
   export.formats = NULL,
   export.formats.fileprefix = "AdhereR-plot",
   export.formats.height = NA,
   export.formats.width = NA,
   export.formats.save.svg.placeholder = TRUE,
+  export.formats.svg.placeholder.type = c("jpg", "png", "webp")[2],
+  export.formats.svg.placeholder.embed = FALSE,
+  export.formats.html.template = NULL,
+  export.formats.html.javascript = NULL,
+  export.formats.html.css = NULL,
   export.formats.directory = NA,
   generate.R.plot = TRUE,
+  suppress.warnings = FALSE,
   ...
 )
 }
@@ -225,14 +245,6 @@ opacity of the legend background.}
 
 \item{legend.cex, legend.cex.title}{The legend and legend title font sizes.}
 
-\item{legend.medication.truncate}{A \emph{number} specifying the maximum length
-(in character) of the medication class showin in the legend (or \code{NA} for
-no truncation).}
-
-\item{legend.medication.truncate.side}{A \emph{string} specifying how the medication
-truncation is done (if \code{legend.medication.truncate} is not \code{NA}); can
-be "left", "right" or "center".}
-
 \item{cex, cex.axis, cex.lab}{\emph{numeric} values specifying the cex of the
 various types of text.}
 
@@ -255,6 +267,19 @@ colorblind-friendly palette such as \code{viridis} or \code{colorblind_pal}.}
 \item{unspecified.category.label}{A \emph{string} giving the name of the
 unspecified (generic) medication category.}
 
+\item{medication.groups.to.plot}{the names of the medication groups to plot or
+\code{NULL} (the default) for all.}
+
+\item{medication.groups.separator.show}{a \emph{boolean}, if \code{TRUE} (the
+default) visually mark the medication groups the belong to the same patient,
+using horizontal lines and alternating vertical lines.}
+
+\item{medication.groups.separator.lty, medication.groups.separator.lwd, medication.groups.separator.color}{graphical parameters (line type, line width and colour describing the visual
+marking og medication groups as beloning to the same patient.}
+
+\item{medication.groups.allother.label}{a \emph{string} giving the label to
+use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").}
+
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
 
@@ -276,17 +301,20 @@ and width of the contuniation lines connecting consecutive events.}
 
 \item{CMA.cex}{... and, if printed, what cex (\emph{numeric}) to use?}
 
-\item{plot.CMA}{\emph{Logical}, should the CMA values be represented
-graphically?}
+\item{plot.CMA}{\emph{Logical}, should the distribution of the CMA values
+across episodes/sliding windows be plotted? If \code{TRUE} (the default), the
+distribution is shown on the left-hand side of the plot, otherwise it is not.}
 
 \item{plot.CMA.as.histogram}{\emph{Logical}, should the CMA plot be a
 histogram or a (truncated) density plot? Please note that it is TRUE by
 deafult for CMA_per_episode and FALSE for CMA_sliding_window, because
 usually there are more sliding windows than episodes. Also, the density
-estimate canot be estimated for less than three different values.}
+estimate cannot be estimated for less than three different values.}
 
-\item{plot.partial.CMAs.as}{Plot the partial CMAs at all (\code{NULL}), and
-if so, how (can be "stacked", "overlapping" or "timeseries").}
+\item{plot.partial.CMAs.as}{Should the partial CMAs be plotted? Possible values
+are "stacked", "overlapping" or "timeseries", or \code{NULL} for no partial
+CMA plots. Please note that \code{plot.CMA} and \code{plot.partial.CMAs.as}
+are independent of each other.}
 
 \item{plot.partial.CMAs.as.stacked.col.bars, plot.partial.CMAs.as.stacked.col.border, plot.partial.CMAs.as.stacked.col.text}{If plotting the partial CMAs as stacked bars, define their graphical attributes.}
 
@@ -318,38 +346,65 @@ or a vector of colors.}
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
 
+\item{force.draw.text}{\emph{Logical}, if \code{TRUE}, always draw text even
+if too big or too small}
+
 \item{min.plot.size.in.characters.horiz, min.plot.size.in.characters.vert}{\emph{Numeric}, the minimum size of the plotting surface in characters;
-horizontally (min.plot.size.in.characters.horiz) referes to the the whole
+horizontally (min.plot.size.in.characters.horiz) refers to the the whole
 duration of the events to plot; vertically (min.plot.size.in.characters.vert)
-referes to a single event.}
+refers to a single event. If the plotting is too small, possible solutions
+might be: if within \code{RStudio}, try to enlarge the "Plots" panel, or
+(also valid outside \code{RStudio} but not if using \code{RStudio server}
+start a new plotting device (e.g., using \code{X11()}, \code{quartz()}
+or \code{windows()}, depending on OS) or (works always) save to an image
+(e.g., \code{jpeg(...); ...; dev.off()}) and display it in a viewer.}
 
 \item{max.patients.to.plot}{\emph{Numeric}, the maximum patients to attempt
 to plot.}
 
+\item{export.formats}{a \emph{string} giving the formats to export the figure
+to (by default \code{NULL}, meaning no exporting); can be any combination of
+"svg" (just an \code{SVG} file), "html" (\code{SVG} + \code{HTML} + \code{CSS}
++ \code{JavaScript}, all embedded within one \code{HTML} document), "jpg",
+"png", "webp", "ps" or "pdf".}
+
+\item{export.formats.fileprefix}{a \emph{string} giving the file name prefix
+for the exported formats (defaults to "AdhereR-plot").}
+
+\item{export.formats.height, export.formats.width}{\emph{numbers} giving the
+desired dimensions (in pixels) for the exported figure (defaults to sane
+values if \code{NA}).}
+
+\item{export.formats.save.svg.placeholder}{a \emph{logical}, if TRUE, save an
+image placeholder of type given by \code{export.formats.svg.placeholder.type}
+for the \code{SVG} image.}
+
+\item{export.formats.svg.placeholder.type}{a \emph{string}, giving the type of
+placeholder for the \code{SVG} image to save; can be "jpg",
+"png" (the default) or "webp".}
+
+\item{export.formats.svg.placeholder.embed}{a \emph{logical}, if \code{TRUE},
+embed the placeholder image in the HTML document (if any) using \code{base64}
+encoding, otherwise (the default) leave it as an external image file (works
+only when an \code{HTML} document is exported and only for \code{JPEG} or
+\code{PNG} images.}
+
+\item{export.formats.html.template, export.formats.html.javascript, export.formats.html.css}{\emph{character strings} or \code{NULL} (the default) giving the path to the
+\code{HTML}, \code{JavaScript} and \code{CSS} templates, respectively, to be
+used when generating the HTML+CSS semi-interactive plots; when \code{NULL},
+the default ones included with the package will be used. If you decide to define
+new templates please use the default ones for inspiration and note that future
+version are not guaranteed to be backwards compatible!}
+
+\item{export.formats.directory}{a \emph{string}; if exporting, which directory
+to export to; if \code{NA} (the default), creates the files in a temporary
+directory.}
+
+\item{generate.R.plot}{a \emph{logical}, if \code{TRUE} (the default),
+generate the standard (base \code{R}) plot for plotting within \code{R}.}
+
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
-
-\item{export.formats}{What formats should the plot be exported to? It can be
-any subset of "svg" (an SVG file), "html" (a self-contained HTML document
-including an embedded SVG image, CSS and the needed JavaScript for some limited
-user interactions, plus an external placeholder JPEG image for those browsers
-not supporting SVGs), "jpg", "png", "webp", "ps" and "pdf". Default to NULL
-(i.e., no plot is exported).}
-
-\item{export.formats.fileprefix}{The file name prefix for the exported
-formats (defaults to "AdhereR-plot").}
-
-\item{export.formats.height, export.formats.width}{The desired dimensions
-of the exported figure (defaults to sane values).}
-
-\item{export.formats.save.svg.placeholder}{\emph{Logical}: if TRUE (the
-default), save a JPG placeholder for the SVG image.}
-
-\item{export.formats.directory}{If exporting the plot, which directory to
-export to (if not given, uses a temporary directory).}
-
-\item{generate.R.plot}{\emph{Logical}: should it generate a standard
-(base R) plot for plotting within R?}
 
 \item{...}{other parameters (to be passed to the estimation and plotting of
 the simple CMA)}

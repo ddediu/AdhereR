@@ -215,7 +215,7 @@ cma9 <- CMA9(data=ExamplePats, # we're estimating CMA9 now!
              date.format="%m/%d/%Y");
 plot(cma9, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%"----
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%", warning=FALSE----
 cmaE <- CMA_per_episode(CMA="CMA9", # apply the simple CMA9 to each treatment episode
                         data=ExamplePats,
                         ID.colname="PATIENT_ID",
@@ -306,6 +306,127 @@ cmaW1 <- CMA_sliding_window(CMA.to.apply="CMA9",
                            parallel.threads=1);
 # Plot:
 plot(cmaW1, patients.to.plot=c("76"), show.legend=FALSE);
+
+## ---- echo=FALSE--------------------------------------------------------------
+knitr::kable(head(med.events.ATC, n=5), row.names=FALSE,
+             caption="First 5 lines of the `med.events.ATC` dataset.");
+
+## ---- eval=FALSE--------------------------------------------------------------
+#  event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+#                                             presc.data = durcomp.prescribing,
+#                                             special.periods.data = durcomp.hospitalisation,
+#                                             ID.colname = "ID",
+#                                             presc.date.colname = "DATE.PRESC",
+#                                             disp.date.colname = "DATE.DISP",
+#                                             medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+#                                             total.dose.colname = "TOTAL.DOSE",
+#                                             presc.daily.dose.colname = "DAILY.DOSE",
+#                                             presc.duration.colname = "PRESC.DURATION",
+#                                             visit.colname = "VISIT",
+#                                             split.on.dosage.change = TRUE,
+#                                             force.init.presc = TRUE,
+#                                             force.presc.renew = TRUE,
+#                                             trt.interruption = "continue",
+#                                             special.periods.method = "continue",
+#                                             date.format = "%Y-%m-%d",
+#                                             suppress.warnings = FALSE,
+#                                             return.data.table = FALSE);
+#  med.events.ATC <- event_durations$event_durations[ !is.na(event_durations$event_durations$DURATION) &
+#                                                       event_durations$event_durations$DURATION > 0,
+#                                           c("ID", "DISP.START", "DURATION", "DAILY.DOSE", "ATC.CODE")];
+#  names(med.events.ATC) <- c("PATIENT_ID", "DATE", "DURATION", "PERDAY", "CATEGORY");
+#  # Groups from the ATC codes:
+#  sort(unique(med.events.ATC$CATEGORY)); # all the ATC codes in the data
+#  # Level 1:
+#  med.events.ATC$CATEGORY_L1 <- vapply(substr(med.events.ATC$CATEGORY,1,1), switch, character(1),
+#                                       "A"="ALIMENTARY TRACT AND METABOLISM",
+#                                       "B"="BLOOD AND BLOOD FORMING ORGANS",
+#                                       "J"="ANTIINFECTIVES FOR SYSTEMIC USE",
+#                                       "R"="RESPIRATORY SYSTEM",
+#                                       "OTHER");
+#  # Level 2:
+#  med.events.ATC$CATEGORY_L2 <- vapply(substr(med.events.ATC$CATEGORY,1,3), switch, character(1),
+#                                       "A02"="DRUGS FOR ACID RELATED DISORDERS",
+#                                       "A05"="BILE AND LIVER THERAPY",
+#                                       "A09"="DIGESTIVES, INCL. ENZYMES",
+#                                       "A10"="DRUGS USED IN DIABETES",
+#                                       "A11"="VITAMINS",
+#                                       "A12"="MINERAL SUPPLEMENTS",
+#                                       "B02"="ANTIHEMORRHAGICS",
+#                                       "J01"="ANTIBACTERIALS FOR SYSTEMIC USE",
+#                                       "J02"="ANTIMYCOTICS FOR SYSTEMIC USE",
+#                                       "R03"="DRUGS FOR OBSTRUCTIVE AIRWAY DISEASES",
+#                                       "R05"="COUGH AND COLD PREPARATIONS",
+#                                       "OTHER");
+
+## ----eval=FALSE---------------------------------------------------------------
+#  med.groups <- c("Vitamins"  = "(CATEGORY_L2 == 'VITAMINS')",
+#                  "VitaResp"  = "({Vitamins} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')",
+#                  "VitaShort" = "({Vitamins} & DURATION <= 30)",
+#                  "VitELow"   = "(CATEGORY == 'A11HA03' & PERDAY <= 500)",
+#                  "VitaComb"  = "({VitaShort} | {VitELow})",
+#                  "NotVita"   = "(!{Vitamins})");
+
+## ---- echo=FALSE--------------------------------------------------------------
+knitr::kable(head(med.events.ATC[med.events.ATC$CATEGORY_L2 == 'VITAMINS',], n=5), row.names=FALSE,
+             caption="First 5 events in `med.events.ATC` corresponding to the *Vitamins* medication group.");
+
+## ---- echo=FALSE--------------------------------------------------------------
+knitr::kable(head(med.events.ATC[med.events.ATC$CATEGORY_L2 == 'VITAMINS' | med.events.ATC$CATEGORY_L1 == 'RESPIRATORY SYSTEM',], n=5), row.names=FALSE,
+             caption="First 5 events in `med.events.ATC` corresponding to the *VitaResp* medication group.");
+
+## -----------------------------------------------------------------------------
+cma1_mg <- CMA1(data=med.events.ATC,
+                ID.colname="PATIENT_ID",
+                event.date.colname="DATE",
+                event.duration.colname="DURATION",
+                event.daily.dose.colname="PERDAY",
+                medication.class.colname="CATEGORY",
+                medication.groups=med.groups,
+                followup.window.start=0,
+                observation.window.start=0,
+                observation.window.duration=365,
+                date.format="%m/%d/%Y");
+cma1_mg; # print it
+
+## ----echo=FALSE---------------------------------------------------------------
+getMGs(cma1_mg)$def;
+
+## ----echo=FALSE---------------------------------------------------------------
+head(getMGs(cma1_mg)$obs, n=10);
+
+## -----------------------------------------------------------------------------
+getCMA(cma1_mg);
+
+## -----------------------------------------------------------------------------
+getCMA(cma1_mg, flatten.medication.groups=TRUE);
+
+## ----echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** CMA 1 with medication groups.", fig.height=9, fig.width=9, out.width="100%"----
+plot(cma1_mg,
+     #medication.groups.to.plot=c("VitaResp", "VitaShort", "VitaComb"),
+     patients.to.plot=1:3,
+     show.legend=FALSE);
+
+## ----eval=FALSE---------------------------------------------------------------
+#  cma0_types <- CMA0(data=med.events.ATC,
+#                     ID.colname="PATIENT_ID",
+#                     event.date.colname="DATE",
+#                     event.duration.colname="DURATION",
+#                     event.daily.dose.colname="PERDAY",
+#                     medication.class.colname="CATEGORY",
+#                     medication.groups="CATEGORY_L1",
+#                     #flatten.medication.groups=TRUE,
+#                     #followup.window.start.per.medication.group=TRUE,
+#                     followup.window.start=0,
+#                     observation.window.start=0,
+#                     observation.window.duration=365,
+#                     date.format="%m/%d/%Y");
+
+## ----echo=FALSE---------------------------------------------------------------
+tmp <- sort(unique(med.events.ATC$CATEGORY_L1));
+cat(paste0("c(",
+           paste0('"',tmp,'"',' = "(CATEGORY_L1 == \'',tmp,'\')"',collapse=",\n  "),
+           ");"));
 
 ## ----eval=FALSE---------------------------------------------------------------
 #  cmaW3 <- CMA_sliding_window(CMA="CMA1",

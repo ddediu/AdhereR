@@ -731,123 +731,123 @@ test_results <- prune_event_durations(test_results_list,
 expect_equal(round(sum(test_results$.prune.event, na.rm=TRUE),0), 4) #correct sum of pruned events
 })
 
-#########################################################################################
+# #########################################################################################
+# #
+# #  Test function cover_special_periods
+# #
+# #########################################################################################
 #
-#  Test function cover_special_periods
+# # Test output format
+# test_that("output format for cover_special_periods is correct", {
+#   test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
+#                                                presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
+#                                                special.periods.data = durcomp.hospitalisation[ID == 3],
+#                                                special.periods.method = "carryover",
+#                                                ID.colname = "ID",
+#                                                presc.date.colname = "DATE.PRESC",
+#                                                disp.date.colname = "DATE.DISP",
+#                                                date.format = "%Y-%m-%d",
+#                                                medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
+#                                                total.dose.colname = "TOTAL.DOSE",
+#                                                presc.daily.dose.colname = "DAILY.DOSE",
+#                                                presc.duration.colname = "PRESC.DURATION",
+#                                                visit.colname = "VISIT",
+#                                                force.init.presc = TRUE,
+#                                                force.presc.renew = TRUE,
+#                                                split.on.dosage.change = TRUE,
+#                                                trt.interruption = "carryover",
+#                                                suppress.warnings = FALSE,
+#                                                return.data.table = TRUE,
+#                                                progress.bar = FALSE)
 #
-#########################################################################################
-
-# Test output format
-test_that("output format for cover_special_periods is correct", {
-  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
-                                               presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
-                                               special.periods.data = durcomp.hospitalisation[ID == 3],
-                                               special.periods.method = "carryover",
-                                               ID.colname = "ID",
-                                               presc.date.colname = "DATE.PRESC",
-                                               disp.date.colname = "DATE.DISP",
-                                               date.format = "%Y-%m-%d",
-                                               medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
-                                               total.dose.colname = "TOTAL.DOSE",
-                                               presc.daily.dose.colname = "DAILY.DOSE",
-                                               presc.duration.colname = "PRESC.DURATION",
-                                               visit.colname = "VISIT",
-                                               force.init.presc = TRUE,
-                                               force.presc.renew = TRUE,
-                                               split.on.dosage.change = TRUE,
-                                               trt.interruption = "carryover",
-                                               suppress.warnings = FALSE,
-                                               return.data.table = TRUE,
-                                               progress.bar = FALSE)
-
-  # cover special periods
-  test_results <- cover_special_periods(events.data = test_results_list$event_durations,
-                                        special.periods.data = test_results_list$special_periods,
-                                        ID.colname = "ID",
-                                        disp.start.colname = "DISP.START",
-                                        duration.colname = "DURATION",
-                                        medication.class.colnames = "ATC.CODE",
-                                        days.before = 7,
-                                        days.after = 7,
-                                        date.format = "%Y-%m-%d",
-                                        return.data.table = FALSE)
-
-  expect_is(test_results, "data.frame") # is a data.table
-  expect_equal(names(test_results), c("ID",
-                                      "ATC.CODE",
-                                      "UNIT",
-                                      "FORM",
-                                      "DATE.DISP",
-                                      "TOTAL.DOSE",
-                                      "DAILY.DOSE",
-                                      "EVENT.ID",
-                                      "DISP.START",
-                                      "DURATION",
-                                      "episode.start",
-                                      "episode.end",
-                                      "SPECIAL.DURATION",
-                                      "tot.presc.interruptions",
-                                      "tot.dosage.changes",
-                                      "CARRYOVER.DURATION") )
-  expect_is(test_results$ID, "numeric") # ID's are integers
-  expect_is(test_results$ATC.CODE, "character") # DCIs are characters
-  expect_is(test_results$UNIT, "character") # Units are characters
-  expect_is(test_results$FORM, "character") # Forms are character
-  expect_is(test_results$TOTAL.DOSE, "numeric") # TOTAL.DOSE is numeric
-  expect_is(test_results$DATE.DISP, "Date") # DATE.DISP is a date
-  expect_is(test_results$DISP.START, "Date") # DATE.DISP is a date
-  expect_is(test_results$DURATION, "numeric") # DURATION is numeric
-  expect_is(test_results$DAILY.DOSE, "numeric") # DAILY.DOSE is numeric
-  expect_is(test_results$episode.start, "Date") # PRESC.START is a date
-  expect_is(test_results$episode.end, "Date") # PRESC.END is a date
-  expect_is(test_results$SPECIAL.DURATION, "numeric") # HOSP.DURATIONS are numeric
-  expect_is(test_results$tot.presc.interruptions, "integer") # number of treatment interruptions are numeric
-  expect_is(test_results$tot.dosage.changes, "numeric") # number of dosage changes are numeric
-  expect_is(test_results$CARRYOVER.DURATION, "numeric") # carryover duration numeric
-  expect_is(test_results$EVENT.ID, "numeric") # EVENT.ID is numeric
-})
-
-test_that("dimensions for cover_special_periods is correct", {
-  test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
-                                               presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
-                                               special.periods.data = durcomp.hospitalisation[ID == 3],
-                                               special.periods.method = "carryover",
-                                               ID.colname = "ID",
-                                               presc.date.colname = "DATE.PRESC",
-                                               disp.date.colname = "DATE.DISP",
-                                               date.format = "%Y-%m-%d",
-                                               medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
-                                               total.dose.colname = "TOTAL.DOSE",
-                                               presc.daily.dose.colname = "DAILY.DOSE",
-                                               presc.duration.colname = "PRESC.DURATION",
-                                               visit.colname = "VISIT",
-                                               force.init.presc = TRUE,
-                                               force.presc.renew = TRUE,
-                                               split.on.dosage.change = TRUE,
-                                               trt.interruption = "carryover",
-                                               suppress.warnings = FALSE,
-                                               return.data.table = TRUE,
-                                               progress.bar = FALSE)
-
-  # cover special periods
-  test_results <- cover_special_periods(events.data = test_results_list$event_durations,
-                                        special.periods.data = test_results_list$special_periods,
-                                        ID.colname = "ID",
-                                        disp.start.colname = "DISP.START",
-                                        duration.colname = "DURATION",
-                                        medication.class.colnames = "ATC.CODE",
-                                        days.before = 7,
-                                        days.after = 7,
-                                        date.format = "%Y-%m-%d",
-                                        return.data.table = TRUE)
-
-  expect_equal(dim(test_results), c(23,16))
-  expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 0), 439) #correct sum of durations
-  expect_equal(round(min(test_results$DURATION, na.rm=TRUE), 0), 1) #correct minimum of durations
-  expect_equal(round(mean(test_results$DURATION, na.rm=TRUE), 3), 19.087) #correct mean of durations
-  expect_equal(round(max(test_results$DURATION, na.rm=TRUE), 0), 52) #correct maximum of durations
-
-})
+#   # cover special periods
+#   test_results <- cover_special_periods(events.data = test_results_list$event_durations,
+#                                         special.periods.data = test_results_list$special_periods,
+#                                         ID.colname = "ID",
+#                                         disp.start.colname = "DISP.START",
+#                                         duration.colname = "DURATION",
+#                                         medication.class.colnames = "ATC.CODE",
+#                                         days.before = 7,
+#                                         days.after = 7,
+#                                         date.format = "%Y-%m-%d",
+#                                         return.data.table = FALSE)
+#
+#   expect_is(test_results, "data.frame") # is a data.table
+#   expect_equal(names(test_results), c("ID",
+#                                       "ATC.CODE",
+#                                       "UNIT",
+#                                       "FORM",
+#                                       "DATE.DISP",
+#                                       "TOTAL.DOSE",
+#                                       "DAILY.DOSE",
+#                                       "EVENT.ID",
+#                                       "DISP.START",
+#                                       "DURATION",
+#                                       "episode.start",
+#                                       "episode.end",
+#                                       "SPECIAL.DURATION",
+#                                       "tot.presc.interruptions",
+#                                       "tot.dosage.changes",
+#                                       "CARRYOVER.DURATION") )
+#   expect_is(test_results$ID, "numeric") # ID's are integers
+#   expect_is(test_results$ATC.CODE, "character") # DCIs are characters
+#   expect_is(test_results$UNIT, "character") # Units are characters
+#   expect_is(test_results$FORM, "character") # Forms are character
+#   expect_is(test_results$TOTAL.DOSE, "numeric") # TOTAL.DOSE is numeric
+#   expect_is(test_results$DATE.DISP, "Date") # DATE.DISP is a date
+#   expect_is(test_results$DISP.START, "Date") # DATE.DISP is a date
+#   expect_is(test_results$DURATION, "numeric") # DURATION is numeric
+#   expect_is(test_results$DAILY.DOSE, "numeric") # DAILY.DOSE is numeric
+#   expect_is(test_results$episode.start, "Date") # PRESC.START is a date
+#   expect_is(test_results$episode.end, "Date") # PRESC.END is a date
+#   expect_is(test_results$SPECIAL.DURATION, "numeric") # HOSP.DURATIONS are numeric
+#   expect_is(test_results$tot.presc.interruptions, "integer") # number of treatment interruptions are numeric
+#   expect_is(test_results$tot.dosage.changes, "numeric") # number of dosage changes are numeric
+#   expect_is(test_results$CARRYOVER.DURATION, "numeric") # carryover duration numeric
+#   expect_is(test_results$EVENT.ID, "numeric") # EVENT.ID is numeric
+# })
+#
+# test_that("dimensions for cover_special_periods is correct", {
+#   test_results_list <- compute_event_durations(disp.data = durcomp.dispensing[ID == 3 & grepl("J01EE01", ATC.CODE)],
+#                                                presc.data = durcomp.prescribing[ID == 3 & grepl("J01EE01", ATC.CODE)],
+#                                                special.periods.data = durcomp.hospitalisation[ID == 3],
+#                                                special.periods.method = "carryover",
+#                                                ID.colname = "ID",
+#                                                presc.date.colname = "DATE.PRESC",
+#                                                disp.date.colname = "DATE.DISP",
+#                                                date.format = "%Y-%m-%d",
+#                                                medication.class.colnames = c("ATC.CODE","UNIT", "FORM"),
+#                                                total.dose.colname = "TOTAL.DOSE",
+#                                                presc.daily.dose.colname = "DAILY.DOSE",
+#                                                presc.duration.colname = "PRESC.DURATION",
+#                                                visit.colname = "VISIT",
+#                                                force.init.presc = TRUE,
+#                                                force.presc.renew = TRUE,
+#                                                split.on.dosage.change = TRUE,
+#                                                trt.interruption = "carryover",
+#                                                suppress.warnings = FALSE,
+#                                                return.data.table = TRUE,
+#                                                progress.bar = FALSE)
+#
+#   # cover special periods
+#   test_results <- cover_special_periods(events.data = test_results_list$event_durations,
+#                                         special.periods.data = test_results_list$special_periods,
+#                                         ID.colname = "ID",
+#                                         disp.start.colname = "DISP.START",
+#                                         duration.colname = "DURATION",
+#                                         medication.class.colnames = "ATC.CODE",
+#                                         days.before = 7,
+#                                         days.after = 7,
+#                                         date.format = "%Y-%m-%d",
+#                                         return.data.table = TRUE)
+#
+#   expect_equal(dim(test_results), c(23,16))
+#   expect_equal(round(sum(test_results$DURATION, na.rm=TRUE), 0), 439) #correct sum of durations
+#   expect_equal(round(min(test_results$DURATION, na.rm=TRUE), 0), 1) #correct minimum of durations
+#   expect_equal(round(mean(test_results$DURATION, na.rm=TRUE), 3), 19.087) #correct mean of durations
+#   expect_equal(round(max(test_results$DURATION, na.rm=TRUE), 0), 52) #correct maximum of durations
+#
+# })
 
 #########################################################################################
 #

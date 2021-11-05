@@ -1,19 +1,29 @@
-# AdhereR 0.6.1
-
-Moves the dependency on the `rsvg` package from being required to suggested, as apparently it is not available on all platforms; now, if `rsvg` is not available, exporting the plot falls back on the base R plotting system.
+# AdhereR 0.7
   
+## New features
+
+  - this introduces the concept of "medication groups" which represent subsets of observations for which CMAs can be computed and which are grouped together in the plots; this prompted massive changes in the output of the various `CMA` functions and in the plotting when medication groups are defined, but is full backward-compatible when no medication groups are defined (the default).
+  
+  - `compute.treatment.episodes()` and, in consequence, `CMA_per_episode()`, have a new argument, `maximum.permissible.gap.append.to.episode`, which specifies if the maximum permissible gap is to be appended to the episodes (FALSE by default).
+  
+  - the Shiny (>= 0.2) interactive interface is aware of medication groups and `maximum.permissible.gap.append.to.episode`.
+  
+  - better and faster `SVG` plotting, better semi-interactive `HTML`+`SVG`+`JavaScript`+`CSS` output, which can be used for display in any standard modern web browser without online R processing (i.e., overnight batch-mode generation of the plots and CMA estimates for later display and further processing).
+  
+  - various enhancements and bugfixes.
+
 
 # AdhereR 0.6
   
 ## New features
 
-  - this release splits the old `AdhereR` package into two packages: `AdhereR`, which continues to implement all the computations and plotting, and `AdhereRViz`, which implements all the interactive plotting and GUI (using either RStudio's manipulate and Shiny); while `AdhereRViz` requires `AdhereR`, `AdhereR` can very well function without `AdhereRViz`.
+  - this release splits the old `AdhereR` package into two packages: `AdhereR`, which continues to implement all the computations and plotting, and `AdhereRViz`, which implements all the interactive plotting and GUI (using either RStudio's manipulate and Shiny); while `AdhereRViz` requires `AdhereR`, `AdhereR` only suggests `AdhereRViz`.
   
-  - the plotting can be done either using R plotting and/or by generating SVG images (which can be further exported to different formats, such as JPG and PNG and can be embedded in HTML/CSS/JavaScript pages with limited interactivity); the plotting code was completely re-written and optimised.
+  - the plotting can be done either using R plotting and/or by generating SVG images (which can be further exported to different formats, such as JPG and PNG and can be embedded in HTML/CSS/JavaScript pages with limited interactivity).
   
   - new subtype of plot where the events are shown on the same row (i.e., without vertical separation): useful for cases where not many events overlap in time and vertical space is at a premium.
   
-  - many other enhancements and bugfixes.
+  - other enhancements and bugfixes.
 
 
 # AdhereR 0.5

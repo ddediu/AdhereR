@@ -22,7 +22,7 @@
   format = c("text", "latex", "markdown"),
   print.params = TRUE,
   print.data = TRUE,
-  exclude.params = c("event.info"),
+  exclude.params = c("event.info", "real.obs.windows"),
   skip.header = FALSE,
   cma.type = class(cma)[1]
 )
@@ -54,7 +54,7 @@
   print.data = TRUE,
   exclude.params = c("event.info"),
   skip.header = FALSE,
-  cma.type = class(cma)[1]
+  cma.type = class(x)[1]
 )
 
 \method{print}{CMA_sliding_window}(...)

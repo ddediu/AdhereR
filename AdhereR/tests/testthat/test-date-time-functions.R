@@ -14,7 +14,7 @@ test_that("wrong start.date", {
 
 test_that("wrong time.interval", {
   expect_warning(as.character(.add.time.interval.to.date(as.Date("2001/01/01",format="%Y/%m/%d"),"1","days"), format="%Y/%m/%d"))
-  expect_warning(as.character(.add.time.interval.to.date(as.Date("2001/01/01",format="%Y/%m/%d"),-1,"days"), format="%Y/%m/%d"))
+  expect_equal(as.character(.add.time.interval.to.date(as.Date("2001/01/01",format="%Y/%m/%d"),-1,"days"), format="%Y/%m/%d"), "2000/12/31")
   expect_warning(as.character(.add.time.interval.to.date(as.Date("2001/01/01",format="%Y/%m/%d"),NA,"days"), format="%Y/%m/%d"))
 })
 
@@ -40,7 +40,7 @@ test_that("add one day to date", {
 })
 
 test_that("try to add a negative day", {
-  expect_warning(is.na(.add.time.interval.to.date(as.Date("2001/01/01",format="%Y/%m/%d"),-1,"days")))
+  expect_equal(as.character(.add.time.interval.to.date(as.Date("2001/01/01",format="%Y/%m/%d"),-1,"days")), "2000-12-31")
 })
 
 test_that("add a day at the end of the year", {

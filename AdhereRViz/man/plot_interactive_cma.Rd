@@ -14,6 +14,7 @@ plot_interactive_cma(
   event.duration.colname = NA,
   event.daily.dose.colname = NA,
   medication.class.colname = NA,
+  medication.groups = NULL,
   date.format = "\%m/\%d/\%Y",
   followup.window.start.max = 5 * 365,
   followup.window.duration.max = 5 * 365,
@@ -74,6 +75,10 @@ defined.}
 \item{medication.class.colname}{A \emph{string}, the name of the column in
 \code{data} containing the classes/types/groups of medication, or \code{NA}
 if not defined.}
+
+\item{medication.groups}{A \emph{named character vector} defining the
+medication classes, the name of a column in the data the defines the groups,
+or \code{NULL} if none (the default).}
 
 \item{date.format}{A \emph{string} giving the format of the dates used in the
 \code{data} and the other parameters; see the \code{format} parameters of the
@@ -153,15 +158,14 @@ patient information.
 For more info please see the vignette.
 }
 \examples{
-if(interactive()) {
-  library(AdhereR);
-  plot_interactive_cma(med.events,
-                       ID.colname="PATIENT_ID",
-                       event.date.colname="DATE",
-                       event.duration.colname="DURATION",
-                       event.daily.dose.colname="PERDAY",
-                       medication.class.colname="CATEGORY");
-}
+\dontrun{
+library(AdhereR);
+plot_interactive_cma(med.events,
+                     ID.colname="PATIENT_ID",
+                     event.date.colname="DATE",
+                     event.duration.colname="DURATION",
+                     event.daily.dose.colname="PERDAY",
+                     medication.class.colname="CATEGORY");}
 }
 \seealso{
 The vignette *AdhereR: Interactive plotting (and more) with Shiny*.

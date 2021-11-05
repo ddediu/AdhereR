@@ -89,11 +89,11 @@ test_that("wrong consider.dosage.change", {
 })
 
 test_that("follow-up window start", {
-  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=NULL), "The follow-up window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!")
-  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=NA), "The follow-up window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!")
-  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=factor(c("a"))), "The follow-up window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!")
-  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=data.frame("a"=1)), "The follow-up window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!")
-  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start="2001-01-01"), "The follow-up window start must be a single value, either a positive number, a Date object, or a string giving a column name in the data!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=NULL), "The follow-up window start must be a single value, either a number, a Date object, or a string giving a column name in the data!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=NA), "The follow-up window start must be a single value, either a number, a Date object, or a string giving a column name in the data!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=factor(c("a"))), "The follow-up window start must be a single value, either a number, a Date object, or a string giving a column name in the data!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start=data.frame("a"=1)), "The follow-up window start must be a single value, either a number, a Date object, or a string giving a column name in the data!")
+  expect_warning(compute.event.int.gaps(data=med.events, ID.colname="PATIENT_ID", event.date.colname="DATE", event.duration.colname="DURATION", event.daily.dose.colname="PERDAY", medication.class.colname="CATEGORY", followup.window.start="2001-01-01"), "The follow-up window start must be a single value, either a number, a Date object, or a string giving a column name in the data!")
 })
 
 test_that("follow-up window start unit", {
@@ -170,7 +170,7 @@ test_that("internally created columns for storing the event intervals and the ga
 })
 
 
-# Test exected results for various parameter combinations using the included med.events data:
+# Test expected results for various parameter combinations using the included med.events data:
 # Given that we expect to obtain large data.frames, we will test the major properties of the result (class, nrow, ncols, column names),
 # the number/distribution of values per columns, and some rows chosen either at random or due to some interesting properties.
 # General rules:

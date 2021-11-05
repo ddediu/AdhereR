@@ -71,223 +71,280 @@ point.types <- c("plus"=3,
 
 
 # Define UI for app that draws a histogram ----
-ui <- shiny::fluidPage(
+ui <- fluidPage(
 
   # JavaScript ----
   shinyjs::useShinyjs(),
-  shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}"),
+  shinyjs::extendShinyjs(text="shinyjs.scroll_cma_compute_log = function() {var x = document.getElementById('cma_computation_progress_log_container'); x.scrollTop = x.scrollHeight;}",
+                         #functions=c("shinyjs.scroll_cma_compute_log")),
+                         functions=c("scroll_cma_compute_log")),
   #shinyjs::extendShinyjs(text="shinyjs.show_hide_sections = function() {$('#follow_up_folding_bits').toggle();"),
 
   # APP TITLE ----
-  #shiny::titlePanel(windowTitle="AdhereR: Interactive plotting using Shiny..."),
-  list(shiny::tags$head(shiny::HTML('<link rel="icon", href="adherer-logo.png", type="image/png" />'))),
-  shiny::div(style="padding: 1px 0px; width: '100%'", shiny::titlePanel(title="", windowTitle="AdhereR: Shiny plot...")),
+  #titlePanel(windowTitle="AdhereR: Interactive plotting using Shiny..."),
+  list(tags$head(HTML('<link rel="icon", href="adherer-logo.png", type="image/png" />'))),
+  div(style="padding: 1px 0px; width: '100%'", titlePanel(title="", windowTitle="AdhereR: Shiny plot...")),
 
-  shiny::fluidRow(
+  fluidRow(
 
     # LOGO & ABOUT ----
-    shiny::column(12,
-           shiny::div(
-             shiny::img(src='adherer-logo.png', align = "left", style="font-size: x-large; font-weight: bold; height: 2em; vertical-align: baseline;"),
-             shiny::div(style="width: 3em; display: inline-block; "),
+    column(12,
+           div(
+             img(src='adherer-logo.png', align = "left", style="font-size: x-large; font-weight: bold; height: 2em; vertical-align: baseline;"),
+             div(style="width: 3em; display: inline-block; "),
              #h1("interactive plots with Shiny...", style="color:DarkBlue; font-size: x-large; font-weight: bold; margin: 0; display: inline-block;"),
-             shiny::div(title="About AdhereR and AdhereRViz, and links to more info online and offline...",
-                 shiny::actionButton(inputId="about_button", label=shiny::strong("About"), icon=shiny::icon("question-sign", lib="glyphicon"), style="color: #3498db; border: none; background: none;"),
+             div(title="About AdhereR and AdhereRViz, and links to more info online and offline...",
+                 actionButton(inputId="about_button", label=strong("About"), icon=icon("question-sign", lib="glyphicon"), style="color: #3498db; border: none; background: none;"),
                  style="float: right;")
            ),
-           shiny::hr()
+           hr()
     ),
 
     #shinythemes::themeSelector(),
 
     # SIDEBAR PANEL ----
-    shiny::column(3,
+    column(3,
 
            # PARAMS TAB ----
-           shinyjs::hidden(shiny::div(id="sidebar_tabpanel_container", # start with these hidden...
-             shiny::tabsetPanel(id="sidebar-tabpanel",
-                       shiny::tabPanel("Params", value="sidebar-params-tab", icon=shiny::icon("wrench", lib="glyphicon"), fluid=TRUE,
-                                shiny::conditionalPanel(
+           shinyjs::hidden(div(id="sidebar_tabpanel_container", # start with these hidden...
+             tabsetPanel(id="sidebar-tabpanel",
+                         selected=ifelse(!is.null(.GlobalEnv$.plotting.params$data), "sidebar-params-tab", "sidebar-params-data"),
+
+                       tabPanel(span("Params", title="See the plot and adjust various parameters (type of CMA, patients, etc.)"),
+                                value="sidebar-params-tab", icon=icon("wrench", lib="glyphicon"), fluid=TRUE,
+                                conditionalPanel(
                                   condition="!(output.is_dataset_defined)",
 
-                                  shiny::wellPanel(id = "tPanelnodataset", style = "overflow:scroll; max-height: 90vh;",
-                                            shiny::div(shiny::h4("No datasource!"), style="color:DarkRed"),
-                                            shiny::br(),
-                                            shiny::div(shiny::span(shiny::span("There is no valid source of data defined (probably because the interactive Shiny plotting was invoked without passing a dataset).")), style="color: red;"),
-                                            shiny::hr(),
-                                            shiny::div(shiny::span("Please use the "),
-                                                shiny::span(shiny::icon("hdd",lib="glyphicon"),shiny::strong("Data"), style="color: darkblue"),
-                                                shiny::span(" tab to select a valid datesource!"))
+                                  wellPanel(id = "tPanelnodataset", style = "overflow:scroll; max-height: 90vh;",
+                                            div(h4("No datasource!"), style="color:DarkRed"),
+                                            br(),
+                                            div(span(span("There is no valid source of data defined (probably because the interactive Shiny plotting was invoked without passing a dataset).")), style="color: red;"),
+                                            hr(),
+                                            div(span("Please use the "),
+                                                span(icon("hdd",lib="glyphicon"),strong("Data"), style="color: darkblue"),
+                                                span(" tab to select a valid datesource!"))
                                   )
                                 ),
 
-                                shiny::conditionalPanel(
+                                conditionalPanel(
                                   condition="(output.is_dataset_defined)",
 
-                                  shiny::wellPanel(id = "tPanel", style = "overflow:scroll; max-height: 90vh;",
+                                  wellPanel(id = "tPanel", style = "overflow:scroll; max-height: 90vh;",
 
                                             # Dataset info ----
-                                            shiny::div(title="Info about the currently used dataset...",
-                                                shiny::actionButton(inputId="about_dataset_button",
-                                                                    label=shiny::strong("Dataset info..."),
-                                                                    icon=shiny::icon("hdd", lib="glyphicon"),
-                                                                    style="color: #3498db; border: none; background: none;")),
+                                            div(title="Info about the currently used dataset...",
+                                                actionButton(inputId="about_dataset_button",
+                                                             label=strong("Dataset info..."),
+                                                             icon=icon("hdd", lib="glyphicon"),
+                                                             style="color: #3498db; border: none; background: none;")),
 
                                             # General settings ----
-                                            shiny::div(id='general_settings_section', style="cursor: pointer;",
-                                                shiny::span(title='General setting that apply to all kinds of plots', # trick for adding tooltips: create a container div with the title the desired tootltip text...
-                                                     id = "general_settings", shiny::h4("General settings"), style="color:DarkBlue"),
-                                                shinyjs::hidden(shiny::div(title='Click to unfold...', id="general_settings_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon")))),
+                                            div(id='general_settings_section', style="cursor: pointer;",
+                                                span(title='General setting that apply to all kinds of plots', # trick for adding tooltips: create a container div with the title the desired tootltip text...
+                                                     id = "general_settings", h4("General settings"), style="color:DarkBlue"),
+                                                shinyjs::hidden(div(title='Click to unfold...', id="general_settings_unfold_icon", icon("option-horizontal", lib="glyphicon")))),
 
-                                            shiny::div(id="general_settings_contents",
+                                            div(id="general_settings_contents",
                                                 # Select the CMA class ----
-                                                shiny::div(title='Select the type of CMA to plot: "simple", "per eipsode" or "sliding window"',
-                                                    shiny::selectInput(inputId="cma_class",
+                                                div(title='Select the type of CMA to plot: "simple", "per eipsode" or "sliding window"',
+                                                    selectInput(inputId="cma_class",
                                                                 label="CMA type",
                                                                 choices=c("simple", "per episode", "sliding window"),
                                                                 selected=.GlobalEnv$.plotting.params$cma.class)),
 
                                                 # Select the simple CMA to compute
-                                                shiny::conditionalPanel(
+                                                conditionalPanel(
                                                   condition = "(input.cma_class == 'simple')",
-                                                  shiny::div(title='The "simple" CMA to compute by itself',
-                                                      shiny::selectInput(inputId="cma_to_compute",
+                                                  div(title='The "simple" CMA to compute by itself',
+                                                      selectInput(inputId="cma_to_compute",
                                                                   label="CMA to compute",
                                                                   choices=paste0("CMA",0:9),
                                                                   selected="CMA0"))
                                                 ),
-                                                shiny::conditionalPanel(
+                                                conditionalPanel(
                                                   condition = "(input.cma_class != 'simple')",
-                                                  shiny::div(title='The "simple" CMA to compute for each episode/sliding window',
-                                                      shiny::selectInput(inputId="cma_to_compute_within_complex",
+                                                  div(title='The "simple" CMA to compute for each episode/sliding window',
+                                                      selectInput(inputId="cma_to_compute_within_complex",
                                                                   label="CMA to compute",
                                                                   choices=paste0("CMA",1:9),
                                                                   selected="CMA1"))
                                                 ),
 
                                                 # Select the patients to plot ----
-                                                shiny::div(title='Select one (or more, by repeatedly selecting) patient(s) to plot',
-                                                    shiny::selectInput(inputId="patient",
+                                                div(title='Select one (or more, by repeatedly selecting) patient(s) to plot',
+                                                    selectInput(inputId="patient",
                                                                 label="Patient(s) to plot",
                                                                 choices=.GlobalEnv$.plotting.params$all.IDs,
                                                                 selected=.GlobalEnv$.plotting.params$ID,
                                                                 multiple=TRUE)),
 
-                                                shiny::hr()
+                                                hr()
+                                            ),
+
+                                            # Medication groups to plot ----
+                                            conditionalPanel(
+                                              condition="(output.is_mg_defined && input.mg_use_medication_groups)",
+
+                                              div(id='mg_section', style="cursor: pointer;",
+                                                  div(title='Chose which medication groups to plot', h4(id="medication_groups", "Medication groups"), style="color:DarkBlue;"),
+                                                  div(title='Click to unfold...', id="mg_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
+
+                                              shinyjs::hidden(div(id="mg_contents",
+                                                                  # View the current medication groups definitions:
+                                                                  conditionalPanel(
+                                                                    condition="(input.mg_definitions_source == 'named vector')",
+                                                                    div(title="Click here to view the medication groups...",
+                                                                        actionButton("mg_view_button", label="View definitions!", icon=icon("eye-open", lib="glyphicon")))
+                                                                  ),
+
+                                                                  # List the medication groups to show:
+                                                                  div(title='Please select all the medication groups that should be plotted!',
+                                                                      shinyWidgets::pickerInput(inputId="mg_to_plot_list",
+                                                                                                label="Groups to plot:",
+                                                                                                choices=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"),
+                                                                                                #choices="<none>",
+                                                                                                options=list(`actions-box`=TRUE,
+                                                                                                             `select-all-text`  ="<b>ALL</b>",
+                                                                                                             `deselect-all-text`="<b>NONE</b>"),
+                                                                                                multiple = TRUE,
+                                                                                                selected=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"))),
+                                                                                                #selected="<none>")),
+
+                                                                  conditionalPanel(
+                                                                    condition="(input.mg_to_plot_list.length > 0)",
+
+                                                                    div(title='Apply the selected medication groups!',
+                                                                      actionButton(inputId="mg_plot_apply_button",
+                                                                                   label=strong("Show them!"),
+                                                                                   icon=icon("sunglasses", lib="glyphicon"),
+                                                                                   style="color:DarkBlue; border-color:DarkBlue;"),
+                                                                      style="float: center;")
+                                                                    ),
+
+                                                                  hr(),
+
+                                                                  div(title='Visually group the medication groups by patient?',
+                                                                      shinyWidgets::materialSwitch(inputId="mg_plot_by_patient",
+                                                                                                   label="Visually group by patient?",
+                                                                                                   value=TRUE, status="primary", right=TRUE)),
+
+                                                                  hr()
+
+                                              ))
                                             ),
 
                                             # Follow-up window ----
-                                            shiny::div(id='follow_up_section', style="cursor: pointer;",
-                                                shiny::div(title='Define the follow-up window (shortened to FUW)', shiny::h4(id="followup_window", "Follow-up window (FUW)"), style="color:DarkBlue;"),
-                                                shiny::div(title='Click to unfold...', id="follow_up_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                            div(id='follow_up_section', style="cursor: pointer;",
+                                                div(title='Define the follow-up window (shortened to FUW)', h4(id="followup_window", "Follow-up window (FUW)"), style="color:DarkBlue;"),
+                                                div(title='Click to unfold...', id="follow_up_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                            shinyjs::hidden(shiny::div(id="follow_up_contents",
+                                            shinyjs::hidden(div(id="follow_up_contents",
                                                                 # Follow-up window start
-                                                                shiny::div(title='The unit of the start of the follow-up window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
-                                                                    shiny::selectInput(inputId="followup_window_start_unit",
+                                                                div(title='The unit of the start of the follow-up window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
+                                                                    selectInput(inputId="followup_window_start_unit",
                                                                                 label="FUW start unit",
                                                                                 choices=c("days", "weeks", "months", "years", "calendar date"), # "column in dataset"),
                                                                                 selected="days")),
 
                                                                 # If follow-up window unit is "calendar date"
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition = "(input.followup_window_start_unit == 'calendar date')",
                                                                   # Select an actual date
-                                                                  shiny::div(title='Select the actual start date of the follow-up window (possibly using a calendar widget)',
-                                                                      shiny::dateInput(inputId="followup_window_start_date",
+                                                                  div(title='Select the actual start date of the follow-up window (possibly using a calendar widget in the format year-month-day)',
+                                                                      dateInput(inputId="followup_window_start_date",
                                                                                 label="FUW start",
-                                                                                value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
+                                                                                value=NULL, format="yyyy-mm-dd", startview="month", weekstart=1))
                                                                 ),
 
                                                                 ## If follow-up window unit is "column in dataset"
-                                                                #shiny::conditionalPanel(
+                                                                #conditionalPanel(
                                                                 #  condition = "(input.followup_window_start_unit == 'column in dataset')",
-                                                                #              shiny::selectInput(inputId="followup_window_start_column",
+                                                                #              selectInput(inputId="followup_window_start_column",
                                                                 #                        label="Follow-up wnd. start",
                                                                 #                        choices=names(.GlobalEnv$.plotting.params$data),
                                                                 #                        selected="")
                                                                 #),
 
                                                                 # If follow-up window unit is regular unit
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition = "(input.followup_window_start_unit != 'calendar date')",  # && input.followup_window_start_unit != 'column in dataset')",
                                                                   # Select the number of units
-                                                                  shiny::div(title='Select the number of units defining the start of the follow-up window',
-                                                                      shiny::numericInput(inputId="followup_window_start_no_units",
+                                                                  div(title='Select the number of units defining the start of the follow-up window',
+                                                                      numericInput(inputId="followup_window_start_no_units",
                                                                                    label="FUW start",
                                                                                    value=0, min=0, max=NA, step=30))
                                                                 ),
 
                                                                 # Follow-up window duration
-                                                                shiny::div(title='The unit of the duration of the follow-up window (can be "days", "weeks", "months" or "years")',
-                                                                    shiny::selectInput(inputId="followup_window_duration_unit",
+                                                                div(title='The unit of the duration of the follow-up window (can be "days", "weeks", "months" or "years")',
+                                                                    selectInput(inputId="followup_window_duration_unit",
                                                                                 label="FUW duration unit",
                                                                                 choices=c("days", "weeks", "months", "years"),
                                                                                 selected="days")),
 
                                                                 # Select the number of units
-                                                                shiny::div(title='Select the number of units defining the duration of the follow-up window',
-                                                                    shiny::numericInput(inputId="followup_window_duration",
+                                                                div(title='Select the number of units defining the duration of the follow-up window',
+                                                                    numericInput(inputId="followup_window_duration",
                                                                                  label="FUW duration",
                                                                                  value=2*365, min=0, max=NA, step=30)),
 
-                                                                shiny::hr()
+                                                                hr()
                                             )),
 
                                             # Observation window ----
-                                            shiny::div(id='observation_section', style="cursor: pointer;",
-                                                shiny::span(title='Define the observation window (shortened to OW)', id="observation_window", shiny::h4("Observation window (OW)"), style="color:DarkBlue"),
-                                                shiny::div(title='Click to unfold...', id="observation_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                            div(id='observation_section', style="cursor: pointer;",
+                                                span(title='Define the observation window (shortened to OW)', id="observation_window", h4("Observation window (OW)"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="observation_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                            shinyjs::hidden(shiny::div(id="observation_contents",
+                                            shinyjs::hidden(div(id="observation_contents",
                                                                 # Observation window start
-                                                                shiny::div(title='The unit of the start of the observation window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
-                                                                    shiny::selectInput(inputId="observation_window_start_unit",
+                                                                div(title='The unit of the start of the observation window (can be "days", "weeks", "months", "years" or an actual "calendar date")',
+                                                                    selectInput(inputId="observation_window_start_unit",
                                                                                 label="OW start unit",
                                                                                 choices=c("days", "weeks", "months", "years", "calendar date"),
                                                                                 selected="days")),
 
                                                                 # If observation window unit is "calendar date"
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition = "(input.observation_window_start_unit == 'calendar date')",
                                                                   # Select an actual date
-                                                                  shiny::div(title='Select the actual start date of the observation window (possibly using a calendar widget)',
-                                                                      shiny::dateInput(inputId="observation_window_start_date",
+                                                                  div(title='Select the actual start date of the observation window (possibly using a calendar widget in the format year-month-day)',
+                                                                      dateInput(inputId="observation_window_start_date",
                                                                                 label="OW start",
-                                                                                value=NULL, format="dd/mm/yyyy", startview="month", weekstart=1))
+                                                                                value=NULL, format="yyyy-mm-dd", startview="month", weekstart=1))
                                                                 ),
 
                                                                 # If observation window unit is not "calendar date"
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition = "(input.observation_window_start_unit != 'calendar date')",
                                                                   # Select the number of units
-                                                                  shiny::div(title='Select the number of units defining the start of the observation window',
-                                                                      shiny::numericInput(inputId="observation_window_start_no_units",
+                                                                  div(title='Select the number of units defining the start of the observation window',
+                                                                      numericInput(inputId="observation_window_start_no_units",
                                                                                    label="OW start",
                                                                                    value=0, min=0, max=NA, step=30))
                                                                 ),
 
 
                                                                 # Observation window duration
-                                                                shiny::div(title='The unit of the duration of the observation window (can be "days", "weeks", "months" or "years")',
-                                                                    shiny::selectInput(inputId="observation_window_duration_unit",
+                                                                div(title='The unit of the duration of the observation window (can be "days", "weeks", "months" or "years")',
+                                                                    selectInput(inputId="observation_window_duration_unit",
                                                                                 label="OW duration unit",
                                                                                 choices=c("days", "weeks", "months", "years"),
                                                                                 selected="days")),
 
                                                                 # Select the number of units
-                                                                shiny::div(title='Select the number of units defining the duration of the observation window',
-                                                                    shiny::numericInput(inputId="observation_window_duration",
+                                                                div(title='Select the number of units defining the duration of the observation window',
+                                                                    numericInput(inputId="observation_window_duration",
                                                                                  label="OW duration",
                                                                                  value=2*365, min=0, max=NA, step=30)),
 
-                                                                shiny::hr()
+                                                                hr()
                                             )),
 
 
                                             # CMA5+ only ----
                                             # carry_only_for_same_medication, consider_dosage_change
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition = "((input.cma_class == 'simple' &&
                                                              (input.cma_to_compute == 'CMA5' ||
                                                               input.cma_to_compute == 'CMA6' ||
@@ -301,442 +358,448 @@ ui <- shiny::fluidPage(
                                                               input.cma_to_compute_within_complex == 'CMA8' ||
                                                               input.cma_to_compute_within_complex == 'CMA9')))",
 
-                                              shiny::div(id='cma_plus_section', style="cursor: pointer;",
-                                                  shiny::span(title='What type of carry over to consider?', shiny::h4("Carry over"), style="color:DarkBlue"),
-                                                  shiny::div(title='Click to unfold...', id="cma_plus_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                              div(id='cma_plus_section', style="cursor: pointer;",
+                                                  span(title='What type of carry over to consider?', h4("Carry over"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="cma_plus_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                              shinyjs::hidden(shiny::div(id="cma_plus_contents",
+                                              shinyjs::hidden(div(id="cma_plus_contents",
                                                                   # Carry-over for same treat only?
-                                                                  shiny::div(title='Carry over only across treatments of the same type?',
+                                                                  div(title='Carry over only across treatments of the same type?',
                                                                       shinyWidgets::materialSwitch(inputId="carry_only_for_same_medication",
                                                                                                    label="For same treat. only?",
                                                                                                    value=FALSE, status="primary", right=TRUE)),
 
                                                                   # Consider dosage changes?
-                                                                  shiny::div(title='Consider dosage change when computing the carry over?',
+                                                                  div(title='Consider dosage change when computing the carry over?',
                                                                       shinyWidgets::materialSwitch(inputId="consider_dosage_change",
                                                                                                    label="Consider dose changes?",
                                                                                                    value=FALSE, status="primary", right=TRUE)),
 
-                                                                  shiny::hr()
+                                                                  hr()
                                               ))
                                             ),
 
 
                                             # Per episode only ----
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition = "(input.cma_class == 'per episode')",
 
-                                              shiny::div(id='episodes_section', style="cursor: pointer;",
-                                                  shiny::span(title='Parameters defining treatment episodes', shiny::h4("Define episodes"), style="color:DarkBlue"),
-                                                  shiny::div(title='Click to unfold...', id="episodes_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                              div(id='episodes_section', style="cursor: pointer;",
+                                                  span(title='Parameters defining treatment episodes', h4("Define episodes"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="episodes_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                              shinyjs::hidden(shiny::div(id="episodes_contents",
+                                              shinyjs::hidden(div(id="episodes_contents",
                                                                   # Does treat. change start new episode?
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition="output.is_treat_class_defined",
-                                                                    shiny::div(title='Does changing the treatment type trigger a new episode?',
+                                                                    div(title='Does changing the treatment type trigger a new episode?',
                                                                         shinyWidgets::materialSwitch(inputId="medication_change_means_new_treatment_episode",
                                                                                                      label="Treat. change starts new episode?",
                                                                                                      value=FALSE, status="primary", right=TRUE))
                                                                   ),
 
                                                                   # Does dosage change start new episode?
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition="output.is_dose_defined",
-                                                                    shiny::div(title='Does changing the dose trigger a new episode?',
+                                                                    div(title='Does changing the dose trigger a new episode?',
                                                                         shinyWidgets::materialSwitch(inputId="dosage_change_means_new_treatment_episode",
                                                                                                      label="Dose change starts new episode?",
                                                                                                      value=FALSE, status="primary", right=TRUE))
                                                                   ),
 
                                                                   # Max. permis. gap duration unit
-                                                                  shiny::div(title='The unit of the maximum permissible gap after which a new episode is triggered: either absolute ("days", "weeks", "months" or "years") or relative ("percent")',
-                                                                      shiny::selectInput(inputId="maximum_permissible_gap_unit",
+                                                                  div(title='The unit of the maximum permissible gap after which a new episode is triggered: either absolute ("days", "weeks", "months" or "years") or relative ("percent")',
+                                                                      selectInput(inputId="maximum_permissible_gap_unit",
                                                                                   label="Max. gap duration unit",
                                                                                   choices=c("days", "weeks", "months", "years", "percent"),
                                                                                   selected="days")),
 
                                                                   # Max. permissible gap
-                                                                  shiny::div(title='The maximum permissible gap after which a new episode is triggered (in the above-selected units)',
-                                                                      shiny::numericInput(inputId="maximum_permissible_gap",
+                                                                  div(title='The maximum permissible gap after which a new episode is triggered (in the above-selected units)',
+                                                                      numericInput(inputId="maximum_permissible_gap",
                                                                                    label="Max. gap duration",
                                                                                    value=0, min=0, max=NA, step=1)),
 
+                                                                  # Append max gap duration?
+                                                                  div(title='Append the maximum permissible gap to the episodes?',
+                                                                      shinyWidgets::materialSwitch(inputId="maximum_permissible_gap_append",
+                                                                                                   label="Append gap?",
+                                                                                                   value=FALSE, status="primary", right=TRUE)),
+
                                                                   # Plot CMA as histogram
-                                                                  shiny::div(title='Show the distribution of estimated CMAs across episodes as a histogram or barplot?',
+                                                                  div(title='Show the distribution of estimated CMAs across episodes as a histogram or barplot?',
                                                                       shinyWidgets::materialSwitch(inputId="plot_CMA_as_histogram_episodes",
                                                                                                    label="Plot CMA as histogram?",
                                                                                                    value=FALSE, status="primary", right=TRUE)),
 
-                                                                  shiny::hr()
+                                                                  hr()
                                               ))
                                             ),
 
 
                                             # Sliding window only ----
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition = "(input.cma_class == 'sliding window')",
 
-                                              shiny::div(id='sliding_windows_section', style="cursor: pointer;",
-                                                  shiny::span(title='Parameters defining the sliding windows (shortened to SW))', shiny::h4("Define sliding windows (SW)"), style="color:DarkBlue"),
-                                                  shiny::div(title='Click to unfold...', id="sliding_windows_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                              div(id='sliding_windows_section', style="cursor: pointer;",
+                                                  span(title='Parameters defining the sliding windows (shortened to SW))', h4("Define sliding windows (SW)"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="sliding_windows_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                              shinyjs::hidden(shiny::div(id="sliding_windows_contents",
+                                              shinyjs::hidden(div(id="sliding_windows_contents",
                                                                   # Sliding window start
-                                                                  shiny::div(title='The unit of the start of the sliding windows ("days", "weeks", "months" or "years")',
-                                                                      shiny::selectInput(inputId="sliding_window_start_unit",
+                                                                  div(title='The unit of the start of the sliding windows ("days", "weeks", "months" or "years")',
+                                                                      selectInput(inputId="sliding_window_start_unit",
                                                                                   label="SW start unit",
                                                                                   choices=c("days", "weeks", "months", "years"),
                                                                                   selected="days")),
 
                                                                   # Select the number of units
-                                                                  shiny::div(title='Select the number of units defining the start of the sliding windows',
-                                                                      shiny::numericInput(inputId="sliding_window_start",
+                                                                  div(title='Select the number of units defining the start of the sliding windows',
+                                                                      numericInput(inputId="sliding_window_start",
                                                                                    label="SW start",
                                                                                    value=0, min=0, max=NA, step=30)),
 
                                                                   # Sliding window duration
-                                                                  shiny::div(title='The unit of the duration of the sliding windows ("days", "weeks", "months" or "years")',
-                                                                      shiny::selectInput(inputId="sliding_window_duration_unit",
+                                                                  div(title='The unit of the duration of the sliding windows ("days", "weeks", "months" or "years")',
+                                                                      selectInput(inputId="sliding_window_duration_unit",
                                                                                   label="SW duration unit",
                                                                                   choices=c("days", "weeks", "months", "years"),
                                                                                   selected="days")),
 
                                                                   # Select the number of units
-                                                                  shiny::div(title='Select the number of units defining the duration of the sliding windows',
-                                                                      shiny::numericInput(inputId="sliding_window_duration",
+                                                                  div(title='Select the number of units defining the duration of the sliding windows',
+                                                                      numericInput(inputId="sliding_window_duration",
                                                                                    label="SW duration",
                                                                                    value=90, min=0, max=NA, step=30)),
 
                                                                   # Steps choice
-                                                                  shiny::div(title='How is the step of the sliding windows defined: by giving their number or their duration?',
-                                                                      shiny::selectInput(inputId="sliding_window_step_choice",
+                                                                  div(title='How is the step of the sliding windows defined: by giving their number or their duration?',
+                                                                      selectInput(inputId="sliding_window_step_choice",
                                                                                   label="Define SW steps by",
                                                                                   choices=c("number of steps", "duration of a step"),
                                                                                   selected="the duration of a step")),
 
                                                                   # Sliding window steps
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition = "(input.sliding_window_step_choice == 'duration of a step')",
-                                                                    shiny::div(title='The unit of the sliding windows step duration ("days", "weeks", "months" or "years")',
-                                                                        shiny::selectInput(inputId="sliding_window_step_unit",
+                                                                    div(title='The unit of the sliding windows step duration ("days", "weeks", "months" or "years")',
+                                                                        selectInput(inputId="sliding_window_step_unit",
                                                                                     label="SW step unit",
                                                                                     choices=c("days", "weeks", "months", "years"),
                                                                                     selected="days")),
-                                                                    shiny::div(title='The sliding windows duration (in the units selected above)',
-                                                                        shiny::numericInput(inputId="sliding_window_step_duration",
+                                                                    div(title='The sliding windows duration (in the units selected above)',
+                                                                        numericInput(inputId="sliding_window_step_duration",
                                                                                      label="SW step duration",
                                                                                      value=60, min=0, max=NA, step=7))
                                                                   ),
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition = "(input.sliding_window_step_choice == 'number of steps')",
-                                                                    shiny::div(title='The number of sliding windows steps',
-                                                                        shiny::numericInput(inputId="sliding_window_no_steps",
+                                                                    div(title='The number of sliding windows steps',
+                                                                        numericInput(inputId="sliding_window_no_steps",
                                                                                      label="SW number of steps",
                                                                                      value=10, min=0, max=NA, step=1))
                                                                   ),
 
                                                                   # Plot CMA as histogram
-                                                                  shiny::div(title='Show the distribution of estimated CMAs across sliding windows as a histogram or barplot?',
+                                                                  div(title='Show the distribution of estimated CMAs across sliding windows as a histogram or barplot?',
                                                                       shinyWidgets::materialSwitch(inputId="plot_CMA_as_histogram_sliding_window",
                                                                                                    label="Plot CMA as histogram?",
                                                                                                    value=TRUE, status="primary", right=TRUE)),
 
-                                                                  shiny::hr()
+                                                                  hr()
                                               ))
 
                                             ),
 
 
                                             # Align all patients ----
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition="(input.patient.length > 1)",
 
-                                              shiny::div(id='align_section', style="cursor: pointer;",
-                                                  shiny::span(title='Align patients for clearer plots?', shiny::h4("Align patients"), style="color:DarkBlue"),
-                                                  shiny::div(title='Click to unfold...', id="align_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                              div(id='align_section', style="cursor: pointer;",
+                                                  span(title='Align patients for clearer plots?', h4("Align patients"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="align_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                              shinyjs::hidden(shiny::div(id="align_contents",
-                                                                  shiny::div(title='Should all the patients be vertically aligned relative to their first event?',
+                                              shinyjs::hidden(div(id="align_contents",
+                                                                  div(title='Should all the patients be vertically aligned relative to their first event?',
                                                                       shinyWidgets::materialSwitch(inputId="plot_align_all_patients",
                                                                                                    label="Align patients?",
                                                                                                    value=FALSE, status="primary", right=TRUE)),
 
                                                                   # Align al patients
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition="input.plot_align_all_patients",
-                                                                    shiny::div(title='Should the first event (across patients) be considered as the origin of time?',
+                                                                    div(title='Should the first event (across patients) be considered as the origin of time?',
                                                                         shinyWidgets::materialSwitch(inputId="plot_align_first_event_at_zero",
                                                                                                      label="Align 1st event at 0?",
                                                                                                      value=FALSE, status="primary", right=TRUE))
                                                                   ),
 
-                                                                  shiny::hr()
+                                                                  hr()
                                               ))
                                             ),
 
 
                                             # Duration and period ----
-                                            shiny::div(id='duration_period_section', style="cursor: pointer;",
-                                                shiny::span(title='Duration and period', shiny::h4("Duration & period"), style="color:DarkBlue"),
-                                                shiny::div(title='Click to unfold...', id="duration_period_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                            div(id='duration_period_section', style="cursor: pointer;",
+                                                span(title='Duration and period', h4("Duration & period"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="duration_period_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                            shinyjs::hidden(shiny::div(id="duration_period_contents",
+                                            shinyjs::hidden(div(id="duration_period_contents",
                                                                 # Duration:
-                                                                shiny::div(title='The duration to plot (in days), or 0 to determine it from the data',
-                                                                    shiny::numericInput(inputId="duration",
+                                                                div(title='The duration to plot (in days), or 0 to determine it from the data',
+                                                                    numericInput(inputId="duration",
                                                                                  label="Duration (in days)",
                                                                                  value=0, min=0, max=NA, step=90)),
 
                                                                 # Period:
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition="(input.patient.length > 1) && input.plot_align_all_patients",
 
-                                                                  shiny::div(title='Draw vertical grid at regular interval as days since the earliest date',
-                                                                      shiny::selectInput(inputId="show_period_align_patients",
+                                                                  div(title='Draw vertical grid at regular interval as days since the earliest date',
+                                                                      selectInput(inputId="show_period_align_patients",
                                                                                   label="Show period as",
                                                                                   choices=c("days"), # only days are possible when aligning the patients
                                                                                   selected="days"))
                                                                 ),
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition="!((input.patient.length > 1) && input.plot_align_all_patients)", # ELSE
 
-                                                                  shiny::div(title='Draw vertical grid at regular interval as days since the earliest date or as actual dates?',
-                                                                      shiny::selectInput(inputId="show_period",
+                                                                  div(title='Draw vertical grid at regular interval as days since the earliest date or as actual dates?',
+                                                                      selectInput(inputId="show_period",
                                                                                   label="Show period as",
                                                                                   choices=c("days", "dates"),
                                                                                   selected="days"))
                                                                 ),
 
-                                                                shiny::div(title='The interval (in days) at which to draw the vertical grid (or 0 for no grid)',
-                                                                    shiny::numericInput(inputId="period_in_days",
+                                                                div(title='The interval (in days) at which to draw the vertical grid (or 0 for no grid)',
+                                                                    numericInput(inputId="period_in_days",
                                                                                  label="Period (in days)",
                                                                                  value=90, min=0, max=NA, step=30)),
 
-                                                                shiny::hr()
+                                                                hr()
                                             )),
 
 
                                             # CMA estimate ----
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition="(input.cma_class == 'per episode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
 
-                                              shiny::div(id='cma_estimate_section', style="cursor: pointer;",
-                                                  shiny::span(title='How to show the CMA estimates', shiny::h4("CMA estimates"), style="color:DarkBlue"),
-                                                  shiny::div(title='Click to unfold...', id="cma_estimate_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                              div(id='cma_estimate_section', style="cursor: pointer;",
+                                                  span(title='How to show the CMA estimates', h4("CMA estimates"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="cma_estimate_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                              shinyjs::hidden(shiny::div(id="cma_estimate_contents",
-                                                                  shiny::conditionalPanel(
+                                              shinyjs::hidden(div(id="cma_estimate_contents",
+                                                                  conditionalPanel(
                                                                     condition="input.cma_class == 'simple'",
 
-                                                                    shiny::div(title='Print the CMA estimate next to the participant\'s ID?',
+                                                                    div(title='Print the CMA estimate next to the participant\'s ID?',
                                                                         shinyWidgets::materialSwitch(inputId="print_cma",
                                                                                                      label="Print CMA?",
                                                                                                      value=TRUE, status="primary", right=TRUE))
                                                                   ),
 
-                                                                  shiny::div(title='Plot the CMA estimate next to the participant\'s ID?',
+                                                                  div(title='Plot the CMA estimate next to the participant\'s ID?',
                                                                       shinyWidgets::materialSwitch(inputId="plot_cma",
                                                                                                    label="Plot CMA?",
                                                                                                    value=TRUE, status="primary", right=TRUE)),
 
-                                                                  shiny::conditionalPanel(
-                                                                    condition="input.cma_class != 'simple' && input.plot_cma",
+                                                                  conditionalPanel(
+                                                                    condition="input.cma_class != 'simple'",
 
-                                                                    shiny::div(title='Show the "partial" CMA estimates as stacked bars?',
+                                                                    div(title='Show the "partial" CMA estimates as stacked bars?',
                                                                         shinyWidgets::materialSwitch(inputId="plot_cma_stacked",
                                                                                                      label="... as stacked bars?",
                                                                                                      value=TRUE, status="primary", right=TRUE)),
 
-                                                                    shiny::div(title='Show the "partial" CMA estimates as overlapping segments?',
+                                                                    div(title='Show the "partial" CMA estimates as overlapping segments?',
                                                                         shinyWidgets::materialSwitch(inputId="plot_cma_overlapping",
                                                                                                      label="... as overlapping lines?",
                                                                                                      value=FALSE, status="primary", right=TRUE)),
 
-                                                                    shiny::div(title='Show the "partial" CMA estimates as time series?',
+                                                                    div(title='Show the "partial" CMA estimates as time series?',
                                                                         shinyWidgets::materialSwitch(inputId="plot_cma_timeseries",
                                                                                                      label="... as time series?",
                                                                                                      value=FALSE, status="primary", right=TRUE))
 
                                                                   ),
 
-                                                                  shiny::hr()
+                                                                  hr()
                                               ))
                                             ),
 
 
                                             # Dose ----
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition="output.is_dose_defined && (input.cma_class == 'per episode' || input.cma_class == 'sliding window' || (input.cma_class == 'simple' && (input.cma_to_compute == 'CMA0' || input.cma_to_compute == 'CMA5' || input.cma_to_compute == 'CMA6' || input.cma_to_compute == 'CMA7' || input.cma_to_compute == 'CMA8' || input.cma_to_compute == 'CMA9')))",
 
-                                              shiny::div(id='dose_section', style="cursor: pointer;",
-                                                  shiny::span(title='Show dose', shiny::h4("Show dose"), style="color:DarkBlue"),
-                                                  shiny::div(title='Click to unfold...', id="dose_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                              div(id='dose_section', style="cursor: pointer;",
+                                                  span(title='Show dose', h4("Show dose"), style="color:DarkBlue"),
+                                                  div(title='Click to unfold...', id="dose_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                              shinyjs::hidden(shiny::div(id="dose_contents",
+                                              shinyjs::hidden(div(id="dose_contents",
                                                                   # Print dose?
-                                                                  shiny::div(title='Print the dosage (i.e., the actual numeric values)?',
+                                                                  div(title='Print the dosage (i.e., the actual numeric values)?',
                                                                       shinyWidgets::materialSwitch(inputId="print_dose",
                                                                                                    label="Print it?",
                                                                                                    value=FALSE, status="primary", right=TRUE)),
 
                                                                   # Print dose attributes
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition="input.print_dose",
 
-                                                                    shiny::div(title='Relative font size (please note that a size of 0 is autmatically forced to 0.01)',
-                                                                        shiny::numericInput(inputId="cex_dose",
+                                                                    div(title='Relative font size (please note that a size of 0 is autmatically forced to 0.01)',
+                                                                        numericInput(inputId="cex_dose",
                                                                                      label="Font size",
                                                                                      value=0.75, min=0.0, max=NA, step=0.25)),
 
-                                                                    shiny::div(title='Dose text outline color',
+                                                                    div(title='Dose text outline color',
                                                                         colourpicker::colourInput(inputId="print_dose_outline_col",
                                                                                                   label="Outline color",
                                                                                                   value="white")),
 
-                                                                    shiny::div(title='Print the dose centered on the event?',
+                                                                    div(title='Print the dose centered on the event?',
                                                                         shinyWidgets::materialSwitch(inputId="print_dose_centered",
                                                                                                      label="Centered?",
                                                                                                      value=FALSE, status="primary", right=TRUE)),
 
-                                                                    shiny::hr()
+                                                                    hr()
                                                                   ),
 
                                                                   # Plot dose?
-                                                                  shiny::div(title='Represent the dose as event line width?',
+                                                                  div(title='Represent the dose as event line width?',
                                                                       shinyWidgets::materialSwitch(inputId="plot_dose",
                                                                                                    label="As line width?",
                                                                                                    value=FALSE, status="primary", right=TRUE)),
 
                                                                   # Plot dose attributes
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition="input.plot_dose",
 
-                                                                    shiny::div(title='What line width corresponds to the maximum dose?',
-                                                                        shiny::numericInput(inputId="lwd_event_max_dose",
+                                                                    div(title='What line width corresponds to the maximum dose?',
+                                                                        numericInput(inputId="lwd_event_max_dose",
                                                                                      label="Max dose width",
                                                                                      value=8, min=1, max=NA, step=1)),
 
-                                                                    shiny::div(title='Consider maximum dose globally or per each medication class separately?',
+                                                                    div(title='Consider maximum dose globally or per each medication class separately?',
                                                                         shinyWidgets::materialSwitch(inputId="plot_dose_lwd_across_medication_classes",
                                                                                                      label="Global max?",
                                                                                                      value=FALSE, status="primary", right=TRUE))
                                                                   ),
 
-                                                                  shiny::hr()
+                                                                  hr()
                                               ))
                                             ),
 
 
                                             # Legend ----
-                                            shiny::div(id='legend_section', style="cursor: pointer;",
-                                                shiny::span(title='The legend', shiny::h4("Legend"), style="color:DarkBlue"),
-                                                shiny::div(title='Click to unfold...', id="legend_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                            div(id='legend_section', style="cursor: pointer;",
+                                                span(title='The legend', h4("Legend"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="legend_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                            shinyjs::hidden(shiny::div(id="legend_contents",
+                                            shinyjs::hidden(div(id="legend_contents",
                                                                 # Show legend?
-                                                                shiny::div(title='Display the plot legend?',
+                                                                div(title='Display the plot legend?',
                                                                     shinyWidgets::materialSwitch(inputId="show_legend",
                                                                                                  label="Show legend?",
                                                                                                  value=TRUE, status="primary", right=TRUE)),
 
                                                                 # Legend attributes
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition="input.show_legend",
 
-                                                                  shiny::div(title='The legend\'s x position',
-                                                                      shiny::selectInput(inputId="legend_x",
+                                                                  div(title='The legend\'s x position',
+                                                                      selectInput(inputId="legend_x",
                                                                                   label="Legend x",
                                                                                   choices=c("left", "right"),
                                                                                   selected="right")),
 
-                                                                  shiny::div(title='The legend\'s y position',
-                                                                      shiny::selectInput(inputId="legend_y",
+                                                                  div(title='The legend\'s y position',
+                                                                      selectInput(inputId="legend_y",
                                                                                   label="Legend y",
                                                                                   choices=c("bottom", "top"),
                                                                                   selected="bottom")),
 
-                                                                  shiny::div(title='Relative font size of legend title (please note that a size of 0 is autmatically forced to 0.01)',
-                                                                      shiny::numericInput(inputId="legend_cex_title",
+                                                                  div(title='Relative font size of legend title (please note that a size of 0 is autmatically forced to 0.01)',
+                                                                      numericInput(inputId="legend_cex_title",
                                                                                    label="Title font size",
                                                                                    value=1.0, min=0.0, max=NA, step=0.25)),
 
-                                                                  shiny::div(title='Relative font size of legend text and symbols (please note that a size of 0 is autmatically forced to 0.01)',
-                                                                      shiny::numericInput(inputId="legend_cex",
+                                                                  div(title='Relative font size of legend text and symbols (please note that a size of 0 is autmatically forced to 0.01)',
+                                                                      numericInput(inputId="legend_cex",
                                                                                    label="Text font size",
                                                                                    value=0.75, min=0.0, max=NA, step=0.25)),
 
-                                                                  shiny::div(title='The legend\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
-                                                                      shiny::sliderInput(inputId="legend_bkg_opacity",
+                                                                  div(title='The legend\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
+                                                                      sliderInput(inputId="legend_bkg_opacity",
                                                                                   label="Legend bkg. opacity",
                                                                                   min=0.0, max=1.0, value=0.5, step=0.1, round=TRUE))
                                                                 ),
 
-                                                                shiny::hr()
+                                                                hr()
                                             )),
 
 
                                             # Aesthetics ----
-                                            shiny::div(id='aesthetics_section', style="cursor: pointer;",
-                                                shiny::span(title='Colors, fonts, line style...', shiny::h4("Aesthetics"), style="color:DarkBlue"),
-                                                shiny::div(title='Click to unfold...', id="aesthetics_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                            div(id='aesthetics_section', style="cursor: pointer;",
+                                                span(title='Colors, fonts, line style...', h4("Aesthetics"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="aesthetics_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                            shinyjs::hidden(shiny::div(id="aesthetics_contents",
+                                            shinyjs::hidden(div(id="aesthetics_contents",
                                                                 ## Show CMA type in the title?
-                                                                #shiny::div(title='Show CMA type in the plot title?',
+                                                                #div(title='Show CMA type in the plot title?',
                                                                 #         checkboxInput(inputId="show_cma",
                                                                 #            label="Show CMA in title?",
                                                                 #            value=TRUE)),
 
-                                                                shiny::div(title='Colors or grayscale?',
-                                                                    shiny::span(shiny::p("Color or grayscale"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                div(title='Colors or grayscale?',
+                                                                    span(p("Color or grayscale"), style="color:RoyalBlue; font-weight: bold;")),
 
                                                                 # Draw grayscale?
-                                                                shiny::div(title='Draw using only grayscales? (overrides everything else)',
+                                                                div(title='Draw using only grayscales? (overrides everything else)',
                                                                     shinyWidgets::materialSwitch(inputId="bw_plot",
                                                                                                  label="Grayscale?",
                                                                                                  value=FALSE, status="primary", right=TRUE)),
 
-                                                                shiny::hr(),
+                                                                hr(),
 
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition="!(input.bw_plot)",
 
-                                                                  shiny::div(title='Colors for catgories of treatment',
-                                                                      shiny::span(shiny::p("Treatment colors"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                  div(title='Colors for catgories of treatment',
+                                                                      span(p("Treatment colors"), style="color:RoyalBlue; font-weight: bold;")),
 
                                                                   # Colors for categories:
-                                                                  shiny::div(title='The color for missing data',
+                                                                  div(title='The color for missing data',
                                                                       colourpicker::colourInput(inputId="col_na",
                                                                                                 label="Missing data color",
                                                                                                 value="lightgray")),
 
                                                                   # Unspecified category name:
-                                                                  shiny::div(title='The label of the unspecified (generic) treatment category',
-                                                                      shiny::textInput(inputId="unspecified_category_label",
+                                                                  div(title='The label of the unspecified (generic) treatment category',
+                                                                      textInput(inputId="unspecified_category_label",
                                                                                 label="Unspec. cat. label",
                                                                                 value="drug")),
 
                                                                   # The colour palette for treatment types:
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition="output.is_treat_class_defined",
-                                                                    shiny::div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on the alphabetic ordering of the category names.',
-                                                                        shiny::selectInput(inputId="col_cats",
+                                                                    div(title='Color palette for mapping treatment categories to colors (the last two are colour-blind-friendly and provided by ).\nPlease see R\'s help for more info about each palette (first 5 are provided by the standard library, and the last 5 are in package "viridisLight").\nThe mapping is done automatically based on the alphabetic ordering of the category names.',
+                                                                        selectInput(inputId="col_cats",
                                                                                     label="Treatment palette",
                                                                                     choices=c("rainbow", "heat.colors", "terrain.colors", "topo.colors", "cm.colors", "magma", "inferno", "plasma", "viridis", "cividis"),
                                                                                     selected="rainbow"))
                                                                   ),
 
-                                                                  shiny::hr()
+                                                                  hr()
                                                                 ),
 
-                                                                shiny::div(title='Event visual attributes',
-                                                                    shiny::span(shiny::p("Events"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                div(title='Event visual attributes',
+                                                                    span(p("Events"), style="color:RoyalBlue; font-weight: bold;")),
 
                                                                 # Event style:
-                                                                shiny::div(title='Event line style',
-                                                                    #shiny::selectInput(inputId="lty_event", # using UNICODE character
+                                                                div(title='Event line style',
+                                                                    #selectInput(inputId="lty_event", # using UNICODE character
                                                                     #            label="Event line style",
                                                                     #            choices=c("\U00A0\U00A0\U00A0\U00A0\U00A0 blank"="blank",
                                                                     #                      "\U2E3B solid"="solid",
@@ -752,19 +815,19 @@ ui <- shiny::fluidPage(
                                                                                               choices=names(line.types),
                                                                                               choicesOpt=list(content=lapply(1:length(line.types),
                                                                                                                              function(i)
-                                                                                                                               shiny::HTML(paste0("<img src='",
+                                                                                                                               HTML(paste0("<img src='",
                                                                                                                                            line.types[i],
                                                                                                                                            "' width=50 height=10/>",
                                                                                                                                            names(line.types[i]))))),
                                                                                               selected="solid")),
 
-                                                                shiny::div(title='Event line width',
-                                                                    shiny::numericInput(inputId="lwd_event",
+                                                                div(title='Event line width',
+                                                                    numericInput(inputId="lwd_event",
                                                                                  label="Event line width",
                                                                                  value=2, min=0, max=NA, step=1)),
 
-                                                                shiny::div(title='Event start symbol (most commonly used)...',
-                                                                    #shiny::selectInput(inputId="pch_start_event",
+                                                                div(title='Event start symbol (most commonly used)...',
+                                                                    #selectInput(inputId="pch_start_event",
                                                                     #            label="Event start",
                                                                     #            choices=c("none"=NA, # using UNICODE characters
                                                                     #                      "\UFF0B plus"=3,
@@ -793,13 +856,13 @@ ui <- shiny::fluidPage(
                                                                                               choices=point.types,
                                                                                               choicesOpt=list(content=lapply(1:length(point.types),
                                                                                                                              function(i)
-                                                                                                                               shiny::HTML(paste0("<img src='symbols/pch-",
+                                                                                                                               HTML(paste0("<img src='symbols/pch-",
                                                                                                                                            point.types[i],
                                                                                                                                            ".png' width=15 height=15/>",
                                                                                                                                            names(point.types[i]))))),
                                                                                               selected=15)),
-                                                                shiny::div(title='Event end symbol (most commonly used)...',
-                                                                  # shiny::selectInput(inputId="pch_end_event",
+                                                                div(title='Event end symbol (most commonly used)...',
+                                                                  # selectInput(inputId="pch_end_event",
                                                                   #           label="Event end",
                                                                   #            choices=c("none"=NA,
                                                                   #                       "\UFF0B plus"=3,
@@ -828,31 +891,31 @@ ui <- shiny::fluidPage(
                                                                                               choices=point.types,
                                                                                               choicesOpt=list(content=lapply(1:length(point.types),
                                                                                                                              function(i)
-                                                                                                                               shiny::HTML(paste0("<img src='symbols/pch-",
+                                                                                                                               HTML(paste0("<img src='symbols/pch-",
                                                                                                                                            point.types[i],
                                                                                                                                            ".png' width=15 height=15/>",
                                                                                                                                            names(point.types[i]))))),
                                                                                               selected=16)),
 
-                                                                shiny::hr(),
+                                                                hr(),
 
                                                                 # Continuation (CMA0 and complex only):
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition="(input.cma_class == 'per eipsode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute == 'CMA0')",
 
-                                                                  shiny::div(title='Continuation visual attributes',
-                                                                      shiny::span(shiny::p("Continuation"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                  div(title='Continuation visual attributes',
+                                                                      span(p("Continuation"), style="color:RoyalBlue; font-weight: bold;")),
 
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition="!(input.bw_plot)",
 
-                                                                    shiny::div(title='The color of continuation lines connecting consecutive events',
+                                                                    div(title='The color of continuation lines connecting consecutive events',
                                                                         colourpicker::colourInput(inputId="col_continuation",
                                                                                                   label="Cont. line color",
                                                                                                   value="black"))
                                                                   ),
-                                                                  shiny::div(title='The line style of continuation lines connecting consecutive events',
-                                                                      #shiny::selectInput(inputId="lty_continuation",
+                                                                  div(title='The line style of continuation lines connecting consecutive events',
+                                                                      #selectInput(inputId="lty_continuation",
                                                                       #            label="Cont. line style",
                                                                       #            choices=c("\U00A0\U00A0\U00A0\U00A0\U00A0 blank"="blank",
                                                                       #                      "\U2E3B solid"="solid",
@@ -868,341 +931,345 @@ ui <- shiny::fluidPage(
                                                                                                 choices=names(line.types),
                                                                                                 choicesOpt=list(content=lapply(1:length(line.types),
                                                                                                                                function(i)
-                                                                                                                                 shiny::HTML(paste0("<img src='",
+                                                                                                                                 HTML(paste0("<img src='",
                                                                                                                                              line.types[i],
                                                                                                                                              "' width=50 height=10/>",
                                                                                                                                              names(line.types[i]))))),
                                                                                                 selected="dotted")),
 
-                                                                  shiny::div(title='The line width of continuation lines connecting consecutive events',
-                                                                      shiny::numericInput(inputId="lwd_continuation",
+                                                                  div(title='The line width of continuation lines connecting consecutive events',
+                                                                      numericInput(inputId="lwd_continuation",
                                                                                    label="Cont. line width",
                                                                                    value=1, min=0, max=NA, step=1)),
 
-                                                                  shiny::hr()
+                                                                  hr()
                                                                 ),
 
                                                                 # Show event intervals:
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition="(input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
 
-                                                                  shiny::div(title='Event intervals',
-                                                                      shiny::span(shiny::p("Event intervals"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                  div(title='Event intervals',
+                                                                      span(p("Event intervals"), style="color:RoyalBlue; font-weight: bold;")),
 
-                                                                  shiny::div(title='Show the event intervals?',
+                                                                  div(title='Show the event intervals?',
                                                                       shinyWidgets::materialSwitch(inputId="show_event_intervals",
                                                                                                    label="Show event interv.?",
                                                                                                    value=TRUE, status="primary", right=TRUE)),
 
-                                                                  shiny::hr()
+                                                                  hr()
                                                                 ),
 
                                                                 # Font sizes:
-                                                                shiny::div(title='Font sizes',
-                                                                    shiny::span(shiny::p("Font sizes"), style="color:RoyalBlue; font-weight: bold;")),
-                                                                shiny::div(title='Relative font size of general plotting text (please note that a size of 0 is autmatically forced to 0.01)',
-                                                                    shiny::numericInput(inputId="cex",
+                                                                div(title='Font sizes',
+                                                                    span(p("Font sizes"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                div(title='Relative font size of general plotting text (please note that a size of 0 is autmatically forced to 0.01)',
+                                                                    numericInput(inputId="cex",
                                                                                  label="General font size",
                                                                                  value=1.0, min=0.0, max=NA, step=0.25)),
-                                                                shiny::div(title='Relative font size of axis text (please note that a size of 0 is autmatically forced to 0.01)',
-                                                                    shiny::numericInput(inputId="cex_axis",
+                                                                div(title='Relative font size of axis text (please note that a size of 0 is autmatically forced to 0.01)',
+                                                                    numericInput(inputId="cex_axis",
                                                                                  label="Axis font size",
                                                                                  value=0.75, min=0.0, max=NA, step=0.25)),
-                                                                shiny::div(title='Relative font size of axis labels text (please note that a size of 0 is autmatically forced to 0.01)',
-                                                                    shiny::numericInput(inputId="cex_lab",
+                                                                div(title='Relative font size of axis labels text (please note that a size of 0 is autmatically forced to 0.01)',
+                                                                    numericInput(inputId="cex_lab",
                                                                                  label="Axis labels font size",
                                                                                  value=1.0, min=0.0, max=NA, step=0.25)),
+                                                                div(title='Force showing text elements, even if they might be too small or ulgy?',
+                                                                    shinyWidgets::materialSwitch(inputId="force_draw_text",
+                                                                                                 label="Force drawing text?",
+                                                                                                 value=FALSE, status="primary", right=TRUE)),
 
-                                                                shiny::hr(),
+                                                                hr(),
 
                                                                 # Follow-up window:
-                                                                shiny::div(title='Follow-up window visual attributes',
-                                                                    shiny::span(shiny::p("FUW visuals"), style="color:RoyalBlue; font-weight: bold;")),
-                                                                shiny::div(title='Show the follow-up window?',
+                                                                div(title='Follow-up window visual attributes',
+                                                                    span(p("FUW visuals"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                div(title='Show the follow-up window?',
                                                                     shinyWidgets::materialSwitch(inputId="highlight_followup_window",
                                                                                                  label="Show FUW?",
                                                                                                  value=TRUE, status="primary", right=TRUE)),
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition="input.highlight_followup_window &&  !(input.bw_plot)",
 
-                                                                  shiny::div(title='The color of the follow-up window',
+                                                                  div(title='The color of the follow-up window',
                                                                       colourpicker::colourInput(inputId="followup_window_col",
                                                                                                 label="FUW color",
                                                                                                 value="green"))
                                                                 ),
 
-                                                                shiny::hr(),
+                                                                hr(),
 
                                                                 # Observation window:
-                                                                shiny::div(title='Observation window visual attributes',
-                                                                    shiny::span(shiny::p("OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
-                                                                shiny::div(title='Show the observation window?',
+                                                                div(title='Observation window visual attributes',
+                                                                    span(p("OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                div(title='Show the observation window?',
                                                                     shinyWidgets::materialSwitch(inputId="highlight_observation_window",
                                                                                                  label="Show OW?",
                                                                                                  value=TRUE, status="primary", right=TRUE)),
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition="input.highlight_observation_window",
 
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition="!(input.bw_plot)",
 
-                                                                    shiny::div(title='The color of the observation window',
+                                                                    div(title='The color of the observation window',
                                                                         colourpicker::colourInput(inputId="observation_window_col",
                                                                                                   label="OW color",
                                                                                                   value="yellow"))
                                                                   ),
-                                                                  #shiny::div(title='The density of the hashing lines (number of lines per inch) used to draw the observation window',
-                                                                  #    shiny::numericInput(inputId="observation_window_density",
+                                                                  #div(title='The density of the hashing lines (number of lines per inch) used to draw the observation window',
+                                                                  #    numericInput(inputId="observation_window_density",
                                                                   #                 label="OW hash dens.",
                                                                   #                 value=35, min=0, max=NA, step=5)),
-                                                                  #shiny::div(title='The orientation of the hashing lines (in degrees) used to draw the observation window',
-                                                                  #    shiny::sliderInput(inputId="observation_window_angle",
+                                                                  #div(title='The orientation of the hashing lines (in degrees) used to draw the observation window',
+                                                                  #    sliderInput(inputId="observation_window_angle",
                                                                   #                label="OW hash angle",
                                                                   #                min=-90.0, max=90.0, value=-30, step=15, round=TRUE)),
-                                                                  shiny::div(title='The observation window\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
-                                                                      shiny::sliderInput(inputId="observation_window_opacity",
+                                                                  div(title='The observation window\'s background opacity (between 0.0=fully transparent and 1.0=fully opaque)',
+                                                                      sliderInput(inputId="observation_window_opacity",
                                                                                   label="OW opacity",
                                                                                   min=0.0, max=1.0, value=0.3, step=0.1, round=TRUE))
                                                                 ),
 
-                                                                shiny::hr(),
+                                                                hr(),
 
                                                                 # Real observation window:
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition="(input.cma_class == 'simple' && input.cma_to_compute == 'CMA8')",
 
-                                                                  shiny::div(title='Real observation window visual attributes',
-                                                                      shiny::span(shiny::p("Real OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
-                                                                  shiny::div(title='Show the real observation window (the color and transparency are the same as for the theoretial observation window but the hasing pattern can be different)?',
+                                                                  div(title='Real observation window visual attributes',
+                                                                      span(p("Real OW visuals"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                  div(title='Show the real observation window (the color and transparency are the same as for the theoretial observation window but the hasing pattern can be different)?',
                                                                       shinyWidgets::materialSwitch(inputId="show_real_obs_window_start",
                                                                                                    label="Show real OW?",
                                                                                                    value=TRUE, status="primary", right=TRUE)),
-                                                                  #shiny::conditionalPanel(
+                                                                  #conditionalPanel(
                                                                   #  condition="input.show_real_obs_window_start",
                                                                   #
-                                                                  #  shiny::div(title='The density of the hashing lines (number of lines per inch) used to draw the real observation window',
-                                                                  #      shiny::numericInput(inputId="real_obs_window_density",
+                                                                  #  div(title='The density of the hashing lines (number of lines per inch) used to draw the real observation window',
+                                                                  #      numericInput(inputId="real_obs_window_density",
                                                                   #                   label="Real OW hash dens.",
                                                                   #                   value=35, min=0, max=NA, step=5)),
-                                                                  #  shiny::div(title='The orientation of the hashing lines (in degrees) used to draw the real observation window',
-                                                                  #      shiny::sliderInput(inputId="real_obs_window_angle",
+                                                                  #  div(title='The orientation of the hashing lines (in degrees) used to draw the real observation window',
+                                                                  #      sliderInput(inputId="real_obs_window_angle",
                                                                   #                  label="Real OW hash angle",
                                                                   #                  min=-90.0, max=90.0, value=30, step=15, round=TRUE))
                                                                   #),
 
-                                                                  shiny::hr()
+                                                                  hr()
                                                                 ),
 
                                                                 # Axis labels & title
-                                                                shiny::div(title='Axis labels and title',
-                                                                    shiny::span(shiny::p("Axis labels and title"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                div(title='Axis labels and title',
+                                                                    span(p("Axis labels and title"), style="color:RoyalBlue; font-weight: bold;")),
 
-                                                                shiny::div(title='Show to main title?',
+                                                                div(title='Show to main title?',
                                                                     shinyWidgets::materialSwitch(inputId="show_plot_title",
                                                                                                  label="Show title?",
                                                                                                  value=TRUE, status="primary", right=TRUE)),
 
-                                                                shiny::div(title='Show to x axis label?',
+                                                                div(title='Show to x axis label?',
                                                                     shinyWidgets::materialSwitch(inputId="show_xlab",
                                                                                                  label="Show x label?",
                                                                                                  value=TRUE, status="primary", right=TRUE)),
 
-                                                                shiny::div(title='Show to y axis label?',
+                                                                div(title='Show to y axis label?',
                                                                     shinyWidgets::materialSwitch(inputId="show_ylab",
                                                                                                  label="Show y label?",
                                                                                                  value=TRUE, status="primary", right=TRUE)),
-                                                                shiny::hr(),
+                                                                hr(),
 
 
                                                                 # CMA estimate aesthetics:
-                                                                shiny::conditionalPanel(
+                                                                conditionalPanel(
                                                                   condition="(input.cma_class == 'per episode') || (input.cma_class == 'sliding window') || (input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
 
-                                                                  shiny::div(title='CMA estimate visual attributes',
-                                                                      shiny::span(shiny::p("CMA estimate"), style="color:RoyalBlue; font-weight: bold;")),
+                                                                  div(title='CMA estimate visual attributes',
+                                                                      span(p("CMA estimate"), style="color:RoyalBlue; font-weight: bold;")),
 
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition="input.plot_cma",
 
-                                                                    shiny::div(title='Relative font size of CMA estimate for per episode and sliding windows (please note that a size of 0 is autmatically forced to 0.01)',
-                                                                        shiny::numericInput(inputId="cma_cex",
+                                                                    div(title='Relative font size of CMA estimate for per episode and sliding windows (please note that a size of 0 is autmatically forced to 0.01)',
+                                                                        numericInput(inputId="cma_cex",
                                                                                      label="CMA font size",
                                                                                      value=0.5, min=0.0, max=NA, step=0.25)),
 
-                                                                    shiny::hr()
+                                                                    hr()
                                                                   ),
 
-                                                                  shiny::conditionalPanel(
+                                                                  conditionalPanel(
                                                                     condition="input.plot_cma",
 
-                                                                    shiny::div(title='The horizontal percent of the total plotting area to be taken by the CMA plot',
-                                                                        shiny::sliderInput(inputId="cma_plot_ratio",
+                                                                    div(title='The horizontal percent of the total plotting area to be taken by the CMA plot',
+                                                                        sliderInput(inputId="cma_plot_ratio",
                                                                                     label="CMA plot area %",
                                                                                     min=0, max=100, value=10, step=5, round=TRUE)),
 
-                                                                    shiny::conditionalPanel(
+                                                                    conditionalPanel(
                                                                       condition="!(input.bw_plot)",
 
-                                                                      shiny::div(title='The color of the CMA plot',
+                                                                      div(title='The color of the CMA plot',
                                                                           colourpicker::colourInput(inputId="cma_plot_col",
                                                                                                     label="CMA plot color",
                                                                                                     value="lightgreen")),
 
-                                                                      shiny::div(title='The color of the CMA plot border',
+                                                                      div(title='The color of the CMA plot border',
                                                                           colourpicker::colourInput(inputId="cma_plot_border",
                                                                                                     label="CMA border color",
                                                                                                     value="darkgreen")),
 
-                                                                      shiny::div(title='The color of the CMA plot background',
+                                                                      div(title='The color of the CMA plot background',
                                                                           colourpicker::colourInput(inputId="cma_plot_bkg",
                                                                                                     label="CMA bkg. color",
                                                                                                     value="aquamarine")),
 
-                                                                      shiny::div(title='The color of the CMA plot text',
+                                                                      div(title='The color of the CMA plot text',
                                                                           colourpicker::colourInput(inputId="cma_plot_text",
                                                                                                     label="CMA text color",
                                                                                                     value="darkgreen")),
 
-                                                                      shiny::conditionalPanel(
+                                                                      conditionalPanel(
                                                                         condition="input.cma_class != 'simple'",
 
-                                                                        shiny::conditionalPanel(
+                                                                        conditionalPanel(
                                                                           condition="input.plot_cma_timeseries",
 
-                                                                          shiny::hr(),
+                                                                          hr(),
 
-                                                                          shiny::div(title='Plotting the "partial" CMAs as time series...',
-                                                                              shiny::span(shiny::p("Showing CMAs as time series"), style="color:RoyalBlue; font-weight: italic;")),
+                                                                          div(title='Plotting the "partial" CMAs as time series...',
+                                                                              span(p("Showing CMAs as time series"), style="color:RoyalBlue; font-weight: italic;")),
 
-                                                                          shiny::div(title='The vertical space (in text lines) taken by the time series plot of the "partial" CMAs',
-                                                                              shiny::numericInput(inputId="cma_as_timeseries_vspace",
+                                                                          div(title='The vertical space (in text lines) taken by the time series plot of the "partial" CMAs',
+                                                                              numericInput(inputId="cma_as_timeseries_vspace",
                                                                                            label="Time series vertical space",
                                                                                            value=10, min=5, max=NA, step=1)),
 
-                                                                          shiny::div(title='Show the 0% mark?',
+                                                                          div(title='Show the 0% mark?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_0perc",
                                                                                                            label="Show 0% mark?",
                                                                                                            value=TRUE, status="primary", right=TRUE)),
 
-                                                                          shiny::div(title='Show the 100% mark?',
+                                                                          div(title='Show the 100% mark?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_100perc",
                                                                                                            label="Show 100% mark?",
                                                                                                            value=FALSE, status="primary", right=TRUE)),
 
-                                                                          shiny::div(title='Should the vertical axis of the time series plot start at 0 or at the minimum actually observed value?',
+                                                                          div(title='Should the vertical axis of the time series plot start at 0 or at the minimum actually observed value?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_start_from_zero",
                                                                                                            label="Start plot from 0?",
                                                                                                            value=TRUE, status="primary", right=TRUE)),
 
-                                                                          shiny::div(title='Show time series values as points and lines?',
+                                                                          div(title='Show time series values as points and lines?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_dots",
                                                                                                            label="Show dots and lines?",
                                                                                                            value=TRUE, status="primary", right=TRUE)),
-                                                                          shiny::conditionalPanel(
+                                                                          conditionalPanel(
                                                                             condition="input.cma_as_timeseries_show_dots",
-                                                                            shiny::div(title='The color of the time series dots and lines',
+                                                                            div(title='The color of the time series dots and lines',
                                                                                 colourpicker::colourInput(inputId="cma_as_timeseries_color_dots",
                                                                                                           label="Dots and lines color",
                                                                                                           value="#422CD1"))), # dark blue
 
-                                                                          shiny::div(title='Show time series interval?',
+                                                                          div(title='Show time series interval?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_interval",
                                                                                                            label="Show intervals?",
                                                                                                            value=TRUE, status="primary", right=TRUE)),
 
-                                                                          shiny::conditionalPanel(
+                                                                          conditionalPanel(
                                                                             condition="input.cma_as_timeseries_show_interval",
 
-                                                                            shiny::div(title='Which way to show the intervals?',
-                                                                                shiny::selectInput(inputId="cma_as_timeseries_show_interval_type",
+                                                                            div(title='Which way to show the intervals?',
+                                                                                selectInput(inputId="cma_as_timeseries_show_interval_type",
                                                                                             label="Show intervals as",
                                                                                             choices=c("none", "segments", "arrows", "lines", "rectangles"),
                                                                                             selected="segments")),
 
-                                                                            shiny::div(title='The color of the time series intervals',
+                                                                            div(title='The color of the time series intervals',
                                                                                 colourpicker::colourInput(inputId="cma_as_timeseries_color_intervals",
                                                                                                           label="Intervals color",
                                                                                                           value="blue")),
 
-                                                                            shiny::conditionalPanel(
+                                                                            conditionalPanel(
                                                                               condition="input.cma_as_timeseries_show_interval_type == 'segments' || input.cma_as_timeseries_show_interval_type == 'arrows' || input.cma_as_timeseries_show_interval_type == 'lines'",
-                                                                              shiny::div(title='Line width',
-                                                                                  shiny::numericInput(inputId="cma_as_timeseries_lwd_intervals",
+                                                                              div(title='Line width',
+                                                                                  numericInput(inputId="cma_as_timeseries_lwd_intervals",
                                                                                                label="Intervals line width",
                                                                                                value=1.0, min=0.01, max=NA, step=0.25))),
 
-                                                                            shiny::conditionalPanel(
+                                                                            conditionalPanel(
                                                                               condition="input.cma_as_timeseries_show_interval_type == 'rectangles'",
-                                                                              shiny::div(title='Rectangle transparency (0=fully transparent to 1=fully opaque)',
-                                                                                  shiny::sliderInput(inputId="cma_as_timeseries_alpha_intervals",
+                                                                              div(title='Rectangle transparency (0=fully transparent to 1=fully opaque)',
+                                                                                  sliderInput(inputId="cma_as_timeseries_alpha_intervals",
                                                                                               label="Intervals transparency",
                                                                                               value=0.25, min=0.00, max=1.00, step=0.05)))
                                                                           ),
 
-                                                                          shiny::div(title='Show time series text?',
+                                                                          div(title='Show time series text?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_timeseries_show_text",
                                                                                                            label="Show text values?",
                                                                                                            value=TRUE, status="primary", right=TRUE)),
 
-                                                                          shiny::conditionalPanel(
+                                                                          conditionalPanel(
                                                                             condition="input.cma_as_timeseries_show_text",
-                                                                            shiny::div(title='The color of the time series text values',
+                                                                            div(title='The color of the time series text values',
                                                                                 colourpicker::colourInput(inputId="cma_as_timeseries_color_text",
                                                                                                           label="Text values color",
                                                                                                           value="firebrick")))
 
                                                                         ),
 
-                                                                        shiny::conditionalPanel(
+                                                                        conditionalPanel(
                                                                           condition="input.plot_cma_overlapping",
 
-                                                                          shiny::hr(),
+                                                                          hr(),
 
-                                                                          shiny::div(title='Plotting the "partial" CMAs as overlapping segments...',
-                                                                              shiny::span(shiny::p("Showing CMAs as overlapping segments"), style="color:RoyalBlue; font-weight: italic;")),
+                                                                          div(title='Plotting the "partial" CMAs as overlapping segments...',
+                                                                              span(p("Showing CMAs as overlapping segments"), style="color:RoyalBlue; font-weight: italic;")),
 
-                                                                          shiny::div(title='Show the overlapping intervals?',
+                                                                          div(title='Show the overlapping intervals?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_overlapping_show_interval",
                                                                                                            label="Show intervals?",
                                                                                                            value=TRUE, status="primary", right=TRUE)),
-                                                                          shiny::conditionalPanel(
+                                                                          conditionalPanel(
                                                                             condition="input.cma_as_overlapping_show_interval",
-                                                                            shiny::div(title='The color of the overlapping intervals',
+                                                                            div(title='The color of the overlapping intervals',
                                                                                 colourpicker::colourInput(inputId="cma_as_overlapping_color_intervals",
                                                                                                           label="Intervals color",
                                                                                                           value="gray70"))),
 
-                                                                          shiny::div(title='Show overlapping text?',
+                                                                          div(title='Show overlapping text?',
                                                                               shinyWidgets::materialSwitch(inputId="cma_as_overlapping_show_text",
                                                                                                            label="Show text values?",
                                                                                                            value=TRUE, status="primary", right=TRUE)),
-                                                                          shiny::conditionalPanel(
+                                                                          conditionalPanel(
                                                                             condition="input.cma_as_overlapping_show_text",
-                                                                            shiny::div(title='The color of the overlapping text values',
+                                                                            div(title='The color of the overlapping text values',
                                                                                 colourpicker::colourInput(inputId="cma_as_overlapping_color_text",
                                                                                                           label="Text values color",
                                                                                                           value="firebrick")))
 
                                                                         ),
 
-                                                                        shiny::conditionalPanel(
+                                                                        conditionalPanel(
                                                                           condition="input.plot_cma_stacked",
 
-                                                                          shiny::hr(),
+                                                                          hr(),
 
-                                                                          shiny::div(title='Plotting the "partial" CMAs as stacked bars...',
-                                                                              shiny::span(shiny::p("Showing CMAs as stacked bars"), style="color:RoyalBlue; font-weight: italic;")),
+                                                                          div(title='Plotting the "partial" CMAs as stacked bars...',
+                                                                              span(p("Showing CMAs as stacked bars"), style="color:RoyalBlue; font-weight: italic;")),
 
-                                                                          shiny::div(title='The color of the bar',
+                                                                          div(title='The color of the bar',
                                                                               colourpicker::colourInput(inputId="plot_partial_cmas_as_stacked_col_bars",
                                                                                                         label="Bar color",
                                                                                                         value="gray90")),
 
-                                                                          shiny::div(title='The color of the border',
+                                                                          div(title='The color of the border',
                                                                               colourpicker::colourInput(inputId="plot_partial_cmas_as_stacked_col_border",
                                                                                                         label="Border color",
                                                                                                         value="gray30")),
-                                                                          shiny::div(title='The color of the text',
+                                                                          div(title='The color of the text',
                                                                               colourpicker::colourInput(inputId="plot_partial_cmas_as_stacked_col_text",
                                                                                                         label="text color",
                                                                                                         value="black"))
@@ -1212,26 +1279,62 @@ ui <- shiny::fluidPage(
                                                                       )
                                                                     ),
 
-                                                                    shiny::hr()
+                                                                    hr()
                                                                   )
+                                                                ),
 
-                                                                )
+                                                                conditionalPanel(
+                                                                  condition="(output.is_mg_defined && input.mg_use_medication_groups)",
+
+                                                                  div(title='Visually grouping medication groups within patients',
+                                                                      span(p("Medication groups"), style="color:RoyalBlue; font-weight: bold;")),
+
+                                                                  div(title='The separator color',
+                                                                      colourpicker::colourInput(inputId="plot_mg_separator_color",
+                                                                                                label="Separator color",
+                                                                                                value="blue")),
+
+                                                                  div(title='The line style of the separator',
+                                                                      shinyWidgets::pickerInput(inputId="plot_mg_separator_lty", # using actual images
+                                                                                                label="Separator line style",
+                                                                                                multiple=FALSE,
+                                                                                                choices=names(line.types),
+                                                                                                choicesOpt=list(content=lapply(1:length(line.types),
+                                                                                                                               function(i)
+                                                                                                                                 HTML(paste0("<img src='",
+                                                                                                                                             line.types[i],
+                                                                                                                                             "' width=50 height=10/>",
+                                                                                                                                             names(line.types[i]))))),
+                                                                                                selected="solid")),
+
+                                                                  div(title='The line width of the separator',
+                                                                      numericInput(inputId="plot_mg_separator_lwd",
+                                                                                   label="Separator line width",
+                                                                                   value=2, min=0, max=NA, step=1)),
+
+                                                                  div(title='The label of the __ALL_OTHERS__ implicit medication group',
+                                                                      textInput(inputId="plot_mg_allothers_label",
+                                                                                   label="__ALL_OTHERS__ label",
+                                                                                   value="*"))
+
+                                            )
+
                                             )),
 
 
                                             # Advanced ----
-                                            shiny::div(id='advanced_section', style="cursor: pointer;",
-                                                shiny::span(title='Advanced stuff...', shiny::h4("Advanced"), style="color:DarkBlue"),
-                                                shiny::div(title='Click to unfold...', id="advanced_unfold_icon", shiny::icon("option-horizontal", lib="glyphicon"))),
+                                            div(id='advanced_section', style="cursor: pointer;",
+                                                span(title='Advanced stuff...', h4("Advanced"), style="color:DarkBlue"),
+                                                div(title='Click to unfold...', id="advanced_unfold_icon", icon("option-horizontal", lib="glyphicon"))),
 
-                                            shinyjs::hidden(shiny::div(id="advanced_contents",
-                                                                shiny::div(title='The minimum horizontal plot size (in characters, for the whole duration to plot)',
-                                                                    shiny::numericInput(inputId="min_plot_size_in_characters_horiz",
+                                            shinyjs::hidden(div(id="advanced_contents",
+                                                                div(title='The minimum horizontal plot size (in characters, for the whole duration to plot)',
+                                                                    numericInput(inputId="min_plot_size_in_characters_horiz",
                                                                                  label="Min plot size (horiz.)",
                                                                                  value=0, min=0, max=NA, step=1.0)), # should be 10
 
-                                                                shiny::div(title='The minimum vertical plot size (in characters, per event)',
-                                                                    shiny::numericInput(inputId="min_plot_size_in_characters_vert",
+                                                                div(title='The minimum vertical plot size (in characters, per event)',
+                                                                    numericInput(inputId="min_plot_size_in_characters_vert",
                                                                                  label="Min plot size (vert.)",
                                                                                  value=0.0, min=0.0, max=NA, step=0.25)) # should be 0.5
                                             )),
@@ -1244,15 +1347,16 @@ ui <- shiny::fluidPage(
                        ),
 
                        # DATA TAB ----
-                       shiny::tabPanel("Data", value="sidebar-params-data", icon=shiny::icon("hdd", lib="glyphicon"), fluid=TRUE,
-                                shiny::wellPanel(id = "tPanel2", style = "overflow:scroll; max-height: 90vh; min-height: 50vh",
+                       tabPanel(span("Data", title="Select the data source (in-memory data frame, file, SQL database)..."),
+                                value="sidebar-params-data", icon=icon("hdd", lib="glyphicon"), fluid=TRUE,
+                                wellPanel(id = "tPanel2", style = "overflow:scroll; max-height: 90vh; min-height: 50vh",
 
                                           # Datasource ----
-                                          shiny::span(title='The data source to use...',
-                                               shiny::h4("Data source"), style="color:DarkBlue"),
+                                          span(title='The data source to use...',
+                                               h4("Data source"), style="color:DarkBlue"),
 
-                                          shiny::div(title='Select the type of data source (currently supported: in-memory data.frame, flat files or SQL connection)',
-                                              shiny::selectInput(inputId="datasource_type",
+                                          div(title='Select the type of data source (currently supported: in-memory data.frame, flat files or SQL connection)',
+                                              selectInput(inputId="datasource_type",
                                                           label="Datasource type",
                                                           choices=c("already in memory",
                                                                     "load from file",
@@ -1260,73 +1364,73 @@ ui <- shiny::fluidPage(
                                                           selected="already in memory")),
 
                                           # Use in-memory dataset ----
-                                          shiny::conditionalPanel(
+                                          conditionalPanel(
                                             condition = "(input.datasource_type == 'already in memory')",
 
                                             # Obligatory stuff:
-                                            shiny::div(title='Required: select the name of the dataset to use from those available in memory',
-                                                shiny::selectInput(inputId="dataset_from_memory",
+                                            div(title='Required: select the name of the dataset to use from those available in memory',
+                                                selectInput(inputId="dataset_from_memory",
                                                             label="In-memory dataset",
                                                             choices=c("[none]"),
                                                             selected="[none]")),
-                                            shiny::div(title="Click here to peek at the selected dataset...",
-                                                shiny::actionButton("dataset_from_memory_peek_button", label="Peek at dataset...", icon=shiny::icon("eye-open", lib="glyphicon"))),
+                                            div(title="Click here to peek at the selected dataset...",
+                                                actionButton("dataset_from_memory_peek_button", label="Peek at dataset...", icon=icon("eye-open", lib="glyphicon"))),
 
-                                            shiny::hr(),
+                                            hr(),
 
-                                            shiny::div(title='Required: select the name of the column containing the patient IDs',
+                                            div(title='Required: select the name of the column containing the patient IDs',
                                                 shinyWidgets::pickerInput(inputId="dataset_from_memory_patient_id",
                                                                           label="Patient ID column",
                                                                           choices=c("[none]"),
                                                                           selected="[none]")),
 
-                                            shiny::div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
-                                                shiny::textInput(inputId="dataset_from_memory_event_format",
+                                            div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
+                                                textInput(inputId="dataset_from_memory_event_format",
                                                           label="Date format",
                                                           value="%m/%d/%Y",
                                                           placeholder="%m/%d/%Y")),
 
-                                            shiny::div(title='Required: select the name of the column containing the event dates (in the format defined above)',
+                                            div(title='Required: select the name of the column containing the event dates (in the format defined above)',
                                                 shinyWidgets::pickerInput(inputId="dataset_from_memory_event_date",
                                                                           label="Event date column",
                                                                           choices=c("[none]"),
                                                                           selected="[none]")),
 
-                                            shiny::div(title='Required: select the name of the column containing the event duration (in days)',
+                                            div(title='Required: select the name of the column containing the event duration (in days)',
                                                 shinyWidgets::pickerInput(inputId="dataset_from_memory_event_duration",
                                                                           label="Event duration column",
                                                                           choices=c("[none]"),
                                                                           selected="[none]")),
 
-                                            shiny::div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
+                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
                                                 shinyWidgets::pickerInput(inputId="dataset_from_memory_daily_dose",
                                                                           label="Daily dose column",
                                                                           choices=c("[not defined]"),
                                                                           selected="[not defined]")),
 
-                                            shiny::div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
+                                            div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
                                                 shinyWidgets::pickerInput(inputId="dataset_from_memory_medication_class",
                                                                           label="Treatment class column",
                                                                           choices=c("[not defined]"),
                                                                           selected="[not defined]")),
 
-                                            shiny::hr(),
+                                            hr(),
 
-                                            shiny::div(title='Validate choices and use the dataset!',
-                                                shiny::actionButton(inputId="dataset_from_memory_button_use",
-                                                                    label=shiny::strong("Validate & use!"),
-                                                                    icon=shiny::icon("sunglasses", lib="glyphicon"),
-                                                                    style="color:DarkBlue; border-color:DarkBlue;"),
+                                            div(title='Validate choices and use the dataset!',
+                                                actionButton(inputId="dataset_from_memory_button_use",
+                                                             label=strong("Validate & use!"),
+                                                             icon=icon("sunglasses", lib="glyphicon"),
+                                                             style="color:DarkBlue; border-color:DarkBlue;"),
                                                 style="float: center;")
                                           ),
 
                                           # Use dataset from file ----
-                                          shiny::conditionalPanel(
+                                          conditionalPanel(
                                             condition = "(input.datasource_type == 'load from file')",
 
                                             # Obligatory stuff:
-                                            shiny::div(title='Required: which type of file to load?\n.csv and .tsv are prefered, .RData and .rds should pose no problems, but for the others there might be limitations (please see the help for packages "readODS", "SASxport", "readxl" and "heaven").\nPlease note that readling very big files might be very slow and need quite a bit of RAM.',
-                                                shiny::selectInput(inputId="dataset_from_file_filetype",
+                                            div(title='Required: which type of file to load?\n.csv and .tsv are prefered, .RData and .rds should pose no problems, but for the others there might be limitations (please see the help for packages "readODS", "SASxport", "readxl" and "heaven").\nPlease note that readling very big files might be very slow and need quite a bit of RAM.',
+                                                selectInput(inputId="dataset_from_file_filetype",
                                                             label="Type of file",
                                                             choices=c("Comma/TAB-separated (.csv; .tsv; .txt)",
                                                                       #"R objects from save() (.RData)",
@@ -1339,11 +1443,11 @@ ui <- shiny::fluidPage(
                                                                       "Stata (.dta)"),
                                                             selected="Comma/TAB-separated (.csv; .tsv; .txt)")),
 
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition = "(input.dataset_from_file_filetype == 'Comma/TAB-separated (.csv; .tsv; .txt)')",
 
-                                              shiny::div(title='The filed separator (or delimiter); usually, a comma (,) for .csv files and a [TAB] for .tsv files...',
-                                                  shiny::selectInput(inputId="dataset_from_file_csv_separator",
+                                              div(title='The filed separator (or delimiter); usually, a comma (,) for .csv files and a [TAB] for .tsv files...',
+                                                  selectInput(inputId="dataset_from_file_csv_separator",
                                                               label="Filed separator",
                                                               choices=c("[TAB] (\\t)",
                                                                         "comma (,)",
@@ -1352,245 +1456,245 @@ ui <- shiny::fluidPage(
                                                                         "colon (:)"),
                                                               selected="[TAB] (\\t)")),
 
-                                              shiny::div(title='The quote character (if any); usually, single (\' \') or double quotes (" ")...',
-                                                  shiny::selectInput(inputId="dataset_from_file_csv_quotes",
+                                              div(title='The quote character (if any); usually, single (\' \') or double quotes (" ")...',
+                                                  selectInput(inputId="dataset_from_file_csv_quotes",
                                                               label="Quote character",
                                                               choices=c("[none] ()",
                                                                         "singe quotes (' ')",
                                                                         "double quotes (\" \")"),
                                                               selected="[none] ()")),
 
-                                              shiny::div(title='The decimal point symbol; usually, the dot (.) or the comma (,)...',
-                                                  shiny::selectInput(inputId="dataset_from_file_csv_decimal",
+                                              div(title='The decimal point symbol; usually, the dot (.) or the comma (,)...',
+                                                  selectInput(inputId="dataset_from_file_csv_decimal",
                                                               label="Decimal point",
                                                               choices=c("dot (.)",
                                                                         "comma (,)"),
                                                               selected="dot (.)")),
 
-                                              shiny::div(title='Should the first row to be considered as the header?',
+                                              div(title='Should the first row to be considered as the header?',
                                                   shinyWidgets::materialSwitch(inputId="dataset_from_file_csv_header",
-                                                                               label=shiny::HTML("Header 1<sup>st</sup> row"),
+                                                                               label=HTML("Header 1<sup>st</sup> row"),
                                                                                value=TRUE, status="primary", right=TRUE)),
 
-                                              shiny::conditionalPanel(
+                                              conditionalPanel(
                                                 condition = "(input.dataset_from_file_csv_quotes != '[none] ()')",
-                                                shiny::div(title='Should the leading and trailing white spaces from unquoted fields be deleted?',
+                                                div(title='Should the leading and trailing white spaces from unquoted fields be deleted?',
                                                     shinyWidgets::materialSwitch(inputId="dataset_from_file_csv_strip_white",
                                                                                  label="Strip white spaces",
                                                                                  value=FALSE, status="primary", right=TRUE))),
 
-                                              shiny::div(title='Which strings in the file should be considered as missing data?\nPlease include the value(s) within double quotes and, if multiple values, separate them with commas (e.g. "NA", " ", "9999", "?").',
-                                                  shiny::textInput(inputId="dataset_from_file_csv_na_strings",
+                                              div(title='Which strings in the file should be considered as missing data?\nPlease include the value(s) within double quotes and, if multiple values, separate them with commas (e.g. "NA", " ", "9999", "?").',
+                                                  textInput(inputId="dataset_from_file_csv_na_strings",
                                                             label="Missing data symbols",
                                                             value='"NA"'))
                                             ),
 
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition = "(input.dataset_from_file_filetype == 'Open Document Spreadsheet (.ods)') || (input.dataset_from_file_filetype == 'Microsoft Excel (.xls; .xlsx)')",
 
-                                              shiny::div(title='Which sheet to load (if there are several sheets)?',
-                                                  shiny::numericInput(inputId="dataset_from_file_sheet",
+                                              div(title='Which sheet to load (if there are several sheets)?',
+                                                  numericInput(inputId="dataset_from_file_sheet",
                                                                label="Which sheet to load?",
                                                                value=1, min=1, max=NA, step=1))
                                             ),
 
-                                            #shiny::conditionalPanel(
+                                            #conditionalPanel(
                                             #  condition = "(input.dataset_from_file_filetype == 'SAS Transport data file (.xpt)')",
                                             #
-                                            #  shiny::div(title='Which dataset to load (if there are several of them)?',
-                                            #      shiny::numericInput(inputId="dataset_from_file_sheet_sas",
+                                            #  div(title='Which dataset to load (if there are several of them)?',
+                                            #      numericInput(inputId="dataset_from_file_sheet_sas",
                                             #                   label="Which dataset to load?",
                                             #                   value=1, min=1, max=NA, step=1))
                                             #),
 
-                                            shiny::div(title='Required: select and load a file...',
-                                                shiny::fileInput(inputId="dataset_from_file_filename",
+                                            div(title='Required: select and load a file...',
+                                                fileInput(inputId="dataset_from_file_filename",
                                                           label="Load from file",
                                                           multiple=FALSE,
                                                           buttonLabel="Select")),
 
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               #condition="(typeof(input.dataset_from_file_filename) != 'undefined') && (input.dataset_from_file_filename != null)",
                                               condition="(output.is_file_loaded == true)",
 
-                                              shiny::div(title="Click here to peek at the selected dataset...",
-                                                  shiny::actionButton("dataset_from_file_peek_button", label="Peek at file...", icon=shiny::icon("eye-open", lib="glyphicon"))),
+                                              div(title="Click here to peek at the selected dataset...",
+                                                  actionButton("dataset_from_file_peek_button", label="Peek at file...", icon=icon("eye-open", lib="glyphicon"))),
 
-                                              shiny::hr(),
+                                              hr(),
 
-                                              shiny::div(title='Required: select the name of the column containing the patient IDs',
+                                              div(title='Required: select the name of the column containing the patient IDs',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_file_patient_id",
                                                                             label="Patient ID column",
                                                                             choices=c("[none]"),
                                                                             selected="[none]")),
 
-                                              shiny::div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
-                                                  shiny::textInput(inputId="dataset_from_file_event_format",
+                                              div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".',
+                                                  textInput(inputId="dataset_from_file_event_format",
                                                             label="Date format",
                                                             value="%m/%d/%Y",
                                                             placeholder="%m/%d/%Y")),
 
-                                              shiny::div(title='Required: select the name of the column containing the event dates (in the format defined above)',
+                                              div(title='Required: select the name of the column containing the event dates (in the format defined above)',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_file_event_date",
                                                                             label="Event date column",
                                                                             choices=c("[none]"),
                                                                             selected="[none]")),
 
-                                              shiny::div(title='Required: select the name of the column containing the event duration (in days)',
+                                              div(title='Required: select the name of the column containing the event duration (in days)',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_file_event_duration",
                                                                             label="Event duration column",
                                                                             choices=c("[none]"),
                                                                             selected="[none]")),
 
-                                              shiny::div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
+                                              div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_file_daily_dose",
                                                                             label="Daily dose column",
                                                                             choices=c("[not defined]"),
                                                                             selected="[not defined]")),
 
-                                              shiny::div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
+                                              div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_file_medication_class",
                                                                             label="Treatment class column",
                                                                             choices=c("[not defined]"),
                                                                             selected="[not defined]")),
 
-                                              shiny::hr(),
+                                              hr(),
 
-                                              shiny::div(title='Validate choices and use the dataset!',
-                                                  shiny::actionButton(inputId="dataset_from_file_button_use",
-                                                                      label=shiny::strong("Validate & use!"),
-                                                                      icon=shiny::icon("sunglasses", lib="glyphicon"),
-                                                                      style="color:DarkBlue; border-color:DarkBlue;"),
+                                              div(title='Validate choices and use the dataset!',
+                                                  actionButton(inputId="dataset_from_file_button_use",
+                                                               label=strong("Validate & use!"),
+                                                               icon=icon("sunglasses", lib="glyphicon"),
+                                                               style="color:DarkBlue; border-color:DarkBlue;"),
                                                   style="float: center;")
                                             )
                                           ),
 
 
                                           # Use dataset from SQL database ----
-                                          shiny::conditionalPanel(
+                                          conditionalPanel(
                                             condition = "(input.datasource_type == 'SQL database')",
 
                                             # Obligatory stuff:
-                                            shiny::div(title=shiny::HTML('Required: connection to SQL database (please note that the credentials are <b>not</b> stored! What RDBMS/SQL server type/vendor/solution to connect to?'),
-                                                shiny::selectInput(inputId="dataset_from_sql_server_type",
+                                            div(title=HTML('Required: connection to SQL database (please note that the credentials are <b>not</b> stored! What RDBMS/SQL server type/vendor/solution to connect to?'),
+                                                selectInput(inputId="dataset_from_sql_server_type",
                                                             label="What RDBMS solution?",
                                                             choices=c("SQLite",
                                                                       "MySQL/MariaDB"),
                                                             selected="SQLite")),
 
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition="(input.dataset_from_sql_server_type == 'SQLite')",
 
-                                              shiny::div(title=shiny::HTML('This is intended as an example of using SQL with SQLite, and uses an in-memory "med_events" database that contains the example dataset included in the package.\nFor security reasons, we do not allow at this time the use of a user-given SQLite database, but this is easy to do.\nDespite its limitations, SQLite could be a fully working solution in specific scenarios involving, for example, local applications or a pre-defined databasestored in a file on the server.'),
-                                                  shinyjs::disabled(shiny::textInput(inputId="dataset_from_sqlite_database_name",
-                                                                              label=shiny::HTML("Database name <span style='color: red'>(fixed example)</span>"),
+                                              div(title=HTML('This is intended as an example of using SQL with SQLite, and uses an in-memory "med_events" database that contains the example dataset included in the package.\nFor security reasons, we do not allow at this time the use of a user-given SQLite database, but this is easy to do.\nDespite its limitations, SQLite could be a fully working solution in specific scenarios involving, for example, local applications or a pre-defined databasestored in a file on the server.'),
+                                                  shinyjs::disabled(textInput(inputId="dataset_from_sqlite_database_name",
+                                                                              label=HTML("Database name <span style='color: red'>(fixed example)</span>"),
                                                                               value=c("med_events"))))
                                             ),
 
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition="(input.dataset_from_sql_server_type == 'MySQL/MariaDB')",
 
-                                              shiny::div(title=shiny::HTML('Required: the address (name or IP) of the host database (if on the local machine, use "localhost" or "[none]").'),
-                                                  shiny::textInput(inputId="dataset_from_sql_server_host",
+                                              div(title=HTML('Required: the address (name or IP) of the host database (if on the local machine, use "localhost" or "[none]").'),
+                                                  textInput(inputId="dataset_from_sql_server_host",
                                                             label="Host name/address",
                                                             value=c("[none]"))),
 
-                                              shiny::div(title=shiny::HTML('Required: the database server TCP/IP port number.'),
-                                                  shiny::numericInput(inputId="dataset_from_sql_server_port",
+                                              div(title=HTML('Required: the database server TCP/IP port number.'),
+                                                  numericInput(inputId="dataset_from_sql_server_port",
                                                                label="TCP/IP port number",
                                                                value=c(0), min=0, max=NA, step=1)),
 
-                                              shiny::div(title=shiny::HTML('Required: the name of the database.'),
-                                                  shiny::textInput(inputId="dataset_from_sql_database_name",
+                                              div(title=HTML('Required: the name of the database.'),
+                                                  textInput(inputId="dataset_from_sql_database_name",
                                                             label="Database name",
                                                             value=c("[none]"))),
 
-                                              shiny::div(title=shiny::HTML('Required: the username.'),
-                                                  shiny::textInput(inputId="dataset_from_sql_username",
+                                              div(title=HTML('Required: the username.'),
+                                                  textInput(inputId="dataset_from_sql_username",
                                                             label="Username",
                                                             value=c(""),
                                                             placeholder="user")),
 
-                                              shiny::div(title=shiny::HTML('Required: the password'),
-                                                  shiny::passwordInput(inputId="dataset_from_sql_password",
+                                              div(title=HTML('Required: the password'),
+                                                  passwordInput(inputId="dataset_from_sql_password",
                                                                 label="Password",
                                                                 value=c(""),
                                                                 placeholder="password"))
                                             ),
 
-                                            shiny::div(title='Connect to datadase and fetch tables!',
-                                                shiny::actionButton(inputId="dataset_from_sql_button_connect",
-                                                                    label=shiny::strong("Connect!"),
-                                                                    icon=shiny::icon("transfer", lib="glyphicon"),
-                                                                    style="color:DarkBlue; border-color:DarkBlue;"),
+                                            div(title='Connect to datadase and fetch tables!',
+                                                actionButton(inputId="dataset_from_sql_button_connect",
+                                                             label=strong("Connect!"),
+                                                             icon=icon("transfer", lib="glyphicon"),
+                                                             style="color:DarkBlue; border-color:DarkBlue;"),
                                                 style="padding-bottom: 10px;"),
 
-                                            shiny::conditionalPanel(
+                                            conditionalPanel(
                                               condition="(output.is_database_connected == true)",
 
-                                              shiny::div(title='Disconnect from datadase (not really necessary, as the disconnection is automatic when closing the application, but nice to do))',
-                                                  shiny::actionButton(inputId="dataset_from_sql_button_disconnect",
-                                                                      label=shiny::strong("Disconnect!"),
-                                                                      icon=shiny::icon("ban-circle", lib="glyphicon"),
-                                                                      style="color:red; border-color:red;"),
+                                              div(title='Disconnect from datadase (not really necessary, as the disconnection is automatic when closing the application, but nice to do))',
+                                                  actionButton(inputId="dataset_from_sql_button_disconnect",
+                                                               label=strong("Disconnect!"),
+                                                               icon=icon("ban-circle", lib="glyphicon"),
+                                                               style="color:red; border-color:red;"),
                                                   style="padding-bottom: 20px;"),
 
-                                              shiny::div(title='Peek at database!',
-                                                  shiny::actionButton(inputId="dataset_from_sql_button_peek",
-                                                                      label=shiny::strong("Peek at database..."),
-                                                                      icon=shiny::icon("eye-open", lib="glyphicon"))),
+                                              div(title='Peek at database!',
+                                                  actionButton(inputId="dataset_from_sql_button_peek",
+                                                               label=strong("Peek at database..."),
+                                                               icon=icon("eye-open", lib="glyphicon"))),
 
-                                              shiny::hr(),
+                                              hr(),
 
-                                              shiny::div(title=shiny::HTML('Required: the table or view to use...'),
+                                              div(title=HTML('Required: the table or view to use...'),
                                                   shinyWidgets::pickerInput(inputId="dataset_from_sql_table",
                                                                             label="Which table/view",
                                                                             choices=c("[none]"),
                                                                             selected="[none]")),
 
-                                              shiny::div(title='Required: select the name of the column containing the patient IDs',
+                                              div(title='Required: select the name of the column containing the patient IDs',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_sql_patient_id",
                                                                             label="Patient ID column",
                                                                             choices=c("[none]"),
                                                                             selected="[none]")),
 
-                                              shiny::div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".\nFor SQL, the standard format is %Y-%m-%d (i.e., YYYY-MM-DD).',
-                                                  shiny::textInput(inputId="dataset_from_sql_event_format",
+                                              div(title='Required: give the date format.\nBasic codes are:\n  "%d" (day of the month as decimal number),\n  "%m" (month as decimal number),\n  "%b" (Month in abbreviated form),\n  "%B" (month full name),\n  "%y" (year in 2 digit format) and\n  "%Y" (year in 4 digit format).\nSome examples are %m/%d/%Y or %Y%m%d.\nPlease see help entry for "strptime()".\nFor SQL, the standard format is %Y-%m-%d (i.e., YYYY-MM-DD).',
+                                                  textInput(inputId="dataset_from_sql_event_format",
                                                             label="Date format",
                                                             value="%Y-%m-%d",
                                                             placeholder="%Y-%m-%d")),
 
-                                              shiny::div(title='Required: select the name of the column containing the event dates (please note the the format is the standard SQL YYYY-MM-DD)',
+                                              div(title='Required: select the name of the column containing the event dates (please note the the format is the standard SQL YYYY-MM-DD)',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_sql_event_date",
                                                                             label="Event date column",
                                                                             choices=c("[none]"),
                                                                             selected="[none]")),
 
-                                              shiny::div(title='Required: select the name of the column containing the event duration (in days)',
+                                              div(title='Required: select the name of the column containing the event duration (in days)',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_sql_event_duration",
                                                                             label="Event duration column",
                                                                             choices=c("[none]"),
                                                                             selected="[none]")),
 
-                                              shiny::div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
+                                              div(title='Optional (potentially used by CMA5+): select the name of the column containing the daily dose',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_sql_daily_dose",
                                                                             label="Daily dose column",
                                                                             choices=c("[not defined]"),
                                                                             selected="[not defined]")),
 
-                                              shiny::div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
+                                              div(title='Optional (potentially used by CMA5+): select the name of the column containing the treatment class',
                                                   shinyWidgets::pickerInput(inputId="dataset_from_sql_medication_class",
                                                                             label="Treatment class column",
                                                                             choices=c("[not defined]"),
                                                                             selected="[not defined]")),
 
-                                              shiny::hr(),
+                                              hr(),
 
-                                              shiny::div(title='Validate choices and use the dataset!',
-                                                  shiny::actionButton(inputId="dataset_from_sql_button_use",
-                                                                      label=shiny::strong("Validate & use!"),
-                                                                      icon=shiny::icon("sunglasses", lib="glyphicon"),
-                                                                      style="color:DarkBlue; border-color:DarkBlue;"),
+                                              div(title='Validate choices and use the dataset!',
+                                                  actionButton(inputId="dataset_from_sql_button_use",
+                                                               label=strong("Validate & use!"),
+                                                               icon=icon("sunglasses", lib="glyphicon"),
+                                                               style="color:DarkBlue; border-color:DarkBlue;"),
                                                   style="float: center;")
                                             )
 
@@ -1600,49 +1704,134 @@ ui <- shiny::fluidPage(
                                           # Allow last comma:
                                           NULL
                                 )
+                       ),
+
+                       # MEDICATION GROUPS TAB ----
+                       tabPanel(span("Groups", title="Define medication groups..."),
+                                value="sidebar-params-data", icon=icon("list", lib="glyphicon"), fluid=TRUE,
+                                conditionalPanel(
+                                  condition="!(output.is_dataset_defined)",
+
+
+                                  wellPanel(id = "tPanelnomg", style = "overflow:scroll; max-height: 90vh;",
+                                            div(h4("No datasource!"), style="color:DarkRed"),
+                                            br(),
+                                            div(span(span("There is no valid source of data defined (probably because the interactive Shiny plotting was invoked without passing a dataset).")), style="color: red;"),
+                                            hr(),
+                                            div(span("Please use the "),
+                                                span(icon("hdd",lib="glyphicon"),strong("Data"), style="color: darkblue"),
+                                                span(" tab to select a valid datesource!"))
+                                  )
+                                ),
+
+                                conditionalPanel(
+                                  condition="(output.is_dataset_defined)",
+
+                                  wellPanel(id = "tPanel3", style = "overflow:scroll; max-height: 90vh; min-height: 50vh",
+
+                                            # Source of medication groups ----
+                                            span(title='Define medication groups...',
+                                                 h4("Medication groups"), style="color:DarkBlue"),
+
+                                            div(title='Are there medication groups or not?',
+                                                shinyWidgets::materialSwitch(inputId="mg_use_medication_groups",
+                                                                             label=HTML("Use medication groups?"),
+                                                                             value=!is.null(.GlobalEnv$.plotting.params$medication.groups), status="primary", right=TRUE)),
+
+                                            conditionalPanel(
+                                              condition="(input.mg_use_medication_groups)",
+
+                                              div(title='How to define the medication groups?',
+                                                  selectInput(inputId="mg_definitions_source",
+                                                              label="Medication groups from:",
+                                                              choices=c("named vector", "column in data"),
+                                                              selected="named vector")),
+
+                                              conditionalPanel(
+                                                condition="(input.mg_definitions_source == 'named vector')",
+
+                                                div(title='Load the medication groups from a named vector in memory',
+                                                    # From in-memory vector ----
+                                                    selectInput(inputId="mg_from_memory",
+                                                                label="Load named vector",
+                                                                choices=c("[none]"),
+                                                                selected="[none]")),
+
+                                                div(style="height: 0.50em;"),
+
+                                                div(title="Click here to check the selected vector...",
+                                                    actionButton("mg_from_memory_peek_button", label="Check it!", icon=icon("eye-open", lib="glyphicon")))
+                                              ),
+
+                                              conditionalPanel(
+                                                condition="(input.mg_definitions_source == 'column in data')",
+
+                                                div(title='The medication groups are defined by a column in the data',
+                                                    # From column in the data ----
+                                                    shinyWidgets::pickerInput(inputId="mg_from_column",
+                                                                              label="Medication groups column",
+                                                                              choices=c("[none]"),
+                                                                              selected="[none]")),
+
+                                                div(style="height: 0.50em;")
+                                              ),
+
+                                              hr(),
+
+                                              div(title='Validate and use the medication groups!',
+                                                  actionButton(inputId="mg_from_memory_button_use",
+                                                               label=strong("Use it!"),
+                                                               icon=icon("sunglasses", lib="glyphicon"),
+                                                               style="color:DarkBlue; border-color:DarkBlue;"),
+                                                  style="float: center;"),
+
+                                              hr()
+                                            )
+                                  )
+                                )
                        )
 
-           )))),
+             )))),
 
 
     # OUTPUT PANEL ----
     #mainPanel(
-    shiny::column(9,
+    column(9,
 
            #shinyjs::hidden(checkboxInput(inputId="output_panel_container_show", label="", value=FALSE)),
-           shinyjs::hidden(shiny::div(id="output_panel_container", # start with these hidden...
-           #shiny::conditionalPanel(
+           shinyjs::hidden(div(id="output_panel_container", # start with these hidden...
+           #conditionalPanel(
            #  condition="(input.output_panel_container_show == true)",
 
-           shiny::conditionalPanel(
+           conditionalPanel(
              condition="(output.is_dataset_defined == true)",
 
              # Plot dimensions ----
-             shiny::column(3,
-                    shiny::div(title='The width of the plotting area (in pixles)',
-                        shiny::sliderInput(inputId="plot_width",
+             column(3,
+                    div(title='The width of the plotting area (in pixles)',
+                        sliderInput(inputId="plot_width",
                                     label="Plot width",
-                                    min=0, max=5000, value=500, step=20, round=TRUE))
+                                    min=100, max=5000, value=500, step=20, round=TRUE))
              ),
 
-             shiny::conditionalPanel(
+             conditionalPanel(
                condition = "(!input.plot_keep_ratio)",
-               shiny::column(3,
-                      shiny::div(title='The height of the plotting area (in pixels)',
-                          shiny::sliderInput(inputId="plot_height",
+               column(3,
+                      div(title='The height of the plotting area (in pixels)',
+                          sliderInput(inputId="plot_height",
                                       label="height",
-                                      min=0, max=5000, value=300, step=20, round=TRUE))
+                                      min=60, max=5000, value=300, step=20, round=TRUE))
                )
              ),
-             shiny::conditionalPanel(
+             conditionalPanel(
                condition = "(input.plot_keep_ratio)",
-               shiny::column(3,
-                      shiny::p("")
+               column(3,
+                      p("")
                )
              ),
 
-             shiny::column(3,
-                    shiny::div(title='Freeze the width/height ratio of the plotting area (or make the width and height independent of each other)?',
+             column(3,
+                    div(title='Freeze the width/height ratio of the plotting area (or make the width and height independent of each other)?',
                         shinyWidgets::materialSwitch(inputId="plot_keep_ratio",
                                                      label="Keep ratio",
                                                      value=TRUE, status="primary", right=TRUE)),
@@ -1652,9 +1841,9 @@ ui <- shiny::fluidPage(
                     #            value=TRUE)
                     #),
 
-                    #shiny::column(2,
+                    #column(2,
                     # Save image to file:
-                    shiny::div(title='Export this plot to an image file?',
+                    div(title='Export this plot to an image file?',
                         shinyWidgets::materialSwitch(inputId="save_to_file_info",
                                                      label="Save plot!",
                                                      value=FALSE, status="primary", right=TRUE))
@@ -1665,129 +1854,129 @@ ui <- shiny::fluidPage(
              )
            ),
 
-           shiny::conditionalPanel(
+           conditionalPanel(
              condition="!(output.is_dataset_defined)",
-             shiny::column(9,
-                    shiny::div(shiny::p(" "))
+             column(9,
+                    div(p(" "))
              )
            ),
 
-           shiny::column(3,
+           column(3,
                   # Close shop:
-                  shiny::div(title='Exit this Shiny plotting app? (The plot will NOT be automatically saved!)',
-                      shiny::actionButton(inputId="close_shop", label=shiny::strong("Exit..."), icon=shiny::icon("remove-circle", lib="glyphicon"), style="color: #C70039 ; border-color: #C70039"))
+                  div(title='Exit this Shiny plotting app? (The plot will NOT be automatically saved!)',
+                      actionButton(inputId="close_shop", label=strong("Exit..."), icon=icon("remove-circle", lib="glyphicon"), style="color: #C70039 ; border-color: #C70039"))
            ),
 
            # Export to file ----
-           shiny::column(12,
-                  shiny::conditionalPanel(
+           column(12,
+                  conditionalPanel(
                     condition="(input.save_to_file_info)",
 
-                    shiny::div(title='Save the plot using the same size as currently displayed or pick a new size?',
-                        shiny::checkboxInput(inputId="save_plot_displayed_size", label="Save plot using current size?", value=TRUE)),
+                    div(title='Save the plot using the same size as currently displayed or pick a new size?',
+                        checkboxInput(inputId="save_plot_displayed_size", label="Save plot using current size?", value=TRUE)),
 
-                    shiny::conditionalPanel(
+                    conditionalPanel(
                       condition="(!input.save_plot_displayed_size)",
-                      shiny::column(2,
-                             shiny::div(title='The width of the exported plot (in the selected units)',
-                                 shiny::numericInput(inputId="save_plot_width", label="width", value=5))),
-                      shiny::column(2,
-                             shiny::div(title='The height of the exported plot (in the selected units)',
-                                 shiny::numericInput(inputId="save_plot_height", label="height", value=5))),
+                      column(2,
+                             div(title='The width of the exported plot (in the selected units)',
+                                 numericInput(inputId="save_plot_width", label="width", value=5))),
+                      column(2,
+                             div(title='The height of the exported plot (in the selected units)',
+                                 numericInput(inputId="save_plot_height", label="height", value=5))),
 
-                      shiny::conditionalPanel( # EPS + PDF
+                      conditionalPanel( # EPS + PDF
                         condition="(input.save_plot_type == 'eps' || save_plot_type == 'pdf')",
-                        shiny::column(2,
-                               shiny::div(title='For EPS and PDF, only inches are available',
-                                   shiny::selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in"))) # only inches
+                        column(2,
+                               div(title='For EPS and PDF, only inches are available',
+                                   selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in"), selected="in"))) # only inches
                       ),
-                      shiny::conditionalPanel( # JPEG + PNG + TIFF
+                      conditionalPanel( # JPEG + PNG + TIFF
                         condition="(input.save_plot_type != 'eps' && save_plot_type != 'pdf')",
-                        shiny::column(2,
-                               shiny::div(title='The unit of exported plot',
-                                   shiny::selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","px"), selected="in")))
+                        column(2,
+                               div(title='The unit of exported plot',
+                                   selectInput(inputId="save_plot_dim_unit", label="unit", choices=c("in","cm","px"), selected="in")))
                       )
                     ),
 
-                    shiny::conditionalPanel(
+                    conditionalPanel(
                       condition="(input.save_plot_displayed_size)",
-                      shiny::column(6,
-                             shiny::div())
+                      column(6,
+                             div())
                     ),
 
-                    shiny::column(2,
-                           shiny::div(title='The type of the exported image',
-                               shiny::selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpg"))),
+                    column(2,
+                           div(title='The type of the exported image',
+                               selectInput(inputId="save_plot_type", label="type", choices=c("jpg","png","tiff","eps","pdf"), selected="jpg"))),
 
-                    #shiny::column(2,shiny::numericInput(inputId="save_plot_quality", label="quality", value=75, min=0, max=100, step=1)),
-                    shiny::conditionalPanel(
+                    #column(2,numericInput(inputId="save_plot_quality", label="quality", value=75, min=0, max=100, step=1)),
+                    conditionalPanel(
                       condition="(input.save_plot_type != 'eps' && input.save_plot_type != 'pdf')",
-                      shiny::column(2,
-                             shiny::div(title='The resolution of the exported image (not useful for EPS and PDF)',
-                                 shiny::numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0)))
+                      column(2,
+                             div(title='The resolution of the exported image (not useful for EPS and PDF)',
+                                 numericInput(inputId="save_plot_resolution", label="resolution", value=72, min=0)))
                     ),
 
-                    shiny::conditionalPanel(
+                    conditionalPanel(
                       condition="(input.save_plot_type == 'eps' || input.save_plot_type == 'pdf')",
-                      shiny::column(2,
-                             shiny::div())
+                      column(2,
+                             div())
                     ),
 
-                    shiny::column(2, style="margin-top: 25px;",
-                           shiny::div(title='Export the plot now!',
-                               shiny::downloadButton(outputId="save_to_file", label="Save plot")))
+                    column(2, style="margin-top: 25px;",
+                           div(title='Export the plot now!',
+                               downloadButton(outputId="save_to_file", label="Save plot")))
                   )
            ),
 
-           shiny::conditionalPanel(
+           conditionalPanel(
              condition="(output.is_dataset_defined)",
 
              # Messages ----
-             shiny::column(12,
-                    shiny::tags$head(shiny::tags$style("#container * { display: inline; }")),
-                    shiny::div(id="container", title="Various messages (in blue), warnings (in green) and errors (in red) generated during plotting...",
-                        shiny::span(" Messages:", style="color:DarkBlue; font-weight: bold;"),
-                        shiny::span(shiny::htmlOutput(outputId = "messages")),
+             column(12,
+                    tags$head(tags$style("#container * { display: inline; }")),
+                    div(id="container", title="Various messages (in blue), warnings (in green) and errors (in red) generated during plotting...",
+                        span(" Messages:", style="color:DarkBlue; font-weight: bold;"),
+                        span(htmlOutput(outputId = "messages")),
                         style="height: 4em; resize: vertical; overflow: auto")
              ),
 
              # The actual plot ----
-             shiny::column(12, shiny::wellPanel(id = "tPlot",
+             column(12, wellPanel(id = "tPlot",
                                   style="resize: none; overflow:scroll; max-height: 75vh; max-width: 80vw",
-                                  shiny::plotOutput(outputId = "distPlot", inline=TRUE))),
+                                  plotOutput(outputId = "distPlot", inline=TRUE))),
 
              # Export R code for plot ----
-             shiny::column(12,
+             column(12,
                     # Show the R code:
-                    shiny::div(title='Show the R code that would generate the current plot',
-                        shiny::actionButton(inputId="show_r_code", label=shiny::strong("Show R code..."), icon=shiny::icon("eye-open", lib="glyphicon")))
+                    div(title='Show the R code that would generate the current plot',
+                        actionButton(inputId="show_r_code", label=strong("Show R code..."), icon=icon("eye-open", lib="glyphicon")))
              ),
 
-             shiny::column(12,
-                    shiny::div(shiny::p(" "))
+             column(12,
+                    div(p(" "))
              ),
 
-             shiny::hr(),
+             hr(),
 
              # Compute CMA for a (larger) set of patients using the same parameters as for the current plot:
-             shiny::column(12,
-                    shiny::conditionalPanel(
+             column(12,
+                    conditionalPanel(
                       condition="!(input.cma_class == 'simple' && input.cma_to_compute == 'CMA0')",
-                      shiny::div(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
-                          # actionButton(inputId="compute_cma_for_larger_sample", label=shiny::strong("Compute CMA for (more) patients..."), icon=shiny::icon("play", lib="glyphicon")))
+                      div(title='Compute the same CMA with the same parameters as those used to generate the current plot but for (possible) more patients and export the results',
+                          # actionButton(inputId="compute_cma_for_larger_sample", label=strong("Compute CMA for (more) patients..."), icon=icon("play", lib="glyphicon")))
                           shinyWidgets::materialSwitch(inputId="compute_cma_for_larger_sample",
-                                                       label=shiny::strong("Compute CMA for several  patients..."),
+                                                       label=strong("Compute CMA for several  patients..."),
                                                        value=FALSE, status="primary", right=TRUE))
                     )
              ),
 
              # Compute CMA and export results and R code ----
-             shiny::column(12,
-                    shiny::conditionalPanel(
+             column(12,
+                    conditionalPanel(
                       condition="!(input.cma_class == 'simple' && input.cma_to_compute == 'CMA0') && (input.compute_cma_for_larger_sample)",
 
-                      shiny::column(12,
-                             shiny::div(shiny::HTML(paste0('Please select the patients for which to compute the <code>CMA</code>.<br/>',
+                      column(12,
+                             div(HTML(paste0('Please select the patients for which to compute the <code>CMA</code>.<br/>',
                                              'Please note that, due to the potentially high computational costs associated, we limit the <b>maximum number of patients</b> to ',
                                              .GlobalEnv$.plotting.params$max.number.patients.to.compute,
                                              ', the <b>maximum number of events</b> across all patients to ',
@@ -1799,60 +1988,60 @@ ui <- shiny::fluidPage(
                                              'which we recommend running from a <b>dedicated <code>R</code> session</b> on appropriately powerful hardware...'
                              ))),
 
-                             #shiny::div(title="TEST!",
+                             #div(title="TEST!",
                              #    radioButtons(inputId="compute_cma_patient_selection_method",
                              #                 label="You can select the patients either:",
                              #                 choices=c("individually by their ID"="by_id",
                              #                           "or as a range based on their position in a list"="by_position"),
                              #                 inline=TRUE)),
 
-                             shiny::hr(),
-                             shiny::div(title="Compue the CMA for the selected patients...",
-                                 shiny::actionButton(inputId="compute_cma_for_larger_sample_button",
-                                                     label=shiny::strong("Compute CMA..."),
-                                                     icon=shiny::icon("play", lib="glyphicon"),
-                                                     style="color: darkblue ; border-color: darkblue")),
-                             shiny::hr(),
+                             hr(),
+                             div(title="Compue the CMA for the selected patients...",
+                                 actionButton(inputId="compute_cma_for_larger_sample_button",
+                                              label=strong("Compute CMA..."),
+                                              icon=icon("play", lib="glyphicon"),
+                                              style="color: darkblue ; border-color: darkblue")),
+                             hr(),
 
-                             shiny::div(shiny::HTML('<b>You can select the patients:</b>')),
-                             #shiny::hr(),
+                             div(HTML('<b>You can select the patients:</b>')),
+                             #hr(),
 
-                             shiny::tabsetPanel(id="compute_cma_patient_selection_method",
+                             tabsetPanel(id="compute_cma_patient_selection_method",
 
-                                         #shiny::conditionalPanel(
+                                         #conditionalPanel(
                                          #  condition="(input.compute_cma_patient_selection_method == 'by_id'",
-                                         shiny::tabPanel(title=shiny::HTML("<b>individually</b>, using their IDs"), value="by_id",
-                                                  shiny::column(12,shiny::div(title="Please select one or more patient IDs to process...",
-                                                                shiny::selectInput(inputId="compute_cma_patient_by_id",
+                                         tabPanel(title=HTML("<b>individually</b>, using their IDs"), value="by_id",
+                                                  column(12,div(title="Please select one or more patient IDs to process...",
+                                                                selectInput(inputId="compute_cma_patient_by_id",
                                                                             label="Select the IDs of the patients to include",
                                                                             choices=.GlobalEnv$.plotting.params$all.IDs,
                                                                             selected=.GlobalEnv$.plotting.params$all.IDs[1],
                                                                             multiple=TRUE)))
                                          ),
 
-                                         #shiny::conditionalPanel(
+                                         #conditionalPanel(
                                          #  condition="(input.compute_cma_patient_selection_method == 'by_position'",
-                                         shiny::tabPanel(title=shiny::HTML("as a <b>range</b>, based on their position in a list"), value="by_position",
-                                                  shiny::column(12,
-                                                         shiny::div(title="Define the range of positions (#) corresponding to the selected IDs...",
-                                                             shiny::sliderInput(inputId="compute_cma_patient_by_group_range",
+                                         tabPanel(title=HTML("as a <b>range</b>, based on their position in a list"), value="by_position",
+                                                  column(12,
+                                                         div(title="Define the range of positions (#) corresponding to the selected IDs...",
+                                                             sliderInput(inputId="compute_cma_patient_by_group_range",
                                                                          label="Select range of ID positions (#)",
-                                                                         min=1, max=NA, step=1, value=c(1,1),
+                                                                         min=1, max=100, step=1, value=c(1,1),
                                                                          round=TRUE, width="100%"))
                                                   ),
 
-                                                  shiny::column(3,
-                                                         shiny::div(title="Order the patients by..."),
-                                                         shiny::selectInput(inputId="compute_cma_patient_by_group_sorting",
+                                                  column(3,
+                                                         div(title="Order the patients by..."),
+                                                         selectInput(inputId="compute_cma_patient_by_group_sorting",
                                                                      label="Sort patients by",
                                                                      choices=c("original order",
                                                                                "by ID (↑)",
                                                                                "by ID (↓)"))
                                                   ),
 
-                                                  shiny::column(9,
-                                                         shiny::div(shiny::div("The patient IDs with their position (#):"),
-                                                             shiny::dataTableOutput(outputId="show_patients_as_list"))
+                                                  column(9,
+                                                         div(div("The patient IDs with their position (#):"),
+                                                             dataTableOutput(outputId="show_patients_as_list"))
                                                   )
                                          )
                              )
@@ -1861,14 +2050,14 @@ ui <- shiny::fluidPage(
              )
            ),
 
-           shiny::conditionalPanel(
+           conditionalPanel(
              condition="!(output.is_dataset_defined)",
 
-             shiny::column(12, align="center",
-             shiny::div(shiny::br(),shiny::br(),shiny::br(),
-                 shiny::span("Please use the "),
-                 shiny::span(shiny::icon("hdd",lib="glyphicon"),shiny::strong("Data"), style="color: darkblue"),
-                 shiny::span(" tab to select a valid datesource!")))
+             column(12, align="center",
+             div(br(),br(),br(),
+                 span("Please use the "),
+                 span(icon("hdd",lib="glyphicon"),strong("Data"), style="color: darkblue"),
+                 span(" tab to select a valid datesource!")))
            )
 
     )))#)
@@ -1880,12 +2069,12 @@ ui <- shiny::fluidPage(
 server <- function(input, output, session)
 {
   # Initialisation of the Shiny app ----
-  shiny::isolate({shiny::showModal(shiny::modalDialog("Adherer", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait while initializing the App..."), easyClose=FALSE, footer=NULL))})
+  isolate({showModal(modalDialog("Adherer", title=div(icon("hourglass", lib="glyphicon"), "Please wait while initializing the App..."), easyClose=FALSE, footer=NULL))})
 
   # Reactive value to allow UI updating on dataset changes:
-  rv <- shiny::reactiveValues(toggle.me = FALSE);
+  rv <- reactiveValues(toggle.me = FALSE);
 
-  shiny::isolate(
+  isolate(
     {
       options(shiny.sanitize.errors=FALSE);
 
@@ -1904,6 +2093,7 @@ server <- function(input, output, session)
                                             "event.duration.colname"=NA,
                                             "event.daily.dose.colname"=NA,
                                             "medication.class.colname"=NA,
+                                            "medication.groups"=NULL,
                                             "date.format"=NA,
                                             "align.all.patients"=FALSE,
                                             "align.first.event.at.zero"=FALSE,
@@ -1940,22 +2130,25 @@ server <- function(input, output, session)
     })
 
   # Show/hide UI elements based on various conditions:
-  output$is_dataset_defined <- shiny::reactive({!is.null(.GlobalEnv$.plotting.params$data)});
-  shiny::outputOptions(output, "is_dataset_defined", suspendWhenHidden = FALSE);
+  output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)});
+  outputOptions(output, "is_dataset_defined", suspendWhenHidden = FALSE);
 
-  output$is_file_loaded <- shiny::reactive({!is.null(.GlobalEnv$.plotting.params$.fromfile.dataset)});
-  shiny::outputOptions(output, "is_file_loaded", suspendWhenHidden = FALSE);
+  output$is_file_loaded <- reactive({!is.null(.GlobalEnv$.plotting.params$.fromfile.dataset)});
+  outputOptions(output, "is_file_loaded", suspendWhenHidden = FALSE);
 
-  output$is_database_connected <- shiny::reactive({!is.null(.GlobalEnv$.plotting.params$.db.connection)});
-  shiny::outputOptions(output, "is_database_connected", suspendWhenHidden = FALSE);
+  output$is_database_connected <- reactive({!is.null(.GlobalEnv$.plotting.params$.db.connection)});
+  outputOptions(output, "is_database_connected", suspendWhenHidden = FALSE);
 
-  output$is_dose_defined <- shiny::reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
-  shiny::outputOptions(output, "is_dose_defined", suspendWhenHidden = FALSE);
+  output$is_dose_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
+  outputOptions(output, "is_dose_defined", suspendWhenHidden = FALSE);
 
-  output$is_treat_class_defined <- shiny::reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
-  shiny::outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
+  output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
+  outputOptions(output, "is_treat_class_defined", suspendWhenHidden = FALSE);
 
-  #shiny::outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
+  output$is_mg_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.groups)});
+  outputOptions(output, "is_mg_defined", suspendWhenHidden = FALSE);
+
+  #outputOptions(output, 'save_to_file', suspendWhenHidden=FALSE);
 
   # Clean up at session end ----
   session$onSessionEnded(function()
@@ -1981,12 +2174,12 @@ server <- function(input, output, session)
     if( length(patients.to.plot) > .GlobalEnv$.plotting.params$max.number.patients.to.plot )
     {
       patients.to.plot <- patients.to.plot[ 1:.GlobalEnv$.plotting.params$max.number.patients.to.plot ];
-      #shiny::updateSelectInput(session, inputId="patient", selected=patients.to.plot);
+      #updateSelectInput(session, inputId="patient", selected=patients.to.plot);
       cat(paste0("Warning: a maximum of ",.GlobalEnv$.plotting.params$max.number.patients.to.plot,
                      " patients can be shown in an interactive plot: we kept only the first ",.GlobalEnv$.plotting.params$max.number.patients.to.plot,
                      " from those you selected!\n"));
     }
-    ## This check can be too constly during plotting (especially for database connections), so we don't do it for now assuming there's not too many events per patient anyway:
+    ## This check can be too costly during plotting (especially for database connections), so we don't do it for now assuming there's not too many events per patient anyway:
     #if( !is.null(n.events <- .GlobalEnv$.plotting.params$get.data.for.patients.fnc(patients.to.plot, .GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname)) &&
     #    nrow(n.events) > .GlobalEnv$.plotting.params$max.number.events.to.plot )
     #{
@@ -2009,6 +2202,15 @@ server <- function(input, output, session)
                                                          date.format=.GlobalEnv$.plotting.params$date.format,
 
                                                          ID=patients.to.plot,
+
+                                                         medication.groups=if( input$mg_use_medication_groups ){ .GlobalEnv$.plotting.params$medication.groups }else{ NULL },
+                                                         medication.groups.separator.show=input$mg_plot_by_patient,
+                                                         medication.groups.to.plot=.GlobalEnv$.plotting.params$medication.groups.to.plot,
+                                                         medication.groups.separator.lty=input$plot_mg_separator_lty,
+                                                         medication.groups.separator.lwd=input$plot_mg_separator_lwd,
+                                                         medication.groups.separator.color=input$plot_mg_separator_color,
+                                                         medication.groups.allother.label=input$plot_mg_allothers_label,
+
                                                          cma=ifelse(input$cma_class == "simple",
                                                                     input$cma_to_compute,
                                                                     input$cma_class),
@@ -2019,18 +2221,14 @@ server <- function(input, output, session)
                                                          #carryover.into.obs.window=FALSE,
                                                          carry.only.for.same.medication=input$carry_only_for_same_medication,
                                                          consider.dosage.change=input$consider_dosage_change,
-                                                         followup.window.start=ifelse(input$followup_window_start_unit== "calendar date",
-                                                                                      as.Date(input$followup_window_start_date, format="%Y-%m-%d"),
-                                                                                      as.numeric(input$followup_window_start_no_units)),
-                                                         followup.window.start.unit=ifelse(input$followup_window_start_unit== "calendar date",
+                                                         followup.window.start=if(input$followup_window_start_unit == "calendar date"){as.Date(input$followup_window_start_date, format="%Y-%m-%d")} else {as.numeric(input$followup_window_start_no_units)},
+                                                         followup.window.start.unit=ifelse(input$followup_window_start_unit == "calendar date",
                                                                                            "days",
                                                                                            input$followup_window_start_unit),
                                                          followup.window.duration=as.numeric(input$followup_window_duration),
                                                          followup.window.duration.unit=input$followup_window_duration_unit,
-                                                         observation.window.start=ifelse(input$observation_window_start_unit== "calendar date",
-                                                                                         as.Date(input$observation_window_start_date, format="%Y-%m-%d"),
-                                                                                         as.numeric(input$observation_window_start_no_units)),
-                                                         observation.window.start.unit=ifelse(input$observation_window_start_unit== "calendar date",
+                                                         observation.window.start=if(input$observation_window_start_unit == "calendar date"){as.Date(input$observation_window_start_date, format="%Y-%m-%d")} else {as.numeric(input$observation_window_start_no_units)},
+                                                         observation.window.start.unit=ifelse(input$observation_window_start_unit == "calendar date",
                                                                                               "days",
                                                                                               input$observation_window_start_unit),
                                                          observation.window.duration=as.numeric(input$observation_window_duration),
@@ -2039,6 +2237,7 @@ server <- function(input, output, session)
                                                          dosage.change.means.new.treatment.episode=input$dosage_change_means_new_treatment_episode,
                                                          maximum.permissible.gap=as.numeric(input$maximum_permissible_gap),
                                                          maximum.permissible.gap.unit=input$maximum_permissible_gap_unit,
+                                                         maximum.permissible.gap.append.to.episode=input$maximum_permissible_gap_append,
                                                          sliding.window.start=as.numeric(input$sliding_window_start),
                                                          sliding.window.start.unit=input$sliding_window_start_unit,
                                                          sliding.window.duration=as.numeric(input$sliding_window_duration),
@@ -2072,6 +2271,7 @@ server <- function(input, output, session)
                                                          lty.event=input$lty_event, lwd.event=input$lwd_event, pch.start.event=as.numeric(input$pch_start_event), pch.end.event=as.numeric(input$pch_end_event),
                                                          col.continuation=input$col_continuation, lty.continuation=input$lty_continuation, lwd.continuation=input$lwd_continuation,
                                                          cex=max(0.01,input$cex), cex.axis=max(0.01,input$cex_axis), cex.lab=max(0.01,input$cex_lab),
+                                                         force.draw.text=input$force_draw_text,
                                                          highlight.followup.window=input$highlight_followup_window, followup.window.col=input$followup_window_col,
                                                          highlight.observation.window=input$highlight_observation_window, observation.window.col=input$observation_window_col,
                                                          #observation.window.density=input$observation_window_density, observation.window.angle=input$observation_window_angle,
@@ -2112,6 +2312,7 @@ server <- function(input, output, session)
                                                          title=if(input$show_plot_title) {c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns")} else {NULL},
                                                          min.plot.size.in.characters.horiz=input$min_plot_size_in_characters_horiz,
                                                          min.plot.size.in.characters.vert=input$min_plot_size_in_characters_vert,
+
                                                          get.colnames.fnc=.GlobalEnv$.plotting.params$get.colnames.fnc,
                                                          get.patients.fnc=.GlobalEnv$.plotting.params$get.patients.fnc,
                                                          get.data.for.patients.fnc=.GlobalEnv$.plotting.params$get.data.for.patients.fnc
@@ -2121,9 +2322,9 @@ server <- function(input, output, session)
   }
 
   # renderPlot() ----
-  output$distPlot <- shiny::renderPlot({
+  output$distPlot <- renderPlot({
 
-      rv$toggle.me; # make the plot aware of forced updates to the UI (for example, when chainging the dataset)
+      rv$toggle.me; # make the plot aware of forced updates to the UI (for example, when changing the dataset)
 
       msgs <- ""; # the output messages
       res <- NULL; # the result of plotting
@@ -2131,16 +2332,16 @@ server <- function(input, output, session)
       if( is.null(.GlobalEnv$.plotting.params$data) )
       {
         # Switch to the Data tab:
-        shiny::updateTabsetPanel(session=session, inputId="sidebar-tabpanel", selected="sidebar-params-data");
+        updateTabsetPanel(session=session, inputId="sidebar-tabpanel", selected="sidebar-params-data");
 
         ## Display a warning urging the user to select a data source:
-        #shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR..."),
-        #                        shiny::div(shiny::span(code("plot_interactive_cma()"),
-        #                                 shiny::span("was called without a dataset!\nPlease use the ")),
-        #                          shiny::span(shiny::icon("hdd",lib="glyphicon")),
-        #                          shiny::span("Data"),
-        #                          shiny::span(" tab to select a datesource!"), style="color: red;"),
-        #                      footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        #showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR..."),
+        #                        div(span(code("plot_interactive_cma()"),
+        #                                 span("was called without a dataset!\nPlease use the ")),
+        #                          span(icon("hdd",lib="glyphicon")),
+        #                          span("Data"),
+        #                          span(" tab to select a datesource!"), style="color: red;"),
+        #                      footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       } else
       {
         # Depeding on the CMA class we might do things differently:
@@ -2152,7 +2353,7 @@ server <- function(input, output, session)
         } else
         {
           # Quitting....
-          shiny::showModal(shiny::modalDialog(title="AdhereR interactive plotting...", paste0("Unknwon CMA class '",input$cma_class,"'."), easyClose=TRUE));
+          showModal(modalDialog(title="AdhereR interactive plotting...", paste0("Unknwon CMA class '",input$cma_class,"'."), easyClose=TRUE));
         }
 
         # Show the messages (if any):
@@ -2167,7 +2368,7 @@ server <- function(input, output, session)
                    "message"=paste0("<b>&gt;</b> <font color=\"blue\">",as.character(ewms$text[i]),"</font>"),
                    paste0("<b>&gt;</b> ",as.character(ewms$text[i])));
           }, character(1));
-          output$messages <- shiny::renderText(paste0(paste0("<font color=\"red\"><b>",  sum(ewms$type=="error",na.rm=TRUE),  " error(s)</b></font>, ",
+          output$messages <- renderText(paste0(paste0("<font color=\"red\"><b>",  sum(ewms$type=="error",na.rm=TRUE),  " error(s)</b></font>, ",
                                                       "<font color=\"green\"><i>",sum(ewms$type=="warning",na.rm=TRUE)," warning(s)</i></font> & ",
                                                       "<font color=\"blue\">",    sum(ewms$type=="message",na.rm=TRUE)," message(s)</font>:<br>"),
                                                paste0(msgs,collapse="<br>")));
@@ -2176,15 +2377,15 @@ server <- function(input, output, session)
         #if( is.null(res) || length(grep("error", msgs, ignore.case=TRUE)) > 0 )
         #{
         #  # Errors:
-        #  output$messages <- shiny::renderText({ paste0("<font color=\"red\"><b>",msgs,"</b></font>"); })
+        #  output$messages <- renderText({ paste0("<font color=\"red\"><b>",msgs,"</b></font>"); })
         #} else if( length(grep("warning", msgs, ignore.case=TRUE)) > 0 )
         #{
         #  # Warnings:
-        #  output$messages <- shiny::renderText({ paste0("<font color=\"green\"><i>",msgs,"</i></font>"); })
+        #  output$messages <- renderText({ paste0("<font color=\"green\"><i>",msgs,"</i></font>"); })
         #} else
         #{
         #  # Normal output:
-        #  output$messages <- shiny::renderText({ paste0("<font color=\"blue\">",msgs,"</font>"); })
+        #  output$messages <- renderText({ paste0("<font color=\"blue\">",msgs,"</font>"); })
         #}
       }
     },
@@ -2207,19 +2408,19 @@ server <- function(input, output, session)
   )
 
   # The text messages ----
-  output$messages <- shiny::renderText({
+  output$messages <- renderText({
     ""
   })
 
   # Keep ratio toggle event ----
-  shiny::observeEvent(input$plot_keep_ratio,
+  observeEvent(input$plot_keep_ratio,
   {
     if( input$plot_keep_ratio )
     {
       .GlobalEnv$.plotting.params$plot.ratio <- (input$plot_width / input$plot_height); # save the ratio
     } else
     {
-      shiny::updateSliderInput(session, "plot_height", value = round(input$plot_width / .GlobalEnv$.plotting.params$plot.ratio));
+      updateSliderInput(session, "plot_height", value = round(input$plot_width / .GlobalEnv$.plotting.params$plot.ratio));
     }
   })
 
@@ -2291,14 +2492,15 @@ server <- function(input, output, session)
 
 
   # About and help box ----
-  shiny::observeEvent(input$about_button,
+  observeEvent(input$about_button,
   {
     # Get most of the relevant info from the DESCRIPTION file:
     descr.adherer    <- utils::packageDescription("AdhereR");
     descr.adhererviz <- utils::packageDescription("AdhereRViz");
     msg <- paste0(# Logo:
                   "<img src='adherer-logo.png', align = 'left', style='font-size: x-large; font-weight: bold; height: 2em; vertical-align: baseline;'/>",
-                  "<div style='width: 1em; display: inline-block;'/>",
+                  #"<div style='width: 1em; display: inline-block;'/>",
+                  "<div style='display: inline-block;'/>",
                   "<hr/>",
                   # AdhereR:
                   "<div style='max-height: 50vh; overflow: auto;'>",
@@ -2331,41 +2533,41 @@ server <- function(input, output, session)
                   "<li>running <code>help('CMA0')</code> (or the equivalent <code>?CMA0</code>) in the R cosole displayes the <i>detailed documentation</i> the particular topic (here, CMA0); in RStudio, selecting the keyword ('CMA0') in the script editor and pressing <code>F1</code> has the same effect. Please note that to obtain help for <i>overloaded</i> functions (such as <code>plot</code>) for, say, sliding windows, one must use the fully qualified function name (here, <code>?plot.CMA_sliding_window</code>);</li>",
                   "<li>the various <i>vignettes</i> contain a lot of information about selected topics. To list all available vignettes for AdhereR, run <code>browseVignettes(package='AdhereR')</code> in the R console. Currently, the main vignettes concern:</li>",
                   "<ul>",
-                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/AdhereR-overview.html' target='_blank'>AdhereR: Adherence to Medications</a></i> gives an overview of what AdhereR can do;</li>",
-                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/calling-AdhereR-from-python3.html' target='_blank'>Calling AdhereR from Python 3</a></i> describes a mechanism that allows AdhereR to be used from programming languages and platforms other than R (in particular, from Python 3);</li>",
-                  "<li><i><a href='https://cran.r-project.org/web/packages/AdhereR/vignettes/adherer_with_databases.pdf' target='_blank'>Using AdhereR with various database technologies for processing very large datasets</a></i> described how to use AdhereR to process data stored in 'classic' SQL Relational Databases Management Systems (RDBMSs) or in Apache's Hadoop;</li>",
-                  "<li><i><b><a href='https://cran.r-project.org/web/packages/AdhereRViz/vignettes/adherer_interctive_plots.html' target='_blank'>AdhereR: Interactive plotting (and more) with Shiny</a></b></i> is probably the most relevant here.</li>",
+                  "<li><i><a href='https://CRAN.R-project.org/package=AdhereR/vignettes/AdhereR-overview.html' target='_blank'>AdhereR: Adherence to Medications</a></i> gives an overview of what AdhereR can do;</li>",
+                  "<li><i><a href='https://CRAN.R-project.org/package=AdhereR/vignettes/calling-AdhereR-from-python3.html' target='_blank'>Calling AdhereR from Python 3</a></i> describes a mechanism that allows AdhereR to be used from programming languages and platforms other than R (in particular, from Python 3);</li>",
+                  "<li><i><a href='https://CRAN.R-project.org/package=AdhereR/vignettes/adherer_with_databases.pdf' target='_blank'>Using AdhereR with various database technologies for processing very large datasets</a></i> described how to use AdhereR to process data stored in 'classic' SQL Relational Databases Management Systems (RDBMSs) or in Apache's Hadoop;</li>",
+                  "<li><i><b><a href='https://CRAN.R-project.org/package=AdhereRViz/vignettes/adherer_interctive_plots.html' target='_blank'>AdhereR: Interactive plotting (and more) with Shiny</a></b></i> is probably the most relevant here.</li>",
                   "</ul>",
                   "</ul>",
                   "</div>");
 
-    tryCatch(shiny::showModal(shiny::modalDialog(shiny::HTML(msg),
+    tryCatch(showModal(modalDialog(HTML(msg),
                                    title=NULL,
-                                   footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon"))))),
-             error = function(e) shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                                       shiny::div("Cannot display the About message!", style="color: red;"),
-                                                       footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))))
+                                   footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
+             error = function(e) showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                                       div("Cannot display the About message!", style="color: red;"),
+                                                       footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))))
     );
   })
 
 
   # Show the R code box ----
   r_code <- ""; # must be global because we need to access it form other functions as well (and it's not a big object anyway)
-  shiny::observeEvent(input$show_r_code,
+  observeEvent(input$show_r_code,
   {
     if( is.na(.GlobalEnv$.plotting.params$.dataset.type) )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::HTML("No dataset (or a NULL one) was given through the <code>data</code> argument to the <code>plot_interactive_cma()</code> function call, and no datasource was manually selected either: please select one using the <b>Data</b> tab!"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            HTML("No dataset (or a NULL one) was given through the <code>data</code> argument to the <code>plot_interactive_cma()</code> function call, and no datasource was manually selected either: please select one using the <b>Data</b> tab!"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     if( is.null(input$patient) || length(input$patient) < 1 )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div("No patients selected, so nothing to do!", style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("No patients selected, so nothing to do!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
@@ -2388,8 +2590,8 @@ server <- function(input, output, session)
       # The dataset came as the `data` argument to `plot_interactive_cam()`, so we don't know it's "name":
       r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
       r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
-      r_code <<- paste0(r_code, "# \"", class(.GlobalEnv$.plotting.params$data), "\", and it has the structure:\n");
-      r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.GlobalEnv$.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n\n");
+      r_code <<- paste0(r_code, "# \"", paste0(class(.GlobalEnv$.plotting.params$data),collapse=","), "\", and it has the structure:\n");
+      r_code <<- paste0(r_code, paste0("#   ",capture.output(str(.GlobalEnv$.plotting.params$data, vec.len=3, width=60)),collapse="\n"),"\n");
     } else
     {
       # The dataset was manually selected, so we know quite a bit about it:
@@ -2442,6 +2644,50 @@ server <- function(input, output, session)
                                 "and contains info for ", length(unique(.GlobalEnv$.plotting.params$get.patients.fnc(.GlobalEnv$.plotting.params$data, .GlobalEnv$.plotting.params$ID.colname))), " patients.\n");
     }
 
+    # The medication group:
+    if( !is.null(.GlobalEnv$.plotting.params$medication.groups) && input$mg_use_medication_groups )
+    {
+      # Defined:
+      r_code <<- paste0(r_code, "# \n",
+                        "# There are medication groups defined: we denote them here as MGs.\n");
+      if( input$mg_definitions_source == 'named vector' &&
+          (length(.GlobalEnv$.plotting.params$medication.groups) > 1 ||
+           (length(.GlobalEnv$.plotting.params$medication.groups) == 1 &&
+            !(.GlobalEnv$.plotting.params$medication.groups %in% .GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)))) )
+      {
+        # Vector defining the medication groups:
+        if( .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments )
+        {
+          # The medication groups came as the `medication.groups` argument to `plot_interactive_cam()`, so we don't know it's "name":
+          r_code <<- paste0(r_code, "# For reasons to do with how R works, we cannot display the name\n");
+          r_code <<- paste0(r_code, "# you used for it (if any), but we can tell you that it is of type\n");
+          r_code <<- paste0(r_code, "# \"", paste0(class(.GlobalEnv$.plotting.params$medication.groups),collapse=","), "\", and has ",length(.GlobalEnv$.plotting.params$medication.groups)," elements:\n");
+        } else
+        {
+          # The medication groups were manually selected, so we know quite a bit about them:
+          r_code <<- paste0(r_code, "# The medication groups are defined using an object already\n",
+                            "# in memory under the name '",.GlobalEnv$.plotting.params$.mg.name,"'.\n",
+                            "# Assuming this object still exists with the same name, then:\n");
+          r_code <<- paste0(r_code, "# it is of type \"", paste0(class(.GlobalEnv$.plotting.params$medication.groups),collapse=","), "\"\n",
+                            "# and has ",length(.GlobalEnv$.plotting.params$medication.groups)," elements:\n");
+        }
+        # The elements are the same:
+        r_code <<- paste0(r_code, "# c(\n");
+        r_code <<- paste0(r_code,
+                          paste0("#   '",names(.GlobalEnv$.plotting.params$medication.groups),"' = '",.GlobalEnv$.plotting.params$medication.groups,"'",collapse=",\n"),
+                          "\n");
+        r_code <<- paste0(r_code, "#  );\n",
+                          "# \n");
+      } else
+      {
+        # Column name:
+        r_code <<- paste0(r_code, "# The medication groups are defined by column\n");
+        r_code <<- paste0(r_code, "# '",.GlobalEnv$.plotting.params$medication.groups,"'\n");
+        r_code <<- paste0(r_code, "# in the data.\n");
+        r_code <<- paste0(r_code, "# \n");
+      }
+    }
+
     # The accessor functions:
     r_code <<- paste0(r_code, "# \n");
     r_code <<- paste0(r_code, "# To allow using data from other sources than a \"data.frame\"\n");
@@ -2455,18 +2701,18 @@ server <- function(input, output, session)
     fnc.code <- capture.output(print(.GlobalEnv$.plotting.params$get.data.for.patients.fnc));
     if( is.null(fnc.code) || length(fnc.code) == 0 )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div("Cannot display the R code for plot!", style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("Cannot display the R code for plot!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
     if( length(grep("<environment", fnc.code[length(fnc.code)], fixed=TRUE)) == 1 ){ fnc.code <- fnc.code[-length(fnc.code)]; }
     if( length(grep("<bytecode", fnc.code[length(fnc.code)], fixed=TRUE)) == 1 ){ fnc.code <- fnc.code[-length(fnc.code)]; }
     if( is.null(fnc.code) || length(fnc.code) == 0 )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div("Cannot display the R code for plot!", style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("Cannot display the R code for plot!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
     if( length(fnc.code) == 1 )
@@ -2496,7 +2742,12 @@ server <- function(input, output, session)
 
     # The parameters:
     r_code <<- paste0(r_code, "data=.data.for.selected.patients.,\n");
-    if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", "CMA=",input$cma_to_compute_within_complex,",\n");
+    if( input$cma_class != "simple" ) r_code <<- paste0(r_code, cma_fnc_body_indent, " ", 'CMA="',input$cma_to_compute_within_complex,'",\n');
+    if( !is.null(.GlobalEnv$.plotting.params$medication.groups) && input$mg_use_medication_groups )
+    {
+      # Medication groups defined:
+      r_code <<- paste0(r_code, cma_fnc_body_indent, " medication.groups=MGs, ### don't forget to put here your REAL medication groups! ###\n");
+    }
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # (please note that even if some parameters are\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # not relevant for a particular CMA type, we\n");
     r_code <<- paste0(r_code, cma_fnc_body_indent, " # nevertheless pass them as they will be ignored)\n");
@@ -2524,7 +2775,8 @@ server <- function(input, output, session)
                        "per.episode"=c("medication.change.means.new.treatment.episode"=input$medication_change_means_new_treatment_episode,
                                        "dosage.change.means.new.treatment.episode"=input$dosage_change_means_new_treatment_episode,
                                        "maximum.permissible.gap"=input$maximum_permissible_gap,
-                                       "maximum.permissible.gap.unit"=paste0('"',input$maximum_permissible_gap_unit,'"')),
+                                       "maximum.permissible.gap.unit"=paste0('"',input$maximum_permissible_gap_unit,'"'),
+                                       "maximum.permissible.gap.append.to.episode"=input$maximum_permissible_gap_append),
                        "sliding.window"=c("sliding.window.start"=as.numeric(input$sliding_window_start),
                                           "sliding.window.start.unit"=paste0('"',input$sliding_window_start_unit,'"'),
                                           "sliding.window.duration"=input$sliding_window_duration,
@@ -2576,6 +2828,7 @@ server <- function(input, output, session)
                      "cex"=max(0.01,input$cex),
                      "cex.axis"=max(0.01,input$cex_axis),
                      "cex.lab"=max(0.01,input$cex_lab),
+                     "force.draw.text"=input$force.draw.text,
                      "highlight.followup.window"=input$highlight_followup_window,
                      "followup.window.col"=paste0('"',input$followup_window_col,'"'),
                      "highlight.observation.window"=input$highlight_observation_window,
@@ -2604,7 +2857,20 @@ server <- function(input, output, session)
                      "lwd.event.max.dose"=input$lwd_event_max_dose,
                      "plot.dose.lwd.across.medication.classes"=input$plot_dose_lwd_across_medication_classes,
                      "min.plot.size.in.characters.horiz"=input$min_plot_size_in_characters_horiz,
-                     "min.plot.size.in.characters.vert"=input$min_plot_size_in_characters_vert);
+                     "min.plot.size.in.characters.vert"=input$min_plot_size_in_characters_vert,
+                     "medication.groups.to.plot"=ifelse(!is.null(.GlobalEnv$.plotting.params$medication.groups) && input$mg_use_medication_groups,
+                                                        paste0("c(",
+                                                               paste0('"',
+                                                                      ifelse(input$mg_to_plot_list=="* (all others)","__ALL_OTHERS__",input$mg_to_plot_list),
+                                                                      '"',collapse=","),
+                                                               ")"),
+                                                        "NULL"),
+                     "medication.groups.separator.show"=input$mg_plot_by_patient,
+                     "medication.groups.separator.lty"=paste0('"',input$plot_mg_separator_lty,'"'),
+                     "medication.groups.separator.lwd"=input$plot_mg_separator_lwd,
+                     "medication.groups.separator.color"=paste0('"',input$plot_mg_separator_color,'"'),
+                     "medication.groups.allother.label"=paste0('"',input$plot_mg_allothers_label,'"')
+    );
     r_code <<- paste0(r_code, paste0("         ", names(params.plot), "=", params.plot, collapse=",\n"), "\n");
     r_code <<- paste0(r_code, "    );\n");
     r_code <<- paste0(r_code, "}\n");
@@ -2612,44 +2878,46 @@ server <- function(input, output, session)
     ## DEBUG:
     #cat(r_code);
 
-    tryCatch(shiny::showModal(shiny::modalDialog(shiny::div(shiny::div(shiny::HTML("<p>This is the <code>R</code> that would generate the plot currently seen. You can copy it to the clipboard using the <i>Copy to clipboard</i> button.</p>
-                                                <p>Please note that the parameter value <b><code>DATA</code></b> <i>must be replaced</i> by the actual data you passed to the Shiny interactive plot function!</p>")),
-                                       shiny::div(shiny::HTML(gsub('<span class="symbol">DATA</span>','<span class="symbol_data">DATA</span>',
-                                                     highlight::highlight(parse.output=parse(text=r_code),
-                                                                          renderer=highlight::renderer_html(document=TRUE,
-                                                                                                            stylesheet=file.path(system.file('interactivePlotShiny',
-                                                                                                                                             package='AdhereRViz'),
-                                                                                                                                 "r-code-highlight.css")),
-                                                                          show_line_numbers=FALSE,
-                                                                          output=NULL),
+    tryCatch(showModal(modalDialog(div(div(HTML("<p>This is the <code>R</code> that would generate the plot currently seen. You can copy it to the clipboard using the <i>Copy to clipboard</i> button.</p>
+                                                <p>Please note that the parameter values <b><code>DATA</code></b> and <b><code>MGs</code></b> <i>must be replaced</i> by the actual data and medication groups (if the case) you passed to the Shiny interactive plot function!</p>")),
+                                       div(HTML(gsub('<span class="symbol">MGs</span>','<span class="symbol_data">MGs</span>',
+                                                     gsub('<span class="symbol">DATA</span>','<span class="symbol_data">DATA</span>',
+                                                          highlight::highlight(parse.output=parse(text=r_code),
+                                                                               renderer=highlight::renderer_html(document=TRUE,
+                                                                                                                 stylesheet=file.path(system.file('interactivePlotShiny',
+                                                                                                                                                  package='AdhereRViz'),
+                                                                                                                                      "r-code-highlight.css")),
+                                                                               show_line_numbers=FALSE,
+                                                                               output=NULL),
+                                                          fixed=TRUE),
                                                      fixed=TRUE)),
-                                       #shiny::div(shiny::HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
-                                           style="max-height: 50vh; overflow: auto;")),
-                                   title=shiny::HTML("The <code>R</code> code for the current plot..."),
-                                   footer = shiny::tagList(shiny::actionButton("copy_code", "Copy to clipboard", icon=shiny::icon("copy", lib="glyphicon")),
-                                                    shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon"))))),
-             error = function(e) shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                                       shiny::div("Cannot display the R code for plot!", style="color: red;"),
-                                                       footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))))
+                                           #div(HTML(highlight::external_highlight(code=r_code, theme="acid", lang="r", type="HTML", doc=TRUE, file=NULL, outfile=NULL)),
+                                           style="max-height: 50vh; overflow-x: scroll; overflow-y: scroll; white-space: nowrap;")), # overflow: auto;
+                                   title=HTML("The <code>R</code> code for the current plot..."),
+                                   footer = tagList(actionButton("copy_code", "Copy to clipboard", icon=icon("copy", lib="glyphicon")),
+                                                    modalButton("Close", icon=icon("ok", lib="glyphicon"))))),
+             error = function(e) showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                                       div("Cannot display the R code for plot!", style="color: red;"),
+                                                       footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))))
     );
   })
-  shiny::observeEvent(input$copy_code,
+  observeEvent(input$copy_code,
   {
     if( clipr::clipr_available() ) clipr::write_clip(r_code, object_type="character");
   })
 
 
   # Close shop nicely ----
-  shiny::observeEvent(input$close_shop,
+  observeEvent(input$close_shop,
   {
-    shiny::showModal(shiny::modalDialog(title="AdhereR interactive plotting...", "Are you sure you want to close the interactive plotting?",
-                          footer = shiny::tagList(shiny::modalButton("No", icon=shiny::icon("remove-circle", lib="glyphicon")),
-                                           shiny::actionButton("ok", "Yes", icon=shiny::icon("ok-circle", lib="glyphicon")))))
+    showModal(modalDialog(title="AdhereR interactive plotting...", "Are you sure you want to close the interactive plotting?",
+                          footer = tagList(modalButton("No", icon=icon("remove-circle", lib="glyphicon")),
+                                           actionButton("ok", "Yes", icon=icon("ok-circle", lib="glyphicon")))))
   })
-  shiny::observeEvent(input$ok,
+  observeEvent(input$ok,
   {
-    shiny::removeModal();
-    shiny::stopApp();
+    removeModal();
+    stopApp();
   })
 
   # Show/hide panel sections ----
@@ -2658,6 +2926,7 @@ server <- function(input, output, session)
     shinyjs::toggle(id=paste0(id,"_unfold_icon"), anim=anim, animType=animType); # the unfolding icon
     shinyjs::toggle(id=paste0(id,"_contents"),    anim=anim, animType=animType); # the section content
   }
+  shinyjs::onclick("mg_section",               function(e){.toggle.all.sections("mg");})
   shinyjs::onclick("follow_up_section",        function(e){.toggle.all.sections("follow_up");})
   shinyjs::onclick("general_settings_section", function(e){.toggle.all.sections("general_settings");})
   shinyjs::onclick("observation_section",      function(e){.toggle.all.sections("observation");})
@@ -2677,7 +2946,7 @@ server <- function(input, output, session)
   .recursively.list.objects.in.memory <- function(..., # inspired from http://adv-r.had.co.nz/Environments.html#env-recursion
                                                   env = parent.frame(),
                                                   of.class="data.frame", # if NULL, no type testing (all go)
-                                                  min.nrow=1, min.ncol=3,
+                                                  min.nrow=1, min.ncol=3, # NA if not relevant
                                                   return.dimensions=TRUE,
                                                   consider.derived.classes=TRUE)
   {
@@ -2698,7 +2967,13 @@ server <- function(input, output, session)
           x <- get(s, envir=env); # get the actual object
           if( (!consider.derived.classes && (of.class %in% class(x))) || (consider.derived.classes && inherits(x, of.class)) )
           {
-            return (nrow(x) >= min.nrow && ncol(x) >= min.ncol);
+            if( !is.na(min.nrow) && !is.na(min.ncol) )
+            {
+              return (nrow(x) >= min.nrow && ncol(x) >= min.ncol);
+            } else
+            {
+              return (TRUE);
+            }
           } else
           {
             return (FALSE);
@@ -2709,14 +2984,19 @@ server <- function(input, output, session)
 
       # Recursive processing:
       all.objects <- c(all.objects,
-                       .recursively.list.objects.in.memory(..., env = parent.env(env), of.class=of.class, consider.derived.classes=consider.derived.classes));
+                       .recursively.list.objects.in.memory(...,
+                                                           env = parent.env(env),
+                                                           of.class=of.class,
+                                                           min.nrow=min.nrow, min.ncol=min.ncol,
+                                                           return.dimensions=return.dimensions,
+                                                           consider.derived.classes=consider.derived.classes));
       # Return the list of objects:
       return (all.objects);
     }
   }
 
   # In-memory dataset: update the list of data.frame-derived objects all the way to the base environment ----
-  shiny::observeEvent(input$datasource_type,
+  observeEvent(input$datasource_type,
   {
     if( input$datasource_type == "already in memory" )
     {
@@ -2734,12 +3014,12 @@ server <- function(input, output, session)
           x <- c("<<'data' argument to plot_interactive_cma() call>>", x);
         }
       }
-      shiny::updateSelectInput(session, "dataset_from_memory", choices=x, selected=head(x,1));
+      updateSelectInput(session, "dataset_from_memory", choices=x, selected=head(x,1));
     }
   })
 
-  # In-memory dataset: list the columns and upate the selections ----
-  shiny::observeEvent(input$dataset_from_memory,
+  # In-memory dataset: list the columns and update the selections ----
+  observeEvent(input$dataset_from_memory,
   {
     # Disconnect any pre-existing database connections:
     if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
@@ -2771,28 +3051,29 @@ server <- function(input, output, session)
          ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
          nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ))
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!"), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!"), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     if( (input$dataset_from_memory != "[none]") && nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Dataset '",input$dataset_from_memory, "' must have at least three distinct columns (patient ID, event date and duration)!"), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Dataset '",input$dataset_from_memory, "' must have at least three distinct columns (patient ID, event date and duration)!"), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     n.vals.to.show <-3;
-    x <- names(.GlobalEnv$.plotting.params$.inmemory.dataset);
-    x.info <- vapply(1:ncol(.GlobalEnv$.plotting.params$.inmemory.dataset),
+    d <- as.data.frame(.GlobalEnv$.plotting.params$.inmemory.dataset);
+    x <- names(d);
+    x.info <- vapply(1:ncol(d),
                      function(i) paste0("(",
-                                        class(as.data.frame(.GlobalEnv$.plotting.params$.inmemory.dataset)[,i]),
+                                        paste0(class(d[,i]),collapse=","),
                                         ": ",
-                                        paste0(as.data.frame(.GlobalEnv$.plotting.params$.inmemory.dataset)[1:min(n.vals.to.show,nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)),i],collapse=", "),
-                                        if(nrow(.GlobalEnv$.plotting.params$.inmemory.dataset)>n.vals.to.show) "...",
+                                        paste0(d[1:min(n.vals.to.show,nrow(d)),i],collapse=", "),
+                                        if(nrow(d)>n.vals.to.show) "...",
                                         ")"),
                      character(1));
 
@@ -2805,6 +3086,8 @@ server <- function(input, output, session)
     shinyWidgets::updatePickerInput(session, "dataset_from_memory_medication_class", choices=c("[not defined]", x), selected="[not defined]", choicesOpt=list(subtext=c("", x.info)));
     shinyWidgets::updatePickerInput(session, "dataset_from_memory_daily_dose",       choices=c("[not defined]", x), selected="[not defined]", choicesOpt=list(subtext=c("", x.info)));
 
+    # Medication groups:
+    shinyWidgets::updatePickerInput(session, "mg_from_column", choices=x, selected=x[1], choicesOpt=list(subtext=x.info));
   })
 
   # Display a data.frame as a nice HTML table ----
@@ -2882,7 +3165,7 @@ server <- function(input, output, session)
   }
 
   # In-memory dataset: peek ----
-  shiny::observeEvent(input$dataset_from_memory_peek_button,
+  observeEvent(input$dataset_from_memory_peek_button,
   {
     # Sanity checks:
     if( is.null(.GlobalEnv$.plotting.params$.inmemory.dataset) ||
@@ -2890,16 +3173,16 @@ server <- function(input, output, session)
         ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
         nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
-    shiny::showModal(shiny::modalDialog(title="AdhereR: peeking at the selected in-memory dataset ...",
-                          shiny::div(shiny::HTML(.show.data.frame.as.HTML(.GlobalEnv$.plotting.params$.inmemory.dataset)),
+    showModal(modalDialog(title="AdhereR: peeking at the selected in-memory dataset ...",
+                          div(HTML(.show.data.frame.as.HTML(.GlobalEnv$.plotting.params$.inmemory.dataset)),
                                    style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
-                          footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+                          footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
 
   })
 
@@ -2915,133 +3198,133 @@ server <- function(input, output, session)
     all.IDs <- get.patients.fnc(d, ID.colname);
     if( length(all.IDs) < min.npats || length(get.colnames.fnc(d)) < min.ncol )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Cannot load the selected dataset!\nPlease make sure your selection is valid and has at least ",min.ncol," column(s) and data for at least ",min.npats," patient(s)..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected dataset!\nPlease make sure your selection is valid and has at least ",min.ncol," column(s) and data for at least ",min.npats," patient(s)..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     # Check if the column names refer to existing columns in the dataset:
     if( is.na(ID.colname) || length(ID.colname) != 1 || ID.colname=="" || !(ID.colname %in% get.colnames.fnc(d)) )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Patient ID column '",ID.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Patient ID column '",ID.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     if( is.na(event.date.colname) || length(event.date.colname) != 1 || event.date.colname=="" || !(event.date.colname %in% get.colnames.fnc(d)) )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Event date column '",event.date.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Event date column '",event.date.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     if( is.na(event.duration.colname) || length(event.duration.colname) != 1 || event.duration.colname=="" || !(event.duration.colname %in% get.colnames.fnc(d)) )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Event duration column '",event.duration.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Event duration column '",event.duration.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     if( is.na(event.daily.dose.colname) || length(event.daily.dose.colname) != 1 || event.daily.dose.colname=="" )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Event duration column '",event.daily.dose.colname, "' must be a non-empty string..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Event duration column '",event.daily.dose.colname, "' must be a non-empty string..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     } else if( event.daily.dose.colname == "[not defined]" )
     {
       event.daily.dose.colname <- NA; # not defined
     } else if( !(event.daily.dose.colname %in% get.colnames.fnc(d)) )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Event duration column '",event.daily.dose.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Event duration column '",event.daily.dose.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     if( is.na(medication.class.colname) || length(medication.class.colname) != 1 || medication.class.colname=="" )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Treatment class column '",medication.class.colname, "' must be a non-empty string..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Treatment class column '",medication.class.colname, "' must be a non-empty string..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     } else if( medication.class.colname == "[not defined]" )
     {
       medication.class.colname <- NA; # not defined
     } else if( !(medication.class.colname %in% get.colnames.fnc(d)) )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Treatment class column '",medication.class.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Treatment class column '",medication.class.colname, "' if given, must be either '[not defined]' or a valid column name in the selected dataset..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     # Check if the column names are unique (i.e., do not repeat):
     if( anyDuplicated(na.omit(c(ID.colname, event.date.colname, event.duration.colname, event.daily.dose.colname, medication.class.colname))) )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div("The selected column names must be unique!", style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("The selected column names must be unique!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     # More advanced checks of the column types:
     if( inherits(d, "data.frame") ) # for data.frame's
     {
-      d_df <- as.data.frame(d); # make sure we deal gracefully with data.table's...
-      if( inherits(d_df[,event.date.colname], "Date") )
+      d <- as.data.frame(d); # force it to a data.frame to avoid unexpected behaviours from derived classes
+      if( inherits(d[,event.date.colname], "Date") )
       {
         # It's a column of Dates: perfect!
-      } else if( is.factor(d_df[,event.date.colname]) || is.character(d_df[,event.date.colname]) )
+      } else if( is.factor(d[,event.date.colname]) || is.character(d[,event.date.colname]) )
       {
         # It's a factor or string: check if it conforms to the given date.format:
-        s <- na.omit(as.character(d_df[,event.date.colname]));
+        s <- na.omit(as.character(d[,event.date.colname]));
         if( length(s) == 0 )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                shiny::div(paste0("There are no non-missing dates in the '",event.date.colname,"' column!"), style="color: red;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div(paste0("There are no non-missing dates in the '",event.date.colname,"' column!"), style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
           return (invisible(NULL));
         }
         tmp <- as.Date(s, format=input$dataset_from_memory_event_format);
         if( all(is.na(tmp)) )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                shiny::div(paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: all conversions failed!"), style="color: red;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div(paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: all conversions failed!"), style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
           return (invisible(NULL));
         } else if( any(is.na(tmp)) )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                shiny::div(paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: ", length(is.na(tmp))," conversions failed!"), style="color: red;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div(paste0("Please check if the date format is correct and fits the actual dates in the '",event.date.colname,"' column: ", length(is.na(tmp))," conversions failed!"), style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
           return (invisible(NULL));
         }
       } else
       {
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div(paste0("The event date column '",event.date.colname,"' must contain either objects of class 'Date' or correctly-formatted strings (or factor levels)!"), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div(paste0("The event date column '",event.date.colname,"' must contain either objects of class 'Date' or correctly-formatted strings (or factor levels)!"), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       }
 
-      if( !is.na(event.duration.colname) && (!is.numeric(d_df[,event.duration.colname]) || any(d_df[,event.duration.colname] < 0, na.rm=TRUE)) )
+      if( !is.na(event.duration.colname) && (!is.numeric(d[,event.duration.colname]) || any(d[,event.duration.colname] < 0, na.rm=TRUE)) )
       {
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div(paste0("If given, the event duration column '",event.duration.colname,"' must contain non-negative numbers!"), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div(paste0("If given, the event duration column '",event.duration.colname,"' must contain non-negative numbers!"), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       }
 
-      if( !is.na(event.daily.dose.colname) && (!is.numeric(d_df[,event.daily.dose.colname]) || any(d_df[,event.daily.dose.colname] < 0, na.rm=TRUE)) )
+      if( !is.na(event.daily.dose.colname) && (!is.numeric(d[,event.daily.dose.colname]) || any(d[,event.daily.dose.colname] < 0, na.rm=TRUE)) )
       {
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div(paste0("If given, the daily dose column '",event.daily.dose.colname,"' must contain non-negative numbers!"), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div(paste0("If given, the daily dose column '",event.daily.dose.colname,"' must contain non-negative numbers!"), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       }
     }
@@ -3059,17 +3342,17 @@ server <- function(input, output, session)
     if( is.null(test.cma) || inherits(test.res, "error") )
     {
       # Some error occured!
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div("There's something wrong with these data!\nI tried to create a CMA0 object and this is what I got back:\n"), shiny::div(as.character(test.res), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("There's something wrong with these data!\nI tried to create a CMA0 object and this is what I got back:\n"), div(as.character(test.res), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     } else
     {
       if( inherits(test.res, "warning") )
       {
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                              shiny::div("These data seem ok, but when I tried to create a CMA0 object I got some warnings:\n"), shiny::div(as.character(test.res), style="color: blue;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                              div("These data seem ok, but when I tried to create a CMA0 object I got some warnings:\n"), div(as.character(test.res), style="color: blue;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       }
     }
 
@@ -3097,7 +3380,7 @@ server <- function(input, output, session)
   }
 
   # In-memory dataset: validate and use ----
-  shiny::observeEvent(input$dataset_from_memory_button_use,
+  observeEvent(input$dataset_from_memory_button_use,
   {
     # Sanity checks:
     if( is.null(.GlobalEnv$.plotting.params$.inmemory.dataset) ||
@@ -3105,9 +3388,9 @@ server <- function(input, output, session)
         ncol(.GlobalEnv$.plotting.params$.inmemory.dataset) < 1 ||
         nrow(.GlobalEnv$.plotting.params$.inmemory.dataset) < 3 )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected dataset '",input$dataset_from_memory, "' from memory!\nPlease make sure you selected a valid data.frame (or derived object) with at least 3 columns and 1 row..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
@@ -3143,23 +3426,55 @@ server <- function(input, output, session)
   # Force updating the Shiny UI using the new data ----
   .force.update.UI <- function()
   {
-    shiny::updateSelectInput(session, "cma_class", selected="simple");
-    shiny::updateSelectInput(session, "cma_to_compute", selected=.GlobalEnv$.plotting.params$cma.class);
-    shiny::updateSelectInput(session, "patient", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$ID);
+    updateSelectInput(session, "cma_class", selected=.GlobalEnv$.plotting.params$cma.class);
+    #updateSelectInput(session, "cma_to_compute", selected=.GlobalEnv$.plotting.params$cma.class);
+    updateSelectInput(session, "patient", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$ID);
 
-    shiny::updateSelectInput(session, "compute_cma_patient_by_id", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$all.IDs[1]);
+    updateSelectInput(session, "compute_cma_patient_by_id", choices=.GlobalEnv$.plotting.params$all.IDs, selected=.GlobalEnv$.plotting.params$all.IDs[1]);
+
+    if( input$mg_definitions_source == 'named vector' )
+    {
+      shinyWidgets::updatePickerInput(session, "mg_to_plot_list",
+                                      choices=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"),
+                                      selected=c(names(.GlobalEnv$.plotting.params$medication.groups), "* (all others)"));
+    } else if( input$mg_definitions_source == 'column in data' )
+    {
+      if( !is.null(.GlobalEnv$.plotting.params$data) )
+      {
+        mg_vals <- .GlobalEnv$.plotting.params$get.data.for.patients.fnc(.GlobalEnv$.plotting.params$all.IDs,
+                                                                         .GlobalEnv$.plotting.params$data,
+                                                                         idcol=.GlobalEnv$.plotting.params$ID.colname);
+        if( !is.null(mg_vals) && length(mg_vals) > 0 )
+        {
+          mg_vals <- unique(mg_vals[, input$mg_from_column]);
+          mg_vals <- mg_vals[ !is.na(mg_vals) ];
+          if( !is.null(mg_vals) && length(mg_vals) > 0 )
+          {
+            mg_vals <- sort(mg_vals);
+          }
+        }
+      } else
+      {
+        mg_vals <- NULL;
+      }
+      shinyWidgets::updatePickerInput(session, "mg_to_plot_list",
+                                      choices=c(mg_vals, "* (all others)"),
+                                      selected=c(mg_vals, "* (all others)"));
+    }
 
     #if( is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname) ) shinyjs::hide(id="dose_is_defined") else shinyjs::show(id="dose_is_defined");
-    output$is_dose_defined <- shiny::reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
-    output$is_treat_class_defined <- shiny::reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
+    output$is_dose_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$event.daily.dose.colname) && !is.na(.GlobalEnv$.plotting.params$event.daily.dose.colname)});
+    output$is_treat_class_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.class.colname) && !is.na(.GlobalEnv$.plotting.params$medication.class.colname)});
 
     rv$toggle.me <- !rv$toggle.me; # make the plotting aware of a change (even if we did not change any UI elements)
-    output$is_dataset_defined <- shiny::reactive({!is.null(.GlobalEnv$.plotting.params$data)}); # now a dataset is defined!
+
+    output$is_dataset_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$data)}); # now a dataset is defined!
+    output$is_mg_defined <- reactive({!is.null(.GlobalEnv$.plotting.params$medication.groups)}); # and medication groups!
   }
 
 
   # Dataset from file: load it, list the columns and upate the selections ----
-  shiny::observeEvent(input$dataset_from_file_filename,
+  observeEvent(input$dataset_from_file_filename,
   {
     # Disconnect any pre-existing database connections:
     if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
@@ -3177,12 +3492,12 @@ server <- function(input, output, session)
     # Try to parse and load it:
     d <- NULL;
     #.GlobalEnv$.plotting.params$.fromfile.dataset <- NULL;
-    #output$is_file_loaded <- shiny::reactive({FALSE}); # Update UI
+    #output$is_file_loaded <- reactive({FALSE}); # Update UI
 
     if( input$dataset_from_file_filetype == "Comma/TAB-separated (.csv; .tsv; .txt)" )
     {
       # Load CSV/TSV:
-      shiny::showModal(shiny::modalDialog("Loading and processing data...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- read.table(input$dataset_from_file_filename$datapath[1],
                                       header=input$dataset_from_file_csv_header,
                                       sep=switch(input$dataset_from_file_csv_separator,
@@ -3201,180 +3516,180 @@ server <- function(input, output, session)
                                       strip.white=input$dataset_from_file_csv_strip_white,
                                       na.strings=gsub('["\']','',trimws(strsplit(input$dataset_from_file_csv_na_strings,",",fixed=TRUE)[[1]], "both"))),
                       error=function(e) e, warning=function(w) w);
-      shiny::removeModal();
+      removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("There's something wrong with the given CSV/TSV file: I tried reading it and this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given CSV/TSV file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("This CSV/TSV file seems ok, but when reading it I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This CSV/TSV file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
       d <- as.data.frame(d);
     } else if( input$dataset_from_file_filetype == "R objects from save() (.RData)" )
     {
       # Use load to recover them but then ask the user to use "load from memory" UI to continue...
-      shiny::showModal(shiny::modalDialog("Loading and processing data...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(read.objs <- load(input$dataset_from_file_filename$datapath[1]),
                       error=function(e) e, warning=function(w) w);
-      shiny::removeModal();
+      removeModal();
       if( is.null(read.objs) || length(read.objs) == 0 || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("There's something wrong with the given R datasets file: I tried reading it and this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given R datasets file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("This R datasets file seems ok, but when reading it I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This R datasets file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
 
       # Show the user the objects that were read and redirect them to load them from memory:
-      shiny::showModal(shiny::modalDialog(title="AdhereR R datasets file loaded!",
-                            shiny::HTML(paste0("The R datasets file was successfully loaded and the following objects are now in memory: ",paste0("'",read.objs,"'",collapse=", "),".<br/>Please use the <b>load from memory</b> option to load the desired object from memory...")),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title="AdhereR R datasets file loaded!",
+                            HTML(paste0("The R datasets file was successfully loaded and the following objects are now in memory: ",paste0("'",read.objs,"'",collapse=", "),".<br/>Please use the <b>load from memory</b> option to load the desired object from memory...")),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL)); # don't continue...
     } else if( input$dataset_from_file_filetype == "Serialized R object (.rds)" )
     {
       # Load them with readRDS:
-      shiny::showModal(shiny::modalDialog("Loading and processing data...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- readRDS(input$dataset_from_file_filename$datapath[1]),
                       error=function(e) e, warning=function(w) w);
-      shiny::removeModal();
+      removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("There's something wrong with the given serialized single R object file: I tried reading it and this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given serialized single R object file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("This serialized single R object file seems ok, but when reading it I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This serialized single R object file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
     } else if( input$dataset_from_file_filetype == "Open Document Spreadsheet (.ods)" )
     {
       # Use readODS::read.ods to read the first sheet:
-      shiny::showModal(shiny::modalDialog("Loading and processing data...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- readODS::read_ods(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet),
                       error=function(e) e, warning=function(w) w);
-      shiny::removeModal();
+      removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("There's something wrong with the given ODS file: I tried reading it and this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given ODS file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("This ODS file seems ok, but when reading it I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This ODS file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
       d <- as.data.frame(d);
     } else if( input$dataset_from_file_filetype == "Microsoft Excel (.xls; .xlsx)" )
     {
       # Use readxl::read_excel to read the first sheet:
-      shiny::showModal(shiny::modalDialog("Loading and processing data...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- readxl::read_excel(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet),
                       #d <- openxlsx::read.xlsx(input$dataset_from_file_filename$datapath[1], sheet=input$dataset_from_file_sheet),
                       error=function(e) e, warning=function(w) w);
-      shiny::removeModal();
+      removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("There's something wrong with the given XLS/XLSX file: I tried reading it and this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given XLS/XLSX file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("This XLS/XLSX file seems ok, but when reading it I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This XLS/XLSX file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
       d <- as.data.frame(d);
     } else if( input$dataset_from_file_filetype == "SPSS (.sav; .por)" )
     {
       # Use haven::read_spss to read the first sheet:
-      shiny::showModal(shiny::modalDialog("Loading and processing data...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- haven::read_spss(input$dataset_from_file_filename$datapath[1]),
                       error=function(e) e, warning=function(w) w);
-      shiny::removeModal();
+      removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("There's something wrong with the given SPSS file: I tried reading it and this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given SPSS file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("This SPSS file seems ok, but when reading it I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This SPSS file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
       d <- as.data.frame(d);
     } else if( input$dataset_from_file_filetype == "SAS Transport data file (.xpt)" )
     {
       # Use haven::read_xpt to read the first sheet:
-      shiny::showModal(shiny::modalDialog("Loading and processing data...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- haven::read_xpt(input$dataset_from_file_filename$datapath[1]),
                       #d <- SASxport::read.xport(input$dataset_from_file_filename$datapath[1], as.list=TRUE),
                       error=function(e) e, warning=function(w) w);
-      shiny::removeModal();
+      removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("There's something wrong with the given SAS Transport file: I tried reading it and this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given SAS Transport file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("This SAS Transport file seems ok, but when reading it I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This SAS Transport file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
       d <- as.data.frame(d);
 
       #if( length(d) < input$dataset_from_file_sheet_sas )
       #{
-      #  shiny::showModal(shiny::modalDialog(title="AdhereR warning!",
+      #  showModal(modalDialog(title="AdhereR warning!",
       #                        paste0("This SAS Transport file contains only ",length(d)," datasets, so I can't load the ",input$dataset_from_file_sheet_sas,"th: loading the first instead!"),
-      #                        footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      #                        footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       #  d <- d[[1]];
       #} else
       #{
@@ -3383,48 +3698,48 @@ server <- function(input, output, session)
     } else if( input$dataset_from_file_filetype == "SAS sas7bdat data file (.sas7bdat)" )
     {
       # Use haven::read_sas to read the first sheet:
-      shiny::showModal(shiny::modalDialog("Loading and processing data...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- haven::read_sas(input$dataset_from_file_filename$datapath[1]),
                       error=function(e) e, warning=function(w) w);
-      shiny::removeModal();
+      removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("There's something wrong with the given SAS sas7bdat file: I tried reading it and this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given SAS sas7bdat file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("This SAS sas7bdat file seems ok, but when reading it I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This SAS sas7bdat file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
       d <- as.data.frame(d);
     } else if( input$dataset_from_file_filetype == "Stata (.dta)" )
     {
       # Use haven::read_stata to read the first sheet:
-      shiny::showModal(shiny::modalDialog("Loading and processing data...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
+      showModal(modalDialog("Loading and processing data...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL));
       res <- tryCatch(d <- haven::read_stata(input$dataset_from_file_filename$datapath[1]),
                       error=function(e) e, warning=function(w) w);
-      shiny::removeModal();
+      removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("There's something wrong with the given Stata file: I tried reading it and this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There's something wrong with the given Stata file: I tried reading it and this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("This Stata file seems ok, but when reading it I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("This Stata file seems ok, but when reading it I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
       d <- as.data.frame(d);
@@ -3435,9 +3750,9 @@ server <- function(input, output, session)
     {
       if( nrow(d) < 3 )
       {
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("The selected file must have at least three distinct columns (patient ID, event date and duration)!", style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("The selected file must have at least three distinct columns (patient ID, event date and duration)!", style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       }
 
@@ -3445,7 +3760,7 @@ server <- function(input, output, session)
       x <- names(d);
       x.info <- vapply(1:ncol(d),
                        function(i) paste0("(",
-                                          class(d[,i]),
+                                          paste0(class(d[,i]),collapse=","),
                                           ": ",
                                           paste0(d[1:min(n.vals.to.show,nrow(d)),i],collapse=", "),
                                           if(nrow(d)>n.vals.to.show) "...",
@@ -3482,12 +3797,12 @@ server <- function(input, output, session)
       .GlobalEnv$.plotting.params$.fromfile.dataset.na.strings <- gsub('["\']','',trimws(strsplit(input$dataset_from_file_csv_na_strings,",",fixed=TRUE)[[1]], "both"));
       .GlobalEnv$.plotting.params$.fromfile.dataset.sheet <- input$dataset_from_file_sheet;
 
-      output$is_file_loaded <- shiny::reactive({TRUE}); # Update UI to reflect this change
+      output$is_file_loaded <- reactive({TRUE}); # Update UI to reflect this change
     }
   })
 
   # Dataset from file: peek ----
-  shiny::observeEvent(input$dataset_from_file_peek_button,
+  observeEvent(input$dataset_from_file_peek_button,
   {
     # Sanity checks:
     if( is.null(.GlobalEnv$.plotting.params$.fromfile.dataset) ||
@@ -3495,20 +3810,20 @@ server <- function(input, output, session)
         ncol(.GlobalEnv$.plotting.params$.fromfile.dataset) < 1 ||
         nrow(.GlobalEnv$.plotting.params$.fromfile.dataset) < 3 )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div("Could not load the selected file '",input$dataset_from_file_filename$name[1], "' in memory!\nPlease make sure you selected a valid file contaning at least 3 columns and 1 row...", style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("Could not load the selected file '",input$dataset_from_file_filename$name[1], "' in memory!\nPlease make sure you selected a valid file contaning at least 3 columns and 1 row...", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
-    shiny::showModal(shiny::modalDialog(title="AdhereR: peeking at the selected file ...",
-                          shiny::div(shiny::HTML(.show.data.frame.as.HTML(.GlobalEnv$.plotting.params$.fromfile.dataset)),
+    showModal(modalDialog(title="AdhereR: peeking at the selected file ...",
+                          div(HTML(.show.data.frame.as.HTML(.GlobalEnv$.plotting.params$.fromfile.dataset)),
                                    style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
-                          footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+                          footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
   })
 
   # Dataset from file: validate and use ----
-  shiny::observeEvent(input$dataset_from_file_button_use,
+  observeEvent(input$dataset_from_file_button_use,
   {
     # Sanity checks:
     if( is.null(.GlobalEnv$.plotting.params$.fromfile.dataset) ||
@@ -3516,9 +3831,9 @@ server <- function(input, output, session)
         ncol(.GlobalEnv$.plotting.params$.fromfile.dataset) < 1 ||
         nrow(.GlobalEnv$.plotting.params$.fromfile.dataset) < 3 )
     {
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div(paste0("Cannot load the selected file '",input$dataset_from_file_filename$name[1], "'!\nPlease make sure you selected a valid file with at least 3 columns and 1 row..."), style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected file '",input$dataset_from_file_filename$name[1], "'!\nPlease make sure you selected a valid file with at least 3 columns and 1 row..."), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
@@ -3541,16 +3856,16 @@ server <- function(input, output, session)
   })
 
   # SQL database: connect and fetch tables ----
-  shiny::observeEvent(input$dataset_from_sql_button_connect,
+  observeEvent(input$dataset_from_sql_button_connect,
   {
     # Disconnect any pre-existing database connections:
     if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
     {
       try(DBI::dbDisconnect(.GlobalEnv$.plotting.params$.db.connection), silent=TRUE);
     }
-    shiny::updateSelectInput(session, inputId="dataset_from_sql_table", choices="[none]", selected="[none]");
+    updateSelectInput(session, inputId="dataset_from_sql_table", choices="[none]", selected="[none]");
     .GlobalEnv$.plotting.params$.db.connection <- NULL;
-    output$is_database_connected <- shiny::reactive({FALSE}); # update UI
+    output$is_database_connected <- reactive({FALSE}); # update UI
 
     if( input$dataset_from_sql_server_type == "SQLite" )
     {
@@ -3563,17 +3878,17 @@ server <- function(input, output, session)
         if( is.null(d) || inherits(res, "error") )
         {
           # Some error occured!
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                shiny::div("Can't create the example in-memory SQLite database: this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div("Can't create the example in-memory SQLite database: this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
           return (invisible(NULL));
         } else
         {
           if( inherits(res, "warning") )
           {
-            shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                  shiny::div("Creating the example in-memory SQLite database seems ok, but when connecting I got some warnings:\n"), shiny::div(as.character(res, style="color: blue;")),
-                                  footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+            showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                  div("Creating the example in-memory SQLite database seems ok, but when connecting I got some warnings:\n"), div(as.character(res, style="color: blue;")),
+                                  footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
           }
         }
 
@@ -3584,17 +3899,17 @@ server <- function(input, output, session)
         if( is.null(d) || inherits(res, "error") )
         {
           # Some error occured!
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                shiny::div("Can't put med.events in the example in-memory SQLite database: this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div("Can't put med.events in the example in-memory SQLite database: this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
           return (invisible(NULL));
         } else
         {
           if( inherits(res, "warning") )
           {
-            shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                  shiny::div("Putting med.events in the example in-memory SQLite database seems ok, but when connecting I got some warnings:\n"), shiny::div(as.character(res, style="color: blue;")),
-                                  footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+            showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                  div("Putting med.events in the example in-memory SQLite database seems ok, but when connecting I got some warnings:\n"), div(as.character(res, style="color: blue;")),
+                                  footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
           }
         }
       } else
@@ -3605,17 +3920,17 @@ server <- function(input, output, session)
         if( is.null(d) || inherits(res, "error") )
         {
           # Some error occured!
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                shiny::div("Can't access the SQLite database: this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div("Can't access the SQLite database: this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
           return (invisible(NULL));
         } else
         {
           if( inherits(res, "warning") )
           {
-            shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                  shiny::div("Accessing the SQLite database seems ok, but when connecting I got some warnings:\n"), shiny::div(as.character(res, style="color: blue;")),
-                                  footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+            showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                  div("Accessing the SQLite database seems ok, but when connecting I got some warnings:\n"), div(as.character(res, style="color: blue;")),
+                                  footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
           }
         }
       }
@@ -3626,18 +3941,18 @@ server <- function(input, output, session)
       if( is.null(db_tables) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("Can't read tables from the SQL server: this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
-        shiny::removeModal();
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("Can't read tables from the SQL server: this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        removeModal();
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("Could read tables from SQL server, but I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("Could read tables from SQL server, but I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
 
@@ -3684,7 +3999,7 @@ server <- function(input, output, session)
     } else if( input$dataset_from_sql_server_type == "MySQL/MariaDB" )
     {
       d <- NULL;
-      shiny::showModal(shiny::modalDialog("Connecting to SQL database...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Connecting to SQL database...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL))
       res <- tryCatch(d <- DBI::dbConnect(RMariaDB::MariaDB(), # works also for MySQL
                                           user=input$dataset_from_sql_username, # the username
                                           password=input$dataset_from_sql_password, # and password
@@ -3694,44 +4009,44 @@ server <- function(input, output, session)
                                           bigint="numeric" # force bigint to numeric to avoid weird problems down the line
                                          ),
                       error=function(e) e, warning=function(w) w);
-      shiny::removeModal();
+      removeModal();
       if( is.null(d) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("Can't connect to the SQL server: this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("Can't connect to the SQL server: this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("The SQL server seems ok, but when connecting I got some warnings:\n"), shiny::div(as.character(res, style="color: blue;")),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("The SQL server seems ok, but when connecting I got some warnings:\n"), div(as.character(res, style="color: blue;")),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
 
       # Fetch the tables:
       db_tables <- NULL;
-      shiny::showModal(shiny::modalDialog("Reading tables from the SQL database...", title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL))
+      showModal(modalDialog("Reading tables from the SQL database...", title=div(icon("hourglass", lib="glyphicon"), "Please wait..."), easyClose=FALSE, footer=NULL))
       res <- tryCatch(db_tables <- DBI::dbListTables(d),
                       error=function(e) e, warning=function(w) w);
       if( is.null(db_tables) || inherits(res, "error") )
       {
         # Some error occured!
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("Can't read tables from the SQL server: this is what I got back:\n"), shiny::div(as.character(res), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
-        shiny::removeModal();
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("Can't read tables from the SQL server: this is what I got back:\n"), div(as.character(res), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+        removeModal();
         return (invisible(NULL));
       } else
       {
         if( inherits(res, "warning") )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                                shiny::div("Could read tables from SQL server, but I got some warnings:\n"), shiny::div(as.character(res), style="color: blue;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                                div("Could read tables from SQL server, but I got some warnings:\n"), div(as.character(res), style="color: blue;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         }
       }
 
@@ -3778,15 +4093,15 @@ server <- function(input, output, session)
         }
       }));
 
-      shiny::removeModal();
+      removeModal();
     }
 
     if( is.null(d.tables.columns) )
     {
       # Some error occured!
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div("Could not fetch any info from the database!", style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("Could not fetch any info from the database!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
@@ -3801,9 +4116,9 @@ server <- function(input, output, session)
     if( length(x.eligible) == 0 )
     {
       # Warning:
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
-                            shiny::div("There doesn't seem to be any tables/views with at least 3 columns in this database: picking the first (but this will generate an error)!\n"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("warning-sign", lib="glyphicon"), "AdhereR warning!"),
+                            div("There doesn't seem to be any tables/views with at least 3 columns in this database: picking the first (but this will generate an error)!\n"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       x.to.pick <- 1;
     } else
     {
@@ -3815,14 +4130,14 @@ server <- function(input, output, session)
                                     choicesOpt=list(subtext=paste0(x$nrow," x ",x$column)));
 
     # Update UI:
-    output$is_database_connected <- shiny::reactive({TRUE});
+    output$is_database_connected <- reactive({TRUE});
 
     # Show the info:
     .show.db.info();
   })
 
   # SQL database: disconnect ----
-  shiny::observeEvent(input$dataset_from_sql_button_disconnect,
+  observeEvent(input$dataset_from_sql_button_disconnect,
   {
     if( !is.null(.GlobalEnv$.plotting.params$.db.connection) )
     {
@@ -3830,12 +4145,12 @@ server <- function(input, output, session)
       .GlobalEnv$.plotting.params$.db.connection <- NULL;
     }
     # Update UI:
-    shiny::updateSelectInput(session, inputId="dataset_from_sql_table", choices="[none]", selected="[none]");
-    output$is_database_connected <- shiny::reactive({FALSE});
+    updateSelectInput(session, inputId="dataset_from_sql_table", choices="[none]", selected="[none]");
+    output$is_database_connected <- reactive({FALSE});
   })
 
   # SQL database: peek ----
-  shiny::observeEvent(input$dataset_from_sql_button_peek,
+  observeEvent(input$dataset_from_sql_button_peek,
   {
      .show.db.info();
   })
@@ -3850,16 +4165,16 @@ server <- function(input, output, session)
         !DBI::dbIsValid(.GlobalEnv$.plotting.params$.db.connection) )
     {
       # Some error occured!
-      shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                            shiny::div("Error accessing the database!", style="color: red;"),
-                            footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("Error accessing the database!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
       return (invisible(NULL));
     }
 
     # Display the info:
-    shiny::showModal(shiny::modalDialog(title="AdhereR SQL database connection...",
-                          shiny::div(style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;",
-                              shiny::HTML(paste0("Successfully connected to SQL server <i>",
+    showModal(modalDialog(title="AdhereR SQL database connection...",
+                          div(style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;",
+                              HTML(paste0("Successfully connected to SQL server <i>",
                                           if( input$dataset_from_sql_server_host == "[none]" ) "localhost" else input$dataset_from_sql_server_host, "</i>",
                                           if( input$dataset_from_sql_server_port > 0 ) paste0(":",input$dataset_from_sql_server_port)," and fetched data from ",
                                           length(unique(.GlobalEnv$.plotting.params$.db.connection.tables$table))," tables.<br/><hl/><br/>",
@@ -3907,12 +4222,12 @@ server <- function(input, output, session)
                                           }, character(1)), collapse="\n"),
                                           "</ul>"
                               ))),
-                          footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+                          footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
   }
 
 
   # SQL database: update columns depending on the selected table ----
-  shiny::observeEvent(input$dataset_from_sql_table,
+  observeEvent(input$dataset_from_sql_table,
   {
     if( input$dataset_from_sql_table != "[none]" &&
         !is.null(.GlobalEnv$.plotting.params$.db.connection) &&
@@ -3921,9 +4236,9 @@ server <- function(input, output, session)
     {
       if( sum(s) < 3 )
       {
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div("The table/view must have at least three columns!", style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("The table/view must have at least three columns!", style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
       }
 
@@ -3943,15 +4258,15 @@ server <- function(input, output, session)
   })
 
   # SQL database: validate and use ----
-  shiny::observeEvent(input$dataset_from_sql_button_use,
+  observeEvent(input$dataset_from_sql_button_use,
   {
     # Sanity checks:
     if( is.null(.GlobalEnv$.plotting.params$.db.connection) ||
         !DBI::dbIsValid(.GlobalEnv$.plotting.params$.db.connection) )
     {
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                              shiny::div(paste0("Cannot use the selected database and table/view!"), style="color: red;"),
-                              footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div(paste0("Cannot use the selected database and table/view!"), style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         return (invisible(NULL));
     }
 
@@ -4018,17 +4333,17 @@ server <- function(input, output, session)
 
 
   # Show info about the curent dataset ----
-  shiny::observeEvent(input$about_dataset_button,
+  observeEvent(input$about_dataset_button,
   {
-    shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("hdd", lib="glyphicon"), "AdhereR: info over the current dataset..."),
-                          shiny::div(style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;",
-                              shiny::HTML(if( .GlobalEnv$.plotting.params$.dataset.type %in% c("in memory", "from file", "SQL database") )
+    showModal(modalDialog(title=div(icon("hdd", lib="glyphicon"), "AdhereR: info over the current dataset..."),
+                          div(style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;",
+                              HTML(if( .GlobalEnv$.plotting.params$.dataset.type %in% c("in memory", "from file", "SQL database") )
                                    {
                                     paste0("The dataset currently used ",
                                      {if(.GlobalEnv$.plotting.params$.dataset.comes.from.function.arguments)
                                       {
                                         paste0("was given as the <code>data</code> argument to the <code>plot_interactive_cma()</code> function called by the user.<br/>",
-                                               "Therefore, we cannot know its name outside the function call (and there might not be such a \"name\" as the data might have been created on-the-fly in the function call), and instead we identify it as the <b style='color:darkblue'><<'data' argument to plot_interactive_cma() call>></b> of class <i>", class(.GlobalEnv$.plotting.params$data), "</i>."
+                                               "Therefore, we cannot know its name outside the function call (and there might not be such a \"name\" as the data might have been created on-the-fly in the function call), and instead we identify it as the <b style='color:darkblue'><<'data' argument to plot_interactive_cma() call>></b> of class <i>", paste0(class(.GlobalEnv$.plotting.params$data),collapse=","), "</i>."
                                                )
                                       } else
                                       {
@@ -4058,7 +4373,7 @@ server <- function(input, output, session)
                                       "There was no argument (or a NULL) passed as the <code>data</code> argument to the <code>plot_interactive_cma()</code>, which means that there's no dataset defined: please define one using the <b>Data</b> tab!"
                                     }
                                 )),
-                          footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+                          footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
   })
 
 
@@ -4083,25 +4398,356 @@ server <- function(input, output, session)
                       check.names=FALSE);
 
     .GlobalEnv$.plotting.params$.patients.to.compute <- tmp;
-    output$show_patients_as_list <- shiny::renderDataTable(.GlobalEnv$.plotting.params$.patients.to.compute, options=list(pageLength=10));
-    if( reset.slider ) shiny::updateSliderInput(session, inputId="compute_cma_patient_by_group_range", max=nrow(tmp), value=c(1,1));
+    output$show_patients_as_list <- renderDataTable(.GlobalEnv$.plotting.params$.patients.to.compute, options=list(pageLength=10));
+    if( reset.slider ) updateSliderInput(session, inputId="compute_cma_patient_by_group_range", max=nrow(tmp), value=c(1,1));
   }
-  shiny::observeEvent(input$compute_cma_patient_selection_method,
+  observeEvent(input$compute_cma_patient_selection_method,
   {
     if( input$compute_cma_patient_selection_method == "by_position" )
     {
       .update.patients.IDs.table();
     }
   })
-  shiny::observeEvent(input$compute_cma_patient_by_group_sorting,
+  observeEvent(input$compute_cma_patient_by_group_sorting,
   {
     .update.patients.IDs.table();
   })
 
+
+  # Basic checks for a putative vector containing medication group definitions:
+  .check.basic.mg.definition <- function(v)
+  {
+    return (!( is.null(v) ||                            # must be non-NULL
+                 (!is.character(v) && !is.factor(v)) || # must be a vector of characters or factors
+                 length(v) == 0 ||                      # of at least length 1
+                 length(v <- v[!is.na(v)]) == 0 ||      # and with at least 1 non-NA element
+                 is.null(names(v)) ||                   # must have names
+                 "" %in% names(v) ||                    # that are non-empty
+                 any(duplicated(names(v))) ));          # and unique
+  }
+
+
+  # In-memory medication groups: get the list of appropriate vectors objects all the way to the base environment ----
+  .list.mg.from.memory <- function()
+  {
+    # List all the character or factor vectors currently in memory:
+    x <- sort(c(.recursively.list.objects.in.memory(of.class="character", min.nrow=NA, min.ncol=NA, return.dimensions=FALSE),
+                .recursively.list.objects.in.memory(of.class="factor", min.nrow=NA, min.ncol=NA, return.dimensions=FALSE)));
+
+    if( is.null(x) || length(x) == 0 )
+    {
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div("There are no fitting medication group definitions in memory!", style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+    } else
+    {
+      # Check that they meet the basic requirements for medication group definitions:
+      s <- vapply(x, function(v) .check.basic.mg.definition(get(v)), logical(1));
+      if( !any(s) )
+      {
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                              div("There are no fitting medication group definitions in memory!", style="color: red;"),
+                              footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      } else
+      {
+        # Keep only these:
+        x <- x[s];
+
+        # If defined, add the medication groups sent to the Shiny plotting function:
+        if( !is.null(.GlobalEnv$.plotting.params) &&
+            !is.null(.GlobalEnv$.plotting.params$medication.groups) &&
+            (is.character(.GlobalEnv$.plotting.params$medication.groups) || is.factor(.GlobalEnv$.plotting.params$medication.groups)))
+        {
+          if( .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments )
+          {
+            # Add the function argument as well:
+            x <- c("<<'medication.groups' argument to plot_interactive_cma() call>>", x);
+          }
+        }
+        updateSelectInput(session, "mg_from_memory", choices=x, selected=x[1]);
+        .update.mg.inmemory();
+      }
+    }
+  }
+
+  # In-memory vector: update the selections ----
+  .update.mg.inmemory <- function()
+  {
+    # Set the vector:
+    .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
+    if( input$mg_from_memory == "[none]" || input$mg_from_memory == "" )
+    {
+      # Initialisation:
+      .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
+    } else if( input$mg_from_memory == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
+    {
+      # The special value pointing to the argument to plot_interactive_cma():
+      .GlobalEnv$.plotting.params$.inmemory.mg <- .GlobalEnv$.plotting.params$medication.groups;
+    } else
+    {
+      try(.GlobalEnv$.plotting.params$.inmemory.mg <- get(input$mg_from_memory), silent=TRUE);
+      if( inherits(.GlobalEnv$.plotting.params$.inmemory.mg, "try-error") ) .GlobalEnv$.plotting.params$.inmemory.mg <- NULL;
+    }
+
+    # Sanity checks:
+    if( (input$mg_from_memory != "[none]") &&
+        (is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ||
+         (!is.character(.GlobalEnv$.plotting.params$.inmemory.mg) && !is.factor(.GlobalEnv$.plotting.params$.inmemory.mg)) ||
+         length(.GlobalEnv$.plotting.params$.inmemory.mg) < 1 ))
+    {
+      showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                            div(paste0("Cannot load the selected medication group definitions '",input$mg_from_memory, "' from memory!"), style="color: red;"),
+                            footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+      return (invisible(NULL));
+    }
+
+    # Update the relevant UI elements:
+    updateRadioButtons(session, "mg_list_of_groups",
+                       choices=if( is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ) {"<EMPTY>"} else {names(.GlobalEnv$.plotting.params$.inmemory.mg)},
+                       selected=NULL);
+  }
+
+  observeEvent(input$mg_from_memory,
+               {
+                 .update.mg.inmemory();
+               })
+
+  # Display a vector of medication groups nicely as HTML ----
+  .show.medication.groups.as.HTML <- function(mg, # the vector to show
+                                              max.entries=200, # if NA, show all
+                                              escape=TRUE)
+  {
+    if( !.check.basic.mg.definition(mg) )
+    {
+      return ("<b>The given medication group definitions are empty of the wrong type!</b>");
+    }
+
+    # Highlight things in the definitions using HTML tags:
+    # The calls:
+    for( s in names(mg) )
+    {
+      mg <- gsub(paste0("{",s,"}"), paste0("{<b><i>",s,"</i></b>}"), mg, fixed=TRUE);
+    }
+    # The names:
+    names(mg) <- paste0("<b><i>",names(mg),"</i></b>");
+
+    # This is a pretty basic thing that tweaks the output of knitr::kable...
+    d <- data.frame("Name"=names(mg), "Definition"=mg);
+    d.as.html <- knitr::kable(d[1:min(max.entries,nrow(d),na.rm=TRUE),], format="html",
+                              align="l",
+                              col.names=names(d), #col.names=paste0("\U2007\U2007",names(d),"\U2007\U2007"),
+                              row.names=FALSE);
+
+    # Put back the HTML tags:
+    d.as.html <- gsub("&lt;/i&gt;", "</i>",
+                      gsub("&lt;i&gt;", "<i>",
+                           gsub("&lt;/b&gt;", "</b>",
+                                gsub("&lt;b&gt;", "<b>",
+                                     d.as.html,
+                                     fixed=TRUE),
+                                fixed=TRUE),
+                           fixed=TRUE),
+                      fixed=TRUE);
+
+    # The data.frame info in a nice HTML format:
+    d.info <- paste0("There are ", nrow(d), " medication groups defined.");
+
+    if( length(s <- strsplit(d.as.html, "<table", fixed=TRUE)[[1]]) > 1 )
+    {
+      # Found the <table> tag: add its class and caption:
+      d.as.html <- paste0(s[1],
+                          paste0("<table class='peekAtMGTable'",
+                                 "<caption style='caption-side: top;'>", d.info,"</caption", # > is already in s[2] because of <table
+                                 s[-1]));
+
+      # Add the CSS:
+      d.as.html <- paste0(d.as.html, "\n\n
+                          <style>
+                            table.peekAtMGTable {
+                              border: 1px solid #1C6EA4;
+                              background-color: #fbfcfc;
+                              #width: 100%;
+                              text-align: left;
+                              border-collapse: collapse;
+                              #white-space: nowrap;
+                            }
+                            table.peekAtMGTable td, table.peekAtMGTable th {
+                              border: 1px solid #AAAAAA;
+                              padding: 0.2em 0.5em;
+                            }
+                            table.peekAtMGTable tbody td {
+                              font-size: 13px;
+                            }
+                            table.peekAtMGTable tr:nth-child(even) {
+                              background: #f0f3f4;
+                            }
+                            table.peekAtMGTable thead {
+                              background: #1C6EA4;
+                              background: -moz-linear-gradient(top, #5592bb 0%, #327cad 66%, #1C6EA4 100%);
+                              background: -webkit-linear-gradient(top, #5592bb 0%, #327cad 66%, #1C6EA4 100%);
+                              background: linear-gradient(to bottom, #5592bb 0%, #327cad 66%, #1C6EA4 100%);
+                              border-bottom: 2px solid #444444;
+                            }
+                            table.peekAtMGTable thead th {
+                              font-size: 15px;
+                              font-weight: bold;
+                              color: #FFFFFF;
+                              border-left: 2px solid #D0E4F5;
+                            }
+                            table.peekAtMGTable thead th:first-child {
+                              border-left: none;
+                            }
+                          </style>\n");
+    }
+
+    return (d.as.html);
+  }
+
+  # In-memory medication groups: peek ----
+  observeEvent(input$mg_from_memory_peek_button,
+               {
+                 # Sanity checks:
+                 if( is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ||
+                     (!is.character(.GlobalEnv$.plotting.params$.inmemory.mg) && !is.factor(.GlobalEnv$.plotting.params$.inmemory.mg)) ||
+                     length(.GlobalEnv$.plotting.params$.inmemory.mg) < 1 )
+                 {
+                   showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                         div(paste0("Cannot load the selected medication group definitions '",input$mg_from_memory, "' from memory!\nPlease make sure you selected a valid vector of definitions..."), style="color: red;"),
+                                         footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                   return (invisible(NULL));
+                 }
+
+                 showModal(modalDialog(title="AdhereR: the selected in-memory medication group definitions ...",
+                                       div(HTML(.show.medication.groups.as.HTML(.GlobalEnv$.plotting.params$.inmemory.mg)),
+                                           style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
+                                       footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+
+               })
+
+  # View the currently selected medication group definitions ----
+  observeEvent(input$mg_view_button,
+               {
+                 # Sanity checks:
+                 if( is.null(.GlobalEnv$.plotting.params$medication.groups) ||
+                     (!is.character(.GlobalEnv$.plotting.params$medication.groups) && !is.factor(.GlobalEnv$.plotting.params$medication.groups)) ||
+                     length(.GlobalEnv$.plotting.params$medication.groups) < 1 )
+                 {
+                   showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                         div(paste0("The medication group definitions seems to be of the wrong type or empty!\n"), style="color: red;"),
+                                         footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                   return (invisible(NULL));
+                 }
+
+                 showModal(modalDialog(title="AdhereR: the medication group definitions ...",
+                                       div(HTML(.show.medication.groups.as.HTML(.GlobalEnv$.plotting.params$medication.groups)),
+                                           style="max-height: 50vh; max-width: 90vw; overflow: auto; overflow-x:auto;"),
+                                       footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+
+               })
+
+  # Validate a given medication groups definition and possibly load it ----
+  .validate.and.load.medication.groups <- function(mg, # the vector of definitions or column name
+                                                   d=NULL # the data.frame to which these definitions refer to (or NULL for no such checks)
+  )
+  {
+     # Place the data in the .GlobalEnv$.plotting.params list:
+    .GlobalEnv$.plotting.params$medication.groups <- mg;
+    .GlobalEnv$.plotting.params$medication.groups.to.plot <- NULL;
+
+    # Force UI updating...
+    .force.update.UI();
+  }
+
+  # In-memory medication group definitions: validate and use ----
+  observeEvent(input$mg_from_memory_button_use,
+               {
+                 if( input$mg_definitions_source == 'named vector' )
+                 {
+                   # From a named vector in memory:
+
+                   # Sanity checks:
+                   if( is.null(.GlobalEnv$.plotting.params$.inmemory.mg) ||
+                       (!is.character(.GlobalEnv$.plotting.params$.inmemory.mg) && !is.factor(.GlobalEnv$.plotting.params$.inmemory.mg)) ||
+                       length(.GlobalEnv$.plotting.params$.inmemory.mg) < 1 )
+                   {
+                     showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                           div(paste0("Cannot load the selected medication group definitions '",input$mg_from_memory, "' from memory!\nPlease make sure you selected a valid vector of definitions..."), style="color: red;"),
+                                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                     return (invisible(NULL));
+                   }
+
+                   # Checks:
+                   .validate.and.load.medication.groups(.GlobalEnv$.plotting.params$.inmemory.mg,
+                                                        .GlobalEnv$.plotting.params$data);
+
+                   # Let the world know this:
+                   .GlobalEnv$.plotting.params$.mg.type <- "in memory";
+                   .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments <- FALSE;
+                   if( input$mg_from_memory == "[none]" )
+                   {
+                     # How did we get here???
+                     return (invisible(NULL));
+                   } else if( input$mg_from_memory == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
+                   {
+                     # The special value pointing to the argument to plot_interactive_cma():
+                     .GlobalEnv$.plotting.params$.mg.name <- NA;
+                   } else
+                   {
+                     .GlobalEnv$.plotting.params$.mg.name <- input$mg_from_memory;
+                   }
+                 } else if( input$mg_definitions_source == 'column in data' )
+                 {
+                   # From column in the data:
+
+                   # Check if the column name refers to an existing column in the dataset:
+                   if( is.na(input$mg_from_column) || length(input$mg_from_column) != 1 || input$mg_from_column=="" ||
+                       !(input$mg_from_column %in% .GlobalEnv$.plotting.params$get.colnames.fnc(.GlobalEnv$.plotting.params$data)) )
+                   {
+                     showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                           div(paste0("The medication groups column '",ID.colname, "' must be a string and a valid column name in the selected dataset..."), style="color: red;"),
+                                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
+                     return (invisible(NULL));
+                   }
+
+                   # Validate and load the medication groups
+                   .validate.and.load.medication.groups(input$mg_from_column,
+                                                        .GlobalEnv$.plotting.params$data);
+
+                   # Let the world know this:
+                   .GlobalEnv$.plotting.params$.mg.type <- "column in data";
+                   .GlobalEnv$.plotting.params$.mg.comes.from.function.arguments <- FALSE;
+                   if( input$mg_from_column == "[none]" )
+                   {
+                     # How did we get here???
+                     return (invisible(NULL));
+                   } else if( input$mg_from_column == "<<'medication.groups' argument to plot_interactive_cma() call>>" )
+                   {
+                     # The special value pointing to the argument to plot_interactive_cma():
+                     .GlobalEnv$.plotting.params$.mg.name <- NA;
+                   } else
+                   {
+                     .GlobalEnv$.plotting.params$.mg.name <- input$mg_from_column;
+                   }
+                 }
+               })
+
+  # Show selected medication groups ----
+  observeEvent(input$mg_plot_apply_button,
+               {
+                 # Sanity checks:
+
+                 # Let the world know this:
+                 .GlobalEnv$.plotting.params$medication.groups.to.plot <- input$mg_to_plot_list;
+
+                 # Re-plot things:
+                 rv$toggle.me <- !rv$toggle.me; # make the plotting aware of the changes
+               })
+
+
   # CMA computation for multiple patients ----
   # Allow the user to break it and show progress (inspired by https://gist.github.com/jcheng5/1659aff15904a0c4ffcd4d0c7788f789 )
   # The CMA computation main UI ----
-  shiny::observeEvent(input$compute_cma_for_larger_sample_button,
+  observeEvent(input$compute_cma_for_larger_sample_button,
   {
     # Get the selected patient IDs:
     if( input$compute_cma_patient_selection_method == "by_id" )
@@ -4145,57 +4791,57 @@ server <- function(input, output, session)
     # Where there any messages or anyhting else wrong? Ask the user if they are sure they want to start this...
     r.ver.info <- sessionInfo();
     cma.computation.progress.log.text <<- "";
-    try(output$cma_computation_progress_log <- shiny::renderText(cma.computation.progress.log.text), silent=TRUE);
-    shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("play", lib="glyphicon"), "AdhereR..."),
-                          shiny::div(shiny::div(if(!is.null(msgs)) paste0("There ",ifelse(length(msgs)==1,"was a warning",paste0("were ",length(msgs)," warnings")),":\n") else ""),
-                              shiny::div(shiny::HTML(paste0(msgs,collapse="<br/>")), style="color: red;"),
-                              shiny::div(shiny::HTML(paste0("We will compute the selected CMA for the <b>",length(patients.to.compute)," patients</b>:"))),
-                              shiny::div(paste0(patients.to.compute,collapse=", "), style="overflow: auto; max-height: 10em; color: blue;"),
-                              shiny::div(shiny::HTML(paste0("totalling <b>",n.events.per.patient[length(patients.to.compute)]," events</b>."))),
-                              shiny::div(shiny::HTML(paste0("The running time is limited to <b>",.GlobalEnv$.plotting.params$max.running.time.in.minutes.to.compute," minutes</b>."))),
-                              shiny::div(shiny::HTML("The actual <code>R</code> code needed to compute the selected CMA for any set of patients and data source can be accessed through the "),
-                                  shiny::span(shiny::icon("eye-open", lib="glyphicon"), shiny::strong("Show R code..."), style="border: 1px solid darkblue; border-radius: 5px; color: darkblue; background-color: lightblue"),
-                                  shiny::HTML(" button in the main window (please ignore the plotting code).<br/>")),
-                              shiny::hr(),
-                              shiny::div(shiny::HTML(paste0("We are using ",R.version.string,
+    try(output$cma_computation_progress_log <- renderText(cma.computation.progress.log.text), silent=TRUE);
+    showModal(modalDialog(title=div(icon("play", lib="glyphicon"), "AdhereR..."),
+                          div(div(if(!is.null(msgs)) paste0("There ",ifelse(length(msgs)==1,"was a warning",paste0("were ",length(msgs)," warnings")),":\n") else ""),
+                              div(HTML(paste0(msgs,collapse="<br/>")), style="color: red;"),
+                              div(HTML(paste0("We will compute the selected CMA for the <b>",length(patients.to.compute)," patients</b>:"))),
+                              div(paste0(patients.to.compute,collapse=", "), style="overflow: auto; max-height: 10em; color: blue;"),
+                              div(HTML(paste0("totalling <b>",n.events.per.patient[length(patients.to.compute)]," events</b>."))),
+                              div(HTML(paste0("The running time is limited to <b>",.GlobalEnv$.plotting.params$max.running.time.in.minutes.to.compute," minutes</b>."))),
+                              div(HTML("The actual <code>R</code> code needed to compute the selected CMA for any set of patients and data source can be accessed through the "),
+                                  span(icon("eye-open", lib="glyphicon"), strong("Show R code..."), style="border: 1px solid darkblue; border-radius: 5px; color: darkblue; background-color: lightblue"),
+                                  HTML(" button in the main window (please ignore the plotting code).<br/>")),
+                              hr(),
+                              div(HTML(paste0("We are using ",R.version.string,
                                               " and AdhereR version ",descr <- utils::packageDescription("AdhereR")$Version,
                                               " on ",r.ver.info$running,"."))),
-                              shiny::hr(),
+                              hr(),
                               shinyWidgets::progressBar(id="cma_computation_progress",
                                                         value=0, display_pct=TRUE, status="info",
                                                         title="Progress:"),
-                              shiny::div(title="Progress long...",
-                                  shiny::strong("Progress log:"), shiny::br(),
-                                  shiny::div(shiny::htmlOutput(outputId="cma_computation_progress_log", inline=FALSE),
+                              div(title="Progress long...",
+                                  strong("Progress log:"), br(),
+                                  div(htmlOutput(outputId="cma_computation_progress_log", inline=FALSE),
                                       id="cma_computation_progress_log_container",
                                       style="height: 5em; overflow: auto; border-radius: 5px; border-style: solid; border-width: 2px; background-color: #f0f0f0;"))
 
                             ),
-                          footer = shiny::tagList(shiny::span(title="Close this dialog box",
-                                                shiny::actionButton(inputId="close_compute_cma_dialog", label="Close", icon=shiny::icon("remove", lib="glyphicon"))),
-                                           shiny::span(title="Start computation...",
-                                                shiny::actionButton(inputId="start_computation_now", label="Start!", icon=shiny::icon("play", lib="glyphicon"))),
-                                           shiny::span(title="Stop computation...",
-                                                shinyjs::disabled(shiny::actionButton(inputId="cancel_cma_computation", label="Stop!", icon=shiny::icon("stop", lib="glyphicon")))),
-                                           shiny::span(title="Save the results to a TAB-separated (no quotes) CSV file...",
-                                                shinyjs::disabled(shiny::downloadButton(outputId="save_cma_computation_results", label="Save results (as TSV)", icon=shiny::icon("floppy-save", lib="glyphicon"))))
+                          footer = tagList(span(title="Close this dialog box",
+                                               actionButton(inputId="close_compute_cma_dialog", label="Close", icon=icon("remove", lib="glyphicon"))),
+                                           span(title="Start computation...",
+                                                actionButton(inputId="start_computation_now", label="Start!", icon=icon("play", lib="glyphicon"))),
+                                           span(title="Stop computation...",
+                                                shinyjs::disabled(actionButton(inputId="cancel_cma_computation", label="Stop!", icon=icon("stop", lib="glyphicon")))),
+                                           span(title="Save the results to a TAB-separated (no quotes) CSV file...",
+                                                shinyjs::disabled(downloadButton(outputId="save_cma_computation_results", label="Save results (as TSV)", icon=icon("floppy-save", lib="glyphicon"))))
                                           )));
 
   })
 
   # Close the CMA computation main UI ----
-  shiny::observeEvent(input$close_compute_cma_dialog,
+  observeEvent(input$close_compute_cma_dialog,
   {
-    shiny::removeModal();
+    removeModal();
   })
 
 
-  # shiny::observeEvent(input$start_computation_now,
+  # observeEvent(input$start_computation_now,
   # {
   #   session=shiny::getDefaultReactiveDomain();
   #   # Show up the progress bar and stopping button:
-  #   #shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), paste0("Computing CMA for ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients: please wait...")),
-  #   #                      #shiny::div(checkboxInput(inputId="stop_cma_computation", label="STOP!", value=FALSE)),
+  #   #showModal(modalDialog(title=div(icon("hourglass", lib="glyphicon"), paste0("Computing CMA for ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients: please wait...")),
+  #   #                      #div(checkboxInput(inputId="stop_cma_computation", label="STOP!", value=FALSE)),
   #   #                      actionButton("stop","Stop",class="btn-danger", onclick="Shiny.onInputChange('stopThis',true)"),
   #   #                      footer=NULL));
   #
@@ -4223,7 +4869,7 @@ server <- function(input, output, session)
   #
   #                    # Stop?
   #                    httpuv:::service();
-  #                    shiny::invalidateLater(1);
+  #                    invalidateLater(1);
   #                    cat(input$cma_class);
   #                    if( !is.null(session$input$stopThis) && session$input$stopThis )
   #                    {
@@ -4237,7 +4883,7 @@ server <- function(input, output, session)
   #                  Sys.sleep(2); # wait a bit for the message to be (possibly) seen...
   #                });
   #
-  #   shiny::removeModal();
+  #   removeModal();
   # })
 
   # Compute CMA for one patient ----
@@ -4265,6 +4911,15 @@ server <- function(input, output, session)
                                                                        date.format=.GlobalEnv$.plotting.params$date.format,
 
                                                                        ID=.GlobalEnv$.plotting.params$.patients.to.compute[i],
+
+                                                                       medication.groups=if( input$mg_use_medication_groups ){ .GlobalEnv$.plotting.params$medication.groups }else{ NULL },
+                                                                       medication.groups.separator.show=input$mg_plot_by_patient,
+                                                                       medication.groups.to.plot=.GlobalEnv$.plotting.params$medication.groups.to.plot,
+                                                                       medication.groups.separator.lty=input$plot_mg_separator_lty,
+                                                                       medication.groups.separator.lwd=input$plot_mg_separator_lwd,
+                                                                       medication.groups.separator.color=input$plot_mg_separator_color,
+                                                                       medication.groups.allother.label=input$plot_mg_allothers_label,
+
                                                                        cma=ifelse(input$cma_class == "simple",
                                                                                   input$cma_to_compute,
                                                                                   input$cma_class),
@@ -4346,11 +5001,19 @@ server <- function(input, output, session)
     }
 
     # Print progress so far...
-    output$cma_computation_progress_log <- shiny::renderText(cma.computation.progress.log.text);
+    output$cma_computation_progress_log <- renderText(cma.computation.progress.log.text);
     shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
 
     # Return the results:
-    return (AdhereR::getCMA(res));
+    if( !input$mg_use_medication_groups )
+    {
+      # No medication groups:
+      return (AdhereR::getCMA(res));
+    } else
+    {
+      # Medication groups:
+      return (AdhereR::getCMA(res, flatten.medication.groups=TRUE));
+    }
   }
 
   # Collect computed CMA for several patients ----
@@ -4367,15 +5030,15 @@ server <- function(input, output, session)
     if (is.null(onSuccess)) { onSuccess <- function(...) NULL }
 
     result <- list();
-    shiny::makeReactiveBinding("result");
+    makeReactiveBinding("result");
 
-    shiny::observe(
+    observe(
     {
       if( i > length(.GlobalEnv$.plotting.params$.patients.to.compute) ) # natural finishing
       {
         #message("Finished naturally");
         result <<- i;
-        #shiny::removeModal();
+        #removeModal();
         shinyjs::enable('start_computation_now');
         shinyjs::disable('cancel_cma_computation');
         shinyjs::enable('close_compute_cma_dialog');
@@ -4384,7 +5047,7 @@ server <- function(input, output, session)
                                         title=paste0("Finished for all ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients, took ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds."));
         cma.computation.progress.log.text <<- paste0(cma.computation.progress.log.text,
                                                      "<br/>Finished for all ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients, took ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds.");
-        output$cma_computation_progress_log <- shiny::renderText(cma.computation.progress.log.text);
+        output$cma_computation_progress_log <- renderText(cma.computation.progress.log.text);
         shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
         return();
       }
@@ -4394,7 +5057,7 @@ server <- function(input, output, session)
       {
         #message("Ran out of time");
         result <<- Inf; # ran out of time
-        #shiny::removeModal();
+        #removeModal();
         shinyjs::enable('start_computation_now');
         shinyjs::disable('cancel_cma_computation');
         shinyjs::enable('close_compute_cma_dialog');
@@ -4403,17 +5066,17 @@ server <- function(input, output, session)
                                         title=paste0("Stopped after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients."));
         cma.computation.progress.log.text <<- paste0(cma.computation.progress.log.text,
                                                      "<br/>Stopped after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients.");
-        output$cma_computation_progress_log <- shiny::renderText(cma.computation.progress.log.text);
+        output$cma_computation_progress_log <- renderText(cma.computation.progress.log.text);
         shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
         return();
       }
 
-      if( shiny::isolate(cancel()) )
+      if( isolate(cancel()) )
       {
         #message("Cancelled by user");
         #collected.results <<- list(); # erase the results collected so far...
         result <- NA; # cancelled by user
-        #shiny::removeModal();
+        #removeModal();
         shinyjs::enable('start_computation_now');
         shinyjs::disable('cancel_cma_computation');
         shinyjs::enable('close_compute_cma_dialog');
@@ -4422,29 +5085,29 @@ server <- function(input, output, session)
                                         title=paste0("Manually cancelled after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients."));
         cma.computation.progress.log.text <<- paste0(cma.computation.progress.log.text,
                                                      "<br/>Manually cancelled after ",round(difftime(Sys.time(), start.time, units="sec"),1)," seconds, succesfully computed for ",i," patients.");
-        output$cma_computation_progress_log <- shiny::renderText(cma.computation.progress.log.text);
+        output$cma_computation_progress_log <- renderText(cma.computation.progress.log.text);
         shinyjs::js$scroll_cma_compute_log(); # make sure the last message is in view
         return();
       }
 
       tryCatch(
         {
-          collected.results[[length(collected.results) + 1]] <<- shiny::isolate(.compute.cma.for.patient(i, start.time));
+          collected.results[[length(collected.results) + 1]] <<- isolate(.compute.cma.for.patient(i, start.time));
           names(collected.results)[length(collected.results)] <- .GlobalEnv$.plotting.params$.patients.to.compute[i];
           result <<- i;
         }, error = onError)
       i <<- i + 1;
-      shiny::invalidateLater(1);
+      invalidateLater(1);
     });
 
-    shiny::reactive(shiny::req(result));
+    reactive(req(result));
   }
 
-  # shiny::observeEvent(input$go,
+  # observeEvent(input$go,
   # {
   #   isCancelled <- local(
   #   {
-  #     origCancel <- shiny::isolate(input$cancel_cma_computation);
+  #     origCancel <- isolate(input$cancel_cma_computation);
   #     function() { !identical(origCancel, input$cancel_cma_computation) }
   #   });
   #
@@ -4453,7 +5116,7 @@ server <- function(input, output, session)
   #   result <- workQueue(patients=.GlobalEnv$.plotting.params$.patients.to.compute,
   #                       cancel=isCancelled);
   #
-  #   #shiny::observe(
+  #   #observe(
   #   #{
   #   #  val <- result();
   #   #  message("The result was ", val);
@@ -4461,11 +5124,11 @@ server <- function(input, output, session)
   # })
 
   # Start CMA computation ----
-  shiny::observeEvent(input$start_computation_now,
+  observeEvent(input$start_computation_now,
   {
     # Show up the progress bar and stopping button:
-    #shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("hourglass", lib="glyphicon"), paste0("Computing CMA for ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients: please wait...")),
-    #                      #shiny::div(checkboxInput(inputId="stop_cma_computation", label="STOP!", value=FALSE)),
+    #showModal(modalDialog(title=div(icon("hourglass", lib="glyphicon"), paste0("Computing CMA for ",length(.GlobalEnv$.plotting.params$.patients.to.compute)," patients: please wait...")),
+    #                      #div(checkboxInput(inputId="stop_cma_computation", label="STOP!", value=FALSE)),
     #                      #actionButton("go", "Go"),
     #                      actionButton("cancel_cma_computation", "Stop"),
     #                      footer=NULL));
@@ -4478,7 +5141,7 @@ server <- function(input, output, session)
 
     isCancelled <- local(
     {
-      origCancel <- shiny::isolate(input$cancel_cma_computation);
+      origCancel <- isolate(input$cancel_cma_computation);
       function() { !identical(origCancel, input$cancel_cma_computation) }
     });
 
@@ -4487,18 +5150,18 @@ server <- function(input, output, session)
     cma.computation.progress.log.text <<- "";
     result <- workQueue(cancel=isCancelled);
 
-    #shiny::observe(
+    #observe(
     #{
     #  val <- result();
     #  message("The result was ", val);
     #});
   })
 
-  # shiny::observeEvent(input$save_cma_computation_results,
+  # observeEvent(input$save_cma_computation_results,
   # {
   #   if( is.null(collected.results) || length(collected.results) < 1 )
   #   {
-  #     shiny::showModal(shiny::modalDialog(title="Adherer warning...", "No results to export..."));
+  #     showModal(modalDialog(title="Adherer warning...", "No results to export..."));
   #     return (invisible(NULL));
   #   }
   #
@@ -4507,9 +5170,9 @@ server <- function(input, output, session)
   #   try(d <- do.call(rbind, collected.results), silent=TRUE);
   #   if( !is.null(d) || !inherits(d, "data.frame") || nrow(d) < 1 || ncol(d) < 1 )
   #   {
-  #     shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-  #                           shiny::div("Error collecting the results of the CMA computation: nothing to save to file!", style="color: red;"),
-  #                           footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+  #     showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+  #                           div("Error collecting the results of the CMA computation: nothing to save to file!", style="color: red;"),
+  #                           footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
   #     return (invisible(NULL));
   #   }
   #
@@ -4524,7 +5187,7 @@ server <- function(input, output, session)
     {
       if( is.null(collected.results) || length(collected.results) < 1 )
       {
-        shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "Adherer warning..."), "No results to export..."));
+        showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "Adherer warning..."), "No results to export..."));
       } else
       {
         # Assemble the results as a single data.frame:
@@ -4532,9 +5195,9 @@ server <- function(input, output, session)
         try(d <- do.call(rbind, collected.results), silent=FALSE);
         if( is.null(d) || !inherits(d, "data.frame") || nrow(d) < 1 || ncol(d) < 1 )
         {
-          shiny::showModal(shiny::modalDialog(title=shiny::div(shiny::icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
-                                shiny::div("Error collecting the results of the CMA computation: nothing to save to file!", style="color: red;"),
-                                footer = shiny::tagList(shiny::modalButton("Close", icon=shiny::icon("ok", lib="glyphicon")))));
+          showModal(modalDialog(title=div(icon("exclamation-sign", lib="glyphicon"), "AdhereR error!"),
+                                div("Error collecting the results of the CMA computation: nothing to save to file!", style="color: red;"),
+                                footer = tagList(modalButton("Close", icon=icon("ok", lib="glyphicon")))));
         } else
         {
           # Write them to file:
@@ -4544,11 +5207,12 @@ server <- function(input, output, session)
     }
   )
 
-  # Make sure the UI is properly updated for ech new session ----
-  shiny::isolate(
+  # Make sure the UI is properly updated for each new session ----
+  isolate(
   {
+    .list.mg.from.memory();
     .force.update.UI();
-    shiny::removeModal();
+    removeModal();
     shinyjs::show(id="sidebar_tabpanel_container");
     #updateCheckboxInput(session, inputId="output_panel_container_show", value=TRUE);
     shinyjs::show(id="output_panel_container");
@@ -4558,5 +5222,5 @@ server <- function(input, output, session)
 
 
 # Call shiny ----
-shiny::shinyApp(ui=ui, server=server);
+shinyApp(ui=ui, server=server);
 
