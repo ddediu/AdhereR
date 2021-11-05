@@ -3595,7 +3595,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
 #' (2012). Comparison of pharmacy-based measures of medication adherence.
 #' \emph{BMC Health Services Research}, \strong{12}, 155.
-#' \url{http://doi.org/10.1186/1472-6963-12-155}.
+#' \doi{10.1186/1472-6963-12-155}.
 #'
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -4312,7 +4312,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
 #' (2012). Comparison of pharmacy-based measures of medication adherence.
 #' \emph{BMC Health Services Research}, \strong{12}, 155.
-#' \url{http://doi.org/10.1186/1472-6963-12-155}.
+#' \doi{10.1186/1472-6963-12-155}.
 #'
 #' @examples
 #' \dontrun{
@@ -4982,7 +4982,7 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
 #' (2012). Comparison of pharmacy-based measures of medication adherence.
 #' \emph{BMC Health Services Research}, \strong{12}, 155.
-#' \url{http://doi.org/10.1186/1472-6963-12-155}.
+#' \doi{10.1186/1472-6963-12-155}.
 #'
 #' @examples
 #' cma5 <- CMA5(data=med.events,
@@ -5417,7 +5417,7 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
 #' (2012). Comparison of pharmacy-based measures of medication adherence.
 #' \emph{BMC Health Services Research}, \strong{12}, 155.
-#' \url{http://doi.org/10.1186/1472-6963-12-155}.
+#' \doi{10.1186/1472-6963-12-155}.
 #'
 #' @examples
 #' cma6 <- CMA6(data=med.events,
@@ -5856,7 +5856,7 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
 #' (2012). Comparison of pharmacy-based measures of medication adherence.
 #' \emph{BMC Health Services Research}, \strong{12}, 155.
-#' \url{http://doi.org/10.1186/1472-6963-12-155}.
+#' \doi{10.1186/1472-6963-12-155}.
 #'
 #' @examples
 #' cma7 <- CMA7(data=med.events,
@@ -6349,7 +6349,7 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
 #' (2012). Comparison of pharmacy-based measures of medication adherence.
 #' \emph{BMC Health Services Research}, \strong{12}, 155.
-#' \url{http://doi.org/10.1186/1472-6963-12-155}.
+#' \doi{10.1186/1472-6963-12-155}.
 #'
 #' @examples
 #' cma8 <- CMA8(data=med.events,
