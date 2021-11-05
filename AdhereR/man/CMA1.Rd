@@ -299,5 +299,5 @@ CMAs 1 to 8 are described in:
 Vollmer, W. M., Xu, M., Feldstein, A., Smith, D., Waterbury, A., & Rand, C.
 (2012). Comparison of pharmacy-based measures of medication adherence.
 \emph{BMC Health Services Research}, \strong{12}, 155.
-\url{http://doi.org/10.1186/1472-6963-12-155}.
+\doi{10.1186/1472-6963-12-155}.
 }

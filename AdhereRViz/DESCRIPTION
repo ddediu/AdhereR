@@ -13,13 +13,11 @@ Author: Dan Dediu [aut, cre],
         Samuel Allemann [aut]
 Maintainer: Dan Dediu <ddediu@gmail.com>
 Description: Interactive graphical user interface (GUI) for the package 
-    AdhereR, allowing the user to access different data sources, to explore 
+    'AdhereR', allowing the user to access different data sources, to explore 
     the patterns of medication use therein, and the computation of various  
     measures of adherence. It is implemented using Shiny and HTML/CSS/JavaScript. 
 URL: https://github.com/ddediu/AdhereR 
 License: GPL (>= 2)
-LazyData: TRUE
-RoxygenNote: 7.1.1
 Imports: AdhereR (>= 0.7),
     lubridate (>= 1.5),
     parallel (>= 3.0),
@@ -47,3 +45,4 @@ Suggests: rmarkdown (>= 1.1),
     R.rsp (>= 0.40)
 VignetteBuilder: knitr, R.rsp
 Encoding: UTF-8
+RoxygenNote: 7.1.2

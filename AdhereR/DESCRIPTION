@@ -30,7 +30,6 @@ Description: Computation of adherence to medications from Electronic Health care
 URL: https://github.com/ddediu/AdhereR 
 License: GPL (>= 2)
 LazyData: TRUE
-RoxygenNote: 7.1.1
 Imports: lubridate (>= 1.5),
     parallel (>= 3.0),
     data.table (>= 1.9),
@@ -47,3 +46,4 @@ Suggests: rmarkdown (>= 1.1),
     AdhereRViz (>= 0.2)
 VignetteBuilder: knitr, R.rsp
 Encoding: UTF-8
+RoxygenNote: 7.1.2
