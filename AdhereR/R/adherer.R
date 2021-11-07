@@ -8190,6 +8190,9 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
+##' @param show.event.intervals \emph{Logical}, should the actual event intervals
+##' be shown? As per-episode and sliding windows might have overlapping intervals,
+##' it is better not to show them by default (\code{FALSE}).
 #' @param plot.events.vertically.displaced Should consecutive events be plotted
 #' on separate rows (i.e., separated vertically, the default) or on the same row?
 #' @param print.dose,cex.dose,print.dose.outline.col,print.dose.centered Print daily
@@ -8351,6 +8354,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  medication.groups.separator.show=TRUE, medication.groups.separator.lty="solid", medication.groups.separator.lwd=2, medication.groups.separator.color="blue", # group medication events by patient?
                                  medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
+                                 show.event.intervals=FALSE,            # per-episode and sliding windows might have overlapping intervals, so better not to show them by default
                                  plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                                  print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                                  plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
@@ -8392,6 +8396,12 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  ...
 )
 {
+  if( show.event.intervals )
+  {
+    if( !suppress.warnings ) .report.ewms("show.event.intervals=TRUE is not yet implemented in plotting sliding windows and per episodes!\n", "message", "plot", "AdhereR");
+    show.event.intervals <- FALSE;
+  }
+
   .plot.CMAs(x,
              patients.to.plot=patients.to.plot,
              duration=duration,
@@ -8422,7 +8432,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              medication.groups.allother.label=medication.groups.allother.label,
              lty.event=lty.event,
              lwd.event=lwd.event,
-             show.event.intervals=FALSE, # per-episode and sliding windows might have overlapping intervals, so better not to show them at all
+             show.event.intervals=show.event.intervals,
              plot.events.vertically.displaced=plot.events.vertically.displaced,
              pch.start.event=pch.start.event,
              pch.end.event=pch.end.event,
@@ -8599,6 +8609,11 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' storing the number of days when medication was not available (i.e., the
 #' "gap days"); the default value "gap.days" should be changed only if there is
 #' a naming conflict with a pre-existing "gap.days" column in \code{event.info}.
+#' @param return.inner.event.info \emph{Logical} specifying if the function
+#' should also return the event.info for all the individual events in each
+#' sliding window; by default it is \code{FALSE} as this information is useful
+#' only in very specific cases (e.g., plotting the event intervals) and adds a
+#' small but non-negligible computational overhead.
 #' @param force.NA.CMA.for.failed.patients \emph{Logical} describing how the
 #' patients for which the CMA estimation fails are treated: if \code{TRUE}
 #' they are returned with an \code{NA} CMA estimate, while for
@@ -8755,6 +8770,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                 sliding.window.step.duration=30, # the step ("jump") of the sliding window in time units (NA = undefined)
                                 sliding.window.step.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
                                 sliding.window.no.steps=NA, # the number of steps to jump; has priority over setp specification
+                                return.inner.event.info=FALSE, # should we return the event.info for all the individual events in each sliding window?
                                 # Date format:
                                 date.format="%m/%d/%Y", # the format of the dates used in this function (NA = undefined)
                                 # Comments and metadata:
@@ -8983,6 +8999,13 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
       wnd.info <- cbind(merge(wnd.info, cma$CMA, by=".WND.ID", all=TRUE),
                         "CMA.to.apply"=class(cma)[1]);
       setnames(wnd.info, c("window.ID", "window.start", "window.end", "CMA", "CMA.to.apply"));
+
+      if( return.inner.event.info )
+      {
+        # Add the event.info to also return it:
+        wnd.info <- merge(wnd.info, cma$event.info, by.x="window.ID", by.y=".WND.ID", all=TRUE);
+      }
+
       return (as.data.frame(wnd.info));
     }
 
@@ -9022,8 +9045,17 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
     data <- merge(data, event.info2[,c(ID.colname, ".OBS.START.DATE", ".OBS.END.DATE"),with=FALSE], all.x=TRUE);
     setnames(data, ncol(data)-c(1,0), c(".OBS.START.DATE.PRECOMPUTED", ".OBS.END.DATE.PRECOMPUTED"));
 
-    CMA <- data[, .process.patient(.SD), by=ID.colname ];
-    return (list("CMA"=CMA, "event.info"=event.info2[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE"), with=FALSE]));
+    if( return.inner.event.info )
+    {
+      CMA.and.event.info <- data[, .process.patient(.SD), by=ID.colname ]; # contains both the CMAs per sliding window and the event.info's for each event
+      CMA <- unique(CMA.and.event.info[,1:6,with=FALSE]); # the per-window CMAs...
+      inner.event.info <- CMA.and.event.info[,c(1,2,7:ncol(CMA.and.event.info)),with=FALSE]; # ...and the event info for each event within the sliding windows
+      return (list("CMA"=CMA, "event.info"=event.info2[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE"), with=FALSE], "inner.event.info"=inner.event.info));
+    } else
+    {
+      CMA <- data[, .process.patient(.SD), by=ID.colname ]; # contains just the CMAs per sliding window
+      return (list("CMA"=CMA, "event.info"=event.info2[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE"), with=FALSE]));
+    }
   }
 
   # Convert the sliding window duration and step in days:
@@ -9093,6 +9125,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
     ret.val$sliding.window.no.steps <- sliding.window.no.steps;
     ret.val$summary <- summary;
     ret.val$CMA <- as.data.frame(tmp$CMA); setnames(ret.val$CMA, 1, ID.colname); ret.val$CMA <- ret.val$CMA[,-ncol(ret.val$CMA)];
+    if( return.inner.event.info && !is.null(tmp$inner.event.info) ) ret.val$inner.event.info <- as.data.frame(tmp$inner.event.info);
     return (ret.val);
 
   } else

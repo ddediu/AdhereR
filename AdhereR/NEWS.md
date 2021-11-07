@@ -1,3 +1,16 @@
+# AdhereR 0.7.1
+  
+## New features
+
+## Bug fixes
+
+### `CMA_polypharmacy`
+
+  - remove option to supply medication class as list after `.check.medication.class` was suppressed from AdhereR.
+  
+  - specify columns to merge by.
+
+  
 # AdhereR 0.7
   
 ## New features
