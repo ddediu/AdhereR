@@ -4050,7 +4050,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       # Draw its sub-periods (if so requested, meaningful and possible):
       if( is.cma.TS.or.SW && has.estimated.CMA )
       {
-        if( length(s.cmas) > 0 && !all(is.na(cmas$CMA[s.cmas])) )
+        if( length(s.cmas) > 0 ) #&& !all(is.na(cmas$CMA[s.cmas])) ) # also show the partial (empty) frame even when all are NA
         {
           # We do have non-missing partial CMAs to plot:
 
@@ -4070,8 +4070,15 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           x.start.min <- min(ppts$start,na.rm=TRUE);
           x.end.max   <- max(ppts$end,  na.rm=TRUE);
           corrected.x.text <- (corrected.x + ppts$x);
-          min.y <- min(ppts$y,na.rm=TRUE);
-          max.y <- max(ppts$y,na.rm=TRUE);
+          if(all(is.na(ppts$y))) # guard against warnings when talking the min and max of only NAs
+          {
+            min.y <- NA;
+            max.y <- NA;
+          } else
+          {
+            min.y <- min(ppts$y,na.rm=TRUE);
+            max.y <- max(ppts$y,na.rm=TRUE);
+          }
 
           # Plotting type:
           if( "stacked" %in% plot.partial.CMAs.as )
@@ -4150,7 +4157,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           if( "overlapping" %in% plot.partial.CMAs.as )
           {
             # Show subperiods as overlapping segments:
-            if( !((range.y <- (max.y - min.y)) > 0) ) range.y <- 1; # avoid division by 0 if there's only one value
+            if( is.na(range.y <- (max.y - min.y)) || range.y <= 0 ) range.y <- 1; # avoid division by 0 if there's only one value or if there's none
             ppts$y.norm <- (ppts$y - min.y)/range.y;
 
             if( .do.SVG ) # SVG:
@@ -4250,7 +4257,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             # Show subperiods as a time series
             if( plot.partial.CMAs.as.timeseries.start.from.zero ) min.y <- min(min.y,0,na.rm=TRUE);
 
-            if( !((range.y <- (max.y - min.y)) > 0) ) range.y <- 1; # avoid division by 0 if there's only one value
+            if( is.na(range.y <- (max.y - min.y)) || range.y <= 0 ) range.y <- 1; # avoid division by 0 if there's only one value or if there's none
             ppts$y.norm <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace - 3) * (ppts$y - min.y)/range.y);
 
             if( .do.SVG ) # SVG:
@@ -4260,8 +4267,16 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             }
 
             # The axes:
-            min.y.norm <- min(ppts$y.norm,na.rm=TRUE);
-            max.y.norm <- max(ppts$y.norm,na.rm=TRUE);
+            if(all(is.na(ppts$y.norm))) # guard against warnings when talking the min and max of only NAs
+            {
+              min.y.norm <- NA;
+              max.y.norm <- NA;
+            } else
+            {
+              min.y.norm <- min(ppts$y.norm,na.rm=TRUE);
+              max.y.norm <- max(ppts$y.norm,na.rm=TRUE);
+            }
+
             if( .do.R ) # Rplot:
             {
               segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.end.max,   y.cur + 0.5, lty="solid", col="black"); # horizontal axis
@@ -4329,8 +4344,11 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             {
               if( print.CMA && (force.draw.text || char.height.CMA <= 0.80) )
               {
-                text(corrected.x + x.start.min, min.y.norm, sprintf("%.1f%%",100*min.y), pos=2, cex=CMA.cex, col="black");
-                text(corrected.x + x.start.min, max.y.norm, sprintf("%.1f%%",100*max.y), pos=2, cex=CMA.cex, col="black");
+                if( !is.na(min.y.norm) && !is.na(max.y.norm) )
+                {
+                  if(min.y.norm < max.y.norm) text(corrected.x + x.start.min, min.y.norm, sprintf("%.1f%%",100*min.y), pos=2, cex=CMA.cex, col="black"); # avoid collisions
+                  text(corrected.x + x.start.min, max.y.norm, sprintf("%.1f%%",100*max.y), pos=2, cex=CMA.cex, col="black");
+                }
                 if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
                 {
                   text(corrected.x + x.start.min, y.for.0perc, "0%", pos=2, cex=CMA.cex, col="red");
@@ -4372,6 +4390,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             }
 
             # The intervals:
+            if(all(is.na(ppts$y.norm))) ppts_y.norm_notna <- 1 else ppts_y.norm_notna <- !is.na(ppts$y.norm); # cache the non-NA ppts$y.norm and avoid crashing if all are NAs
             if( !is.na(plot.partial.CMAs.as.timeseries.col.interval) )
             {
               if( plot.partial.CMAs.as.timeseries.interval.type == "none" )
@@ -4385,10 +4404,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                             "y.region.start"=y.cur + 0.5,
                                                                             "x.region.end"=corrected.x + x.end.max,
                                                                             "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                                            "x.partial.start"=corrected.x.text[!is.na(ppts$y.norm)],
-                                                                            "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)],
-                                                                            "x.partial.end"=corrected.x.text[!is.na(ppts$y.norm)],
-                                                                            "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)]));
+                                                                            "x.partial.start"=corrected.x.text[ppts_y.norm_notna],
+                                                                            "y.partial.start"=ppts$y.norm[ppts_y.norm_notna],
+                                                                            "x.partial.end"=corrected.x.text[ppts_y.norm_notna],
+                                                                            "y.partial.end"=ppts$y.norm[ppts_y.norm_notna]));
                 }
                 if( .do.SVG )
                 {
@@ -4398,10 +4417,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                           "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
                                                                           "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
                                                                           "y.region.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                          "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.text[!is.na(ppts$y.norm)]),
-                                                                          "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)]),
-                                                                          "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.text[!is.na(ppts$y.norm)]),
-                                                                          "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)])));
+                                                                          "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.text[ppts_y.norm_notna]),
+                                                                          "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna]),
+                                                                          "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.text[ppts_y.norm_notna]),
+                                                                          "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna])));
                 }
               } else if( plot.partial.CMAs.as.timeseries.interval.type %in% c("segments", "arrows", "lines") )
               {
@@ -4423,10 +4442,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                               "y.region.start"=y.cur + 0.5,
                                                                               "x.region.end"=corrected.x + x.end.max,
                                                                               "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                                              "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
-                                                                              "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)] - 0.2,
-                                                                              "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
-                                                                              "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)] + 0.2));
+                                                                              "x.partial.start"=corrected.x.start[ppts_y.norm_notna],
+                                                                              "y.partial.start"=ppts$y.norm[ppts_y.norm_notna] - 0.2,
+                                                                              "x.partial.end"=corrected.x.end[ppts_y.norm_notna],
+                                                                              "y.partial.end"=ppts$y.norm[ppts_y.norm_notna] + 0.2));
                   } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
                   {
                     # The arrow endings:
@@ -4445,10 +4464,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                               "y.region.start"=y.cur + 0.5,
                                                                               "x.region.end"=corrected.x + x.end.max,
                                                                               "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                                              "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
-                                                                              "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)] - char.height/2,
-                                                                              "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
-                                                                              "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)] + char.height/2));
+                                                                              "x.partial.start"=corrected.x.start[ppts_y.norm_notna],
+                                                                              "y.partial.start"=ppts$y.norm[ppts_y.norm_notna] - char.height/2,
+                                                                              "x.partial.end"=corrected.x.end[ppts_y.norm_notna],
+                                                                              "y.partial.end"=ppts$y.norm[ppts_y.norm_notna] + char.height/2));
                   } else
                   {
                     # Just the lines:
@@ -4459,10 +4478,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                               "y.region.start"=y.cur + 0.5,
                                                                               "x.region.end"=corrected.x + x.end.max,
                                                                               "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                                              "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
-                                                                              "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)],
-                                                                              "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
-                                                                              "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)]));
+                                                                              "x.partial.start"=corrected.x.start[ppts_y.norm_notna],
+                                                                              "y.partial.start"=ppts$y.norm[ppts_y.norm_notna],
+                                                                              "x.partial.end"=corrected.x.end[ppts_y.norm_notna],
+                                                                              "y.partial.end"=ppts$y.norm[ppts_y.norm_notna]));
                   }
                 }
 
@@ -4511,10 +4530,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                             "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
                                                                             "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
                                                                             "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] - 0.2),
-                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] + 0.2)));
+                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[ppts_y.norm_notna]),
+                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna] - 0.2),
+                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[ppts_y.norm_notna]),
+                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna] + 0.2)));
                   } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
                   {
                     .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
@@ -4523,10 +4542,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                             "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
                                                                             "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
                                                                             "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] - 0.2),
-                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] + 0.2)));
+                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[ppts_y.norm_notna]),
+                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna] - 0.2),
+                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[ppts_y.norm_notna]),
+                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna] + 0.2)));
                   } else # just lines
                   {
                     .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
@@ -4535,10 +4554,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                             "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
                                                                             "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
                                                                             "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)]),
-                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)])));
+                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[ppts_y.norm_notna]),
+                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna]),
+                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[ppts_y.norm_notna]),
+                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna])));
                   }
                 }
               } else if( plot.partial.CMAs.as.timeseries.interval.type == "rectangles" )
@@ -4557,9 +4576,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                             "y.region.start"=y.cur + 0.5,
                                                                             "x.region.end"=corrected.x + x.end.max,
                                                                             "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                                            "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
+                                                                            "x.partial.start"=corrected.x.start[ppts_y.norm_notna],
                                                                             "y.partial.start"=y.cur + 0.5,
-                                                                            "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
+                                                                            "x.partial.end"=corrected.x.end[ppts_y.norm_notna],
                                                                             "y.partial.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0));
                 }
 
@@ -4582,9 +4601,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                                           "y.region.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
                                                                           "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
                                                                           "y.region.end"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
-                                                                          "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
+                                                                          "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[ppts_y.norm_notna]),
                                                                           "y.partial.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                          "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
+                                                                          "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[ppts_y.norm_notna]),
                                                                           "y.partial.end"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0)));
                 }
               }
@@ -4605,7 +4624,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                   .SVG.lines(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm),
                              connected=TRUE,
                              stroke=plot.partial.CMAs.as.timeseries.col.dot, lty="solid",
-                             class="partial_cma_timeseries_connecting_lines", suppress.warnings=suppress.warnings);
+                             class="partial_cma_timeseries_connecting_lines", suppress.warnings=(suppress.warnings || length(ppts$y.norm) == 1)); # avoid useless warning when only 1
                 svg.str[[length(svg.str)+1]] <-
                   # The points:
                   .SVG.points(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm),
