@@ -3817,10 +3817,27 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
 
     # Show event intervals as rectangles?
-    if( show.event.intervals && !is.null(evinfo) && !is.na(evinfo$event.interval[i]) )
+#browser() ## >> DEBUG << ####
+    # Cache the event info for plotting the events:
+    if( inherits(cma, "CMA0") )
+    {
+      # For simple CMAs, use the "standard" event info data:
+      plot_evinfo <- evinfo;
+    } else if( inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window") )
+    {
+      # Complex CMAs are a bit more complex: if the have the "inner" event info, use it:
+      if( "inner.event.info" %in% names(cma) )
+      {
+        plot_evinfo <- cma$inner.event.info;
+      } else
+      {
+        plot_evinfo <- NULL;
+      }
+    }
+    if( show.event.intervals && !is.null(plot_evinfo) && !is.na(plot_evinfo$event.interval[i]) )
     {
       # The end of the prescription:
-      end.pi <- start + evinfo$event.interval[i] - evinfo$gap.days[i];
+      end.pi <- start + plot_evinfo$event.interval[i] - plot_evinfo$gap.days[i];
 
       if( .do.R ) # Rplot:
       {
@@ -3834,12 +3851,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         rect(.last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"],
              .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"],
              col=adjustcolor(col,alpha.f=0.2), border=col);
-        if( evinfo$gap.days[i] > 0 )
+        if( plot_evinfo$gap.days[i] > 0 )
         {
           # Save the info:
           .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"] <- (adh.plot.space[2] + end.pi + correct.earliest.followup.window);
           .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"] <- (y.cur - char.height/2);
-          .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"]   <- (adh.plot.space[2] + end.pi + evinfo$gap.days[i] + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"]   <- (adh.plot.space[2] + end.pi + plot_evinfo$gap.days[i] + correct.earliest.followup.window);
           .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"]   <- (y.cur + char.height/2);
 
           # Draw:
@@ -3867,12 +3884,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                     stroke=col, fill=col, fill_opacity=0.2,
                     class=paste0("event-interval-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
                     tooltip=med.class.svg.name);
-        if( evinfo$gap.days[i] > 0 )
+        if( plot_evinfo$gap.days[i] > 0 )
         {
           # Save the info:
           .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window);
           .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] <- .scale.y.to.SVG.plot(y.cur) - dims.event.y/2;
-          .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + evinfo$gap.days[i] + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + plot_evinfo$gap.days[i] + correct.earliest.followup.window);
           .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.END"]   <- .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] + dims.event.y;
 
           # Draw:
