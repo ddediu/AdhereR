@@ -1306,6 +1306,25 @@ getEventInfo.CMA0 <- function(x, flatten.medication.groups=FALSE, medication.gro
 }
 
 
+
+#' Access the inner event info from a complex CMA object.
+#'
+#' Retrieve the event info encapsulated in a complex (i.e., per episode
+#' or sliding window) CMA object.
+#'
+#' @param x a CMA object.
+#' @param flatten.medication.groups \emph{Logical}, if \code{TRUE} and there are
+#' medication groups defined, then the return value is flattened to a single
+#' \code{data.frame} with an extra column containing the medication group (its
+#' name is given by \code{medication.groups.colname}).
+#' @param medication.groups.colname a \emph{string} (defaults to ".MED_GROUP_ID")
+#' giving the name of the column storing the group name when
+#' \code{flatten.medication.groups} is \code{TRUE}.
+#' @return a \emph{data.frame} containing the CMA estimate(s).
+#' @export
+getInnerEventInfo <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID") UseMethod("getInnerEventInfo")
+
+
 #' Restrict a CMA object to a subset of patients.
 #'
 #' Restrict a CMA object to a subset of patients.
@@ -7961,6 +7980,25 @@ getEventInfo.CMA_per_episode <- function(x, flatten.medication.groups=FALSE, med
 }
 
 #' @export
+getInnerEventInfo.CMA_per_episode <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA_per_episode") || !("inner.event.info" %in% names(cma)) || is.null(cma$inner.event.info) ) return (NULL);
+  if( inherits(cma$inner.event.info, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$inner.event.info);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$inner.event.info);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$inner.event.info), function(i) if(!is.null(cma$inner.event.info[[i]])){rep(names(cma$inner.event.info)[i], nrow(cma$inner.event.info[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
+}
+
+#' @export
 subsetCMA.CMA_per_episode <- function(cma, patients, suppress.warnings=FALSE)
 {
   if( inherits(patients, "factor") ) patients <- as.character(patients);
@@ -7988,6 +8026,16 @@ subsetCMA.CMA_per_episode <- function(cma, patients, suppress.warnings=FALSE)
     } else if( is.list(ret.val$event.info) && length(ret.val$event.info) > 0 )
     {
       ret.val$event.info <- lapply(ret.val$event.info, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
+  if( !is.null(ret.val$inner.event.info) )
+  {
+    if( inherits(ret.val$inner.event.info, "data.frame") )
+    {
+      ret.val$inner.event.info <- ret.val$inner.event.info[ ret.val$inner.event.info[,ret.val$ID.colname] %in% patients.to.keep, ]; if( nrow(ret.val$inner.event.info) == 0 ) ret.val$inner.event.info <- NULL;
+    } else if( is.list(ret.val$inner.event.info) && length(ret.val$inner.event.info) > 0 )
+    {
+      ret.val$inner.event.info <- lapply(ret.val$inner.event.info, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
     }
   }
   if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) )
@@ -8396,11 +8444,11 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  ...
 )
 {
-  if( show.event.intervals )
-  {
-    if( !suppress.warnings ) .report.ewms("show.event.intervals=TRUE is not yet implemented in plotting sliding windows and per episodes!\n", "message", "plot", "AdhereR");
-    show.event.intervals <- FALSE;
-  }
+  #if( show.event.intervals )
+  #{
+  #  if( !suppress.warnings ) .report.ewms("show.event.intervals=TRUE is not yet implemented in plotting sliding windows and per episodes!\n", "message", "plot", "AdhereR");
+  #  show.event.intervals <- FALSE;
+  #}
 
   .plot.CMAs(x,
              patients.to.plot=patients.to.plot,
@@ -9209,6 +9257,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
       tmp$CMA.to.apply <- tmp$CMA$CMA.to.apply[1];
       tmp$CMA <- as.data.frame(tmp$CMA); setnames(tmp$CMA, 1, ID.colname); tmp$CMA <- tmp$CMA[,-ncol(tmp$CMA)];
       tmp$event.info <- as.data.frame(tmp$event.info);
+      if( return.inner.event.info && !is.null(tmp$inner.event.info) ) tmp$inner.event.info <- as.data.frame(tmp$inner.event.info);
       return (tmp);
 
     });
@@ -9225,6 +9274,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
     # Rearrange these and return:
     ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
     ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
+    if( return.inner.event.info && !is.null(ret.val[["inner.event.info"]]) ) ret.val[["inner.event.info"]] <- lapply(tmp, function(x) x$inner.event.info);
     ret.val$computed.CMA <- unique(vapply(tmp, function(x) if(is.null(x) || is.na(x$CMA.to.apply)){return (NA_character_)}else{return(x$CMA.to.apply)}, character(1))); ret.val$computed.CMA <- ret.val$computed.CMA[ !is.na(ret.val$computed.CMA) ];
     if( flatten.medication.groups && !is.na(medication.groups.colname) )
     {
@@ -9250,6 +9300,21 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
         tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["event.info"]]), function(i) if(!is.null(ret.val[["event.info"]][[i]])){rep(names(ret.val[["event.info"]])[i], nrow(ret.val[["event.info"]][[i]]))}else{NULL})));
         names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
         ret.val[["event.info"]] <- tmp;
+      }
+
+      # ... and the inner.event.info:
+      if( return.inner.event.info && !is.null(ret.val[["inner.event.info"]]) )
+      {
+        tmp <- do.call(rbind, ret.val[["inner.event.info"]]);
+        if( is.null(tmp) || nrow(tmp) == 0 )
+        {
+          ret.val[["inner.event.info"]] <- NULL;
+        } else
+        {
+          tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["inner.event.info"]]), function(i) if(!is.null(ret.val[["inner.event.info"]][[i]])){rep(names(ret.val[["inner.event.info"]])[i], nrow(ret.val[["inner.event.info"]][[i]]))}else{NULL})));
+          names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+          ret.val[["inner.event.info"]] <- tmp;
+        }
       }
     }
     class(ret.val) <- "CMA_sliding_window";
@@ -9312,6 +9377,25 @@ getEventInfo.CMA_sliding_window <- function(x, flatten.medication.groups=FALSE, 
 }
 
 #' @export
+getInnerEventInfo.CMA_sliding_window <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
+{
+  cma <- x; # parameter x is required for S3 consistency, but I like cma more
+  if( is.null(cma) || !inherits(cma, "CMA_sliding_window") || !("event.info" %in% names(cma)) || is.null(cma$inner.event.info) ) return (NULL);
+  if( inherits(cma$inner.event.info, "data.frame") || !flatten.medication.groups )
+  {
+    return (cma$inner.event.info);
+  } else
+  {
+    # Flatten the medication groups into a single data.frame:
+    ret.val <- do.call(rbind, cma$inner.event.info);
+    if( is.null(ret.val) || nrow(ret.val) == 0 ) return (NULL);
+    ret.val <- cbind(ret.val, unlist(lapply(1:length(cma$inner.event.info), function(i) if(!is.null(cma$inner.event.info[[i]])){rep(names(cma$inner.event.info)[i], nrow(cma$inner.event.info[[i]]))}else{NULL})));
+    names(ret.val)[ncol(ret.val)] <- medication.groups.colname; rownames(ret.val) <- NULL;
+    return (ret.val);
+  }
+}
+
+#' @export
 subsetCMA.CMA_sliding_window <- function(cma, patients, suppress.warnings=FALSE)
 {
   if( inherits(patients, "factor") ) patients <- as.character(patients);
@@ -9333,6 +9417,16 @@ subsetCMA.CMA_sliding_window <- function(cma, patients, suppress.warnings=FALSE)
     } else if( is.list(ret.val$event.info) && length(ret.val$event.info) > 0 )
     {
       ret.val$event.info <- lapply(ret.val$event.info, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
+    }
+  }
+  if( !is.null(ret.val$inner.event.info) )
+  {
+    if( inherits(ret.val$inner.event.info, "data.frame") )
+    {
+      ret.val$inner.event.info <- ret.val$inner.event.info[ ret.val$inner.event.info[,ret.val$ID.colname] %in% patients.to.keep, ]; if( nrow(ret.val$inner.event.info) == 0 ) ret.val$inner.event.info <- NULL;
+    } else if( is.list(ret.val$inner.event.info) && length(ret.val$inner.event.info) > 0 )
+    {
+      ret.val$inner.event.info <- lapply(ret.val$inner.event.info, function(x){tmp <- x[ x[,ret.val$ID.colname] %in% patients.to.keep, ]; if(!is.null(tmp) && nrow(tmp) > 0){tmp}else{NULL}});
     }
   }
   if( ("CMA" %in% names(ret.val)) && !is.null(ret.val$CMA) )

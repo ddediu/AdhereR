@@ -2116,6 +2116,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( length(patids.no.events.to.plot) > 0 )
     {
       cma$data <- cma$data[ !(cma$data[,col.patid] %in% patids.no.events.to.plot), ];
+      cma$event.info <- cma$event.info[ !(cma$event.info[,col.patid] %in% patids.no.events.to.plot), ];
       #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), col.patid ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
       if( !suppress.warnings ) .report.ewms(paste0("Patient",
                                                    ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
@@ -2133,6 +2134,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( length(patids.no.events.to.plot) > 0 )
     {
       cma$data <- cma$data[ !(cma$data[,col.patid] %in% patids.no.events.to.plot), ];
+      cma$event.info <- cma$event.info[ !(cma$event.info[,col.patid] %in% patids.no.events.to.plot), ];
       #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), col.patid ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
       if( !suppress.warnings ) .report.ewms(paste0("Patient",
                                                    ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
@@ -2216,6 +2218,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( length(patids.no.events.to.plot) > 0 )
         {
           cma$data <- cma$data[ !(cma$data[,col.patid] %in% patids.no.events.to.plot), ];
+          cma$event.info <- cma$event.info[ !(cma$event.info[,col.patid] %in% patids.no.events.to.plot), ];
           #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), col.patid ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
           if( !suppress.warnings ) .report.ewms(paste0("Patient",
                                                        ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
@@ -2337,6 +2340,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( length(patids.no.events.to.plot) > 0 )
     {
       cma$data <- cma$data[ !(cma$data[,col.patid] %in% patids.no.events.to.plot), ];
+      cma$event.info <- cma$event.info[ !(cma$event.info[,col.patid] %in% patids.no.events.to.plot), ];
       #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), col.patid ] <- patids.no.events.to.plot; # everything else is NA except for the patient id
       cmas <- cmas[ !(cmas[,col.patid] %in% patids.no.events.to.plot),  ]
       if( !suppress.warnings ) .report.ewms(paste0("Patient",

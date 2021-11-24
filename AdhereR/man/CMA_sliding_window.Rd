@@ -33,6 +33,7 @@ CMA_sliding_window(
   sliding.window.step.duration = 30,
   sliding.window.step.unit = c("days", "weeks", "months", "years")[1],
   sliding.window.no.steps = NA,
+  return.inner.event.info = FALSE,
   date.format = "\%m/\%d/\%Y",
   summary = "CMA per sliding window",
   event.interval.colname = "event.interval",
@@ -148,6 +149,12 @@ window in time units.}
 \item{sliding.window.no.steps}{a \emph{integer} specifying the desired number
 of sliding windows to cover the observation window (if possible); trumps
 \code{sliding.window.step.duration} and \code{sliding.window.step.unit}.}
+
+\item{return.inner.event.info}{\emph{Logical} specifying if the function
+should also return the event.info for all the individual events in each
+sliding window; by default it is \code{FALSE} as this information is useful
+only in very specific cases (e.g., plotting the event intervals) and adds a
+small but non-negligible computational overhead.}
 
 \item{date.format}{A \emph{string} giving the format of the dates used in the
 \code{data} and the other parameters; see the \code{format} parameters of the
