@@ -2,6 +2,8 @@
   
 ## New features
 
+  - now `plot()` respects the order of patients given through the `patients.to.plot` argument
+
 ## Bug fixes
 
 ### `CMA_polypharmacy`

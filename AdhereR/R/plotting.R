@@ -2017,6 +2017,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   #
 
   # The patients:
+  patients.to.plot <- patients.to.plot[ !duplicated(patients.to.plot) ]; # remove duplicates keeping the order
   patids <- unique(as.character(cma$data[,col.patid])); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(patids, as.character(patients.to.plot));
   if( length(patids) == 0 )
@@ -2449,21 +2450,29 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   }
 
   # Make sure the patients are ordered by ID, medication group (if the case), and date:
+  if( !is.null(patients.to.plot) && any(patients.to.plot %in% patids) )
+  {
+    # Respect the order given in patients.to.plot by converting everything to factor with a given levels order:
+    patids.ordered <- factor(patids, levels=patients.to.plot[patients.to.plot %in% patids]);
+    cma$data[,col.patid] <- factor(cma$data[,col.patid], levels=patients.to.plot[patients.to.plot %in% cma$data[,col.patid]]);
+    if( cma.mg ) patmgids[,col.patid] <- factor(patmgids[,col.patid], levels=patients.to.plot[patients.to.plot %in% patmgids[,col.patid]]);
+    cmas[,col.patid] <- factor(cmas[,col.patid], levels=patients.to.plot[patients.to.plot %in% cmas[,col.patid]]);
+  }
   patids <- patids[ order(patids) ];
   if( !cma.mg )
   {
-    cma$data <- cma$data[ order( cma$data[,col.patid], cma$data$.DATE.as.Date), ];
+    cma$data <- cma$data[ order(cma$data[,col.patid], cma$data$.DATE.as.Date), ];
   } else
   {
-    cma$data <- cma$data[ order( cma$data[,col.patid], cma$data[,col.mg], cma$data$.DATE.as.Date), ];
-    patmgids <- patmgids[ order( patmgids[,col.patid], patmgids[,col.mg]), ];
+    cma$data <- cma$data[ order(cma$data[,col.patid], cma$data[,col.mg], cma$data$.DATE.as.Date), ];
+    patmgids <- patmgids[ order(patmgids[,col.patid], patmgids[,col.mg]), ];
   }
   if( all(c("WND.ID","start") %in% names(cmas)) )
   {
-    cmas <- cmas[ order( cmas[,col.patid], cmas$WND.ID, cmas$start), ];
+    cmas <- cmas[ order(cmas[,col.patid], cmas$WND.ID, cmas$start), ];
   } else
   {
-    cmas <- cmas[ order( cmas[,col.patid]), ];
+    cmas <- cmas[ order(cmas[,col.patid]), ];
   }
 
 
