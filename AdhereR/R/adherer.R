@@ -8059,7 +8059,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                                   format=c("text", "latex", "markdown"), # the format to print to
                                   print.params=TRUE,                     # show the parameters?
                                   print.data=TRUE,                       # show the summary of the data?
-                                  exclude.params=c("event.info"),        # if so, should I not print some?
+                                  exclude.params=c("event.info", "inner.event.info"), # if so, should I not print some?
                                   skip.header=FALSE,                     # should I print the generic header?
                                   cma.type=class(x)[1]
 )
