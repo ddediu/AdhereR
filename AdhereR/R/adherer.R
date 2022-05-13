@@ -9126,12 +9126,12 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
   data.copy$..ORIGINAL.ROW.ORDER.. <- 1:nrow(data.copy); # preserve the original order of the rows (needed for medication groups)
   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
-  # Computing the inner.event.info makes sense only for non-overlapping sliding windows:
-  if( return.inner.event.info && (sliding.window.duration.in.days > sliding.window.step.duration.in.days) )
-  {
-    if( !suppress.warnings ) .report.ewms("Computing the inner.event.info makes sense only for non-overlapping sliding windows.\n", "warning", "CMA_sliding_windows", "AdhereR");
-    return.inner.event.info <- FALSE;
-  }
+  ## Computing the inner.event.info makes sense only for non-overlapping sliding windows:
+  #if( return.inner.event.info && (sliding.window.duration.in.days > sliding.window.step.duration.in.days) )
+  #{
+  #  if( !suppress.warnings ) .report.ewms("Computing the inner.event.info makes sense only for non-overlapping sliding windows.\n", "warning", "CMA_sliding_windows", "AdhereR");
+  #  return.inner.event.info <- FALSE;
+  #}
 
 
   # Are there medication groups?
