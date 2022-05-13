@@ -1002,6 +1002,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                        lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                        show.event.intervals=TRUE,             # show the actual prescription intervals
+                       show.overlapping.event.intervals=c("first", "last", "min gap", "max gap", "average")[1], # how to plot overlapping event intervals (relevant for sliding windows and per episode)
                        plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                        print.dose=FALSE, cex.dose=0.75, print.dose.col="black", print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                        plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
@@ -3283,6 +3284,68 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     .last.cma.plot.info$SVG$partialCMAs <- NULL;
   }
 
+  ## For sliding windows and per episode, prepare the inner.event.info (if it exists) for plotting ####
+  if( (inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window")) &&
+      "inner.event.info" %in% names(cma) && !is.null(cma$inner.event.info) &&
+      show.event.intervals )
+  {
+    if( !(show.overlapping.event.intervals %in% c("first", "last", "all")) )
+    {
+      if( !suppress.warnings ) .report.ewms(paste0("Unknown 'show.overlapping.event.intervals' value '",show.overlapping.event.intervals,"': assuming 'first'.\n"), "warning", "plot", "AdhereR");
+      show.overlapping.event.intervals <- "first";
+    }
+
+    # Identify the overlapping events (i.e., those events that belong to the patient but fall in different windows/episodes):
+    proc.inner.event.info <- as.data.table(cma$inner.event.info);
+
+    .combine.overlapping.events <- function(data4event)
+    {
+      if( nrow(data4event) == 0 ) return (NULL);
+
+      # The non-missing-data rows:
+      s <- which(!is.na(data4event$event.interval) & !is.na(data4event$gap.days));
+      if( length(s) == 0 )
+      {
+        r1 <- r2 <- NA;
+      } else
+      {
+        if( show.overlapping.event.intervals == "first" )
+        {
+          # Use the values of the first window/episode with non-NA:
+          i <- min(s); r1 <- data4event$event.interval[i]; r2 <- data4event$gap.days[i];
+        } else if( show.overlapping.event.intervals == "last" )
+        {
+          # Use the values of the last window/episode with non-NA:
+          i <- max(s); r1 <- data4event$event.interval[i]; r2 <- data4event$gap.days[i];
+        } else if( show.overlapping.event.intervals == "min gap" )
+        {
+          # Use the minimum gap:
+          i <- s[which.min(data4event$gap.days[s])]; r1 <- data4event$event.interval[i]; r2 <- data4event$gap.days[i];
+        }  else if( show.overlapping.event.intervals == "max gap" )
+        {
+          # Use the maximum gap:
+          i <- s[which.max(data4event$gap.days[s])]; r1 <- data4event$event.interval[i]; r2 <- data4event$gap.days[i];
+        }  else if( show.overlapping.event.intervals == "average" )
+        {
+          # Use the average event interval and gap:
+          r1 <- mean(data4event$event.interval[s]); r2 <- mean(data4event$gap.days[s]);
+        } else
+        {
+          # This should now have happened! Assume "first":
+          i <- min(s); r1 <- data4event$event.interval[i]; r2 <- data4event$gap.days[i];
+        }
+      }
+
+      # Return the value:
+      return (data.frame(rep(r1, nrow(data4event)), r2));
+    }
+    event.columns = c("event.interval", "gap.days");
+    proc.inner.event.info[ , (event.columns) := .combine.overlapping.events(.SD), by=list(PATIENT_ID, DATE, PERDAY, CATEGORY, DURATION)];
+
+    # Put it back:
+    cma$inner.event.info <- as.data.frame(proc.inner.event.info);
+  }
+
   # For each individual event in turn:
   alternating.band.mg.to.draw <- FALSE;
   y.old.mg <- y.cur;
@@ -3834,8 +3897,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       plot_evinfo <- evinfo;
     } else if( inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window") )
     {
-      # Complex CMAs are a bit more complicated: if the have the "inner" event info, use it:
-      if( "inner.event.info" %in% names(cma) )
+      # Complex CMAs are a bit more complicated: if the have the "inner" event info, use it (if the user wants to plot the information within):
+      if( "inner.event.info" %in% names(cma) && show.event.intervals )
       {
         plot_evinfo <- cma$inner.event.info;
       } else
