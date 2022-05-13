@@ -3834,7 +3834,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       plot_evinfo <- evinfo;
     } else if( inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window") )
     {
-      # Complex CMAs are a bit more complex: if the have the "inner" event info, use it:
+      # Complex CMAs are a bit more complicated: if the have the "inner" event info, use it:
       if( "inner.event.info" %in% names(cma) )
       {
         plot_evinfo <- cma$inner.event.info;
