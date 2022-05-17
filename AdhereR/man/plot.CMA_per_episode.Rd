@@ -40,6 +40,8 @@
   pch.start.event = 15,
   pch.end.event = 16,
   show.event.intervals = FALSE,
+  show.overlapping.event.intervals = c("first", "last", "min gap", "max gap",
+    "average")[1],
   plot.events.vertically.displaced = TRUE,
   print.dose = FALSE,
   cex.dose = 0.75,
@@ -141,6 +143,8 @@
   pch.start.event = 15,
   pch.end.event = 16,
   show.event.intervals = FALSE,
+  show.overlapping.event.intervals = c("first", "last", "min gap", "max gap",
+    "average")[1],
   plot.events.vertically.displaced = TRUE,
   print.dose = FALSE,
   cex.dose = 0.75,
@@ -288,6 +292,12 @@ event (line style, width, and start and end symbols).}
 \item{show.event.intervals}{\emph{Logical}, should the actual event intervals
 be shown? As per-episode and sliding windows might have overlapping intervals,
 it is better not to show them by default (\code{FALSE}).}
+
+\item{show.overlapping.event.intervals}{if we do show the event intervals, how
+should we deal with the potential overlaps between windows or events? We can
+show the \emph{first} (the default) or the \emph{last} (among windows/episodes),
+or the one that minimizes (\emph{min gap}) or maximizes (\emph{max gap}) the gap,
+or \emph{average} across all windows/events.}
 
 \item{plot.events.vertically.displaced}{Should consecutive events be plotted
 on separate rows (i.e., separated vertically, the default) or on the same row?}

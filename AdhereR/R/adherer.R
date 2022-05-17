@@ -33,7 +33,7 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
                   ".CARRY.OVER.FROM.BEFORE", ".DATE.as.Date", ".END.EVENT.DATE", ".EVENT.STARTS.AFTER.OBS.WINDOW",
                   ".EVENT.STARTS.BEFORE.OBS.WINDOW", ".EVENT.WITHIN.FU.WINDOW", ".FU.START.DATE", ".FU.START.DATE.UPDATED",
                   ".INTERSECT.EPISODE.OBS.WIN.END", ".INTERSECT.EPISODE.OBS.WIN.START", ".OBS.DURATION.UPDATED",
-                  ".OBS.END.DATE", ".OBS.END.DATE.PRECOMPUTED",
+                  ".OBS.END.DATE", ".OBS.END.DATE.PRECOMPUTED", "PERDAY", "CATEGORY",
                   "episode.ID", "episode.duration", "end.episode.gap.days"));
 
 ## Package private info ####
@@ -8238,9 +8238,14 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").
 #' @param lty.event,lwd.event,pch.start.event,pch.end.event The style of the
 #' event (line style, width, and start and end symbols).
-##' @param show.event.intervals \emph{Logical}, should the actual event intervals
-##' be shown? As per-episode and sliding windows might have overlapping intervals,
-##' it is better not to show them by default (\code{FALSE}).
+#' @param show.event.intervals \emph{Logical}, should the actual event intervals
+#' be shown? As per-episode and sliding windows might have overlapping intervals,
+#' it is better not to show them by default (\code{FALSE}).
+#' @param show.overlapping.event.intervals if we do show the event intervals, how
+#' should we deal with the potential overlaps between windows or events? We can
+#' show the \emph{first} (the default) or the \emph{last} (among windows/episodes),
+#' or the one that minimizes (\emph{min gap}) or maximizes (\emph{max gap}) the gap,
+#' or \emph{average} across all windows/events.
 #' @param plot.events.vertically.displaced Should consecutive events be plotted
 #' on separate rows (i.e., separated vertically, the default) or on the same row?
 #' @param print.dose,cex.dose,print.dose.outline.col,print.dose.centered Print daily
