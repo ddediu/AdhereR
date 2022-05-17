@@ -52,7 +52,7 @@
   format = c("text", "latex", "markdown"),
   print.params = TRUE,
   print.data = TRUE,
-  exclude.params = c("event.info"),
+  exclude.params = c("event.info", "inner.event.info"),
   skip.header = FALSE,
   cma.type = class(x)[1]
 )

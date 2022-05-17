@@ -8403,6 +8403,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                                  lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                                  show.event.intervals=FALSE,            # per-episode and sliding windows might have overlapping intervals, so better not to show them by default
+                                 show.overlapping.event.intervals=c("first", "last", "min gap", "max gap", "average")[1], # how to plot overlapping event intervals (relevant for sliding windows and per episode)
                                  plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                                  print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                                  plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
@@ -8481,6 +8482,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              lty.event=lty.event,
              lwd.event=lwd.event,
              show.event.intervals=show.event.intervals,
+             show.overlapping.event.intervals=show.overlapping.event.intervals,
              plot.events.vertically.displaced=plot.events.vertically.displaced,
              pch.start.event=pch.start.event,
              pch.end.event=pch.end.event,

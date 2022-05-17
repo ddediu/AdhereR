@@ -3285,11 +3285,14 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   }
 
   ## For sliding windows and per episode, prepare the inner.event.info (if it exists) for plotting ####
+  # Prepare the plot title:
+  title.inner.event.info <- ""; # empty in most cases
+  # Check the conditions:
   if( (inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window")) &&
       "inner.event.info" %in% names(cma) && !is.null(cma$inner.event.info) &&
       show.event.intervals )
   {
-    if( !(show.overlapping.event.intervals %in% c("first", "last", "all")) )
+    if( !(show.overlapping.event.intervals %in% c("first", "last", "min gap", "max gap", "average")) )
     {
       if( !suppress.warnings ) .report.ewms(paste0("Unknown 'show.overlapping.event.intervals' value '",show.overlapping.event.intervals,"': assuming 'first'.\n"), "warning", "plot", "AdhereR");
       show.overlapping.event.intervals <- "first";
@@ -3306,7 +3309,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       s <- which(!is.na(data4event$event.interval) & !is.na(data4event$gap.days));
       if( length(s) == 0 )
       {
-        r1 <- r2 <- NA;
+        r1 <- r2 <- NA_real_;
       } else
       {
         if( show.overlapping.event.intervals == "first" )
@@ -3337,13 +3340,21 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       }
 
       # Return the value:
-      return (data.frame(rep(r1, nrow(data4event)), r2));
+      #r1s <- r2s <- rep(NA, nrow(data4event)); r1s[s] <- r1; r2s[s] <- r2; # use the new values only for the originally non-NA ones...
+      #return (data.frame(r1s, r2s));
+      return (data.frame(r1, r2));
     }
-    event.columns = c("event.interval", "gap.days");
-    proc.inner.event.info[ , (event.columns) := .combine.overlapping.events(.SD), by=list(PATIENT_ID, DATE, PERDAY, CATEGORY, DURATION)];
+    proc.inner.event.info <- proc.inner.event.info[ , .combine.overlapping.events(.SD), by=list(PATIENT_ID, DATE, PERDAY, CATEGORY, DURATION)];
+    colnames(proc.inner.event.info)[(-1:0)+ncol(proc.inner.event.info)] <- c("event.interval", "gap.days");
+    proc.inner.event.info2 <- cma$data; proc.inner.event.info2$.ORIG.ROW.ORDER <- 1:nrow(proc.inner.event.info2);
+    proc.inner.event.info2 <- merge(proc.inner.event.info2, proc.inner.event.info, all.x=TRUE, all.y=FALSE);
+    proc.inner.event.info2 <- proc.inner.event.info2[ order(proc.inner.event.info2$.ORIG.ROW.ORDER), ];
 
-    # Put it back:
-    cma$inner.event.info <- as.data.frame(proc.inner.event.info);
+    # Put back the information needed for plotting:
+    cma$inner.event.info <- as.data.frame(proc.inner.event.info2);
+
+    # Prepare the plot title:
+    title.inner.event.info <- paste0("; overlapping events: ", show.overlapping.event.intervals);
   }
 
   # For each individual event in turn:
@@ -3889,7 +3900,6 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
 
     # Show event intervals as rectangles?
-#browser() ## >> DEBUG << ####
     # Cache the event info for plotting the events:
     if( inherits(cma, "CMA0") )
     {
@@ -4878,8 +4888,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                          ifelse(!is.null(title) && show.cma,
                                 paste0(" ",
                                        switch(class(cma)[1],
-                                              "CMA_sliding_window"=paste0("sliding window (",cma$computed.CMA,")"),
-                                              "CMA_per_episode"=   paste0("per episode (",cma$computed.CMA,")"),
+                                              "CMA_sliding_window"=paste0("sliding window (",cma$computed.CMA, title.inner.event.info,")"),
+                                              "CMA_per_episode"=   paste0("per episode (",cma$computed.CMA, title.inner.event.info,")"),
                                               class(cma)[1])
                                 ),
                                 ""));
