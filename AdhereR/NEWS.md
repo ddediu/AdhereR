@@ -2,9 +2,9 @@
   
 ## New features
 
-  - now `plot()` respects the order of patients given through the `patients.to.plot` argument
+  - now `plot()` respects the order of patients given through the `patients.to.plot` argument.
   
-  - plotting sliding windows and per episodes can now show the events and gaps (as for simple plots, but things are a bit more complicated as different windows/events might result in different estimates)
+  - plotting sliding windows and per episodes can now show the events and gaps (as for simple plots, but things are a bit more complicated as different windows/events might result in different estimates).
 
 ## Bug fixes
 
