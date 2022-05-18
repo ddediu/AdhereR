@@ -33,7 +33,8 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
                   ".CARRY.OVER.FROM.BEFORE", ".DATE.as.Date", ".END.EVENT.DATE", ".EVENT.STARTS.AFTER.OBS.WINDOW",
                   ".EVENT.STARTS.BEFORE.OBS.WINDOW", ".EVENT.WITHIN.FU.WINDOW", ".FU.START.DATE", ".FU.START.DATE.UPDATED",
                   ".INTERSECT.EPISODE.OBS.WIN.END", ".INTERSECT.EPISODE.OBS.WIN.START", ".OBS.DURATION.UPDATED",
-                  ".OBS.END.DATE", ".OBS.END.DATE.PRECOMPUTED", "PERDAY", "CATEGORY",
+                  ".OBS.END.DATE", ".OBS.END.DATE.PRECOMPUTED",
+                  "PERDAY", "CATEGORY",
                   "episode.ID", "episode.duration", "end.episode.gap.days"));
 
 ## Package private info ####
@@ -7304,6 +7305,11 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' storing the number of days when medication was not available (i.e., the
 #' "gap days"); the default value "gap.days" should be changed only if there is
 #' a naming conflict with a pre-existing "gap.days" column in \code{event.info}.
+#' @param return.inner.event.info \emph{Logical} specifying if the function
+#' should also return the event.info for all the individual events in each
+#' sliding window; by default it is \code{FALSE} as this information is useful
+#' only in very specific cases (e.g., plotting the event intervals) and adds a
+#' small but non-negligible computational overhead.
 #' @param force.NA.CMA.for.failed.patients \emph{Logical} describing how the
 #' patients for which the CMA estimation fails are treated: if \code{TRUE}
 #' they are returned with an \code{NA} CMA estimate, while for
@@ -7458,6 +7464,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              observation.window.start.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
                              observation.window.duration=365*2, # the duration of the observation window in time units (NA = undefined)
                              observation.window.duration.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
+                             return.inner.event.info=FALSE, # should we return the event.info for all the individual events in each sliding window?
                              # Date format:
                              date.format="%m/%d/%Y", # the format of the dates used in this function (NA = undefined)
                              # Comments and metadata:
@@ -7683,7 +7690,8 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     setkeyv(data.epi, c(".PATIENT.EPISODE.ID", ".DATE.as.Date"));
 
     # compute end.episode.gap.days, if treat.epi are supplied
-    if(!"end.episode.gap.days" %in% colnames(treat.epi)) {
+    if(!"end.episode.gap.days" %in% colnames(treat.epi))
+    {
       data.epi2 <- compute.event.int.gaps(data=as.data.frame(data.epi),
                                           ID.colname=".PATIENT.EPISODE.ID",
                                           event.date.colname=event.date.colname,
@@ -7711,11 +7719,9 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
 
       episode.gap.days <- data.epi2[which(.EVENT.WITHIN.FU.WINDOW), c(ID.colname, "episode.ID", gap.days.colname), by = c(ID.colname, "episode.ID"), with = FALSE]; # gap days during the follow-up window
       end.episode.gap.days <- episode.gap.days[,last(get(gap.days.colname)), by = c(ID.colname, "episode.ID")]; # gap days during the last event
-
       setnames(end.episode.gap.days, old = "V1", new = "end.episode.gap.days")
 
       treat.epi <- merge(treat.epi, end.episode.gap.days, all.x = TRUE, by = c(ID.colname, "episode.ID")); # merge end.episode.gap.days back to data.epi
-
       treat.epi[, episode.duration := as.numeric(.INTERSECT.EPISODE.OBS.WIN.END-.INTERSECT.EPISODE.OBS.WIN.START)];
     }
 
@@ -7750,7 +7756,17 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     # Add back the patient and episode IDs:
     tmp <- as.data.table(merge(cma$CMA, treat.epi)[,c(ID.colname, "episode.ID", "episode.start", "end.episode.gap.days", "episode.duration", "episode.end", "CMA")]);
     setkeyv(tmp, c(ID.colname,"episode.ID"));
-    return (list("CMA"=as.data.frame(tmp), "event.info"=as.data.frame(event.info2)[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]));
+
+    if( !return.inner.event.info )
+    {
+      return (list("CMA"=as.data.frame(tmp),
+                   "event.info"=as.data.frame(event.info2)[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]));
+    } else
+    {
+      return (list("CMA"=as.data.frame(tmp),
+                   "event.info"=as.data.frame(event.info2)[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")],
+                   "inner.event.info"=as.data.frame(event.info2)));
+    }
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
@@ -7800,6 +7816,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     ret.val$summary <- summary;
     ret.val$CMA <- as.data.frame(tmp$CMA);
     setnames(ret.val$CMA, 1, ID.colname);
+    if( return.inner.event.info && !is.null(tmp$inner.event.info) ) ret.val$inner.event.info <- as.data.frame(tmp$inner.event.info);
 
     return (ret.val);
 
@@ -7883,6 +7900,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
       # Convert to data.frame and return:
       tmp$CMA <- as.data.frame(tmp$CMA); setnames(tmp$CMA, 1, ID.colname);
       tmp$event.info <- as.data.frame(tmp$event.info);
+      if( return.inner.event.info && !is.null(tmp$inner.event.info) ) tmp$inner.event.info <- as.data.frame(tmp$inner.event.info);
       return (tmp);
 
     });
@@ -7899,6 +7917,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     # Rearrange these and return:
     ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
     ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
+    if( return.inner.event.info && !is.null(tmp$inner.event.info) ) ret.val[["inner.event.info"]] <- lapply(tmp, function(x) x$inner.event.info);
     ret.val$computed.CMA <- CMA.to.apply;
     if( flatten.medication.groups && !is.na(medication.groups.colname) )
     {
@@ -7924,6 +7943,21 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
         tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["event.info"]]), function(i) if(!is.null(ret.val[["event.info"]][[i]])){rep(names(ret.val[["event.info"]])[i], nrow(ret.val[["event.info"]][[i]]))}else{NULL})));
         names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
         ret.val[["event.info"]] <- tmp;
+      }
+
+      # ... and the inner.event.info:
+      if( return.inner.event.info && !is.null(ret.val[["inner.event.info"]]) )
+      {
+        tmp <- do.call(rbind, ret.val[["inner.event.info"]]);
+        if( is.null(tmp) || nrow(tmp) == 0 )
+        {
+          ret.val[["inner.event.info"]] <- NULL;
+        } else
+        {
+          tmp <- cbind(tmp, unlist(lapply(1:length(ret.val[["inner.event.info"]]), function(i) if(!is.null(ret.val[["inner.event.info"]][[i]])){rep(names(ret.val[["inner.event.info"]])[i], nrow(ret.val[["inner.event.info"]][[i]]))}else{NULL})));
+          names(tmp)[ncol(tmp)] <- medication.groups.colname; rownames(tmp) <- NULL;
+          ret.val[["inner.event.info"]] <- tmp;
+        }
       }
     }
     class(ret.val) <- "CMA_per_episode";
@@ -8241,11 +8275,12 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' @param show.event.intervals \emph{Logical}, should the actual event intervals
 #' be shown? As per-episode and sliding windows might have overlapping intervals,
 #' it is better not to show them by default (\code{FALSE}).
-#' @param show.overlapping.event.intervals if we do show the event intervals, how
-#' should we deal with the potential overlaps between windows or events? We can
-#' show the \emph{first} (the default) or the \emph{last} (among windows/episodes),
-#' or the one that minimizes (\emph{min gap}) or maximizes (\emph{max gap}) the gap,
-#' or \emph{average} across all windows/events.
+#' @param show.overlapping.event.intervals specifies how to plot the event
+#' intervals that appear in multiple sliding windows or episodes. We can plot
+#' how thye look in the \emph{first} sliding window or episode (the default),
+#' how they appear in the \emph{last}, pick the one that minimizes the gap
+#' (\emph{min gap}) or maximizes it (\emph{max gap}), or compute their
+#' \emph{average} across all sliding windows or episodes containing them.
 #' @param plot.events.vertically.displaced Should consecutive events be plotted
 #' on separate rows (i.e., separated vertically, the default) or on the same row?
 #' @param print.dose,cex.dose,print.dose.outline.col,print.dose.centered Print daily
@@ -9288,7 +9323,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
     # Rearrange these and return:
     ret.val[["CMA"]]        <- lapply(tmp, function(x) x$CMA);
     ret.val[["event.info"]] <- lapply(tmp, function(x) x$event.info);
-    if( return.inner.event.info && !is.null(ret.val[["inner.event.info"]]) ) ret.val[["inner.event.info"]] <- lapply(tmp, function(x) x$inner.event.info);
+    if( return.inner.event.info && !is.null(tmp$inner.event.info) ) ret.val[["inner.event.info"]] <- lapply(tmp, function(x) x$inner.event.info);
     ret.val$computed.CMA <- unique(vapply(tmp, function(x) if(is.null(x) || is.na(x$CMA.to.apply)){return (NA_character_)}else{return(x$CMA.to.apply)}, character(1))); ret.val$computed.CMA <- ret.val$computed.CMA[ !is.na(ret.val$computed.CMA) ];
     if( flatten.medication.groups && !is.na(medication.groups.colname) )
     {

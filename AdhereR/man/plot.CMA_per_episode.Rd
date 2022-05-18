@@ -293,11 +293,12 @@ event (line style, width, and start and end symbols).}
 be shown? As per-episode and sliding windows might have overlapping intervals,
 it is better not to show them by default (\code{FALSE}).}
 
-\item{show.overlapping.event.intervals}{if we do show the event intervals, how
-should we deal with the potential overlaps between windows or events? We can
-show the \emph{first} (the default) or the \emph{last} (among windows/episodes),
-or the one that minimizes (\emph{min gap}) or maximizes (\emph{max gap}) the gap,
-or \emph{average} across all windows/events.}
+\item{show.overlapping.event.intervals}{specifies how to plot the event
+intervals that appear in multiple sliding windows or episodes. We can plot
+how thye look in the \emph{first} sliding window or episode (the default),
+how they appear in the \emph{last}, pick the one that minimizes the gap
+(\emph{min gap}) or maximizes it (\emph{max gap}), or compute their
+\emph{average} across all sliding windows or episodes containing them.}
 
 \item{plot.events.vertically.displaced}{Should consecutive events be plotted
 on separate rows (i.e., separated vertically, the default) or on the same row?}

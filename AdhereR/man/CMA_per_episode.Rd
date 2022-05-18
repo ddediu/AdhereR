@@ -32,6 +32,7 @@ CMA_per_episode(
   observation.window.start.unit = c("days", "weeks", "months", "years")[1],
   observation.window.duration = 365 * 2,
   observation.window.duration.unit = c("days", "weeks", "months", "years")[1],
+  return.inner.event.info = FALSE,
   date.format = "\%m/\%d/\%Y",
   summary = "CMA per treatment episode",
   event.interval.colname = "event.interval",
@@ -171,6 +172,12 @@ defined.}
 
 \item{observation.window.start, observation.window.start.unit, observation.window.duration, observation.window.duration.unit}{the definition of the observation window
 (see the follow-up window parameters above for details).}
+
+\item{return.inner.event.info}{\emph{Logical} specifying if the function
+should also return the event.info for all the individual events in each
+sliding window; by default it is \code{FALSE} as this information is useful
+only in very specific cases (e.g., plotting the event intervals) and adds a
+small but non-negligible computational overhead.}
 
 \item{date.format}{A \emph{string} giving the format of the dates used in the
 \code{data} and the other parameters; see the \code{format} parameters of the
