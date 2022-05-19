@@ -7726,28 +7726,58 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     }
 
     # Compute the required CMA on this new combined database:
-    cma <- CMA.FNC(data=as.data.frame(data.epi),
-                   ID.colname=".PATIENT.EPISODE.ID",
-                   event.date.colname=event.date.colname,
-                   event.duration.colname=event.duration.colname,
-                   event.daily.dose.colname=event.daily.dose.colname,
-                   medication.class.colname=medication.class.colname,
-                   carryover.within.obs.window=carryover.within.obs.window,
-                   carryover.into.obs.window=carryover.into.obs.window,
-                   carry.only.for.same.medication=carry.only.for.same.medication,
-                   consider.dosage.change=consider.dosage.change,
-                   followup.window.start="episode.start",
-                   followup.window.start.unit=followup.window.start.unit,
-                   followup.window.duration="episode.duration",
-                   followup.window.duration.unit=followup.window.duration.unit,
-                   observation.window.start=".INTERSECT.EPISODE.OBS.WIN.START",
-                   observation.window.duration=".INTERSECT.EPISODE.OBS.WIN.DURATION",
-                   observation.window.duration.unit="days",
-                   date.format=date.format,
-                   parallel.backend="none", # make sure this runs sequentially!
-                   parallel.threads=1,
-                   suppress.warnings=suppress.warnings,
-                   ...);
+    if(length(dot.args <- list(...)) > 0 && "arguments.that.should.not.be.defined" %in% names(dot.args)) # check if arguments.that.should.not.be.defined is passed in the ... argument
+    {
+      # Avoid passing again arguments.that.should.not.be.defined to the CMA function:
+      cma <- CMA.FNC(data=as.data.frame(data.epi),
+                     ID.colname=".PATIENT.EPISODE.ID",
+                     event.date.colname=event.date.colname,
+                     event.duration.colname=event.duration.colname,
+                     event.daily.dose.colname=event.daily.dose.colname,
+                     medication.class.colname=medication.class.colname,
+                     carryover.within.obs.window=carryover.within.obs.window,
+                     carryover.into.obs.window=carryover.into.obs.window,
+                     carry.only.for.same.medication=carry.only.for.same.medication,
+                     consider.dosage.change=consider.dosage.change,
+                     followup.window.start="episode.start",
+                     followup.window.start.unit=followup.window.start.unit,
+                     followup.window.duration="episode.duration",
+                     followup.window.duration.unit=followup.window.duration.unit,
+                     observation.window.start=".INTERSECT.EPISODE.OBS.WIN.START",
+                     observation.window.duration=".INTERSECT.EPISODE.OBS.WIN.DURATION",
+                     observation.window.duration.unit="days",
+                     date.format=date.format,
+                     parallel.backend="none", # make sure this runs sequentially!
+                     parallel.threads=1,
+                     suppress.warnings=suppress.warnings,
+                     ...);
+    } else
+    {
+      # Temporarily avoid warnings linked to rewriting some CMA arguments by passing it arguments.that.should.not.be.defined=NULL:
+      cma <- CMA.FNC(data=as.data.frame(data.epi),
+                     ID.colname=".PATIENT.EPISODE.ID",
+                     event.date.colname=event.date.colname,
+                     event.duration.colname=event.duration.colname,
+                     event.daily.dose.colname=event.daily.dose.colname,
+                     medication.class.colname=medication.class.colname,
+                     carryover.within.obs.window=carryover.within.obs.window,
+                     carryover.into.obs.window=carryover.into.obs.window,
+                     carry.only.for.same.medication=carry.only.for.same.medication,
+                     consider.dosage.change=consider.dosage.change,
+                     followup.window.start="episode.start",
+                     followup.window.start.unit=followup.window.start.unit,
+                     followup.window.duration="episode.duration",
+                     followup.window.duration.unit=followup.window.duration.unit,
+                     observation.window.start=".INTERSECT.EPISODE.OBS.WIN.START",
+                     observation.window.duration=".INTERSECT.EPISODE.OBS.WIN.DURATION",
+                     observation.window.duration.unit="days",
+                     date.format=date.format,
+                     parallel.backend="none", # make sure this runs sequentially!
+                     parallel.threads=1,
+                     suppress.warnings=suppress.warnings,
+                     arguments.that.should.not.be.defined=NULL,
+                     ...);
+    }
 
     # adjust episode start- and end dates
     treat.epi[, `:=` (episode.start = .INTERSECT.EPISODE.OBS.WIN.START,
@@ -9059,26 +9089,54 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
       setkeyv(data4ID.wnds, ".WND.ID");
 
       # Apply the desired CMA to all the windows:
-      cma <- CMA.FNC(data=as.data.frame(data4ID.wnds),
-                     ID.colname=".WND.ID",
-                     event.date.colname=event.date.colname,
-                     event.duration.colname=event.duration.colname,
-                     event.daily.dose.colname=event.daily.dose.colname,
-                     medication.class.colname=medication.class.colname,
-                     carry.only.for.same.medication=carry.only.for.same.medication,
-                     consider.dosage.change=consider.dosage.change,
-                     followup.window.start=followup.window.start,
-                     followup.window.start.unit=followup.window.start.unit,
-                     followup.window.duration=followup.window.duration,
-                     followup.window.duration.unit=followup.window.duration.unit,
-                     observation.window.start=".WND.START.DATE",
-                     observation.window.duration=".WND.DURATION",
-                     observation.window.duration.unit="days",
-                     date.format=date.format,
-                     parallel.backend="none", # make sure this runs sequentially!
-                     parallel.threads=1,
-                     suppress.warnings=suppress.warnings,
-                     ...);
+      if(length(dot.args <- list(...)) > 0 && "arguments.that.should.not.be.defined" %in% names(dot.args)) # check if arguments.that.should.not.be.defined is passed in the ... argument
+      {
+        # Avoid passing again arguments.that.should.not.be.defined to the CMA function:
+        cma <- CMA.FNC(data=as.data.frame(data4ID.wnds),
+                       ID.colname=".WND.ID",
+                       event.date.colname=event.date.colname,
+                       event.duration.colname=event.duration.colname,
+                       event.daily.dose.colname=event.daily.dose.colname,
+                       medication.class.colname=medication.class.colname,
+                       carry.only.for.same.medication=carry.only.for.same.medication,
+                       consider.dosage.change=consider.dosage.change,
+                       followup.window.start=followup.window.start,
+                       followup.window.start.unit=followup.window.start.unit,
+                       followup.window.duration=followup.window.duration,
+                       followup.window.duration.unit=followup.window.duration.unit,
+                       observation.window.start=".WND.START.DATE",
+                       observation.window.duration=".WND.DURATION",
+                       observation.window.duration.unit="days",
+                       date.format=date.format,
+                       parallel.backend="none", # make sure this runs sequentially!
+                       parallel.threads=1,
+                       suppress.warnings=suppress.warnings,
+                       ...);
+      } else
+      {
+        # Temporarily avoid warnings linked to rewriting some CMA arguments by passing it arguments.that.should.not.be.defined=NULL:
+        cma <- CMA.FNC(data=as.data.frame(data4ID.wnds),
+                       ID.colname=".WND.ID",
+                       event.date.colname=event.date.colname,
+                       event.duration.colname=event.duration.colname,
+                       event.daily.dose.colname=event.daily.dose.colname,
+                       medication.class.colname=medication.class.colname,
+                       carry.only.for.same.medication=carry.only.for.same.medication,
+                       consider.dosage.change=consider.dosage.change,
+                       followup.window.start=followup.window.start,
+                       followup.window.start.unit=followup.window.start.unit,
+                       followup.window.duration=followup.window.duration,
+                       followup.window.duration.unit=followup.window.duration.unit,
+                       observation.window.start=".WND.START.DATE",
+                       observation.window.duration=".WND.DURATION",
+                       observation.window.duration.unit="days",
+                       date.format=date.format,
+                       parallel.backend="none", # make sure this runs sequentially!
+                       parallel.threads=1,
+                       suppress.warnings=suppress.warnings,
+                       arguments.that.should.not.be.defined=NULL,
+                       ...);
+      }
       if( is.null(cma) ) return (NULL);
 
       # Unpack the data fo returning:
