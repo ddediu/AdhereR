@@ -3397,7 +3397,7 @@ server <- function(input, output, session)
     .GlobalEnv$.plotting.params$get.patients.fnc <- get.patients.fnc;
     .GlobalEnv$.plotting.params$get.data.for.patients.fnc <- get.data.for.patients.fnc;
     # CMA class:
-    .GlobalEnv$.plotting.params$cma.class <- "CMA0";
+    .GlobalEnv$.plotting.params$cma.class <- "simple";
     # Patient IDs and selected ID:
     .GlobalEnv$.plotting.params$all.IDs <- all.IDs;
     .GlobalEnv$.plotting.params$ID <- all.IDs[1];
