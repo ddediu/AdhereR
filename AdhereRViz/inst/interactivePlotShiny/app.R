@@ -2510,10 +2510,15 @@ server <- function(input, output, session)
   # Make sure by default the event intervals are not shown for complex CMAs ----
   observeEvent(input$cma_class,
                {
-                 if( input$cma_class %in% c("sliding windows", "per episode") )
-                 {
-                   shinyWidgets::updateMaterialSwitch(session, inputId="show_event_intervals", value=FALSE); # set it to FALSE
-                 }
+                 shinyWidgets::updateMaterialSwitch(session,
+                                                    inputId="show_event_intervals",
+                                                    value=(input$cma_class == "simple" && input$cma_to_compute != "CMA0")); # by default, it is TRUE for simple (non-CMA0) CMAs and FALSE otherwise
+               })
+  observeEvent(input$cma_to_compute,
+               {
+                 shinyWidgets::updateMaterialSwitch(session,
+                                                    inputId="show_event_intervals",
+                                                    value=(input$cma_class == "simple" && input$cma_to_compute != "CMA0")); # by default, it is TRUE for simple (non-CMA0) CMAs and FALSE otherwise
                })
 
 
