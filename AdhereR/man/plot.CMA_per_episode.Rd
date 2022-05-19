@@ -104,6 +104,7 @@
   export.formats.html.css = NULL,
   export.formats.directory = NA,
   generate.R.plot = TRUE,
+  do.not.draw.plot = FALSE,
   suppress.warnings = FALSE,
   ...
 )
@@ -207,6 +208,7 @@
   export.formats.html.css = NULL,
   export.formats.directory = NA,
   generate.R.plot = TRUE,
+  do.not.draw.plot = FALSE,
   suppress.warnings = FALSE,
   ...
 )
@@ -419,6 +421,12 @@ directory.}
 
 \item{generate.R.plot}{a \emph{logical}, if \code{TRUE} (the default),
 generate the standard (base \code{R}) plot for plotting within \code{R}.}
+
+\item{do.not.draw.plot}{a \emph{logical}, if \code{TRUE} (\emph{not} the default),
+does not draw the plot itself, but only the legend (if \code{show.legend} is
+\code{TRUE}) at coordinates (0,0) irrespective of the given legend coordinates.
+This is intended to allow (together with the \code{get.legend.plotting.area()}
+function) the separate plotting of the legend.}
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}

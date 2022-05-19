@@ -1029,6 +1029,11 @@ print.CMA0 <- function(x,                                                  # the
 #' directory.
 #' @param generate.R.plot a \emph{logical}, if \code{TRUE} (the default),
 #' generate the standard (base \code{R}) plot for plotting within \code{R}.
+#' @param do.not.draw.plot a \emph{logical}, if \code{TRUE} (\emph{not} the default),
+#' does not draw the plot itself, but only the legend (if \code{show.legend} is
+#' \code{TRUE}) at coordinates (0,0) irrespective of the given legend coordinates.
+#' This is intended to allow (together with the \code{get.legend.plotting.area()}
+#' function) the separate plotting of the legend.
 #' @param ... other possible parameters
 #' @examples
 #' cma0 <- CMA0(data=med.events,
@@ -1088,7 +1093,8 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                       export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                       export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
-                      generate.R.plot=TRUE                   # generate standard (base R) plot for plotting within R?
+                      generate.R.plot=TRUE,                  # generate standard (base R) plot for plotting within R?
+                      do.not.draw.plot=FALSE                 # if TRUE, don't draw the actual plot, but only the legend (if required)
 )
 {
   .plot.CMAs(x,
@@ -1164,6 +1170,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              export.formats.html.css=export.formats.html.css,
              export.formats.directory=export.formats.directory,
              generate.R.plot=generate.R.plot,
+             do.not.draw.plot=do.not.draw.plot,
              suppress.warnings=suppress.warnings);
 }
 
@@ -3345,6 +3352,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                            export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                            generate.R.plot=TRUE,                  # generate standard (base R) plot for plotting within R?
+                           do.not.draw.plot=FALSE,                # if TRUE, don't draw the actual plot, but only the legend (if required)
                            ...
 )
 {
@@ -3427,6 +3435,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              export.formats.html.css=export.formats.html.css,
              export.formats.directory=export.formats.directory,
              generate.R.plot=generate.R.plot,
+             do.not.draw.plot=do.not.draw.plot,
              suppress.warnings=suppress.warnings);
 }
 
@@ -4019,6 +4028,11 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' directory.
 #' @param generate.R.plot a \emph{logical}, if \code{TRUE} (the default),
 #' generate the standard (base \code{R}) plot for plotting within \code{R}.
+#' @param do.not.draw.plot a \emph{logical}, if \code{TRUE} (\emph{not} the default),
+#' does not draw the plot itself, but only the legend (if \code{show.legend} is
+#' \code{TRUE}) at coordinates (0,0) irrespective of the given legend coordinates.
+#' This is intended to allow (together with the \code{get.legend.plotting.area()}
+#' function) the separate plotting of the legend.
 #' @param ... other possible parameters
 #' @examples
 #' cma1 <- CMA1(data=med.events,
@@ -4072,7 +4086,8 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                       export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                       export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
-                      generate.R.plot=TRUE                   # generate standard (base R) plot for plotting within R?
+                      generate.R.plot=TRUE,                  # generate standard (base R) plot for plotting within R?
+                      do.not.draw.plot=FALSE                 # if TRUE, don't draw the actual plot, but only the legend (if required)
 )
 {
   .plot.CMA1plus(cma=x,
@@ -4148,6 +4163,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  export.formats.html.css=export.formats.html.css,
                  export.formats.directory=export.formats.directory,
                  generate.R.plot=generate.R.plot,
+                 do.not.draw.plot=do.not.draw.plot,
                  ...)
 }
 
@@ -8407,6 +8423,11 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' directory.
 #' @param generate.R.plot a \emph{logical}, if \code{TRUE} (the default),
 #' generate the standard (base \code{R}) plot for plotting within \code{R}.
+#' @param do.not.draw.plot a \emph{logical}, if \code{TRUE} (\emph{not} the default),
+#' does not draw the plot itself, but only the legend (if \code{show.legend} is
+#' \code{TRUE}) at coordinates (0,0) irrespective of the given legend coordinates.
+#' This is intended to allow (together with the \code{get.legend.plotting.area()}
+#' function) the separate plotting of the legend.
 #' @param ... other parameters (to be passed to the estimation and plotting of
 #' the simple CMA)
 #'
@@ -8511,6 +8532,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
                                  export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
                                  generate.R.plot=TRUE,                  # generate standard (base R) plot for plotting within R?
+                                 do.not.draw.plot=FALSE,                # if TRUE, don't draw the actual plot, but only the legend (if required)
                                  suppress.warnings=FALSE,         # suppress warnings?
                                  ...
 )
@@ -8613,6 +8635,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              export.formats.html.css=export.formats.html.css,
              export.formats.directory=export.formats.directory,
              generate.R.plot=generate.R.plot,
+             do.not.draw.plot=do.not.draw.plot,
              suppress.warnings=suppress.warnings);
 }
 

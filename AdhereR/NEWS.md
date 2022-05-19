@@ -5,6 +5,8 @@
   - now `plot()` respects the order of patients given through the `patients.to.plot` argument.
   
   - plotting sliding windows and per episodes can now show the events and gaps (as for simple plots, but things are a bit more complicated as different windows/events might result in different estimates).
+  
+  - `plot()` has an "advanced" parameter `do.not.draw.plot` which, when `TRUE`, does not draw the plot but only the legend, allowing its display separate from (or next to) the plot.
 
 ## Bug fixes
 

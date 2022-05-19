@@ -75,7 +75,8 @@
   export.formats.html.javascript = NULL,
   export.formats.html.css = NULL,
   export.formats.directory = NA,
-  generate.R.plot = TRUE
+  generate.R.plot = TRUE,
+  do.not.draw.plot = FALSE
 )
 }
 \arguments{
@@ -261,6 +262,12 @@ directory.}
 
 \item{generate.R.plot}{a \emph{logical}, if \code{TRUE} (the default),
 generate the standard (base \code{R}) plot for plotting within \code{R}.}
+
+\item{do.not.draw.plot}{a \emph{logical}, if \code{TRUE} (\emph{not} the default),
+does not draw the plot itself, but only the legend (if \code{show.legend} is
+\code{TRUE}) at coordinates (0,0) irrespective of the given legend coordinates.
+This is intended to allow (together with the \code{get.legend.plotting.area()}
+function) the separate plotting of the legend.}
 }
 \description{
 Plots the events (prescribing or dispensing) data encapsulated in a basic
