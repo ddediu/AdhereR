@@ -429,6 +429,42 @@ cat(paste0("c(",
            ");"));
 
 ## ----eval=FALSE---------------------------------------------------------------
+#  library(dplyr);
+#  
+#  # Compute, then get the CMA, change it and print it:
+#  x <- med.events %>%                      # use med.events
+#    filter(PATIENT_ID %in% c(1,2,3)) %>%   # first 3 patients
+#    CMA9(ID.colname="PATIENT_ID",          # compute CMA9
+#         event.date.colname="DATE",
+#         event.duration.colname="DURATION",
+#         event.daily.dose.colname="PERDAY",
+#         medication.class.colname="CATEGORY",
+#         followup.window.start=230,
+#         followup.window.duration=705,
+#         observation.window.start=41,
+#         observation.window.duration=100,
+#         date.format="%m/%d/%Y") %>%
+#    getCMA() %>% # get the CMA estimates
+#    mutate(CMA=sprintf("%.1f%%",100*CMA)); # make them percents
+#  print(x); # print it
+#  
+#  # Plot some CMAs:
+#  med.events %>% # use med.events
+#    filter(PATIENT_ID %in% c(1,2,3)) %>%             # first 3 patients
+#    CMA_sliding_window(CMA.to.apply="CMA7",          # sliding windows CMA7
+#                       ID.colname="PATIENT_ID",
+#                       event.date.colname="DATE",
+#                       event.duration.colname="DURATION",
+#                       event.daily.dose.colname="PERDAY",
+#                       medication.class.colname="CATEGORY",
+#                       followup.window.start=230,
+#                       followup.window.duration=705,
+#                       observation.window.start=41,
+#                       observation.window.duration=100,
+#                       date.format="%m/%d/%Y") %>%
+#    plot(align.all.patients=TRUE, show.legend=TRUE); # plot it
+
+## ----eval=FALSE---------------------------------------------------------------
 #  cmaW3 <- CMA_sliding_window(CMA="CMA1",
 #                              data=med.events,
 #                              ID.colname="PATIENT_ID",

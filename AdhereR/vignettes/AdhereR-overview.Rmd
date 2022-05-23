@@ -904,6 +904,51 @@ All these are detailed in a dedicated vignette *"Using `AdhereR` with various da
 A working implementation for `Python 3` is included in the package (and inteded also as a hands-on guide to further implementations) and is described in detailed in a dedicated vignette *"Calling AdhereR from Python3"*.
 
 
+## AdhereR is pipe (`%>%` or `|>`)-friendly
+<a name="pipe-friendly"></a>
+
+The [pipe operator (`%>%`)](https://r4ds.had.co.nz/pipes.html) has been originally introduced in `R` by the [`magrittr` package](https://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html) and is a central feature of the [Tidyverse](https://www.tidyverse.org/), and is since `R` 4.1 also available natively as `|>` [(but there are some subtle differences from `%>%`)](https://www.infoworld.com/article/3621369/use-the-new-r-pipe-built-into-r-41.html).
+`AdhereR` is compatible with pipe (because for all functions the first parameter encapsulates the "important" data, with the others providing various "tweaks"), so, code such as the following is fully functional:
+
+```{r eval=FALSE}
+library(dplyr);
+
+# Compute, then get the CMA, change it and print it:
+x <- med.events %>%                      # use med.events
+  filter(PATIENT_ID %in% c(1,2,3)) %>%   # first 3 patients
+  CMA9(ID.colname="PATIENT_ID",          # compute CMA9
+       event.date.colname="DATE",
+       event.duration.colname="DURATION",
+       event.daily.dose.colname="PERDAY",
+       medication.class.colname="CATEGORY",
+       followup.window.start=230,
+       followup.window.duration=705,
+       observation.window.start=41,
+       observation.window.duration=100,
+       date.format="%m/%d/%Y") %>%
+  getCMA() %>% # get the CMA estimates
+  mutate(CMA=sprintf("%.1f%%",100*CMA)); # make them percents
+print(x); # print it
+
+# Plot some CMAs:
+med.events %>% # use med.events
+  filter(PATIENT_ID %in% c(1,2,3)) %>%             # first 3 patients
+  CMA_sliding_window(CMA.to.apply="CMA7",          # sliding windows CMA7
+                     ID.colname="PATIENT_ID",
+                     event.date.colname="DATE",
+                     event.duration.colname="DURATION",
+                     event.daily.dose.colname="PERDAY",
+                     medication.class.colname="CATEGORY",
+                     followup.window.start=230,
+                     followup.window.duration=705,
+                     observation.window.start=41,
+                     observation.window.duration=100,
+                     date.format="%m/%d/%Y") %>%
+  plot(align.all.patients=TRUE, show.legend=TRUE); # plot it
+```
+
+
+
 ## Technical details
 
 Here we overview some technical details, including the main `S3` classes and functions (probably useful for scripting and extension), our treatment of dates and durations, and the issue of performance and parallelism (useful for large datasets).

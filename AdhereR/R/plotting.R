@@ -1055,6 +1055,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     return (invisible(NULL));
   }
 
+  # There is a confusion in the help concerning align.first.event.at.zero, so negate it:
+  align.first.event.at.zero <- !align.first.event.at.zero;
+
 
   #
   # Initialize the SVG file content ####
@@ -2654,7 +2657,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   {
     latest.date <- max(cma$data$.DATE.as.Date + cma$data[,cma$event.duration.colname], cmas$.FU.END.DATE, cmas$.OBS.END.DATE, na.rm=TRUE);
     if( "end" %in% names(cmas) ) latest.date <- max(cmas$end, latest.date, na.rm=TRUE);
-    duration <- as.numeric(latest.date - earliest.date) + correct.earliest.followup.window;
+    duration <- as.numeric(latest.date - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0);
   }
   endperiod <- duration;
 
@@ -2749,26 +2752,14 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   date.labels <- NULL;
   if( period.in.days > 0 )
   {
+    xpos <- seq(0, as.numeric(endperiod), by=period.in.days); # where to put lables and guidelines
     if( show.period=="dates" )
     {
-      xpos <- seq(0, as.numeric(endperiod), by=period.in.days); # where to put lables and guidelines
       axis.labels <- as.character(earliest.date + round(xpos, 1), format=cma$date.format);
     } else
     {
-      if( align.first.event.at.zero )
-      {
-        # Correctly deal with events starting before the FUW (i.e., correct.earliest.followup.window < 0):
-        xpos <- c(correct.earliest.followup.window - seq(0, correct.earliest.followup.window, by=period.in.days * sign(correct.earliest.followup.window)),
-                  seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
-        xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
-        axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
-      } else
-      {
-        xpos <- seq(0, as.numeric(endperiod), by=period.in.days);
-        axis.labels <- as.character(round(xpos, 1));
-      }
+      axis.labels <- as.character(round(xpos - ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0), 1));
     }
-
     date.labels <- data.frame("position"=adh.plot.space[2] + xpos, "string"=axis.labels);
   }
 
@@ -3390,6 +3381,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         vspace.needed.total  <- vspace.needed.events + vspace.needed.partial.cmas;
 
 
+        # Reset the clipping region to the whole plotting area...
+        if( .do.R ) # Rplot:
+        {
+          clip(.last.cma.plot.info$baseR$xlim[1], .last.cma.plot.info$baseR$xlim[2], .last.cma.plot.info$baseR$ylim[1], .last.cma.plot.info$baseR$ylim[2]);
+        }
+
         ##
         ## The alternating bands ####
         ##
@@ -3487,9 +3484,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           if( .do.R ) # Rplot:
           {
             # Save the info:
-            .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
+            .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
             .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.START"] <- (y.cur - 0.5);
-            .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
+            .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
             .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.END"]   <- (y.cur + vspace.needed.events - 0.5);
 
             # Draw:
@@ -3501,9 +3498,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           if( .do.SVG ) # SVG:
           {
             # Save the info:
-            .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
+            .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
             .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
-            .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
+            .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
             .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
 
             # Draw:
@@ -3522,9 +3519,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           if( .do.R ) # Rplot:
           {
             # Save the info:
-            .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
+            .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
             .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.START"] <- (y.cur - 0.5);
-            .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
+            .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
             .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.END"]   <- (y.cur + vspace.needed.events - 0.5);
 
             # Draw:
@@ -3536,9 +3533,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           if( .do.SVG ) # SVG:
           {
             # Save the info:
-            .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
+            .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
             .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
-            .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
+            .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
             .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
 
             # Draw:
@@ -3578,9 +3575,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
               if( .do.R ) # Rplot:
               {
                 # Save the info:
-                .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.START"] <- (adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
+                .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.START"] <- (adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
                 .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.START"] <- (y.cur - 0.5);
-                .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.END"]   <- (adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + correct.earliest.followup.window);
+                .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.END"]   <- (adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
                 .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.END"]   <- (y.cur + vspace.needed.events - 0.5);
 
                 # Draw:
@@ -3592,9 +3589,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
               if( .do.SVG ) # SVG:
               {
                 # Save the info:
-                .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
+                .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
                 .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
-                .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
+                .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
                 .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
 
                 # Draw:
@@ -3834,6 +3831,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             }
           }
         }
+
+        # Set the clipping region to make sure no events "overflows" in other bits of the plot...
+        if( .do.R ) # Rplot:
+        {
+          clip(.last.cma.plot.info$baseR$adh.plot.space[2]-1, .last.cma.plot.info$baseR$xlim[2], .last.cma.plot.info$baseR$ylim[1], .last.cma.plot.info$baseR$ylim[2]);
+        }
       }
 
       ##
@@ -3841,7 +3844,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       ##
 
       # Get the event start and end dates:
-      start <- as.numeric(cma$data$.DATE.as.Date[i] - earliest.date);
+      start <- as.numeric(cma$data$.DATE.as.Date[i] - earliest.date + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
       end   <- start + cma$data[i,cma$event.duration.colname];
 
       # Map medication classes to colors:
@@ -3858,12 +3861,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       if( .do.R ) # Rplot:
       {
         # Save the info:
-        .last.cma.plot.info$baseR$cma$data[i,".X.START"] <- (adh.plot.space[2] + start + correct.earliest.followup.window);
+        .last.cma.plot.info$baseR$cma$data[i,".X.START"] <- (adh.plot.space[2] + start);
         .last.cma.plot.info$baseR$cma$data[i,".Y.START"] <- (y.cur);
-        .last.cma.plot.info$baseR$cma$data[i,".X.END"]   <- (adh.plot.space[2] + end   + correct.earliest.followup.window);
+        .last.cma.plot.info$baseR$cma$data[i,".X.END"]   <- (adh.plot.space[2] + end);
         .last.cma.plot.info$baseR$cma$data[i,".Y.END"]   <- (y.cur);
 
-        # Plot the beging and end of the event:
+        # Plot the beginning and end of the event:
         points(.last.cma.plot.info$baseR$cma$data[i,".X.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.START"], pch=pch.start.event, col=col, cex=cex);
         points(.last.cma.plot.info$baseR$cma$data[i,".X.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.END"],   pch=pch.end.event,   col=col, cex=cex);
       }
@@ -3871,9 +3874,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       if( .do.SVG ) # SVG:
       {
         # Save the info:
-        .last.cma.plot.info$SVG$cma$data[i,".X.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window);
+        .last.cma.plot.info$SVG$cma$data[i,".X.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + start);
         .last.cma.plot.info$SVG$cma$data[i,".Y.START"] <- .scale.y.to.SVG.plot(y.cur);
-        .last.cma.plot.info$SVG$cma$data[i,".X.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window);
+        .last.cma.plot.info$SVG$cma$data[i,".X.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end);
         .last.cma.plot.info$SVG$cma$data[i,".Y.END"]   <- .scale.y.to.SVG.plot(y.cur);
 
         # Draw:
@@ -3929,9 +3932,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( .do.R ) # Rplot:
         {
           # Save the info:
-          .last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"] <- (adh.plot.space[2] + start  + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"] <- (adh.plot.space[2] + start);
           .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"] <- (y.cur - char.height/2);
-          .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"]   <- (adh.plot.space[2] + end.pi + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"]   <- (adh.plot.space[2] + end.pi);
           .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"]   <- (y.cur + char.height/2);
 
           # Draw:
@@ -3941,9 +3944,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           if( plot_evinfo$gap.days[i] > 0 )
           {
             # Save the info:
-            .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"] <- (adh.plot.space[2] + end.pi + correct.earliest.followup.window);
+            .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"] <- (adh.plot.space[2] + end.pi);
             .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"] <- (y.cur - char.height/2);
-            .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"]   <- (adh.plot.space[2] + end.pi + plot_evinfo$gap.days[i] + correct.earliest.followup.window);
+            .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"]   <- (adh.plot.space[2] + end.pi + plot_evinfo$gap.days[i]);
             .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"]   <- (y.cur + char.height/2);
 
             # Draw:
@@ -3957,9 +3960,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( .do.SVG ) # SVG:
         {
           # Save the info:
-          .last.cma.plot.info$SVG$cma$data[i,".X.EVC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[i,".X.EVC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + start);
           .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"] <- .scale.y.to.SVG.plot(y.cur) - dims.event.y/2;
-          .last.cma.plot.info$SVG$cma$data[i,".X.EVC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[i,".X.EVC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi);
           .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.END"]   <- .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"] + dims.event.y;
 
           # Draw:
@@ -3974,9 +3977,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           if( plot_evinfo$gap.days[i] > 0 )
           {
             # Save the info:
-            .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window);
+            .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi);
             .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] <- .scale.y.to.SVG.plot(y.cur) - dims.event.y/2;
-            .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + plot_evinfo$gap.days[i] + correct.earliest.followup.window);
+            .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + plot_evinfo$gap.days[i]);
             .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.END"]   <- .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] + dims.event.y;
 
             # Draw:
@@ -3993,8 +3996,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       }
 
       # Do we show dose?
-      seg.x1 <- adh.plot.space[2] + start + correct.earliest.followup.window;
-      seg.x2 <- adh.plot.space[2] + end   + correct.earliest.followup.window;
+      seg.x1 <- adh.plot.space[2] + start;
+      seg.x2 <- adh.plot.space[2] + end;
       seg.lwd <- NA;
       if( plot.dose )
       {
@@ -4060,7 +4063,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( .do.R ) # Rplot:
         {
           # Save the info:
-          .last.cma.plot.info$baseR$cma$data[i,".X.DOSE"] <- (adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[i,".X.DOSE"] <- (adh.plot.space[2] + (start + end)/2);
           .last.cma.plot.info$baseR$cma$data[i,".Y.DOSE"] <- (y.cur - ifelse(print.dose.centered, 0, dose.text.height*2/3)); # print it on or below the dose segment?
           .last.cma.plot.info$baseR$cma$data[i,".FONT.SIZE.DOSE"] <- cex.dose;
 
@@ -4072,7 +4075,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( .do.SVG ) # SVG:
         {
           # Save the info:
-          .last.cma.plot.info$SVG$cma$data[i,".X.DOSE"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[i,".X.DOSE"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + (start + end)/2);
           .last.cma.plot.info$SVG$cma$data[i,".Y.DOSE"] <- .scale.y.to.SVG.plot(y.cur - ifelse(print.dose.centered, 0, 3/4));
           .last.cma.plot.info$SVG$cma$data[i,".FONT.SIZE.DOSE"] <- (dims.chr.std * cex.dose);
 
@@ -4099,7 +4102,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       if( i < nrow(cma$data) && (cur_plot_id == cma$data[i+1,col.plotid]) )
       {
         # We're still plotting the same patient: show the continuation line:
-        start.next <- as.numeric(cma$data$.DATE.as.Date[i+1] - earliest.date);
+        start.next <- as.numeric(cma$data$.DATE.as.Date[i+1] - earliest.date + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
 
         # How many lines to jump?
         cont.v.jump <- ifelse(plot.events.vertically.displaced, 1, 0);
@@ -4107,9 +4110,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( .do.R ) # Rplot:
         {
           # Save the info:
-          .last.cma.plot.info$baseR$cma$data[i,".X.CNT.START"] <- (adh.plot.space[2] + end        + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[i,".X.CNT.START"] <- (adh.plot.space[2] + end);
           .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"] <- (y.cur - cont.v.jump);
-          .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"]   <- (adh.plot.space[2] + start.next + correct.earliest.followup.window);
+          .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"]   <- (adh.plot.space[2] + start.next);
           .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.END"]   <- (y.cur);
 
           # Draw:
@@ -4124,9 +4127,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( .do.SVG ) # SVG:
         {
           # Save the info:
-          .last.cma.plot.info$SVG$cma$data[i,".X.CNT.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[i,".X.CNT.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end);
           .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"] <- .scale.y.to.SVG.plot(y.cur - cont.v.jump);
-          .last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + start.next + correct.earliest.followup.window);
+          .last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + start.next);
           .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.END"]   <- .scale.y.to.SVG.plot(y.cur);
 
           # Draw:
@@ -4172,7 +4175,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
             ppts$x <- (ppts$start + ppts$end)/2;
 
             # Cache stuff:
-            corrected.x <- (adh.plot.space[2] + correct.earliest.followup.window);
+            corrected.x <- (adh.plot.space[2] + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
             corrected.x.start <- (corrected.x+ppts$start);
             corrected.x.end   <- (corrected.x+ppts$end);
             x.start.min <- min(ppts$start,na.rm=TRUE);
@@ -4771,6 +4774,13 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     }
 
 
+    # Reset the clipping region to the whole plotting area...
+    if( .do.R ) # Rplot:
+    {
+      clip(.last.cma.plot.info$baseR$xlim[1], .last.cma.plot.info$baseR$xlim[2], .last.cma.plot.info$baseR$ylim[1], .last.cma.plot.info$baseR$ylim[2]);
+    }
+
+
     ##
     ## Separator between CMA and event plotting areas ####
     ##
@@ -4953,25 +4963,14 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     # The x-axis and vertical guides:
     if( period.in.days > 0 )
     {
-      if( show.period=="dates" )
-      {
-        xpos <- seq(0, as.numeric(endperiod), by=period.in.days); # where to put lables and guidelines
-        axis.labels <- as.character(earliest.date + round(xpos, 1), format=cma$date.format);
-      } else
-      {
-        if( align.first.event.at.zero )
-        {
-          # Correctly deal with events starting before the FUW (i.e., correct.earliest.followup.window < 0):
-          xpos <- c(correct.earliest.followup.window - seq(0, correct.earliest.followup.window, by=period.in.days * sign(correct.earliest.followup.window)),
-                    seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
-          xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
-          axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
-        } else
-        {
-          xpos <- seq(0, as.numeric(endperiod), by=period.in.days);
-          axis.labels <- as.character(round(xpos, 1));
-        }
-      }
+      #xpos <- seq(0, as.numeric(endperiod), by=period.in.days); # where to put lables and guidelines
+      #if( show.period=="dates" )
+      #{
+      #  axis.labels <- as.character(earliest.date + round(xpos, 1), format=cma$date.format);
+      #} else
+      #{
+      #  axis.labels <- as.character(round(xpos - ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0), 1));
+      #}
 
       if( .do.R ) # Rplot:
       {
