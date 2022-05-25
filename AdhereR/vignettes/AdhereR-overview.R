@@ -464,6 +464,46 @@ cat(paste0("c(",
 #                       date.format="%m/%d/%Y") %>%
 #    plot(align.all.patients=TRUE, show.legend=TRUE); # plot it
 
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-15\"></a>**Figure 15.** Modifying an `AdhereR` plot is easy using the `get.plotted.events()` function.", fig.height=8, fig.width=8, out.width="100%"----
+# Plot CMA7 for patients 5 and 8:
+cma7 <- CMA7(data=med.events,
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             event.daily.dose.colname="PERDAY",
+             medication.class.colname="CATEGORY",
+             followup.window.start=30,
+             observation.window.start=30,
+             observation.window.duration=365,
+             date.format="%m/%d/%Y"
+);
+plot(cma7, patients.to.plot=c(5,8), show.legend=TRUE); # good plot after an error plot
+
+# Access the plotting info:
+pevs <- get.plotted.events(); # get the plotted events with their plotting info
+
+# Let's add a vertical line for patient 8 between the medication change:
+# Find the event where the medication changes:
+i <- which(pevs$PATIENT_ID == "8" & 
+             pevs$CATEGORY != c(pevs$CATEGORY[-1], pevs$CATEGORY[nrow(pevs)]));
+# Half-way between the events where medication changes:
+x <- (pevs$.X.END[i] + pevs$.X.START[i+1])/2;
+# Draw the line:
+segments(x, pevs$.Y.OW.START[i], x, pevs$.Y.OW.END[i],
+         col="blue", lty="solid", lwd=3);
+
+# Put a star * next to the 4th event of patient 5:
+# Find the event:
+i <- which(pevs$PATIENT_ID == "5")[4];
+# Plot the star:
+text(pevs$.X.START[i]-strwidth("*   "), pevs$.Y.START[i],
+     "*", cex=3.0, col="darkgreen");
+
+# Add some random text over the figure:
+text((pevs$.X.FUW.START[1] + pevs$.X.FUW.END[1])/2, # X center of patient 5's FUW
+     (pevs$.Y.FUW.START[nrow(pevs)] + pevs$.Y.FUW.END[nrow(pevs)])/2, # Y center of 8's FUW
+     "Change with care!!!", srt=45, cex=1.5, col="darkred")
+
 ## ----eval=FALSE---------------------------------------------------------------
 #  cmaW3 <- CMA_sliding_window(CMA="CMA1",
 #                              data=med.events,
