@@ -708,7 +708,9 @@ class CMA0(object):
              cex=1.0,
              cex_axis=0.75,
              cex_lab=1.0,
+             cex_title=1.5,
              show_cma=True,
+             col_cats="rainbow()",
              unspecified_category_label='drug',
              lty_event='solid',
              lwd_event=2,
@@ -793,8 +795,12 @@ class CMA0(object):
             The relative axis text size (defaults to 0.75)
         cex_lab : numeric
             The relative labels text size (defaults to 1.0)
+        cex_title : numeric
+            The relative title text size (defaults to 1.5)
         show_cma : bool
             Show the CMA type? (defaults to True)
+        col_cats : str
+            The color or the function (followed by "()") used to map the categories to colors (defaults to "ranbow()"); for security reasons, the list of functions currently supported is: rainbow, heat.colors, terrain.colors, topo.colors and cm.colors from base R, and viridis, magma, inferno, plasma, cividis, rocket, mako and turbo from viridisLite (if installed in R)
         unspecified_category_label : str
             The label of the unspecified category of medication (defaults to 'drug')
         lty_event : str
@@ -968,8 +974,9 @@ class CMA0(object):
                                     plot_legend_x=legend_x, plot_legend_y=legend_y,
                                     plot_legend_bkg_opacity=legend_bkg_opacity,
                                     plot_legend_cex=legend_cex, plot_legend_cex_title=legend_cex_title, 
-                                    plot_cex=cex, plot_cex_axis=cex_axis, plot_cex_lab=cex_lab,
+                                    plot_cex=cex, plot_cex_axis=cex_axis, plot_cex_lab=cex_lab, plot_cex_title=cex_title,
                                     plot_show_cma=show_cma,
+                                    plot_col_cats=col_cats,
                                     plot_unspecified_category_label=unspecified_category_label,
                                     plot_lty_event=lty_event, plot_lwd_event=lwd_event,
                                     plot_pch_start_event=pch_start_event,
@@ -1140,7 +1147,9 @@ class CMA0(object):
                       plot_cex=1.0,
                       plot_cex_axis=0.75,
                       plot_cex_lab=1.0,
+                      plot_cex_title=1.5,
                       plot_show_cma=True,
+                      plot_col_cats="rainbow()",
                       plot_unspecified_category_label='drug',
                       plot_lty_event='solid',
                       plot_lwd_event=2,
@@ -1379,8 +1388,12 @@ class CMA0(object):
             The relative axis text size (defaults to 0.75)
         plot_cex_lab : numeric
             The relative labels text size (defaults to 1.0)
+        plot_cex_title : numeric
+            The relative title text size (defaults to 1.5)
         plot_show_cma : bool
             Show the CMA type? (defaults to True)
+        plot_col_cats : str
+            The color or the function (followed by "()") used to map the categories to colors (defaults to "ranbow()"); for security reasons, the list of functions currently supported is: rainbow, heat.colors, terrain.colors, topo.colors and cm.colors from base R, and viridis, magma, inferno, plasma, cividis, rocket, mako and turbo from viridisLite (if installed in R)
         plot_unspecified_category_label : str
             The label of the unspecified category of medication (defaults to 'drug')
         plot_lty_event : str
@@ -2114,11 +2127,24 @@ class CMA0(object):
             return None
         parameters_file.write('plot.cex.lab = "' + str(plot_cex_lab) + '"\n')
 
+        if not isinstance(plot_cex_title, numbers.Number) or plot_cex_title < 0:
+            warnings.warn('adhereR: argument "plot_cex_title" must be a strictly positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.cex.title = "' + str(plot_cex_title) + '"\n')
+
         if not isinstance(plot_show_cma, bool):
             warnings.warn('adhereR: argument "plot_show_cma" must be a bool.')
             parameters_file.close()
             return None
         parameters_file.write('plot.show.cma = "' + ('TRUE' if plot_show_cma else 'FALSE') + '"\n')
+
+        if not isinstance(plot_col_cats, str):
+            warnings.warn('adhereR: argument "plot_col_cats" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.col.cats = "' +
+                              plot_col_cats + '"\n')
 
         if not isinstance(plot_unspecified_category_label, str):
             warnings.warn('adhereR: argument "plot_unspecified_category_label" must be a string.')

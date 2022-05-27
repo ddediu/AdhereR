@@ -948,7 +948,7 @@ For all the `CMA` functions (i.e., `CMA0`, `CMA1` ...`CMA9`, `CMA_per_episode`, 
 | `plot.xlab`	 | NO | `{'dates':´'Date', 'days':'Days'}` | [dictionary specifying the x labels] | 
 | `plot.ylab`	 | NO | `{'withoutCMA'='patient', 'withCMA'='patient (& CMA)'}` | [dictionary specifying the y labels] | 
 | `plot.title`	 | NO | `{'aligned'='Event patterns (all patients aligned)', 'notaligned'='Event patterns'}` | [dictionary specifying the title] | 
-| `plot.col.cats`	 | NO | `"rainbow"` | [single color (using two quotes, e.g. "'blue'") or a function (quoted, e.g., "rainbow") mapping the categories to colors] | 
+| `plot.col.cats`	 | NO | `"rainbow()"` | [single color or a function name (followed by "()", e.g., "rainbow()") mapping the categories to colors; for security reasons, the list of functions currently supported is: rainbow, heat.colors, terrain.colors, topo.colors and cm.colors from base R, and viridis, magma, inferno, plasma, cividis, rocket, mako and turbo from viridisLite (if installed)] | 
 | `plot.unspecified.category.label` | NO | `"drug"` | [the label of the unspecified category of medication] | 
 | `plot.medication.groups.to.plot` | NO | `"NULL"` | [the names of the medication groups to plot (by default, all)] | 
 | `plot.medication.groups.separator.show` | NO | `"TRUE"` | [group medication events by patient?] | 

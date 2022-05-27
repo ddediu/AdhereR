@@ -231,7 +231,6 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   params.as.list <- Filter(Negate(is.null), params.as.list); # get rid of the NULL ("default") elemens
 
   # some params have special meaning and should be processed as such:
-  # various window types:
   .cast.param.to.type <- function(value.param, type.param, is.type.param.fixed=FALSE)
   {
     if( !is.null(params.as.list[[value.param]]) )
@@ -294,6 +293,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   .cast.param.to.type("plot.cex",                        "numeric", TRUE);
   .cast.param.to.type("plot.cex.axis",                   "numeric", TRUE);
   .cast.param.to.type("plot.cex.lab",                    "numeric", TRUE);
+  .cast.param.to.type("plot.cex.title",                  "numeric", TRUE);
   .cast.param.to.type("plot.lwd.event",                  "numeric", TRUE);
   .cast.param.to.type("plot.pch.start.event",            "numeric", TRUE);
   .cast.param.to.type("plot.pch.end.event",              "numeric", TRUE);
@@ -310,6 +310,28 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   .cast.param.to.type("consider.dosage.change",          "logical", TRUE);
   .cast.param.to.type("medication.change.means.new.treatment.episode", "logical", TRUE);
   .cast.param.to.type("dosage_change_means_new_treatment_episode",     "logical", TRUE);
+
+  # col.cats is special in that it can be a function name or a color name:
+  col.cats <- trimws(.get.param.value("plot.col.cats", type="character", required=FALSE));
+  if( substring(col.cats, nchar(col.cats)-1, nchar(col.cats)) == "()" )
+  {
+    # it seems to be a function name, so match it to the ones we currently support:
+    col.cats <- switch(col.cats,
+                       "rainbow()"=rainbow,
+                       "heat.colors()"=heat.colors,
+                       "terrain.colors()"=terrain.colors,
+                       "topo.colors()"=topo.colors,
+                       "cm.colors()"=cm.colors,
+                       "viridis()"=viridisLite::viridis,
+                       "magma()"=viridisLite::magma,
+                       "inferno()"=viridisLite::inferno,
+                       "plasma()"=viridisLite::plasma,
+                       "cividis()"=viridisLite::cividis,
+                       "rocket()"=viridisLite::rocket,
+                       "mako"=viridisLite::mako,
+                       "turbo"=viridisLite::turbo,
+                       rainbow); # defaults to rainbow
+  } # otherwise it is a color name, so use it as such
 
   if( suppressWarnings(!is.na(as.numeric(params.as.list[["parallel.threads"]]))) )
   {
@@ -478,6 +500,9 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
       # patients.to.plot has already been parsed:
       if( "patients.to.plot" %in% names(plotting.params) ) plotting.params[["patients.to.plot"]] <- patients.to.plot;
 
+      # col.cats has already been parsed:
+      if( "col.cats" %in% names(plotting.params) ) plotting.params[["col.cats"]] <- col.cats;
+
       # Get the info about the plot exporting process:
       plot.file.dir <- .get.param.value("plot.save.to", type="character", default.value=shared.data.directory, required=FALSE);
       # Check if the directory exists and is writtable:
@@ -525,7 +550,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
             onefile=FALSE, paper="special");
       }
 
-      # attemt to plot:
+      # attempt to plot:
       msg <- capture.output(do.call("plot", c(list(results), plotting.params)), file=NULL, type="output");
       if( length(msg) > 0 )
       {

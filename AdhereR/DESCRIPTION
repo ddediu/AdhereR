@@ -33,16 +33,17 @@ LazyData: TRUE
 Imports: lubridate (>= 1.5),
     parallel (>= 3.0),
     data.table (>= 1.9),
-	rsvg (>= 1.3),
-	jpeg (>= 0.1),
-	png (>= 0.1),
-	webp (>= 1.0),
-	methods
+	  rsvg (>= 1.3),
+	  jpeg (>= 0.1),
+	  png (>= 0.1),
+	  webp (>= 1.0),
+	  methods
 Depends: R (>= 3.0)
 Suggests: rmarkdown (>= 1.1),
     knitr (>= 1.20),
     R.rsp (>= 0.40),
-    base64(>= 2.0),
+    base64 (>= 2.0),
+    viridisLite (>= 0.4),
     AdhereRViz (>= 0.2)
 VignetteBuilder: knitr, R.rsp
 Encoding: UTF-8
