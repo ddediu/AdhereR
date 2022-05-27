@@ -4917,8 +4917,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                             ifelse(length(xlab)==1,
                                    xlab,
                                    xlab[show.period]));
-      title(main=title.string, # title
-            xlab=xlab.string, cex.lab=cex.lab);
+      title(main=title.string, cex.main=cex.title, # title
+            xlab=xlab.string, cex.lab=cex.lab); # x-axis label
       mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3); # y-axis label
 
       # Save the info:
