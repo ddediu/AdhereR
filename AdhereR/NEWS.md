@@ -9,6 +9,8 @@
   - `plot()` has an "advanced" parameter `do.not.draw.plot` which, when `TRUE`, does not draw the plot but only the legend, allowing its display separate from (or next to) the plot.
   
   - `AdhereR` is compatible with the pipe operator (`%>%` or `|>`), the overview vignette now shows several examples.
+  
+  - the overview vignette now shows an example of modifying an `AdhereR` plot *a posteriori* by adding various elements (lines, symbols and text) to a CMA plot.
 
 ## Bug fixes
 

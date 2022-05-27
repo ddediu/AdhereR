@@ -98,7 +98,7 @@ knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg");
 
 While `AdhereR` is written in `R` and makes extensive use of various `R` packages and techniques (such as `data.table` and parallel processing), it is possible to use it from other programming languages and applications.
 This is accomplished through a very generic mecahnism that only requires the caller to be able to *read and write files* in a location of its choice and to *invoke an external command* with a set of arguments.
-These requirements are widely available in programming languages (such as `C`/`C++`, `Java`, `Python 2` and `3`, and `R` itself), can be accomplished from the scripting available in several applications (e.g., `VBA` in Microsoft Excel, `STATA` scripting or `SAS` programs), and works in similar ways across the major Operating Systems (`Linux` flavors, `macOS`/`Mac OS X`/`OS X` and `Microsoft Windows`).
+These requirements are widely available in programming languages (such as `C`/`C++`, `Java`, `Python 2` and `3`, and `R` itself), can be accomplished from the scripting available in several applications (e.g., `VBA` in Microsoft Excel, `STATA` scripting or `SAS` programs), and works in similar ways across the major Operating Systems (`Linux` flavors, `macOS` and `Microsoft Windows`).
 
 We present here this generic mechanism using its *reference implementation* for `Python 3`.
 While this reference implementation is definitely useable in production environments, this can probably be improved both in terms of calling and passing data between `Python` and `R`, as well as in terms of the "pythonicity" of the `Python` side of the implementation.
@@ -134,7 +134,7 @@ We will use here a `macOS` setup for illustration purposes, but this is very sim
 Essentially, the `Python 3` wrapper creates the *input files* `parameters.log` and `dataset.csv` in the data sharing directory (let us denote it as `DATA_SHARING_DIRECTORY`, by default, a unique temorary directory).
 Let's assume that `DATA_SHARING_DIRECTORY` is set to `/var/folders/kx/bphryt7j5tz1n_fcjk5809940000gn/T/adherer-qmx4pw7t`; then, before calling `AdhereR`, this directory should contain the files:
 
-    ~
+    .
      |-parameters.log
      \-dataset.csv
 
@@ -164,7 +164,7 @@ If it does not, a warning contaning the messages is thrown and the process retur
 If it does, the appropriate output files are read, parsed and loaded (depending on the invoked function, these files might differ).
 For example, after successfully invoking `CMA1`, the `DATA_SHARING_DIRECTORY` might look like:
 
-    ~
+    .
      |-parameters.log
      |-dataset.csv
      |-Adherer-results.txt
@@ -211,13 +211,20 @@ This file can be either:
     - adding its directory to the `PYTHONPATH` environment variable [the recommended solution], or
     - using various tricks described, for example, [here](https://stackoverflow.com/a/67692).
 
-On the example `macos` machine, this can be achiveded by adding:
+On the example `macos` machine, this can be achieved by adding:
 ``` bash
 # Add AdhereR to PYTHONPATH
 export PYTHONPATH=$PYTHONPATH:/Library/Frameworks/[...]/AdhereR/wrappers/python3
 ```
 to the `.bash_profile` file in the user's home folder (if this file does not exist, then it can be created using a text editor such as `nano`; please note that the `[...]` are for shortening the path and should be replaced by the actual path given in full above).
-The process should be very simular on `Linux`, while on `MS Windows` one should use the system's "Environment Variables" settings (for example, see [here](https://stackoverflow.com/a/4855685) for details).
+The process should be very similar on `Linux`, while on `MS Windows` one should use the system's "Environment Variables" settings (for example, see [here](https://stackoverflow.com/a/4855685) for details).
+
+Please note that `adherer` needs `pandas` and `PIL`, which can be installed, for example, using:
+``` bash
+pip3 install pandas
+pip3 install Pillow
+```
+
 
 *NOTE:* we will consistently use `AdhereR` to refer to the `R` package, and `adherer` to refer to the `Python 3` module.
 
@@ -263,83 +270,83 @@ Errors in the `adherer` code are signalled by throwing `CallAdhereRError` except
 
 All classes that implement ways to compute adherence (`CMA`s) are derived from `CMA0`.
 `CMA0` does not in itself compute any sort of adherence, but instead provides the *infrastructure* for *storing* the data, parameter values and results (including errors), and for *interacting* with `AdhereR`.
-Please note that in the "higher" `CMA`s, the class constructor `__init()__` implicitely performs the actual computation of the `CMA` and saves the results (for `CMA0` there are no such computations and `__init()__' only saves the parameters internally)! 
+Please note that in the "higher" `CMA`s, the class constructor `__init()__` implicitely performs the actual computation of the `CMA` and saves the results (for `CMA0` there are no such computations and `__init()__` only saves the parameters internally)! 
 
-  1. *storage of data and parameter values*: `CMA0` allows the user to set various parameters through the constructor `__init()__`, parameters that are stored for later use, printing, saving, and for facilitating easy reconstruction of all types of computations. By main groups, these are (please, see the manual entry for `?CMA0` in the `AdhereR` package and the full protocol in [**Appendix I**](#appendix-1) as well):
+1. **storage of data and parameter values**: `CMA0` allows the user to set various parameters through the constructor `__init()__`, parameters that are stored for later use, printing, saving, and for facilitating easy reconstruction of all types of computations. By main groups, these are (please, see the manual entry for `?CMA0` in the `AdhereR` package and the full protocol in [**Appendix I**](#appendix-1) as well):
   
-    - `dataset` stores the primary data (as a `Pandas` table with various columns) containing the actual events; must be given;
+  - `dataset` stores the primary data (as a `Pandas` table with various columns) containing the actual events; must be given;
     
-    - `id_colname`, `event_date_colname`, `event_duration_colname`, `event_daily_dose_colname` and `medication_class_colname`: these give the *names* of the columns in the `dataset` table containing important information about the events (the first three are required, the last two are optional);
+  - `id_colname`, `event_date_colname`, `event_duration_colname`, `event_daily_dose_colname` and `medication_class_colname`: these give the *names* of the columns in the `dataset` table containing important information about the events (the first three are required, the last two are optional);
     
-    - `carryover_within_obs_window`, `carryover_into_obs_window`, `carry_only_for_same_medication`, `consider_dosage_change`, `medication_change_means_new_treatment_episode`, `maximum_permissible_gap`, `maximum_permissible_gap_unit`: optional parameters defining the types of carry-over, changes and treatment episode triggers;
+  - `carryover_within_obs_window`, `carryover_into_obs_window`, `carry_only_for_same_medication`, `consider_dosage_change`, `medication_change_means_new_treatment_episode`, `maximum_permissible_gap`, `maximum_permissible_gap_unit`: optional parameters defining the types of carry-over, changes and treatment episode triggers;
     
-    - `followup_window_start_type`, `followup_window_start `followup_window_start_unit`, `followup_window_duration_type `followup_window_duration`, `followup_window_duration_unit`, `observation_window_start_type`, `observation_window_start`, `observation_window_start_unit `observation_window_duration_type`, `observation_window_duration`, `observation_window_duration_unit`: optional parameters defining the follow-up and observation windows;
+  - `followup_window_start_type`, `followup_window_start `followup_window_start_unit`, `followup_window_duration_type `followup_window_duration`, `followup_window_duration_unit`, `observation_window_start_type`, `observation_window_start`, `observation_window_start_unit `observation_window_duration_type`, `observation_window_duration`, `observation_window_duration_unit`: optional parameters defining the follow-up and observation windows;
     
-    - `sliding_window_start_type`, `sliding_window_start`, `sliding_window_start_unit`, `sliding_window_duration_type`, `sliding_window_duration`, `sliding_window_duration_unit`, `sliding_window_step_duration_type`, `sliding_window_step_duration`, `sliding_window_step_unit`, `sliding_window_no_steps`: optional parameters defining the sliding windows;
+  - `sliding_window_start_type`, `sliding_window_start`, `sliding_window_start_unit`, `sliding_window_duration_type`, `sliding_window_duration`, `sliding_window_duration_unit`, `sliding_window_step_duration_type`, `sliding_window_step_duration`, `sliding_window_step_unit`, `sliding_window_no_steps`: optional parameters defining the sliding windows;
     
-    - `cma_to_apply`: optional parameter specifying which "simple" `CMA` is to be used when computing sliding windos and treatment episodes;
+  - `cma_to_apply`: optional parameter specifying which "simple" `CMA` is to be used when computing sliding windos and treatment episodes;
     
-    - `date_format`: optional parameter describing the format of column dates in `dataset` (defaults to month/day/year);
+  - `date_format`: optional parameter describing the format of column dates in `dataset` (defaults to month/day/year);
     
-    - `event_interval_colname`, `gap_days_colname`: optional parameters allowing the user to change the names of the columns where these computed data are stored in the resuling table;
+  - `event_interval_colname`, `gap_days_colname`: optional parameters allowing the user to change the names of the columns where these computed data are stored in the resuling table;
     
-    - `force_na_cma_for_failed_patients`, `keep_window_start_end_dates`, `remove_events_outside_followup_window`, `keep_event_interval_for_all_events`: optional parameters governing the content of the resuling table;
+  - `force_na_cma_for_failed_patients`, `keep_window_start_end_dates`, `remove_events_outside_followup_window`, `keep_event_interval_for_all_events`: optional parameters governing the content of the resuling table;
     
-    - `parallel_backend`, `parallel_threads`: these optional parameters control the parallelism of the computations (if any); see **PARALLEL PROCESSING** for details;
+  - `parallel_backend`, `parallel_threads`: these optional parameters control the parallelism of the computations (if any); see **PARALLEL PROCESSING** for details;
     
-    - `suppress_warnings`: should all the internal warning be shown?
+  - `suppress_warnings`: should all the internal warning be shown?
     
-    - `save_event_info`: should this "advanced" info be also made available?
+  - `save_event_info`: should this "advanced" info be also made available?
     
-    - `na_symbol_numeric`, `na_symbol_string`, `logical_symbol_true`, `logical_symbol_false`, `colnames_dot_symbol`, `colnames_start_dot`: these optional parameters allow `AdhereR` to adapt to "non-`R`" conventions concerning the data format for missing values, logicals and column names;
+  - `na_symbol_numeric`, `na_symbol_string`, `logical_symbol_true`, `logical_symbol_false`, `colnames_dot_symbol`, `colnames_start_dot`: these optional parameters allow `AdhereR` to adapt to "non-`R`" conventions concerning the data format for missing values, logicals and column names;
     
-    - `path_to_rscript`, `path_to_data_directory`: these parameters allow the user to override the `_RSCRIPT_PATH` and `_DATA_SHARING_DIRECTORY` variables;
+  - `path_to_rscript`, `path_to_data_directory`: these parameters allow the user to override the `_RSCRIPT_PATH` and `_DATA_SHARING_DIRECTORY` variables;
     
-    - `print_adherer_messages`: should the important messages be printed to the user as well?
+  - `print_adherer_messages`: should the important messages be printed to the user as well?
 
-  2. *storage of, and access to, the results*:
+2. **storage of, and access to, the results**:
   
-    - `get_dataset()`: returns the internally saved `Pandas` table `dataset`;
+  - `get_dataset()`: returns the internally saved `Pandas` table `dataset`;
     
-    - `get_cma()`: returns the computed `CMA` (if any);
+  - `get_cma()`: returns the computed `CMA` (if any);
     
-    - `get_event_info()`: returns the computed event information (if any);
+  - `get_event_info()`: returns the computed event information (if any);
     
-    - `get_treatment_episodes()`: returns the computed treatment episodes information (if any);
+  - `get_treatment_episodes()`: returns the computed treatment episodes information (if any);
     
-    2.5. `get_computation_results()`: return the results of the last computation (if any); more precisely, a `dictionary` containing the numeric `code` returned by `AdhereR` and the string `messages` written by `AdhereR` during the computation;
+  - `get_computation_results()`: return the results of the last computation (if any); more precisely, a `dictionary` containing the numeric `code` returned by `AdhereR` and the string `messages` written by `AdhereR` during the computation;
 
-  3. *computing event interval and treatment episode info*: this can be done by explicitelly calling the `compute_event_int_gaps()` and `compute_treatment_episodes()` functions;
+3. **computing event interval and treatment episode info**: this can be done by explicitelly calling the `compute_event_int_gaps()` and `compute_treatment_episodes()` functions;
   
-  4. *plotting*: 
+4. **plotting**: 
   
-    - *static plotting*: this is realized by the `plot()` function that takes several plotting-specific parameters:
+  - *static plotting*: this is realized by the `plot()` function that takes several plotting-specific parameters:
     
-        + `patients_to_plot`: should a subset of the patients present in the `dataset` be plotted (by default, all will be)?
+      + `patients_to_plot`: should a subset of the patients present in the `dataset` be plotted (by default, all will be)?
       
-        + `save_to`, `save_as`, `width`, `height`, `quality`, `dpi`: where should the plot be saved, in what format, dimentions and quality?
+      + `save_to`, `save_as`, `width`, `height`, `quality`, `dpi`: where should the plot be saved, in what format, dimentions and quality?
       
-        + `duration`, `align_all_patients`, `align_first_event_at_zero`, `show_period`, `period_in_days`: duration to plots and alignment of patients;
+      + `duration`, `align_all_patients`, `align_first_event_at_zero`, `show_period`, `period_in_days`: duration to plots and alignment of patients;
         
-        + `show_legend`, `legend_x`, `legend_y`, `legend_bkg_opacity`: legend parameters;
+      + `show_legend`, `legend_x`, `legend_y`, `legend_bkg_opacity`: legend parameters;
         
-        + `cex`, `cex_axis`, `cex_lab`: the relative size of various text elements;
+      + `cex`, `cex_axis`, `cex_lab`: the relative size of various text elements;
         
-        + `show_cma`, `print_cma`, `plot_cma`, `plot_cma_as_histogram`, `cma_plot_ratio`, `cma_plot_col`, `cma_plot_border`, `cma_plot_bkg`, `cma_plot_text`: should the cma be shown and how?
+      + `show_cma`, `print_cma`, `plot_cma`, `plot_cma_as_histogram`, `cma_plot_ratio`, `cma_plot_col`, `cma_plot_border`, `cma_plot_bkg`, `cma_plot_text`: should the cma be shown and how?
         
-        + `unspecified_category_label`: implicit label of unlabelled categories?
+      + `unspecified_category_label`: implicit label of unlabelled categories?
         
-        + `lty_event`, `lwd_event`, `pch_start_event`, `pch_end_event`, `show_event_intervals`, `col_na`, `col_continuation`, `lty_continuation`, `lwd_continuation`: visual aspects of events and continuations;
+      + `lty_event`, `lwd_event`, `pch_start_event`, `pch_end_event`, `show_event_intervals`, `col_na`, `col_continuation`, `lty_continuation`, `lwd_continuation`: visual aspects of events and continuations;
         
-        + `highlight_followup_window`, `followup_window_col`, `highlight_observation_window`, `observation_window_col`, `observation_window_density`, `observation_window_angle`, `show_real_obs_window_start`, `real_obs_window_density`, `real_obs_window_angle`:  visual appearance of the follow-up, obervation and "real observation" windows (the latter for `CMA`s that djust it);
+      + `highlight_followup_window`, `followup_window_col`, `highlight_observation_window`, `observation_window_col`, `observation_window_density`, `observation_window_angle`, `show_real_obs_window_start`, `real_obs_window_density`, `real_obs_window_angle`:  visual appearance of the follow-up, obervation and "real observation" windows (the latter for `CMA`s that djust it);
         
-        + `bw_plot`: produce a grayscel plot?
+      + `bw_plot`: produce a grayscel plot?
         
-     - *interactive plotting*: the `plot_interactive()` function launches a [Shiny](https://shiny.rstudio.com/)-powered interactive plot using the system's WEB browser; the only parameter `patient_to_plot` may specify which patient to show initially, as all the relevant parameters can be interactively altered ar run-time;
+  - *interactive plotting*: the `plot_interactive()` function launches a [Shiny](https://shiny.rstudio.com/)-powered interactive plot using the system's WEB browser; the only parameter `patient_to_plot` may specify which patient to show initially, as all the relevant parameters can be interactively altered ar run-time;
      
-  5. *printing*: the `__repr__()` function implements a very simple printing mechanism showing the `CMA` type and a summary of the `dataset`;
+5. **printing**: the `__repr__()` function implements a very simple printing mechanism showing the `CMA` type and a summary of the `dataset`;
       
-  6. *calling `AdhereR`*: the private function `_call_adherer()` is the real workhorse that manages all the interaction with the `R` `AdhereR` package as described above. This function can take many parameters covering *all* that `AdhereR` can do, but it is not intended to be directly called by the end-user but instead to be internally called by various exposed functions such as `plot()`, `compute_event_int_gaps()` and `__init()__`. Roughly, after some checks, it creates the files needed for communication, calls `AdhereR`, analyses any errors, warnings and messages that it might have generated, and packs the results in a manageable format.
+6. **calling `AdhereR`**: the private function `_call_adherer()` is the real workhorse that manages all the interaction with the `R` `AdhereR` package as described above. This function can take many parameters covering *all* that `AdhereR` can do, but it is not intended to be directly called by the end-user but instead to be internally called by various exposed functions such as `plot()`, `compute_event_int_gaps()` and `__init()__`. Roughly, after some checks, it creates the files needed for communication, calls `AdhereR`, analyses any errors, warnings and messages that it might have generated, and packs the results in a manageable format.
 
 To preserve the generality of the interaction with `AdhereR`, all the `CMA` classes define a private static member `_adherer_function` which is the name of the corresponding `S3` class as implemented in `AdhereR`.
 
@@ -931,23 +938,63 @@ For all the `CMA` functions (i.e., `CMA0`, `CMA1` ...`CMA9`, `CMA_per_episode`, 
 | `plot.legend.x` | NO | `"bottom right"` |  | 
 | `plot.legend.y` | NO | `""` |  | 
 | `plot.legend.bkg.opacity` | NO | `"0.5"` | [background opacity] | 
+| `plot.legend.cex` | NO | `"0.75"` |  | 
+| `plot.legend.cex.title` | NO | `"1.0"` |  | 
 | `plot.cex` | NO | `"1.0"`	 | [various plotting font sizes] | 
 | `plot.cex.axis` | NO | `"0.75"` |  | 
 | `plot.cex.lab` | NO	 | `"1.0"` |  | 
+| `plot.cex.title` | NO	 | `"1.5"` |  | 
 | `plot.show.cma`	 | NO | `"TRUE"` | [show the CMA type] | 
+| `plot.xlab`	 | NO | `{'dates':´'Date', 'days':'Days'}` | [dictionary specifying the x labels] | 
+| `plot.ylab`	 | NO | `{'withoutCMA'='patient', 'withCMA'='patient (& CMA)'}` | [dictionary specifying the y labels] | 
+| `plot.title`	 | NO | `{'aligned'='Event patterns (all patients aligned)', 'notaligned'='Event patterns'}` | [dictionary specifying the title] | 
+| `plot.col.cats`	 | NO | `"rainbow"` | [single color (using two quotes, e.g. "'blue'") or a function (quoted, e.g., "rainbow") mapping the categories to colors] | 
 | `plot.unspecified.category.label` | NO | `"drug"` | [the label of the unspecified category of medication] | 
+| `plot.medication.groups.to.plot` | NO | `"NULL"` | [the names of the medication groups to plot (by default, all)] | 
+| `plot.medication.groups.separator.show` | NO | `"TRUE"` | [group medication events by patient?] | 
+| `plot.medication.groups.separator.lty` | NO | `"solid"` |  | 
+| `plot.medication.groups.separator.lwd` | NO | `"2"` |  | 
+| `plot.medication.groups.separator.color` | NO | `"blue"` |  | 
+| `plot.medication.groups.allother.label` | NO | `"*"` | [the label to use for the \_\_ALL\_OTHERS\_\_ medication class (defaults to *)] | 
 | `plot.lty.event` | NO | `"solid"`	 | [style parameters controlling the plotting of events] | 
 | `plot.lwd.event` | NO | `"2"` |  | 
 | `plot.pch.start.event` | NO | `"15"` |  | 
 | `plot.pch.end.event` | NO | `"16"` |  | 
-| `plot.show.event.intervals`	 | NO | `"TRUE"` | [show the actual prescription intervals] | 
+| `plot.show.overlapping.event.intervals`	 | NO | `"first"` | [show the actual prescription intervals; can be: "first", "last", "min gap", "max gap", "average"] | 
+| `plot.plot.events.vertically.displaced`	 | NO | `"TRUE"` | [display the events on different lines (vertical displacement) or not (defaults to TRUE)?] | 
+| `plot.print.dose`	 | NO | `"FALSE"` | [print daily dose] | 
+| `plot.cex.dose`	 | NO | `"0.75"` |  | 
+| `plot.print.dose.col`	 | NO | `"black"` |  | 
+| `plot.print.dose.outline.col`	 | NO | `"white"` |  | 
+| `plot.print.dose.centered`	 | NO | `"FALSE"` |  | 
+| `plot.plot.dose`	 | NO | `"FALSE"` | [draw daily dose as line width] | 
+| `plot.lwd.event.max.dose`	 | NO | `"8"` |  | 
+| `plot.plot.dose.lwd.across.medication.classes`	 | NO | `"FALSE"` |  | 
 | `plot.col.na` | NO | `"lightgray"` | [colour for missing data] | 
 | `plot.col.continuation` | NO | `"black"` | [colour, style and width of the continuation lines connecting consecutive events] | 
 | `plot.lty.continuation` | NO | `"dotted"` |  | 
 | `plot.lwd.continuation` | NO | `"1"` |  | 
 | `plot.print.CMA` | NO | `"TRUE"` | [print CMA next to the participant's ID?] | 
+| `plot.CMA.cex` | NO | `"0.50"` | | 
 | `plot.plot.CMA`	 | NO | `"TRUE"` | [plot the CMA next to the participant ID?] | 
-| `plot.plot.CMA.as.histogram` | NO | `"TRUE"` | [lot CMA as a histogram or as a density plot?] | 
+| `plot.plot.CMA.as.histogram` | NO | `"TRUE"` | [plot CMA as a histogram or as a density plot?] | 
+| `plot.plot.partial.CMAs.as` | NO | `"stacked"` | [can be "stacked", "overlapping" or "timeseries"] | 
+| `plot.plot.partial.CMAs.as.stacked.col.bars` | NO | `"gray90"` |  | 
+| `plot.plot.partial.CMAs.as.stacked.col.border` | NO | `"gray30"` |  | 
+| `plot.plot.partial.CMAs.as.stacked.col.text` | NO | `"black"` |  | 
+| `plot.plot.partial.CMAs.as.timeseries.vspace` | NO | `"7"` |  | 
+| `plot.plot.partial.CMAs.as.timeseries.start.from.zero` | NO | `"TRUE"` |  | 
+| `plot.plot.partial.CMAs.as.timeseries.col.dot` | NO | `"darkblue"` |  | 
+| `plot.plot.partial.CMAs.as.timeseries.col.interval` | NO | `"gray70"` |  | 
+| `plot.plot.partial.CMAs.as.timeseries.col.text` | NO | `"firebrick"` |  | 
+| `plot.plot.partial.CMAs.as.timeseries.interval.type` | NO | `"segments"` | [can be "none", "segments", "arrows", "lines" or "rectangles"] | 
+| `plot.plot.partial.CMAs.as.timeseries.lwd.interval` | NO | `"1"` |  | 
+| `plot.plot.partial.CMAs.as.timeseries.alpha.interval` | NO | `"0.25"` |  | 
+| `plot.plot.partial.CMAs.as.timeseries.show.0perc` | NO | `"TRUE"` | TRUE | 
+| `plot.plot.partial.CMAs.as.timeseries.show.100perc` | NO | `"FALSE"` |  | 
+| `plot.plot.partial.CMAs.as.overlapping.alternate` | NO | `"TRUE"` |  | 
+| `plot.plot.partial.CMAs.as.overlapping.col.interval` | NO | `"gray70"` |  | 
+| `plot.plot.partial.CMAs.as.overlapping.col.text` | NO | `"firebrick"` |  | 
 | `plot.CMA.plot.ratio` | NO | `"0.10"` | [the proportion of the total horizontal plot to be taken by the CMA plot] | 
 | `plot.CMA.plot.col`	 | NO | `"lightgreen"` | [attributes of the CMA plot] | 
 | `plot.CMA.plot.border` | NO	 | `"darkgreen"` |  | 
@@ -959,10 +1006,19 @@ For all the `CMA` functions (i.e., `CMA0`, `CMA1` ...`CMA9`, `CMA_per_episode`, 
 | `plot.observation.window.col` | NO | `"yellow"` |  | 
 | `plot.observation.window.density` | NO | `"35"` |  | 
 | `plot.observation.window.angle`	 | NO | `"-30"` |  | 
+| `plot.observation.window.opacity`	 | NO | `"0.3"` |  | 
 | `plot.show.real.obs.window.start` | NO | `"TRUE"` | [for some CMAs, the real observation window starts at a different date] | 
 | `plot.real.obs.window.density` | NO | `"35"` |  | 
 | `plot.real.obs.window.angle` | NO | `"30"` |  |  
+| `plot.alternating.bands.cols` | NO | `["white", "gray95"]` | [the colors of the alternating vertical bands across patients (`None`=don't draw any; can be >= 1 color)] |  
+| `plot.rotate.text` | NO | `"-60"` |  |  
+| `plot.force.draw.text` | NO | `"FALSE"` |  |  
 | `plot.bw.plot` | NO | `"FALSE"` | [if `TRUE`, override all user-given colours and replace them with a scheme suitable for grayscale plotting] | 
+| `plot.min.plot.size.in.characters.horiz` | NO | `"0"` |  |  
+| `plot.min.plot.size.in.characters.vert` | NO | `"0"` |  |  
+| `plot.max.patients.to.plot` | NO | `"100"` |  |  
+| `plot.suppress.warnings` | NO | `"FALSE"` |  |  
+| `plot.do.not.draw.plot` | NO | `"FALSE"` | [if TRUE, don't draw the actual plot, but only the legend (if required)] |  
 
 
 #### `CMA1`, `CMA2`, `CMA3`, `CMA4`

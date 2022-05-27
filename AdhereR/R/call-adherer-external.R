@@ -289,6 +289,8 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   .cast.param.to.type("plot.dpi",                        "numeric", TRUE);
   .cast.param.to.type("plot.period.in.days",             "numeric", TRUE);
   .cast.param.to.type("plot.legend.bkg.opacity",         "numeric", TRUE);
+  .cast.param.to.type("plot.legend.cex",                 "numeric", TRUE);
+  .cast.param.to.type("plot.legend.cex.title",           "numeric", TRUE);
   .cast.param.to.type("plot.cex",                        "numeric", TRUE);
   .cast.param.to.type("plot.cex.axis",                   "numeric", TRUE);
   .cast.param.to.type("plot.cex.lab",                    "numeric", TRUE);

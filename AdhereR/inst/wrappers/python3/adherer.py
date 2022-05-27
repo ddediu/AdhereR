@@ -20,7 +20,7 @@ import atexit
 import platform
 import shutil
 import pandas
-from PIL import Image
+from PIL import Image # please install Pillow for PIL
 
 # Windows=specific registry access:
 if platform.system() == "Windows":
@@ -62,7 +62,7 @@ def _check_rscript(path):
         return False
     # try to execute it:
     try:
-        subprocess.call(path)
+        subprocess.call([path, "--vanilla", "-e", "invisible(1+1)"]) # try to evaluate (1+1) invisibly to avoid printing the help message
     except subprocess.CalledProcessError:
         return False
     return True
@@ -703,6 +703,8 @@ class CMA0(object):
              legend_x='right',
              legend_y='bottom',
              legend_bkg_opacity=0.5,
+             legend_cex=0.75,
+             legend_cex_title=1.0,
              cex=1.0,
              cex_axis=0.75,
              cex_lab=1.0,
@@ -746,7 +748,7 @@ class CMA0(object):
             The folder where to save the plots (defaults to None, i.e. same folder
             as the other results)
         save_as : str
-            The format of the saved plot; can be 'jpg', 'png', 'tiff', 'eps' or
+            The format of the saved plot; can be 'jpg' (or 'jpeg'), 'png', 'tiff', 'eps' or
             'pdataset' (defaults to 'jpg')
         width : numeric
             Plot width in inches (defaults to 7)
@@ -781,6 +783,10 @@ class CMA0(object):
             can be 'bottom' or 'top' or a number; (defaults to 'bottom')
         legend_bkg_opacity : numeric
             The legend background opacity (between 0 and 1, defaults to 0.5)
+        legend_cex : numeric
+             The relative text size in the legend (defaults to 0.75)
+        legend_cex_title : numeric
+             The relative text size of the legend title (defaults to 1.0)
         cex : numeric
             The relative text size (defaults to 1.0)
         cex_axis : numeric
@@ -961,6 +967,7 @@ class CMA0(object):
                                     plot_show_legend=show_legend,
                                     plot_legend_x=legend_x, plot_legend_y=legend_y,
                                     plot_legend_bkg_opacity=legend_bkg_opacity,
+                                    plot_legend_cex=legend_cex, plot_legend_cex_title=legend_cex_title, 
                                     plot_cex=cex, plot_cex_axis=cex_axis, plot_cex_lab=cex_lab,
                                     plot_show_cma=show_cma,
                                     plot_unspecified_category_label=unspecified_category_label,
@@ -1128,6 +1135,8 @@ class CMA0(object):
                       plot_legend_x='right',
                       plot_legend_y='bottom',
                       plot_legend_bkg_opacity=0.5,
+                      plot_legend_cex=0.75,
+                      plot_legend_cex_title=1.0,
                       plot_cex=1.0,
                       plot_cex_axis=0.75,
                       plot_cex_lab=1.0,
@@ -1325,7 +1334,7 @@ class CMA0(object):
             The folder where to save the plots (defaults to None, i.e. same folder
             as the other results)
         plot_save_as : str
-            The format of the saved plot; can be 'jpg', 'png', 'tiff', 'eps' or
+            The format of the saved plot; can be 'jpg' (or 'jpeg'), 'png', 'tiff', 'eps' or
             'pdataset' (defaults to 'jpg')
         plot_width : numeric
             Plot width in inches (defaults to 7)
@@ -1360,6 +1369,10 @@ class CMA0(object):
             can be 'bottom' or 'top' or a number; (defaults to 'bottom')
         plot_legend_bkg_opacity : numeric
             The legend background opacity (between 0 and 1, defaults to 0.5)
+        plot_legend_cex : numeric
+             The relative text size in the legend (defaults to 0.75)
+        plot_legend_cex_title : numeric
+             The relative text size of the legend title (defaults to 1.0)
         plot_cex : numeric
             The relative text size (defaults to 1.0)
         plot_cex_axis : numeric
@@ -1960,11 +1973,13 @@ class CMA0(object):
             parameters_file.close()
             return None
 
-        if plot_save_as not in ('jpg', 'png', 'tiff', 'eps', 'pdataset'):
+        if plot_save_as not in ('jpg', 'jpeg', 'png', 'tiff', 'eps', 'pdataset'):
             warnings.warn('adhereR: argument "plot_save_as" (' + plot_save_as +
                           ') is not recognized.')
             parameters_file.close()
             return None
+        if plot_save_as == 'jpeg':
+            plot_save_as = 'jpg'
         parameters_file.write('plot.save.as = "' + plot_save_as + '"\n')
 
         if not isinstance(plot_width, numbers.Number) or plot_width <= 0:
@@ -2068,6 +2083,18 @@ class CMA0(object):
             parameters_file.close()
             return None
         parameters_file.write('plot.legend.bkg.opacity = "' + str(plot_legend_bkg_opacity) + '"\n')
+
+        if not isinstance(plot_legend_cex, numbers.Number) or plot_legend_cex < 0:
+            warnings.warn('adhereR: argument "plot_legend_cex" must be a strictly positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.legend.cex = "' + str(plot_legend_cex) + '"\n')
+
+        if not isinstance(plot_legend_cex_title, numbers.Number) or plot_legend_cex_title < 0:
+            warnings.warn('adhereR: argument "plot_legend_cex_title" must be a strictly positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.legend.cex.title = "' + str(plot_legend_cex_title) + '"\n')
 
         if not isinstance(plot_cex, numbers.Number) or plot_cex < 0:
             warnings.warn('adhereR: argument "plot_cex" must be a strictly positive number.')
