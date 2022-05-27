@@ -333,6 +333,21 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
                        rainbow); # defaults to rainbow
   } # otherwise it is a color name, so use it as such
 
+  # xlab.* are special in that they need assembly into a single named vector:
+  xlab.dates <- trimws(.get.param.value("plot.xlab.dates", type="character", required=FALSE));
+  xlab.days  <- trimws(.get.param.value("plot.xlab.days",  type="character", required=FALSE));
+  xlab <- c("dates"=xlab.dates, "days"=xlab.days);
+
+  # ylab.* are special in that they need assembly into a single named vector:
+  ylab.withoutcma <- trimws(.get.param.value("plot.ylab.withoutcma", type="character", required=FALSE));
+  ylab.withcma    <- trimws(.get.param.value("plot.ylab.withcma",    type="character", required=FALSE));
+  ylab <- c("withoutCMA"=ylab.withoutcma, "withCMA"=ylab.withcma);
+
+  # title.* are special in that they need assembly into a single named vector:
+  title.aligned    <- trimws(.get.param.value("plot.title.aligned",    type="character", required=FALSE));
+  title.notaligned <- trimws(.get.param.value("plot.title.notaligned", type="character", required=FALSE));
+  title.main <- c("aligned"=title.aligned, "notaligned"=title.notaligned);
+
   if( suppressWarnings(!is.na(as.numeric(params.as.list[["parallel.threads"]]))) )
   {
     params.as.list[["parallel.threads"]] <- as.numeric(params.as.list[["parallel.threads"]]);
@@ -502,6 +517,15 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
       # col.cats has already been parsed:
       if( "col.cats" %in% names(plotting.params) ) plotting.params[["col.cats"]] <- col.cats;
+
+      # xlab has already been parsed:
+      if( "xlab.dates" %in% names(plotting.params) && "xlab.days" %in% names(plotting.params) ){ plotting.params[["xlab"]] <- xlab; plotting.params["xlab.dates"] <- NULL; plotting.params["xlab.days"] <- NULL; }
+
+      # ylab has already been parsed:
+      if( "ylab.withoutcma" %in% names(plotting.params) && "ylab.withcma" %in% names(plotting.params) ){ plotting.params[["ylab"]] <- ylab; plotting.params["ylab.withoutcma"] <- NULL; plotting.params["ylab.withcma"] <- NULL; }
+
+      # title has already been parsed:
+      if( "title.aligned" %in% names(plotting.params) && "title.notaligned" %in% names(plotting.params) ){ plotting.params[["title"]] <- title.main; plotting.params["title.aligned"] <- NULL; plotting.params["title.notaligned"] <- NULL; }
 
       # Get the info about the plot exporting process:
       plot.file.dir <- .get.param.value("plot.save.to", type="character", default.value=shared.data.directory, required=FALSE);

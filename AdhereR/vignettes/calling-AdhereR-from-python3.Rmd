@@ -945,12 +945,15 @@ For all the `CMA` functions (i.e., `CMA0`, `CMA1` ...`CMA9`, `CMA_per_episode`, 
 | `plot.cex.lab` | NO	 | `"1.0"` |  | 
 | `plot.cex.title` | NO	 | `"1.5"` |  | 
 | `plot.show.cma`	 | NO | `"TRUE"` | [show the CMA type] | 
-| `plot.xlab`	 | NO | `{'dates':´'Date', 'days':'Days'}` | [dictionary specifying the x labels] | 
-| `plot.ylab`	 | NO | `{'withoutCMA'='patient', 'withCMA'='patient (& CMA)'}` | [dictionary specifying the y labels] | 
-| `plot.title`	 | NO | `{'aligned'='Event patterns (all patients aligned)', 'notaligned'='Event patterns'}` | [dictionary specifying the title] | 
-| `plot.col.cats`	 | NO | `"rainbow()"` | [single color or a function name (followed by "()", e.g., "rainbow()") mapping the categories to colors; for security reasons, the list of functions currently supported is: rainbow, heat.colors, terrain.colors, topo.colors and cm.colors from base R, and viridis, magma, inferno, plasma, cividis, rocket, mako and turbo from viridisLite (if installed)] | 
+| `plot.xlab.dates`	 | NO | `"Date"` | [the x-label when showing the dates] | 
+| `plot.xlab.days`	 | NO | `"Days"` | [the x-label when showing the number of days] | 
+| `plot.ylab.withoutcma`	 | NO | `"patient"` | [the y-label when there's no CMA] | 
+| `plot.ylab.withcma`	 | NO | `"patient (& CMA)"` | [the y-label when there's a CMA] | 
+| `plot.title.aligned`	 | NO | `"Event patterns (all patients aligned)"` | [the title when patients are aligned] | 
+| `plot.title.notaligned`	 | NO | `"Event patterns"` | [the title when patients are not aligned] | 
+| `plot.col.cats`	 | NO | `"rainbow()"` | [single color or a function name (followed by "()", e.g., "rainbow()") mapping the categories to colors; for security reasons, the list of functions currently supported is: `rainbow`, `heat.colors`, `terrain.colors`, `topo.colors` and `cm.colors` from base `R`, and `viridis`, `magma`, `inferno`, `plasma`, `cividis`, `rocket`, `mako` and `turbo` from `viridisLite` (if installed)] | 
 | `plot.unspecified.category.label` | NO | `"drug"` | [the label of the unspecified category of medication] | 
-| `plot.medication.groups.to.plot` | NO | `"NULL"` | [the names of the medication groups to plot (by default, all)] | 
+| `plot.medication.groups.to.plot` | NO | `""` | [the names of the medication groups to plot (by default, all)] | 
 | `plot.medication.groups.separator.show` | NO | `"TRUE"` | [group medication events by patient?] | 
 | `plot.medication.groups.separator.lty` | NO | `"solid"` |  | 
 | `plot.medication.groups.separator.lwd` | NO | `"2"` |  | 

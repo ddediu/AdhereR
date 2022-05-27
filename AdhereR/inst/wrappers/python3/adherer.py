@@ -710,6 +710,12 @@ class CMA0(object):
              cex_lab=1.0,
              cex_title=1.5,
              show_cma=True,
+             xlab_dates="Date",
+             xlab_days="Days",
+             ylab_withoutcma="patient",
+             ylab_withcma="patient (& CMA)",
+             title_aligned="Event patterns (all patients aligned)",
+             title_notaligned="Event patterns",
              col_cats="rainbow()",
              unspecified_category_label='drug',
              lty_event='solid',
@@ -799,6 +805,18 @@ class CMA0(object):
             The relative title text size (defaults to 1.5)
         show_cma : bool
             Show the CMA type? (defaults to True)
+        xlab_dates : str
+            The x-label when showing the dates (defaults to "Date")
+        xlab_days : str
+            The x-label when showing the number of days (defaults to "Days")
+        ylab_withoutcma : str
+            The y-label when there's no CMA (defaults to "patient")
+        ylab_withcma : str
+            The y-label when there's a CMA (defaults to "patient (& CMA)")
+        title_aligned : str
+            The title when patients are aligned (defaults to "Event patterns (all patients aligned)")
+        title_notaligned : str
+            The title when patients are not aligned (defaults to "Event patterns")
         col_cats : str
             The color or the function (followed by "()") used to map the categories to colors (defaults to "ranbow()"); for security reasons, the list of functions currently supported is: rainbow, heat.colors, terrain.colors, topo.colors and cm.colors from base R, and viridis, magma, inferno, plasma, cividis, rocket, mako and turbo from viridisLite (if installed in R)
         unspecified_category_label : str
@@ -976,6 +994,9 @@ class CMA0(object):
                                     plot_legend_cex=legend_cex, plot_legend_cex_title=legend_cex_title, 
                                     plot_cex=cex, plot_cex_axis=cex_axis, plot_cex_lab=cex_lab, plot_cex_title=cex_title,
                                     plot_show_cma=show_cma,
+                                    plot_xlab_dates=xlab_dates, plot_xlab_days=xlab_days,
+                                    plot_ylab_withoutcma=ylab_withoutcma, plot_ylab_withcma=ylab_withcma,
+                                    plot_title_aligned=title_aligned, plot_title_notaligned=title_notaligned,
                                     plot_col_cats=col_cats,
                                     plot_unspecified_category_label=unspecified_category_label,
                                     plot_lty_event=lty_event, plot_lwd_event=lwd_event,
@@ -1149,6 +1170,12 @@ class CMA0(object):
                       plot_cex_lab=1.0,
                       plot_cex_title=1.5,
                       plot_show_cma=True,
+                      plot_xlab_dates="Date",
+                      plot_xlab_days="Days",
+                      plot_ylab_withoutcma="patient",
+                      plot_ylab_withcma="patient (& CMA)",
+                      plot_title_aligned="Event patterns (all patients aligned)",
+                      plot_title_notaligned="Event patterns",
                       plot_col_cats="rainbow()",
                       plot_unspecified_category_label='drug',
                       plot_lty_event='solid',
@@ -1392,6 +1419,18 @@ class CMA0(object):
             The relative title text size (defaults to 1.5)
         plot_show_cma : bool
             Show the CMA type? (defaults to True)
+        plot_xlab_dates : str
+            The x-label when showing the dates (defaults to "Date")
+        plot_xlab_days : str
+            The x-label when showing the number of days (defaults to "Days")
+        plot_ylab_withoutcma : str
+            The y-label when there's no CMA (defaults to "patient")
+        plot_ylab_withcma : str
+            The y-label when there's a CMA (defaults to "patient (& CMA)")
+        plot_title_aligned : str
+            The title when patients are aligned (defaults to "Event patterns (all patients aligned)")
+        plot_title_notaligned : str
+            The title when patients are not aligned (defaults to "Event patterns")
         plot_col_cats : str
             The color or the function (followed by "()") used to map the categories to colors (defaults to "ranbow()"); for security reasons, the list of functions currently supported is: rainbow, heat.colors, terrain.colors, topo.colors and cm.colors from base R, and viridis, magma, inferno, plasma, cividis, rocket, mako and turbo from viridisLite (if installed in R)
         plot_unspecified_category_label : str
@@ -2138,6 +2177,55 @@ class CMA0(object):
             parameters_file.close()
             return None
         parameters_file.write('plot.show.cma = "' + ('TRUE' if plot_show_cma else 'FALSE') + '"\n')
+
+        if not isinstance(plot_xlab_dates, str):
+            warnings.warn('adhereR: argument "plot_xlab_dates" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.xlab.dates = "' +
+                              plot_xlab_dates + '"\n')
+
+        if not isinstance(plot_xlab_days, str):
+            warnings.warn('adhereR: argument "plot_xlab_days" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.xlab.days = "' +
+                              plot_xlab_days + '"\n')
+
+        if not isinstance(plot_ylab_withoutcma, str):
+            warnings.warn('adhereR: argument "plot_ylab_withoutcma" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.ylab.withoutcma = "' +
+                              plot_ylab_withoutcma + '"\n')
+
+        if not isinstance(plot_ylab_withcma, str):
+            warnings.warn('adhereR: argument "plot_ylab_withcma" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.ylab.withcma = "' +
+                              plot_ylab_withcma + '"\n')
+
+        if not isinstance(plot_title_aligned, str):
+            warnings.warn('adhereR: argument "plot_title_aligned" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.title.aligned = "' +
+                              plot_title_aligned + '"\n')
+
+        if not isinstance(plot_title_notaligned, str):
+            warnings.warn('adhereR: argument "plot_title_notaligned" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.title.notaligned = "' +
+                              plot_title_notaligned + '"\n')
+
+        if not isinstance(plot_col_cats, str):
+            warnings.warn('adhereR: argument "plot_col_cats" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.col.cats = "' +
+                              plot_col_cats + '"\n')
 
         if not isinstance(plot_col_cats, str):
             warnings.warn('adhereR: argument "plot_col_cats" must be a string.')
