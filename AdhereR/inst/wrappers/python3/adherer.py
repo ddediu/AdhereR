@@ -747,6 +747,23 @@ class CMA0(object):
              cma_cex=0.50,
              plot_cma=True,
              plot_cma_as_histogram=True,
+             plot_partial_CMAs_as='stacked',
+             plot_partial_CMAs_as_stacked_col_bars='gray90',
+             plot_partial_CMAs_as_stacked_col_border='gray30',
+             plot_partial_CMAs_as_stacked_col_text='black',
+             plot_partial_CMAs_as_timeseries_vspace=7,
+             plot_partial_CMAs_as_timeseries_start_from_zero=True,
+             plot_partial_CMAs_as_timeseries_col_dot='darkblue',
+             plot_partial_CMAs_as_timeseries_col_interval='gray70',
+             plot_partial_CMAs_as_timeseries_col_text='firebrick',
+             plot_partial_CMAs_as_timeseries_interval_type='segments',
+             plot_partial_CMAs_as_timeseries_lwd_interval=1,
+             plot_partial_CMAs_as_timeseries_alpha_interval=0.25,
+             plot_partial_CMAs_as_timeseries_show_0perc=True,
+             plot_partial_CMAs_as_timeseries_show_100perc=False,
+             plot_partial_CMAs_as_overlapping_alternate=True,
+             plot_partial_CMAs_as_overlapping_col_interval='gray70',
+             plot_partial_CMAs_as_overlapping_col_text='firebrick',
              cma_plot_ratio=0.10,
              cma_plot_col='lightgreen',
              cma_plot_border='darkgreen',
@@ -910,6 +927,42 @@ class CMA0(object):
             Relative size of the printed CMA (defaults to 0.5)
         plot_cma_as_histogram : bool
             Plot CMA as a histogram or as a density plot? (defaults to True)
+        plot_partial_CMAs_as : str
+            How to plot the "partial" (i.e., intervals/episodes) CMAs? Can be 
+            "stacked", "overlapping" or "timeseries" or None (defaults to stacked)
+        plot_partial_CMAs_as_stacked_col_bars : str
+            Color of stacked bars (defaults to 'gray90')
+        plot_partial_CMAs_as_stacked_col_border : str
+            Color of the border of the stacked bars (defaults to 'gray90')
+        plot_partial_CMAs_as_stacked_col_text : str
+            Color of the text of the stacked bars (defaults to 'black')
+        plot_partial_CMAs_as_timeseries_vspace : numeric
+            Vertical space between stacked bars (defaults to 7)
+        plot_partial_CMAs_as_timeseries_start_from_zero : bool
+            Should the time series start from 0? (defaults to True)
+        plot_partial_CMAs_as_timeseries_col_dot : str
+            Color of the time series dots (defaults to 'darkblue')
+        plot_partial_CMAs_as_timeseries_col_interval : str
+            Color of the time series intervals (defaults to 'gray70')
+        plot_partial_CMAs_as_timeseries_col_text : str
+            Color of the time series text (defaults to 'firebrick')
+        plot_partial_CMAs_as_timeseries_interval_type : str
+            How to plot the time series intervals; can be "none", "segments", 
+            "arrows", "lines", "rectangles" (defaults to 'segments')
+        plot_partial_CMAs_as_timeseries_lwd_interval : numeric
+            Width of the time series interval line (defaults to 1)
+        plot_partial_CMAs_as_timeseries_alpha_interval : numeric
+            Transparency of the time series interval line (defaults to 0.25)
+        plot_partial_CMAs_as_timeseries_show_0perc : bool
+            Show 0% for the time series? (defaults to True)
+        plot_partial_CMAs_as_timeseries_show_100perc : bool
+            Show 100% for the time series? (defaults to False)
+        plot_partial_CMAs_as_overlapping_alternate : bool
+            Should successive intervals be plotted low/high? (defaults to True)
+        plot_partial_CMAs_as_overlapping_col_interval : str
+            Color of the alternate interval (defaults to 'gray70')
+        plot_partial_CMAs_as_overlapping_col_text : str
+            Color of the alternate text (defaults to 'firebrick')
         cma_plot_ratio : numeric
             The proportion of the total horizontal plot to be taken by the CMA plot
             (defaults to 0.10)
@@ -1085,6 +1138,23 @@ class CMA0(object):
                                     plot_print_cma=print_cma, plot_cma_cex=cma_cex,
                                     plot_plot_cma=plot_cma,
                                     plot_plot_cma_as_histogram=plot_cma_as_histogram,
+                                    plot_plot_partial_CMAs_as=plot_partial_CMAs_as,
+                                    plot_plot_partial_CMAs_as_stacked_col_bars=plot_partial_CMAs_as_stacked_col_bars,
+                                    plot_plot_partial_CMAs_as_stacked_col_border=plot_partial_CMAs_as_stacked_col_border,
+                                    plot_plot_partial_CMAs_as_stacked_col_text=plot_partial_CMAs_as_stacked_col_text,
+                                    plot_plot_partial_CMAs_as_timeseries_vspace=plot_partial_CMAs_as_timeseries_vspace,
+                                    plot_plot_partial_CMAs_as_timeseries_start_from_zero=plot_partial_CMAs_as_timeseries_start_from_zero,
+                                    plot_plot_partial_CMAs_as_timeseries_col_dot=plot_partial_CMAs_as_timeseries_col_dot,
+                                    plot_plot_partial_CMAs_as_timeseries_col_interval=plot_partial_CMAs_as_timeseries_col_interval,
+                                    plot_plot_partial_CMAs_as_timeseries_col_text=plot_partial_CMAs_as_timeseries_col_text,
+                                    plot_plot_partial_CMAs_as_timeseries_interval_type=plot_partial_CMAs_as_timeseries_interval_type,
+                                    plot_plot_partial_CMAs_as_timeseries_lwd_interval=plot_partial_CMAs_as_timeseries_lwd_interval,
+                                    plot_plot_partial_CMAs_as_timeseries_alpha_interval=plot_partial_CMAs_as_timeseries_alpha_interval,
+                                    plot_plot_partial_CMAs_as_timeseries_show_0perc=plot_partial_CMAs_as_timeseries_show_0perc,
+                                    plot_plot_partial_CMAs_as_timeseries_show_100perc=plot_partial_CMAs_as_timeseries_show_100perc,
+                                    plot_plot_partial_CMAs_as_overlapping_alternate=plot_partial_CMAs_as_overlapping_alternate,
+                                    plot_plot_partial_CMAs_as_overlapping_col_interval=plot_partial_CMAs_as_overlapping_col_interval,
+                                    plot_plot_partial_CMAs_as_overlapping_col_text=plot_partial_CMAs_as_overlapping_col_text,
                                     plot_cma_plot_ratio=cma_plot_ratio,
                                     plot_cma_plot_col=cma_plot_col,
                                     plot_cma_plot_border=cma_plot_border,
@@ -1283,6 +1353,23 @@ class CMA0(object):
                       plot_cma_cex=0.50,
                       plot_plot_cma=True,
                       plot_plot_cma_as_histogram=True,
+                      plot_plot_partial_CMAs_as='stacked',
+                      plot_plot_partial_CMAs_as_stacked_col_bars='gray90',
+                      plot_plot_partial_CMAs_as_stacked_col_border='gray30',
+                      plot_plot_partial_CMAs_as_stacked_col_text='black',
+                      plot_plot_partial_CMAs_as_timeseries_vspace=7,
+                      plot_plot_partial_CMAs_as_timeseries_start_from_zero=True,
+                      plot_plot_partial_CMAs_as_timeseries_col_dot='darkblue',
+                      plot_plot_partial_CMAs_as_timeseries_col_interval='gray70',
+                      plot_plot_partial_CMAs_as_timeseries_col_text='firebrick',
+                      plot_plot_partial_CMAs_as_timeseries_interval_type='segments',
+                      plot_plot_partial_CMAs_as_timeseries_lwd_interval=1,
+                      plot_plot_partial_CMAs_as_timeseries_alpha_interval=0.25,
+                      plot_plot_partial_CMAs_as_timeseries_show_0perc=True,
+                      plot_plot_partial_CMAs_as_timeseries_show_100perc=False,
+                      plot_plot_partial_CMAs_as_overlapping_alternate=True,
+                      plot_plot_partial_CMAs_as_overlapping_col_interval='gray70',
+                      plot_plot_partial_CMAs_as_overlapping_col_text='firebrick',
                       plot_cma_plot_ratio=0.10,
                       plot_cma_plot_col='lightgreen',
                       plot_cma_plot_border='darkgreen',
@@ -1595,6 +1682,42 @@ class CMA0(object):
             Plot the CMA next to the participant ID? (defaults to True)
         plot_plot_cma_as_histogram : bool
             Plot CMA as a histogram or as a density plot? (defaults to True)
+        plot_plot_partial_CMAs_as : str
+            How to plot the "partial" (i.e., intervals/episodes) CMAs? Can be 
+            "stacked", "overlapping" or "timeseries" or None (defaults to stacked)
+        plot_plot_partial_CMAs_as_stacked_col_bars : str
+            Color of stacked bars (defaults to 'gray90')
+        plot_plot_partial_CMAs_as_stacked_col_border : str
+            Color of the border of the stacked bars (defaults to 'gray90')
+        plot_plot_partial_CMAs_as_stacked_col_text : str
+            Color of the text of the stacked bars (defaults to 'black')
+        plot_plot_partial_CMAs_as_timeseries_vspace : numeric
+            Vertical space between stacked bars (defaults to 7)
+        plot_plot_partial_CMAs_as_timeseries_start_from_zero : bool
+            Should the time series start from 0? (defaults to True)
+        plot_plot_partial_CMAs_as_timeseries_col_dot : str
+            Color of the time series dots (defaults to 'darkblue')
+        plot_plot_partial_CMAs_as_timeseries_col_interval : str
+            Color of the time series intervals (defaults to 'gray70')
+        plot_plot_partial_CMAs_as_timeseries_col_text : str
+            Color of the time series text (defaults to 'firebrick')
+        plot_plot_partial_CMAs_as_timeseries_interval_type : str
+            How to plot the time series intervals; can be "none", "segments", 
+            "arrows", "lines", "rectangles" (defaults to 'segments')
+        plot_plot_partial_CMAs_as_timeseries_lwd_interval : numeric
+            Width of the time series interval line (defaults to 1)
+        plot_plot_partial_CMAs_as_timeseries_alpha_interval : numeric
+            Transparency of the time series interval line (defaults to 0.25)
+        plot_plot_partial_CMAs_as_timeseries_show_0perc : bool
+            Show 0% for the time series? (defaults to True)
+        plot_plot_partial_CMAs_as_timeseries_show_100perc : bool
+            Show 100% for the time series? (defaults to False)
+        plot_plot_partial_CMAs_as_overlapping_alternate : bool
+            Should successive intervals be plotted low/high? (defaults to True)
+        plot_plot_partial_CMAs_as_overlapping_col_interval : str
+            Color of the alternate interval (defaults to 'gray70')
+        plot_plot_partial_CMAs_as_overlapping_col_text : str
+            Color of the alternate text (defaults to 'firebrick')
         plot_cma_plot_ratio : numeric
             The proportion of the total horizontal plot to be taken by the CMA plot
             (defaults to 0.10)
@@ -2581,6 +2704,132 @@ class CMA0(object):
         parameters_file.write('plot.plot.CMA.as.histogram = "' +
                               ('TRUE' if plot_plot_cma_as_histogram else 'FALSE') +
                               '"\n')
+
+        if plot_plot_partial_CMAs_as is None:
+            plot_plot_partial_CMAs_as=''
+        if not isinstance(plot_plot_partial_CMAs_as, str):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as = "' + plot_plot_partial_CMAs_as + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_stacked_col_bars, str):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_stacked_col_bars" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.stacked.col.bars = "' + 
+                              plot_plot_partial_CMAs_as_stacked_col_bars + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_stacked_col_border, str):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_stacked_col_border" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.stacked.col.border = "' + 
+                              plot_plot_partial_CMAs_as_stacked_col_border + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_stacked_col_text, str):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_stacked_col_text" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.stacked.col.text = "' + 
+                              plot_plot_partial_CMAs_as_stacked_col_text + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_timeseries_vspace, numbers.Number) or \
+           plot_plot_partial_CMAs_as_timeseries_vspace < 0:
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_timeseries_vspace" '
+                          'must be a positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.timeseries.vspace = "' + 
+                              str(plot_plot_partial_CMAs_as_timeseries_vspace) + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_timeseries_start_from_zero, bool):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_timeseries_start_from_zero" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.timeseries.start.from.zero = "' + 
+                              ('TRUE' if plot_plot_partial_CMAs_as_timeseries_start_from_zero else 'FALSE') + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_timeseries_col_dot, str):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_timeseries_col_dot" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.timeseries.col.dot = "' + 
+                              plot_plot_partial_CMAs_as_timeseries_col_dot + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_timeseries_col_interval, str):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_timeseries_col_interval" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.timeseries.col.interval = "' + 
+                              plot_plot_partial_CMAs_as_timeseries_col_interval + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_timeseries_col_text, str):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_timeseries_col_text" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.timeseries.col.text = "' + 
+                              plot_plot_partial_CMAs_as_timeseries_col_text + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_timeseries_interval_type, str):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_timeseries_interval_type" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.timeseries.interval.type = "' + 
+                              plot_plot_partial_CMAs_as_timeseries_interval_type + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_timeseries_lwd_interval, numbers.Number) or \
+           plot_plot_partial_CMAs_as_timeseries_lwd_interval < 0:
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_timeseries_lwd_interval" '
+                          'must be a positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.timeseries.lwd_interval = "' + 
+                              str(plot_plot_partial_CMAs_as_timeseries_lwd_interval) + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_timeseries_alpha_interval, numbers.Number) or \
+           plot_plot_partial_CMAs_as_timeseries_alpha_interval < 0 or plot_plot_partial_CMAs_as_timeseries_alpha_interval > 1:
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_timeseries_alpha_interval" '
+                          'must be a number between 0 and 1.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.timeseries.alpha.interval = "' + 
+                              str(plot_plot_partial_CMAs_as_timeseries_alpha_interval) + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_timeseries_show_0perc, bool):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_timeseries_show_0perc" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.timeseries.show.0perc = "' + 
+                              ('TRUE' if plot_plot_partial_CMAs_as_timeseries_show_0perc else 'FALSE') + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_timeseries_show_100perc, bool):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_timeseries_show_100perc" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.timeseries.show.100perc = "' + 
+                              ('TRUE' if plot_plot_partial_CMAs_as_timeseries_show_100perc else 'FALSE') + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_overlapping_alternate, bool):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_overlapping_alternate" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.overlapping.alternate = "' + 
+                              ('TRUE' if plot_plot_partial_CMAs_as_overlapping_alternate else 'FALSE') + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_overlapping_col_interval, str):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_overlapping_col_interval" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.overlapping.col.interval = "' + 
+                              plot_plot_partial_CMAs_as_overlapping_col_interval + '"\n')
+
+        if not isinstance(plot_plot_partial_CMAs_as_overlapping_col_text, str):
+            warnings.warn('adhereR: argument "plot_plot_partial_CMAs_as_overlapping_col_text" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.partial.CMAs.as.overlapping.col.text = "' + 
+                              plot_plot_partial_CMAs_as_overlapping_col_text + '"\n')
 
         if not isinstance(plot_cma_plot_ratio, numbers.Number) or \
            plot_cma_plot_ratio < 0 or plot_cma_plot_ratio > 1:

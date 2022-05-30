@@ -362,6 +362,9 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   # medication.groups.to.plot is a bit special:
   if( (medication.groups.to.plot <- trimws(.get.param.value("plot.medication.groups.to.plot", type="character", default.value="", required=FALSE))) == "" ) medication.groups.to.plot <- NULL;
 
+  # plot.partial.CMAs.as is a bit special:
+  if( (plot.partial.CMAs.as <- trimws(.get.param.value("plot.plot.partial.CMAs.as", type="character", default.value="", required=FALSE))) == "" ) plot.partial.CMAs.as <- NULL;
+
   if( suppressWarnings(!is.na(as.numeric(params.as.list[["parallel.threads"]]))) )
   {
     params.as.list[["parallel.threads"]] <- as.numeric(params.as.list[["parallel.threads"]]);
@@ -543,6 +546,9 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
       # medication.groups.to.plot has already been parsed:
       if( "medication.groups.to.plot" %in% names(plotting.params) ) plotting.params[["medication.groups.to.plot"]] <- medication.groups.to.plot;
+
+      # plot.partial.CMAs.as has already been parsed:
+      if( "plot.partial.CMAs.as" %in% names(plotting.params) ) plotting.params[["plot.partial.CMAs.as"]] <- plot.partial.CMAs.as;
 
       # Get the info about the plot exporting process:
       plot.file.dir <- .get.param.value("plot.save.to", type="character", default.value=shared.data.directory, required=FALSE);
