@@ -718,6 +718,12 @@ class CMA0(object):
              title_notaligned="Event patterns",
              col_cats="rainbow()",
              unspecified_category_label='drug',
+             medication_groups_to_plot=None,
+             medication_groups_separator_show=True,
+             medication_groups_separator_lty='solid',
+             medication_groups_separator_lwd=2,
+             medication_groups_separator_color='blue',
+             medication_groups_allother_label='*',
              lty_event='solid',
              lwd_event=2,
              pch_start_event=15,
@@ -814,13 +820,30 @@ class CMA0(object):
         ylab_withcma : str
             The y-label when there's a CMA (defaults to "patient (& CMA)")
         title_aligned : str
-            The title when patients are aligned (defaults to "Event patterns (all patients aligned)")
+            The title when patients are aligned (defaults to "Event patterns (all 
+            patients aligned)")
         title_notaligned : str
             The title when patients are not aligned (defaults to "Event patterns")
         col_cats : str
-            The color or the function (followed by "()") used to map the categories to colors (defaults to "ranbow()"); for security reasons, the list of functions currently supported is: rainbow, heat.colors, terrain.colors, topo.colors and cm.colors from base R, and viridis, magma, inferno, plasma, cividis, rocket, mako and turbo from viridisLite (if installed in R)
+            The color or the function (followed by "()") used to map the categories 
+            to colors (defaults to "ranbow()"); for security reasons, the list of 
+            functions currently supported is: rainbow, heat.colors, terrain.colors, 
+            topo.colors and cm.colors from base R, and viridis, magma, inferno, 
+            plasma, cividis, rocket, mako and turbo from viridisLite (if installed in R)
         unspecified_category_label : str
             The label of the unspecified category of medication (defaults to 'drug')
+        medication_groups_to_plot : str
+            The names of the medication groups to plot (defaults to None)
+        medication_groups_separator_show : bool
+            Group medication events by patient? (defaults to True)
+        medication_groups_separator_lty : str
+            Medication groups separator line type (defaults to 'solid')
+        medication_groups_separator_lwd : numeric
+            Medication groups separator line width (defaults to 2)
+        medication_groups_separator_color : str
+            Medication groups separator line color (defaults to 'blue')
+        medication_groups_allother_label : str
+            The label to use for the __ALL_OTHERS__ medication class (defaults to '*')
         lty_event : str
             Line style for plotting events; can be 'solid', 'dotted' or 'dashed'
             (defaults to 'solid')
@@ -999,6 +1022,12 @@ class CMA0(object):
                                     plot_title_aligned=title_aligned, plot_title_notaligned=title_notaligned,
                                     plot_col_cats=col_cats,
                                     plot_unspecified_category_label=unspecified_category_label,
+                                    plot_medication_groups_to_plot=medication_groups_to_plot,
+                                    plot_medication_groups_separator_show=medication_groups_separator_show,
+                                    plot_medication_groups_separator_lty=medication_groups_separator_lty,
+                                    plot_medication_groups_separator_lwd=medication_groups_separator_lwd,
+                                    plot_medication_groups_separator_color=medication_groups_separator_color,
+                                    plot_medication_groups_allother_label=medication_groups_allother_label,
                                     plot_lty_event=lty_event, plot_lwd_event=lwd_event,
                                     plot_pch_start_event=pch_start_event,
                                     plot_pch_end_event=pch_end_event,
@@ -1178,6 +1207,12 @@ class CMA0(object):
                       plot_title_notaligned="Event patterns",
                       plot_col_cats="rainbow()",
                       plot_unspecified_category_label='drug',
+                      plot_medication_groups_to_plot=None,
+                      plot_medication_groups_separator_show=True,
+                      plot_medication_groups_separator_lty='solid',
+                      plot_medication_groups_separator_lwd=2,
+                      plot_medication_groups_separator_color='blue',
+                      plot_medication_groups_allother_label='*',
                       plot_lty_event='solid',
                       plot_lwd_event=2,
                       plot_pch_start_event=15,
@@ -1435,6 +1470,18 @@ class CMA0(object):
             The color or the function (followed by "()") used to map the categories to colors (defaults to "ranbow()"); for security reasons, the list of functions currently supported is: rainbow, heat.colors, terrain.colors, topo.colors and cm.colors from base R, and viridis, magma, inferno, plasma, cividis, rocket, mako and turbo from viridisLite (if installed in R)
         plot_unspecified_category_label : str
             The label of the unspecified category of medication (defaults to 'drug')
+        plot_medication_groups_to_plot : str
+            The names of the medication groups to plot (defaults to None)
+        plot_medication_groups_separator_show : bool
+            Group medication events by patient? (defaults to True)
+        plot_medication_groups_separator_lty : str
+            Medication groups separator line type (defaults to 'solid')
+        plot_medication_groups_separator_lwd : numeric
+            Medication groups separator line width (defaults to 2)
+        plot_medication_groups_separator_color : str
+            Medication groups separator line color (defaults to 'blue')
+        plot_medication_groups_allother_label : str
+            The label to use for the __ALL_OTHERS__ medication class (defaults to '*')
         plot_lty_event : str
             Line style for plotting events; can be 'solid', 'dotted' or 'dashed'
             (defaults to 'solid')
@@ -2240,6 +2287,50 @@ class CMA0(object):
             return None
         parameters_file.write('plot.unspecified.category.label = "' +
                               plot_unspecified_category_label + '"\n')
+
+        if plot_medication_groups_to_plot is None:
+            plot_medication_groups_to_plot=''
+        if not isinstance(plot_medication_groups_to_plot, str):
+            warnings.warn('adhereR: argument "plot_medication_groups_to_plot" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.medication.groups.to.plot = "' +
+                              plot_medication_groups_to_plot + '"\n')
+
+        if not isinstance(plot_medication_groups_separator_show, bool):
+            warnings.warn('adhereR: argument "plot_medication_groups_separator_show" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.medication.groups.separator.show = "' +
+                              ('TRUE' if plot_medication_groups_separator_show else 'FALSE') +
+                              '"\n')
+
+        if not isinstance(plot_medication_groups_separator_lty, str):
+            warnings.warn('adhereR: argument "plot_medication_groups_separator_lty" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.medication.groups.separator.lty = "' +
+                              plot_medication_groups_separator_lty + '"\n')
+
+        if not isinstance(plot_medication_groups_separator_lwd, numbers.Number) or plot_lwd_event < 0:
+            warnings.warn('adhereR: argument "plot_medication_groups_separator_lwd" must be a strictly positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.medication.groups.separator.lwd = "' + str(plot_medication_groups_separator_lwd) + '"\n')
+
+        if not isinstance(plot_medication_groups_separator_color, str):
+            warnings.warn('adhereR: argument "plot_medication_groups_separator_color" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.medication.groups.separator.color = "' +
+                              plot_medication_groups_separator_color + '"\n')
+
+        if not isinstance(plot_medication_groups_allother_label, str):
+            warnings.warn('adhereR: argument "plot_medication_groups_allother_label" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.medication.groups.allother.label = "' +
+                              plot_medication_groups_allother_label + '"\n')
 
         if plot_lty_event not in ('solid', 'dotted', 'dashed'):
             warnings.warn('adhereR: argument "plot_lty_event" (' +

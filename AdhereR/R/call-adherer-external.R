@@ -311,6 +311,9 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   .cast.param.to.type("medication.change.means.new.treatment.episode", "logical", TRUE);
   .cast.param.to.type("dosage_change_means_new_treatment_episode",     "logical", TRUE);
 
+  .cast.param.to.type("plot.medication.groups.separator.show", "logical", TRUE);
+  .cast.param.to.type("plot.medication.groups.separator.lwd",  "numeric", TRUE);
+
   # col.cats is special in that it can be a function name or a color name:
   col.cats <- trimws(.get.param.value("plot.col.cats", type="character", required=FALSE));
   if( substring(col.cats, nchar(col.cats)-1, nchar(col.cats)) == "()" )
@@ -347,6 +350,9 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   title.aligned    <- trimws(.get.param.value("plot.title.aligned",    type="character", required=FALSE));
   title.notaligned <- trimws(.get.param.value("plot.title.notaligned", type="character", required=FALSE));
   title.main <- c("aligned"=title.aligned, "notaligned"=title.notaligned);
+
+  # medication.groups.to.plot is a bit special:
+  if( (medication.groups.to.plot <- trimws(.get.param.value("plot.medication.groups.to.plot", type="character", default.value="", required=FALSE))) == "" ) medication.groups.to.plot <- NULL;
 
   if( suppressWarnings(!is.na(as.numeric(params.as.list[["parallel.threads"]]))) )
   {
@@ -526,6 +532,9 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
       # title has already been parsed:
       if( "title.aligned" %in% names(plotting.params) && "title.notaligned" %in% names(plotting.params) ){ plotting.params[["title"]] <- title.main; plotting.params["title.aligned"] <- NULL; plotting.params["title.notaligned"] <- NULL; }
+
+      # medication.groups.to.plot has already been parsed:
+      if( "medication.groups.to.plot" %in% names(plotting.params) ) plotting.params[["medication.groups.to.plot"]] <- medication.groups.to.plot;
 
       # Get the info about the plot exporting process:
       plot.file.dir <- .get.param.value("plot.save.to", type="character", default.value=shared.data.directory, required=FALSE);
