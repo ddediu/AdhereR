@@ -963,7 +963,8 @@ For all the `CMA` functions (i.e., `CMA0`, `CMA1` ...`CMA9`, `CMA_per_episode`, 
 | `plot.lwd.event` | NO | `"2"` |  | 
 | `plot.pch.start.event` | NO | `"15"` |  | 
 | `plot.pch.end.event` | NO | `"16"` |  | 
-| `plot.show.overlapping.event.intervals`	 | NO | `"first"` | [show the actual prescription intervals; can be: "first", "last", "min gap", "max gap", "average"] | 
+| `plot.show.event.intervals`	 | NO | `"TRUE"` | [show the actual prescription intervals] | 
+| `plot.show.overlapping.event.intervals`	 | NO | `"first"` | [how to plot overlapping event intervals (relevant for sliding windows and per episode); can be: "first", "last", "min gap", "max gap", "average"] | 
 | `plot.plot.events.vertically.displaced`	 | NO | `"TRUE"` | [display the events on different lines (vertical displacement) or not (defaults to TRUE)?] | 
 | `plot.print.dose`	 | NO | `"FALSE"` | [print daily dose] | 
 | `plot.cex.dose`	 | NO | `"0.75"` |  | 

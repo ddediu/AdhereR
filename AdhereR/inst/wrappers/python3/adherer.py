@@ -729,6 +729,16 @@ class CMA0(object):
              pch_start_event=15,
              pch_end_event=16,
              show_event_intervals=True,
+             show_overlapping_event_intervals='first',
+             plot_events_vertically_displaced=True,
+             print_dose=False,
+             cex_dose=0.75,
+             print_dose_col='black',
+             print_dose_outline_col='white',
+             print_dose_centered=False,
+             plot_dose=False,
+             lwd_event_max_dose=8,
+             plot_dose_lwd_across_medication_classes=False,
              col_na='lightgray',
              col_continuation='black',
              lty_continuation='dotted',
@@ -856,6 +866,29 @@ class CMA0(object):
             Symbol for event end (see plot_pch_start_event for details; defaults to 16)
         show_event_intervals : bool
             Show the prescription intervals? (defaults to True)
+        show_overlapping_event_intervals : str
+            How to plot overlapping event intervals (relevant for sliding windows 
+            and per episode); can be: "first", "last", "min gap", "max gap", 
+            "average" (defaults to 'first')
+        plot_events_vertically_displaced : bool
+            Display the events on different lines (vertical displacement) or not? 
+            (defaults to True)
+        print_dose : bool
+            Print daily dose (as text)? (defaults to False)
+        cex_dose : numeric
+            Relative size of the printed daily dose (defaults to 0.75)
+        print_dose_col : str
+            The color of printed daily dose (defaults to 'black')
+        print_dose_outline_col : str
+            The color of outline of the printed daily dose (defaults to 'white')
+        print_dose_centered : bool
+            Print daily dose centered? (defaults to False)
+        plot_dose : bool
+            Plot daily dose (as line width)? (defaults to False)
+        lwd_event_max_dose : numeric
+            Maximum dose line width (defaults to 8)
+        plot_dose_lwd_across_medication_classes : bool
+            Plot daily dose across medication groups? (defaults to False)
         col_na : str
             The color of the missing data; can be any R color specification as,
             for example, given at http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdataset
@@ -1032,6 +1065,16 @@ class CMA0(object):
                                     plot_pch_start_event=pch_start_event,
                                     plot_pch_end_event=pch_end_event,
                                     plot_show_event_intervals=show_event_intervals,
+                                    plot_show_overlapping_event_intervals=show_overlapping_event_intervals,
+                                    plot_plot_events_vertically_displaced=plot_events_vertically_displaced,
+                                    plot_print_dose=print_dose,
+                                    plot_cex_dose=cex_dose,
+                                    plot_print_dose_col=print_dose_col,
+                                    plot_print_dose_outline_col=print_dose_outline_col,
+                                    plot_print_dose_centered=print_dose_centered,
+                                    plot_plot_dose=plot_dose,
+                                    plot_lwd_event_max_dose=lwd_event_max_dose,
+                                    plot_plot_dose_lwd_across_medication_classes=plot_dose_lwd_across_medication_classes,
                                     plot_col_na=col_na,
                                     plot_col_continuation=col_continuation,
                                     plot_lty_continuation=lty_continuation,
@@ -1218,6 +1261,16 @@ class CMA0(object):
                       plot_pch_start_event=15,
                       plot_pch_end_event=16,
                       plot_show_event_intervals=True,
+                      plot_show_overlapping_event_intervals='first',
+                      plot_plot_events_vertically_displaced=True,
+                      plot_print_dose=False,
+                      plot_cex_dose=0.75,
+                      plot_print_dose_col='black',
+                      plot_print_dose_outline_col='white',
+                      plot_print_dose_centered=False,
+                      plot_plot_dose=False,
+                      plot_lwd_event_max_dose=8,
+                      plot_plot_dose_lwd_across_medication_classes=False,
                       plot_col_na='lightgray',
                       plot_col_continuation='black',
                       plot_lty_continuation='dotted',
@@ -1494,6 +1547,29 @@ class CMA0(object):
             Symbol for event end (see plot_pch_start_event for details; defaults to 16)
         plot_show_event_intervals : bool
             Show the prescription intervals? (defaults to True)
+        plot_show_overlapping_event_intervals : str
+            How to plot overlapping event intervals (relevant for sliding windows 
+            and per episode); can be: "first", "last", "min gap", "max gap", 
+            "average" (defaults to 'first')
+        plot_plot_events_vertically_displaced : bool
+            Display the events on different lines (vertical displacement) or not? 
+            (defaults to True)
+        plot_print_dose : bool
+            Print daily dose (as text)? (defaults to False)
+        plot_cex_dose : numeric
+            Relative size of the printed daily dose (defaults to 0.75)
+        plot_print_dose_col : str
+            The color of printed daily dose (defaults to 'black')
+        plot_print_dose_outline_col : str
+            The color of outline of the printed daily dose (defaults to 'white')
+        plot_print_dose_centered : bool
+            Print daily dose centered? (defaults to False)
+        plot_plot_dose : bool
+            Plot daily dose (as line width)? (defaults to False)
+        plot_lwd_event_max_dose : numeric
+            Maximum dose line width (defaults to 8)
+        plot_plot_dose_lwd_across_medication_classes : bool
+            Plot daily dose across medication groups? (defaults to False)
         plot_col_na : str
             The color of the missing data; can be any R color specification as,
             for example, given at http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdataset
@@ -2371,11 +2447,84 @@ class CMA0(object):
                               ('TRUE' if plot_show_event_intervals else 'FALSE') +
                               '"\n')
 
+        if not isinstance(plot_show_overlapping_event_intervals, str):
+            warnings.warn('adhereR: argument "plot_show_overlapping_event_intervals" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.show.overlapping.event.intervals = "' + 
+                              plot_show_overlapping_event_intervals + '"\n')
+
+        if not isinstance(plot_plot_events_vertically_displaced, bool):
+            warnings.warn('adhereR: argument "plot_plot_events_vertically_displaced" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.events.vertically.displaced = "' +
+                              ('TRUE' if plot_plot_events_vertically_displaced else 'FALSE') +
+                              '"\n')
+
+        if not isinstance(plot_print_dose, bool):
+            warnings.warn('adhereR: argument "plot_print_dose" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.print.dose = "' +
+                              ('TRUE' if plot_print_dose else 'FALSE') +
+                              '"\n')
+
+        if not isinstance(plot_cex_dose, numbers.Number) or plot_cex_dose < 0:
+            warnings.warn('adhereR: argument "plot_cex_dose" '
+                          'must be a strictly positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.cex.dose = "' + str(plot_cex_dose) + '"\n')
+
         if not isinstance(plot_col_na, str):
             warnings.warn('adhereR: argument "plot_col_na" must be a string.')
             parameters_file.close()
             return None
         parameters_file.write('plot.col.na = "' + plot_col_na + '"\n')
+
+        if not isinstance(plot_print_dose_col, str):
+            warnings.warn('adhereR: argument "plot_print_dose_col" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.print.dose.col = "' + plot_print_dose_col + '"\n')
+
+        if not isinstance(plot_print_dose_outline_col, str):
+            warnings.warn('adhereR: argument "plot_print_dose_outline_col" must be a string.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.print.dose.outline.col = "' + plot_print_dose_outline_col + '"\n')
+
+        if not isinstance(plot_print_dose_centered, bool):
+            warnings.warn('adhereR: argument "plot_print_dose_centered" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.print.dose.centered = "' +
+                              ('TRUE' if plot_print_dose_centered else 'FALSE') +
+                              '"\n')
+
+        if not isinstance(plot_plot_dose, bool):
+            warnings.warn('adhereR: argument "plot_plot_dose" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.dose = "' +
+                              ('TRUE' if plot_plot_dose else 'FALSE') +
+                              '"\n')
+
+        if not isinstance(plot_lwd_event_max_dose, numbers.Number) or plot_lwd_event_max_dose < 0:
+            warnings.warn('adhereR: argument "plot_lwd_event_max_dose" '
+                          'must be a strictly positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.lwd.event.max.dose = "' + str(plot_lwd_event_max_dose) + '"\n')
+
+        if not isinstance(plot_plot_dose_lwd_across_medication_classes, bool):
+            warnings.warn('adhereR: argument "plot_plot_dose_lwd_across_medication_classes" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.plot.dose.lwd.across.medication.classes = "' +
+                              ('TRUE' if plot_plot_dose_lwd_across_medication_classes else 'FALSE') +
+                              '"\n')
 
         if not isinstance(plot_col_continuation, str):
             warnings.warn('adhereR: argument "plot_col_continuation" must be a string.')

@@ -313,6 +313,13 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
   .cast.param.to.type("plot.medication.groups.separator.show", "logical", TRUE);
   .cast.param.to.type("plot.medication.groups.separator.lwd",  "numeric", TRUE);
+  .cast.param.to.type("plot.plot.events.vertically.displaced", "logical", TRUE);
+  .cast.param.to.type("plot.print.dose",                       "logical", TRUE);
+  .cast.param.to.type("plot.cex.dose",                         "numeric", TRUE);
+  .cast.param.to.type("plot.print.dose.centered",              "logical", TRUE);
+  .cast.param.to.type("plot.plot.dose",                        "logical", TRUE);
+  .cast.param.to.type("plot.lwd.event.max.dose",               "numeric", TRUE);
+  .cast.param.to.type("plot.plot.dose.lwd.across.medication.classes", "logical", TRUE);
 
   # col.cats is special in that it can be a function name or a color name:
   col.cats <- trimws(.get.param.value("plot.col.cats", type="character", required=FALSE));
