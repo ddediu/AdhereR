@@ -3328,7 +3328,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            show.event.intervals=TRUE,             # show the actual prescription intervals
                            plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                            col.na="lightgray",                    # color for missing data
-                           print.CMA=TRUE, CMA.cex=0.50,           # print CMA next to the participant's ID?
+                           print.CMA=TRUE, CMA.cex=0.50,          # print CMA next to the participant's ID?
                            plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
                            CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
                            CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot

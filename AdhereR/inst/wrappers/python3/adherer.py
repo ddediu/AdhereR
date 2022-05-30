@@ -744,6 +744,7 @@ class CMA0(object):
              lty_continuation='dotted',
              lwd_continuation=1,
              print_cma=True,
+             cma_cex=0.50,
              plot_cma=True,
              plot_cma_as_histogram=True,
              cma_plot_ratio=0.10,
@@ -905,6 +906,8 @@ class CMA0(object):
             Print CMA value next to the participant's ID? (defaults to True)
         plot_cma : bool
             Plot the CMA next to the participant ID? (defaults to True)
+        cma_cex : numeric
+            Relative size of the printed CMA (defaults to 0.5)
         plot_cma_as_histogram : bool
             Plot CMA as a histogram or as a density plot? (defaults to True)
         cma_plot_ratio : numeric
@@ -1079,7 +1082,8 @@ class CMA0(object):
                                     plot_col_continuation=col_continuation,
                                     plot_lty_continuation=lty_continuation,
                                     plot_lwd_continuation=lwd_continuation,
-                                    plot_print_cma=print_cma, plot_plot_cma=plot_cma,
+                                    plot_print_cma=print_cma, plot_cma_cex=cma_cex,
+                                    plot_plot_cma=plot_cma,
                                     plot_plot_cma_as_histogram=plot_cma_as_histogram,
                                     plot_cma_plot_ratio=cma_plot_ratio,
                                     plot_cma_plot_col=cma_plot_col,
@@ -1276,6 +1280,7 @@ class CMA0(object):
                       plot_lty_continuation='dotted',
                       plot_lwd_continuation=1,
                       plot_print_cma=True,
+                      plot_cma_cex=0.50,
                       plot_plot_cma=True,
                       plot_plot_cma_as_histogram=True,
                       plot_cma_plot_ratio=0.10,
@@ -1584,6 +1589,8 @@ class CMA0(object):
             Line width for plitting events (defaults to 1)
         plot_print_cma : bool
             Print CMA value next to the participant's ID? (defaults to True)
+        plot_cma_cex : numeric
+            Relative size of the printed CMA (defaults to 0.5)
         plot_plot_cma : bool
             Plot the CMA next to the participant ID? (defaults to True)
         plot_plot_cma_as_histogram : bool
@@ -2553,6 +2560,13 @@ class CMA0(object):
         parameters_file.write('plot.print.CMA = "' +
                               ('TRUE' if plot_print_cma else 'FALSE') +
                               '"\n')
+
+        if not isinstance(plot_cma_cex, numbers.Number) or plot_cma_cex < 0:
+            warnings.warn('adhereR: argument "plot_cma_cex" '
+                          'must be a strictly positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.cma.cex = "' + str(plot_cma_cex) + '"\n')
 
         if not isinstance(plot_plot_cma, bool):
             warnings.warn('adhereR: argument "plot_plot_cma" must be a bool.')
