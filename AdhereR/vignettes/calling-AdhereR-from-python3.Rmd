@@ -15,6 +15,18 @@ vignette: >
 knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg"); 
 ```
 
+
+## Overview
+
+While `AdhereR` is written in `R` and makes extensive use of various `R` packages and techniques (such as `data.table` and parallel processing), it is possible to use it from other programming languages and applications.
+This is accomplished through a very generic mecahnism that only requires the caller to be able to *read and write files* in a location of its choice and to *invoke an external command* with a set of arguments.
+These requirements are widely available in programming languages (such as `C`/`C++`, `Java`, `Python 2` and `3`, and `R` itself), can be accomplished from the scripting available in several applications (e.g., `VBA` in Microsoft Excel, `STATA` scripting or `SAS` programs), and works in similar ways across the major Operating Systems (`Linux` flavors, `macOS` and `Microsoft Windows`).
+
+We present here this generic mechanism using its *reference implementation* for `Python 3`.
+While this reference implementation is definitely usable in production environments (including from [Jupyter Notebooks](#from-a-jupyter-notebook)) and comes with the `R` `AdhereR` package (see [here](#making-the-adherer-module-visible-to-python-aka-installation) on how to "install" it in `Python 3`), this can probably be improved both in terms of calling and passing data between `Python` and `R`, as well as in terms of the "pythonicity" of the `Python` side of the implementation.
+Nevertheless, we hope this implementation will be useful to users of `Python` that would like to access `AdhereR` without switching to `R`, and will provide a template and working example for further implementations that aim to make `AdhereR` available to other programming languages and platforms.
+
+
 ## Table of Contents
 
   - [Introduction](#introduction)
@@ -24,6 +36,8 @@ knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg");
   - [Fundamentals of calling `AdhereR` from `Python 3`](#fundamentals-of-calling-adherer-from-python-3)
   
   - [The `Python 3` wrapper: the `adherer` module](#the-python-3-wrapper-the-adherer-module)
+  
+      - [Making the `adherer` module visible to Python (aka installation)](#making-the-adherer-module-visible-to-python-aka-installation)
   
       - [Importing the `adherer` module and initializations](#importing-the-adherer-module-and-initializations)
     
@@ -50,6 +64,8 @@ knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg");
              - [Compute and plot test CMA](#compute-and-plot-test-cma)
              
              - [Interactive plotting](#interactive-plotting)
+          
+          - [From a Jupyter Notebook](#from-a-jupyter-notebook)
           
           - [Parallel processing (locally and on different machines)](#parallel-processing-locally-and-on-different-machines)
           
@@ -92,17 +108,6 @@ knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg");
   - [Appendix II: the `Python 3` code](#appendix-ii-the-python-3-code)
       
   - [Notes](#notes)
-
-
-## Introduction
-
-While `AdhereR` is written in `R` and makes extensive use of various `R` packages and techniques (such as `data.table` and parallel processing), it is possible to use it from other programming languages and applications.
-This is accomplished through a very generic mecahnism that only requires the caller to be able to *read and write files* in a location of its choice and to *invoke an external command* with a set of arguments.
-These requirements are widely available in programming languages (such as `C`/`C++`, `Java`, `Python 2` and `3`, and `R` itself), can be accomplished from the scripting available in several applications (e.g., `VBA` in Microsoft Excel, `STATA` scripting or `SAS` programs), and works in similar ways across the major Operating Systems (`Linux` flavors, `macOS` and `Microsoft Windows`).
-
-We present here this generic mechanism using its *reference implementation* for `Python 3`.
-While this reference implementation is definitely useable in production environments, this can probably be improved both in terms of calling and passing data between `Python` and `R`, as well as in terms of the "pythonicity" of the `Python` side of the implementation.
-Nevertheless, we hope this implementation will be useful to users of `Python` that would like to access `AdhereR` without switching to `R`, and will provide a template and working example for further implementations that aim to make `AdhereR` available to other programming languages and platforms.
 
 
 ## General ideas
@@ -200,6 +205,8 @@ where `plot_save_to` and `plot_save_as` may specify where the plots are to be sa
 
 
 ## The `Python 3` wrapper: the `adherer` module
+
+### Making the `adherer` module visible to Python (aka installation)
 
 The reference implementation is contained in single file (`adherer.py`) included with the `R` `AdhereR` package and whose location can be obtained using the function `getCallerWrapperLocation(full.path=TRUE)` from `AdhereR` (*N.B.* it is located in the directory where the `AdhereR` package is installed on the system, subdirectory `wrappers/python3/adherer.py`; for example, on the example `macos` machine this is `/Library/Frameworks/R.framework/Versions/3.4/Resources/library/AdhereR/wrappers/python3/adherer.py`).
 In the future, as more wrappers are added, the argument `callig.platform` will allow the selection of the desired wrapper (now it is implicitely set to `python3`).
@@ -582,9 +589,145 @@ Out[12]: True
 Please note that it does not matter how the interactive session is started, as it only needs access to the base `CMA0` object and, more precisely, the raw dataset; all relevant parameters, including the CMA type can be changed interactively (this is why the CMA shown in the screenshot is `CMA1` even if the function `cma8.plot_interactive()` was initiated from a `CMA8` object).
 
 
+#### From a Jupyter Notebook
+
+`AdhereR` is very easy to use from within a [Jupyter Notebook](https://jupyter.org/) (the only tricky bit being making sure that `adherer` module is visible to the `Python` kernel, but this is explained in detail in section [Making the `adherer` module visible to Python (aka installation)](#making-the-adherer-module-visible-to-python-aka-installation)).
+
+A full example is provided in the `jupyter_notebook_python3_wrapper.ipynb` file accompanying the package in the same directory as the `adherer` module, but the code is reproduced below for convenience:
+
+``` python
+# import the adherer python module (see above about how to make it findable)
+import adherer
+
+# load the test dataset:
+import pandas
+df = pandas.read_csv('./test-dataset.csv', sep='\t', header=0)
+
+# Change the column names:
+df.rename(columns={'ID': 'patientID',
+                   'DATE': 'prescriptionDate',
+                   'PERDAY': 'quantityPerDay',
+                   'CLASS': 'medicationType',
+                   'DURATION': 'prescriptionDuration'},
+          inplace=True)
+
+# check the file was read correctly
+type(df)
+
+# HTML printing of data frames
+import rpy2.ipython.html
+rpy2.ipython.html.init_printing()
+# print it
+df
+
+# create a CMA7 object
+cma7 = adherer.CMA7(df,
+                    id_colname='patientID',
+                    event_date_colname='prescriptionDate',
+                    event_duration_colname='prescriptionDuration',
+                    event_daily_dose_colname='quantityPerDay',
+                    medication_class_colname='medicationType',
+                    followup_window_start=230,
+                    followup_window_duration=705,
+                    observation_window_start=41,
+                    observation_window_duration=100,
+                    date_format="%m/%d/%Y",
+                    suppress_warnings=True)
+
+# print it for checking
+cma7
+
+# show the plot directly in the notebook
+x
+```
+
+While this is very easy and transparent, some people might prefer to use the more generic mechanism provided by [`rpy2`](https://rpy2.github.io/index.html), which, in principle, allows the transparent call of `R` code from `Python`.
+In fact, `AdhereR` seems to play very nicely with `rpy2`, even within a [Jupyter Notebook](https://jupyter.org/), as shown by the code below (the full notebook is available in the `jupyter_notebook_python3_py2.ipynb` file accompanying the package in the same directory as the `adherer` module):
+
+``` python
+# import ryp2 (please note that you might need to install it as per https://rpy2.github.io/doc.html)
+import rpy2
+
+# check that all is ok
+rpy2.__path__
+
+# import R's "AdhereR" package
+from rpy2.robjects.packages import importr
+adherer = importr('AdhereR')
+
+# access the internal R session
+import rpy2.robjects as robjects
+
+# access the med.events dataset
+med_events = robjects.r['med.events']
+
+# check its type
+type(med_events)
+
+# HTML printing of data frames
+import rpy2.ipython.html
+rpy2.ipython.html.init_printing()
+# print it
+med_events
+
+# make some AdhereR functions available to Python
+CMA7 = robjects.r['CMA7']
+getCMA = robjects.r['getCMA']
+
+# create a CMA7 object
+cma7 = CMA7(med_events,
+            ID_colname="PATIENT_ID",
+            event_date_colname="DATE",
+            event_duration_colname="DURATION",
+            event_daily_dose_colname="PERDAY",
+            medication_class_colname="CATEGORY",
+            followup_window_start=230,
+            followup_window_duration=705,
+            observation_window_start=41,
+            observation_window_duration=100,
+            date_format="%m/%d/%Y")
+            
+# print it for checking
+cma7
+
+# print the estimated CMAs
+getCMA(cma7)
+
+# plot it
+# this is some clunky code involving do.call and named lists because
+# plot has lots of arguments with . that cannot be autmatically handeled by rpy2
+# the idea is to use a TaggedList that associated values and argument names
+
+import rpy2.rlike.container as rlc # for TaggedList
+rcall = robjects.r['do.call'] # do.call()
+grdevices = importr('grDevices') # R graphics device
+
+# the actual plotting
+grdevices.jpeg(file="./cma7plot.jpg", width=512, height=512)
+rcall("plot",
+      rlc.TaggedList([cma7,
+                      robjects.IntVector([1,2,3]), 
+                      False,
+                      True], 
+                     tags=('cma', 
+                           'patients.to.plot', 
+                           'show.legend',
+                           'align.all.patients')))
+grdevices.dev_off()
+```
+
+Arguably, the code is clunkier and, at least in this approach, needs an extra step for showing the plot:
+
+```
+Include the CMA7 plot using the Markdown syntax (there are several alternatives: https://stackoverflow.com/questions/32370281/how-to-embed-image-or-picture-in-jupyter-notebook-either-from-a-local-machine-o): 
+
+![The plot](./cma7plot.jpg)
+```
+
+
 #### Parallel processing (locally and on different machines)
 
-`AdhereR` uses `R`'s parallel procesing capacities to split expensive computations and distribute them across multiple CPUs/cores in a single computer or even across a network of computers.
+`AdhereR` uses `R`'s parallel processing capacities to split expensive computations and distribute them across multiple CPUs/cores in a single computer or even across a network of computers.
 As an example, we will compute here `CMA1` across sliding windows on the whole dataset, first in `R` and then in `Python 3`.
 
 ##### Single thread on the local machine
