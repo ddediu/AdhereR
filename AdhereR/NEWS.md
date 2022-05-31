@@ -11,6 +11,8 @@
   - `AdhereR` is compatible with the pipe operator (`%>%` or `|>`), the overview vignette now shows several examples.
   
   - the overview vignette now shows an example of modifying an `AdhereR` plot *a posteriori* by adding various elements (lines, symbols and text) to a CMA plot.
+  
+  - the `Python 3` wrapper (bridge) was updated, as was the associated vignette; `AdhereR` can now be used transparently from Junyper Notebooks (and even through `rpy2`) and two example notebooks have been included. 
 
 ## Bug fixes
 
