@@ -1014,14 +1014,14 @@ For all the `CMA` functions (i.e., `CMA0`, `CMA1` ...`CMA9`, `CMA_per_episode`, 
 | `plot.show.real.obs.window.start` | NO | `"TRUE"` | [for some CMAs, the real observation window starts at a different date] | 
 | `plot.real.obs.window.density` | NO | `"35"` |  | 
 | `plot.real.obs.window.angle` | NO | `"30"` |  |  
-| `plot.alternating.bands.cols` | NO | `["white", "gray95"]` | [the colors of the alternating vertical bands across patients (`None`=don't draw any; can be >= 1 color)] |  
-| `plot.rotate.text` | NO | `"-60"` |  |  
-| `plot.force.draw.text` | NO | `"FALSE"` |  |  
+| `plot.alternating.bands.cols` | NO | `["white", "gray95"]` | [the colors of the alternating vertical bands across patients; ''=don't draw any; if >= 1 color then a list of comma-separated strings] |  
+| `plot.rotate.text` | NO | `"-60"` | [some text (e.g., axis labels) may be rotated by this much degrees] |  
+| `plot.force.draw.text` | NO | `"FALSE"` | [if true, always draw text even if too big or too small] |  
 | `plot.bw.plot` | NO | `"FALSE"` | [if `TRUE`, override all user-given colours and replace them with a scheme suitable for grayscale plotting] | 
 | `plot.min.plot.size.in.characters.horiz` | NO | `"0"` |  |  
 | `plot.min.plot.size.in.characters.vert` | NO | `"0"` |  |  
 | `plot.max.patients.to.plot` | NO | `"100"` |  |  
-| `plot.suppress.warnings` | NO | `"FALSE"` |  |  
+| `plot.suppress.warnings` | NO | `"FALSE"` | [suppress warnings?] |  
 | `plot.do.not.draw.plot` | NO | `"FALSE"` | [if TRUE, don't draw the actual plot, but only the legend (if required)] |  
 
 

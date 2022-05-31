@@ -981,6 +981,8 @@ print.CMA0 <- function(x,                                                  # the
 #' or a vector of colors.
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
+#' @param rotate.text \emph{Numeric}, the angle by which certain text elements
+#' (e.g., axis labels) should be rotated.
 #' @param force.draw.text \emph{Logical}, if \code{TRUE}, always draw text even
 #' if too big or too small
 #' @param min.plot.size.in.characters.horiz,min.plot.size.in.characters.vert
@@ -1080,6 +1082,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       highlight.followup.window=TRUE, followup.window.col="green",
                       highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
+                      rotate.text=-60,                       # some text (e.g., axis labels) may be rotated by this much degrees
                       force.draw.text=FALSE,                 # if true, always draw text even if too big or too small
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                       min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
@@ -1154,6 +1157,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
              observation.window.opacity=observation.window.opacity,
              alternating.bands.cols=alternating.bands.cols,
              bw.plot=bw.plot,
+             rotate.text=rotate.text,
              force.draw.text=force.draw.text,
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
@@ -3339,6 +3343,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                            alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                            bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                           rotate.text=-60,                       # some text (e.g., axis labels) may be rotated by this much degrees
                            force.draw.text=FALSE,                 # if true, always draw text even if too big or too small
                            min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                            suppress.warnings=FALSE,               # suppress warnings?
@@ -3419,6 +3424,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
              real.obs.window.angle=real.obs.window.angle,
              alternating.bands.cols=alternating.bands.cols,
              bw.plot=bw.plot,
+             rotate.text=rotate.text,
              force.draw.text=force.draw.text,
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
@@ -3949,6 +3955,8 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' @param col.na The colour used for missing event data.
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
+#' @param rotate.text \emph{Numeric}, the angle by which certain text elements
+#' (e.g., axis labels) should be rotated.
 #' @param force.draw.text \emph{Logical}, if \code{TRUE}, always draw text even
 #' if too big or too small
 #' @param print.CMA \emph{Logical}, should the CMA values be printed?
@@ -3983,6 +3991,9 @@ print.CMA1 <- function(...) print.CMA0(...)
 #' the line width of the even is scaled relative to all medication classes (i.e.,
 #' relative to the global minimum and maximum doses), otherwise it is scale
 #' relative only to its medication class.
+#' @param alternating.bands.cols The colors of the alternating vertical bands
+#' distinguishing the patients; can be \code{NULL} = don't draw the bandes;
+#' or a vector of colors.
 #' @param min.plot.size.in.characters.horiz,min.plot.size.in.characters.vert
 #' \emph{Numeric}, the minimum size of the plotting surface in characters;
 #' horizontally (min.plot.size.in.characters.horiz) refers to the the whole
@@ -4074,7 +4085,9 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for some CMAs, the real observation window starts at a different date
                       print.dose=FALSE, cex.dose=0.75, print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                       plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
+                      alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                      rotate.text=-60,                       # some text (e.g., axis labels) may be rotated by this much degrees
                       force.draw.text=FALSE,                 # if true, always draw text even if too big or too small
                       min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event)
                       max.patients.to.plot=100,              # maximum number of patients to plot
@@ -4146,7 +4159,9 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                  plot.dose=plot.dose,
                  lwd.event.max.dose=lwd.event.max.dose,
                  plot.dose.lwd.across.medication.classes=plot.dose.lwd.across.medication.classes,
+                 alternating.bands.cols=alternating.bands.cols,
                  bw.plot=bw.plot,
+                 rotate.text=rotate.text,
                  force.draw.text=force.draw.text,
                  min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
                  min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,
@@ -8342,6 +8357,8 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' or a vector of colors.
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
+#' @param rotate.text \emph{Numeric}, the angle by which certain text elements
+#' (e.g., axis labels) should be rotated.
 #' @param force.draw.text \emph{Logical}, if \code{TRUE}, always draw text even
 #' if too big or too small
 #' @param print.CMA \emph{Logical}, should the CMA values be printed?
@@ -8520,6 +8537,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.opacity=0.3,
                                  alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                                  bw.plot=FALSE,                   # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                                 rotate.text=-60,                 # some text (e.g., axis labels) may be rotated by this much degrees
                                  force.draw.text=FALSE,           # if true, always draw text even if too big or too small
                                  min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
                                  max.patients.to.plot=100,        # maximum number of patients to plot
@@ -8619,6 +8637,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              observation.window.opacity=observation.window.opacity,
              alternating.bands.cols=alternating.bands.cols,
              bw.plot=bw.plot,
+             rotate.text=rotate.text,
              force.draw.text=force.draw.text,
              min.plot.size.in.characters.horiz=min.plot.size.in.characters.horiz,
              min.plot.size.in.characters.vert=min.plot.size.in.characters.vert,

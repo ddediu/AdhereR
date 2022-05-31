@@ -58,6 +58,7 @@
   observation.window.angle = -30,
   observation.window.opacity = 0.3,
   alternating.bands.cols = c("white", "gray95"),
+  rotate.text = -60,
   force.draw.text = FALSE,
   bw.plot = FALSE,
   min.plot.size.in.characters.horiz = 0,
@@ -200,6 +201,9 @@ opacity).}
 \item{alternating.bands.cols}{The colors of the alternating vertical bands
 distinguishing the patients; can be \code{NULL} = don't draw the bandes;
 or a vector of colors.}
+
+\item{rotate.text}{\emph{Numeric}, the angle by which certain text elements
+(e.g., axis labels) should be rotated.}
 
 \item{force.draw.text}{\emph{Logical}, if \code{TRUE}, always draw text even
 if too big or too small}

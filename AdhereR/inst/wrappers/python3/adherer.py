@@ -775,10 +775,19 @@ class CMA0(object):
              observation_window_col='yellow',
              observation_window_density=35,
              observation_window_angle=-30,
+             observation_window_opacity=0.3,
              show_real_obs_window_start=True,
              real_obs_window_density=35,
              real_obs_window_angle=30,
-             bw_plot=False):
+             alternating_bands_cols=["white", "gray95"],
+             rotate_text=-60,
+             force_draw_text=False,
+             min_plot_size_in_characters_horiz=0,
+             min_plot_size_in_characters_vert=0,
+             max_patients_to_plot=100,
+             bw_plot=False,
+             suppress_warnings=False,
+             do_not_draw_plot=False):
         """
         Plotting the CMA.
 
@@ -994,6 +1003,8 @@ class CMA0(object):
         observation_window_angle : numeric
             The angle (in degrees) of the hash lines marking the obervation window
             (defaults to -30)
+        observation_window_opacity : numeric
+            The opacity of the obervation window (defaults to 0.3)
         show_real_obs_window_start : bool
             For some CMAs, the real observation window starts at a different date:
             should we show it? (defaults to True)
@@ -1001,9 +1012,30 @@ class CMA0(object):
             Same as plot_observation_window_density (defaults to 35)
         real_obs_window_angle : numeric
             Same as plot_observation_window_angle (defaults to 30)
+        alternating_bands_cols : None, str or list
+            The colors of the alternating vertical bands across patients 
+            (None=don't draw any; can be >= 1 color) (defaults to ["white", "gray95"])
+        rotate_text : numeric
+            Some text (e.g., axis labels) may be rotated by this much degrees 
+            (defaults to -60)
+        force_draw_text : bool
+            If True, always draw text even if too big or too small (defaults to False)
+        min_plot_size_in_characters_horiz : numeric
+            The minimum plot size in characters, for the whole duration
+            (defaults to 0)
+        min_plot_size_in_characters_vert : numeric
+            The minimum plot size in characters, per event (and, if shown, per 
+            episode/sliding window) (defaults to 0)
+        max_patients_to_plot : numeric
+            The maximum number of patients to plot (defaults to 100)
         bw_plot : bool
             If True, override all user-given colors and replace them with a scheme
-            suitable for grayscale plotting (fedaults to False)
+            suitable for grayscale plotting (defaults to False)
+        suppress_warnings : bool
+            Suppress warnings? (defaults to False)
+        do_not_draw_plot : bool
+            Ff True, don't draw the actual plot, but only the legend (if required) 
+            (defaults to False)
 
         Returns
         -------
@@ -1081,7 +1113,7 @@ class CMA0(object):
                                     parallel_backend=self._parallel_backend,
                                     parallel_threads=self._parallel_threads,
 
-                                    suppress_warnings=self._suppress_warnings,
+                                    suppress_warnings=suppress_warnings,
                                     save_event_info=self._save_event_info,
 
                                     na_symbol_numeric=self._na_symbol_numeric,
@@ -1166,11 +1198,18 @@ class CMA0(object):
                                     plot_observation_window_col=observation_window_col,
                                     plot_observation_window_density=observation_window_density,
                                     plot_observation_window_angle=observation_window_angle,
+                                    plot_observation_window_opacity=observation_window_opacity,
                                     plot_show_real_obs_window_start=show_real_obs_window_start,
                                     plot_real_obs_window_density=real_obs_window_density,
                                     plot_real_obs_window_angle=real_obs_window_angle,
+                                    plot_alternating_bands_cols=alternating_bands_cols,
                                     plot_bw_plot=bw_plot,
-
+                                    plot_do_not_draw_plot=do_not_draw_plot,
+                                    plot_rotate_text=rotate_text,
+                                    plot_force_draw_text=force_draw_text,
+                                    plot_min_plot_size_in_characters_horiz=min_plot_size_in_characters_horiz,
+                                    plot_min_plot_size_in_characters_vert=min_plot_size_in_characters_vert,
+                                    plot_max_patients_to_plot=max_patients_to_plot,
                                     path_to_rscript=get_rscript_path(),
                                     path_to_data_directory=get_data_sharing_directory(),
                                     print_adherer_messages=self._print_adherer_messages)
@@ -1381,10 +1420,18 @@ class CMA0(object):
                       plot_observation_window_col='yellow',
                       plot_observation_window_density=35,
                       plot_observation_window_angle=-30,
+                      plot_observation_window_opacity=0.3,
                       plot_show_real_obs_window_start=True,
                       plot_real_obs_window_density=35,
                       plot_real_obs_window_angle=30,
+                      plot_alternating_bands_cols=["white", "gray95"],
+                      plot_rotate_text=-60,
+                      plot_force_draw_text=False,
+                      plot_min_plot_size_in_characters_horiz=0,
+                      plot_min_plot_size_in_characters_vert=0,
+                      plot_max_patients_to_plot=100,
                       plot_bw_plot=False,
+                      plot_do_not_draw_plot=False,
                       patient_to_plot=None,
                       path_to_rscript=get_rscript_path(),
                       path_to_data_directory=get_data_sharing_directory(),
@@ -1749,6 +1796,8 @@ class CMA0(object):
         plot_observation_window_angle : numeric
             The angle (in degrees) of the hash lines marking the obervation window
             (defaults to -30)
+        plot_observation_window_opacity : numeric
+            The opactiy of the obervation window (defaults to 0.3)
         plot_show_real_obs_window_start : bool
             For some CMAs, the real observation window starts at a different date:
             should we show it? (defaults to True)
@@ -1756,9 +1805,28 @@ class CMA0(object):
             Same as plot_observation_window_density (defaults to 35)
         plot_real_obs_window_angle : numeric
             Same as plot_observation_window_angle (defaults to 30)
+        plot_alternating_bands_cols : None, str or list
+            The colors of the alternating vertical bands across patients 
+            (None=don't draw any; can be >= 1 color) (defaults to ["white", "gray95"])
+        plot_rotate_text : numeric
+            Some text (e.g., axis labels) may be rotated by this much degrees 
+            (defaults to -60)
+        plot_force_draw_text : bool
+            If True, always draw text even if too big or too small (defaults to False)
+        plot_min_plot_size_in_characters_horiz : numeric
+            The minimum plot size in characters, for the whole duration
+            (defaults to 0)
+        plot_min_plot_size_in_characters_vert : numeric
+            The minimum plot size in characters, per event (and, if shown, per 
+            episode/sliding window) (defaults to 0)
+        plot_max_patients_to_plot : numeric
+            The maximum number of patients to plot (defaults to 100)
         plot_bw_plot : bool
             If True, override all user-given colors and replace them with a scheme
             suitable for grayscale plotting (fedaults to False)
+        plot_do_not_draw_plot : bool
+            If True, don't draw the actual plot, but only the legend (if required) 
+            (defaults to False)
         patient_to_plot : str
             The patient to plot in the interactive plotting (it can be interactively
             changed; deaults to None, i.e., the first patient)
@@ -2906,11 +2974,20 @@ class CMA0(object):
 
         if not isinstance(plot_observation_window_angle, numbers.Number):
             warnings.warn('adhereR: argument "plot_observation_window_angle" '
-                          'must be a positive number.')
+                          'must be a number.')
             parameters_file.close()
             return None
         parameters_file.write('plot.observation.window.angle = "' +
                               str(plot_observation_window_angle) + '"\n')
+
+        if not isinstance(plot_observation_window_opacity, numbers.Number) or \
+            plot_observation_window_opacity < 0:
+            warnings.warn('adhereR: argument "plot_observation_window_opacity" '
+                          'must be a positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.observation.window.opacity = "' +
+                              str(plot_observation_window_opacity) + '"\n')
 
         if not isinstance(plot_show_real_obs_window_start, bool):
             warnings.warn('adhereR: argument "plot_show_real_obs_window_start" must be a bool.')
@@ -2930,17 +3007,76 @@ class CMA0(object):
 
         if not isinstance(plot_real_obs_window_angle, numbers.Number):
             warnings.warn('adhereR: argument "plot_real_obs_window_angle" must '
-                          'be a positive number.')
+                          'be a number.')
             parameters_file.close()
             return None
         parameters_file.write('plot.real.obs.window.angle = "' +
                               str(plot_real_obs_window_angle) + '"\n')
+
+        if plot_alternating_bands_cols is None:
+            plot_alternating_bands_cols = ''
+        if isinstance(plot_alternating_bands_cols, list):
+            plot_alternating_bands_cols = str(plot_alternating_bands_cols)
+            plot_alternating_bands_cols = plot_alternating_bands_cols[1:(len(plot_alternating_bands_cols)-1)]
+        if not isinstance(plot_alternating_bands_cols, str):
+            warnings.warn('adhereR: argument "plot_alternating_bands_cols" must be a string, None or a list of strings.')
+            parameters_file.close()
+            return None
+        else:
+            parameters_file.write('plot.alternating.bands.cols = "' + plot_alternating_bands_cols + '"\n')
+    
+        if not isinstance(plot_rotate_text, numbers.Number):
+            warnings.warn('adhereR: argument "plot_rotate_text" must '
+                          'be a number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.rotate.text = "' +
+                              str(plot_rotate_text) + '"\n')
+
+        if not isinstance(plot_force_draw_text, bool):
+            warnings.warn('adhereR: argument "plot_force_draw_text" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.force.draw.text = "' + ('TRUE' if plot_force_draw_text else 'FALSE') + '"\n')
+
+        if not isinstance(plot_min_plot_size_in_characters_horiz, numbers.Number) or \
+            plot_min_plot_size_in_characters_horiz < 0:
+            warnings.warn('adhereR: argument "plot_min_plot_size_in_characters_horiz" must '
+                          'be a positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.min.plot.size.in.characters.horiz = "' +
+                              str(plot_min_plot_size_in_characters_horiz) + '"\n')
+
+        if not isinstance(plot_min_plot_size_in_characters_vert, numbers.Number) or \
+            plot_min_plot_size_in_characters_vert < 0:
+            warnings.warn('adhereR: argument "plot_min_plot_size_in_characters_vert" must '
+                          'be a positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.min.plot.size.in.characters.vert = "' +
+                              str(plot_min_plot_size_in_characters_vert) + '"\n')
+
+        if not isinstance(plot_max_patients_to_plot, numbers.Number) or \
+            plot_max_patients_to_plot < 0:
+            warnings.warn('adhereR: argument "plot_max_patients_to_plot" must '
+                          'be a positive number.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.max.patients.to.plot = "' +
+                              str(plot_max_patients_to_plot) + '"\n')
 
         if not isinstance(plot_bw_plot, bool):
             warnings.warn('adhereR: argument "plot_bw_plot" must be a bool.')
             parameters_file.close()
             return None
         parameters_file.write('plot.bw.plot = "' + ('TRUE' if plot_bw_plot else 'FALSE') + '"\n')
+
+        if not isinstance(plot_do_not_draw_plot, bool):
+            warnings.warn('adhereR: argument "plot_do_not_draw_plot" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('plot.do.not.draw.plot = "' + ('TRUE' if plot_do_not_draw_plot else 'FALSE') + '"\n')
 
         if patient_to_plot is None:
             parameters_file.write('patient_to_plot = ""\n')

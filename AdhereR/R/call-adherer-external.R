@@ -319,8 +319,22 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   .cast.param.to.type("plot.print.dose.centered",              "logical", TRUE);
   .cast.param.to.type("plot.plot.dose",                        "logical", TRUE);
   .cast.param.to.type("plot.lwd.event.max.dose",               "numeric", TRUE);
-  .cast.param.to.type("plot.plot.dose.lwd.across.medication.classes", "logical", TRUE);
-  .cast.param.to.type("plot.cma.cex",                          "numeric", TRUE);
+  .cast.param.to.type("plot.plot.dose.lwd.across.medication.classes",    "logical", TRUE);
+  .cast.param.to.type("plot.cma.cex",                                    "numeric", TRUE);
+  .cast.param.to.type("plot.partial.CMAs.as.timeseries.vspace",          "numeric", TRUE);
+  .cast.param.to.type("plot.partial.CMAs.as.timeseries.start.from.zero", "logical", TRUE);
+  .cast.param.to.type("plot.partial.CMAs.as.timeseries.lwd.interval",    "numeric", TRUE);
+  .cast.param.to.type("plot.partial.CMAs.as.timeseries.alpha.interval",  "numeric", TRUE);
+  .cast.param.to.type("plot.partial.CMAs.as.timeseries.show.0perc",      "logical", TRUE);
+  .cast.param.to.type("plot.partial.CMAs.as.timeseries.show.100perc",    "logical", TRUE);
+  .cast.param.to.type("plot.partial.CMAs.as.overlapping.alternate",      "logical", TRUE);
+  .cast.param.to.type("plot.observation.window.opacity",                 "numeric", TRUE);
+  .cast.param.to.type("plot.rotate.text",                                "numeric", TRUE);
+  .cast.param.to.type("plot.force.draw.text",                            "logical", TRUE);
+  .cast.param.to.type("plot.min.plot.size.in.characters.horiz",          "numeric", TRUE);
+  .cast.param.to.type("plot.min.plot.size.in.characters.vert",           "numeric", TRUE);
+  .cast.param.to.type("plot.max.patients.to.plot",                       "numeric", TRUE);
+  .cast.param.to.type("plot.do.not.draw.plot",                           "logical", TRUE);
 
   # col.cats is special in that it can be a function name or a color name:
   col.cats <- trimws(.get.param.value("plot.col.cats", type="character", required=FALSE));
@@ -364,6 +378,24 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
   # plot.partial.CMAs.as is a bit special:
   if( (plot.partial.CMAs.as <- trimws(.get.param.value("plot.plot.partial.CMAs.as", type="character", default.value="", required=FALSE))) == "" ) plot.partial.CMAs.as <- NULL;
+
+  # plot.partial.CMAs.as is special in that it might be a vector of strings:
+  alternating.bands.cols <- trimws(.get.param.value("plot.alternating.bands.cols", type="character", default.value="", required=FALSE));
+  if( alternating.bands.cols == "" )
+  {
+    alternating.bands.cols <- NA;
+  } else
+  {
+    # see if it is a list of strings:
+    alternating.bands.cols <- strsplit(alternating.bands.cols, ",", fixed=TRUE)[[1]];
+    if( length(alternating.bands.cols) == 1 )
+    {
+      alternating.bands.cols <- .remove.spaces.and.quotes(alternating.bands.cols);
+    } else
+    {
+      alternating.bands.cols <- vapply(alternating.bands.cols, .remove.spaces.and.quotes, character(1));
+    }
+  }
 
   if( suppressWarnings(!is.na(as.numeric(params.as.list[["parallel.threads"]]))) )
   {
@@ -549,6 +581,9 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
       # plot.partial.CMAs.as has already been parsed:
       if( "plot.partial.CMAs.as" %in% names(plotting.params) ) plotting.params[["plot.partial.CMAs.as"]] <- plot.partial.CMAs.as;
+
+      # alternating.bands.cols has already been parsed:
+      plotting.params[["alternating.bands.cols"]] <- alternating.bands.cols;
 
       # Get the info about the plot exporting process:
       plot.file.dir <- .get.param.value("plot.save.to", type="character", default.value=shared.data.directory, required=FALSE);

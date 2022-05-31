@@ -88,6 +88,7 @@
   observation.window.opacity = 0.3,
   alternating.bands.cols = c("white", "gray95"),
   bw.plot = FALSE,
+  rotate.text = -60,
   force.draw.text = FALSE,
   min.plot.size.in.characters.horiz = 0,
   min.plot.size.in.characters.vert = 0,
@@ -192,6 +193,7 @@
   observation.window.opacity = 0.3,
   alternating.bands.cols = c("white", "gray95"),
   bw.plot = FALSE,
+  rotate.text = -60,
   force.draw.text = FALSE,
   min.plot.size.in.characters.horiz = 0,
   min.plot.size.in.characters.vert = 0,
@@ -364,6 +366,9 @@ or a vector of colors.}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
+
+\item{rotate.text}{\emph{Numeric}, the angle by which certain text elements
+(e.g., axis labels) should be rotated.}
 
 \item{force.draw.text}{\emph{Logical}, if \code{TRUE}, always draw text even
 if too big or too small}

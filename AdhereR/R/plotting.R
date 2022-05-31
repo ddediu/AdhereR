@@ -1027,7 +1027,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        highlight.followup.window=TRUE, followup.window.col="green",
                        highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                        show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for CMA8, the real observation window starts at a different date
-                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
+                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL or NA=don't draw any; can be >= 1 color)
                        rotate.text=-60,                       # some text (e.g., axis labels) may be rotated by this much degrees
                        force.draw.text=FALSE,                 # if true, always draw text even if too big or too small
                        bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
@@ -3392,7 +3392,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         ##
 
         # Draw the alternating bands
-        if( !is.null(alternating.bands.cols) )
+        if( !is.null(alternating.bands.cols) && !is.na(alternating.bands.cols) )
         {
           if( .do.R ) # Rplot:
           {

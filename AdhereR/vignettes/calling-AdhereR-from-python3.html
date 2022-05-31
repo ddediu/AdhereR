@@ -12,7 +12,7 @@
 
 <meta name="author" content="Dan Dediu" />
 
-<meta name="date" content="2022-05-27" />
+<meta name="date" content="2022-05-31" />
 
 <title>Calling AdhereR from Python 3</title>
 
@@ -335,7 +335,7 @@ code > span.er { color: #a61717; background-color: #e3d2d2; }
 <h1 class="title toc-ignore">Calling <code>AdhereR</code> from
 <code>Python 3</code></h1>
 <h4 class="author">Dan Dediu</h4>
-<h4 class="date">2022-05-27</h4>
+<h4 class="date">2022-05-31</h4>
 
 
 
@@ -1778,107 +1778,135 @@ regular interval as dates or days?]</td>
 <td>[show the CMA type]</td>
 </tr>
 <tr class="even">
-<td><code>plot.xlab</code></td>
+<td><code>plot.xlab.dates</code></td>
 <td>NO</td>
-<td><code>{&#39;dates&#39;:´&#39;Date&#39;, &#39;days&#39;:&#39;Days&#39;}</code></td>
-<td>[dictionary specifying the x labels]</td>
+<td><code>&quot;Date&quot;</code></td>
+<td>[the x-label when showing the dates]</td>
 </tr>
 <tr class="odd">
-<td><code>plot.ylab</code></td>
+<td><code>plot.xlab.days</code></td>
 <td>NO</td>
-<td><code>{&#39;withoutCMA&#39;=&#39;patient&#39;, &#39;withCMA&#39;=&#39;patient (&amp; CMA)&#39;}</code></td>
-<td>[dictionary specifying the y labels]</td>
+<td><code>&quot;Days&quot;</code></td>
+<td>[the x-label when showing the number of days]</td>
 </tr>
 <tr class="even">
-<td><code>plot.title</code></td>
+<td><code>plot.ylab.withoutcma</code></td>
 <td>NO</td>
-<td><code>{&#39;aligned&#39;=&#39;Event patterns (all patients aligned)&#39;, &#39;notaligned&#39;=&#39;Event patterns&#39;}</code></td>
-<td>[dictionary specifying the title]</td>
+<td><code>&quot;patient&quot;</code></td>
+<td>[the y-label when there’s no CMA]</td>
 </tr>
 <tr class="odd">
+<td><code>plot.ylab.withcma</code></td>
+<td>NO</td>
+<td><code>&quot;patient (&amp; CMA)&quot;</code></td>
+<td>[the y-label when there’s a CMA]</td>
+</tr>
+<tr class="even">
+<td><code>plot.title.aligned</code></td>
+<td>NO</td>
+<td><code>&quot;Event patterns (all patients aligned)&quot;</code></td>
+<td>[the title when patients are aligned]</td>
+</tr>
+<tr class="odd">
+<td><code>plot.title.notaligned</code></td>
+<td>NO</td>
+<td><code>&quot;Event patterns&quot;</code></td>
+<td>[the title when patients are not aligned]</td>
+</tr>
+<tr class="even">
 <td><code>plot.col.cats</code></td>
 <td>NO</td>
 <td><code>&quot;rainbow()&quot;</code></td>
 <td>[single color or a function name (followed by “()”, e.g.,
 “rainbow()”) mapping the categories to colors; for security reasons, the
-list of functions currently supported is: rainbow, heat.colors,
-terrain.colors, topo.colors and cm.colors from base R, and viridis,
-magma, inferno, plasma, cividis, rocket, mako and turbo from viridisLite
-(if installed)]</td>
+list of functions currently supported is: <code>rainbow</code>,
+<code>heat.colors</code>, <code>terrain.colors</code>,
+<code>topo.colors</code> and <code>cm.colors</code> from base
+<code>R</code>, and <code>viridis</code>, <code>magma</code>,
+<code>inferno</code>, <code>plasma</code>, <code>cividis</code>,
+<code>rocket</code>, <code>mako</code> and <code>turbo</code> from
+<code>viridisLite</code> (if installed)]</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>plot.unspecified.category.label</code></td>
 <td>NO</td>
 <td><code>&quot;drug&quot;</code></td>
 <td>[the label of the unspecified category of medication]</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>plot.medication.groups.to.plot</code></td>
 <td>NO</td>
-<td><code>&quot;NULL&quot;</code></td>
+<td><code>&quot;&quot;</code></td>
 <td>[the names of the medication groups to plot (by default, all)]</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>plot.medication.groups.separator.show</code></td>
 <td>NO</td>
 <td><code>&quot;TRUE&quot;</code></td>
 <td>[group medication events by patient?]</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>plot.medication.groups.separator.lty</code></td>
 <td>NO</td>
 <td><code>&quot;solid&quot;</code></td>
 <td></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>plot.medication.groups.separator.lwd</code></td>
 <td>NO</td>
 <td><code>&quot;2&quot;</code></td>
 <td></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>plot.medication.groups.separator.color</code></td>
 <td>NO</td>
 <td><code>&quot;blue&quot;</code></td>
 <td></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>plot.medication.groups.allother.label</code></td>
 <td>NO</td>
 <td><code>&quot;*&quot;</code></td>
 <td>[the label to use for the __ALL_OTHERS__ medication class (defaults
 to *)]</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>plot.lty.event</code></td>
 <td>NO</td>
 <td><code>&quot;solid&quot;</code></td>
 <td>[style parameters controlling the plotting of events]</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>plot.lwd.event</code></td>
 <td>NO</td>
 <td><code>&quot;2&quot;</code></td>
 <td></td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td><code>plot.pch.start.event</code></td>
 <td>NO</td>
 <td><code>&quot;15&quot;</code></td>
 <td></td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td><code>plot.pch.end.event</code></td>
 <td>NO</td>
 <td><code>&quot;16&quot;</code></td>
 <td></td>
 </tr>
+<tr class="even">
+<td><code>plot.show.event.intervals</code></td>
+<td>NO</td>
+<td><code>&quot;TRUE&quot;</code></td>
+<td>[show the actual prescription intervals]</td>
+</tr>
 <tr class="odd">
 <td><code>plot.show.overlapping.event.intervals</code></td>
 <td>NO</td>
 <td><code>&quot;first&quot;</code></td>
-<td>[show the actual prescription intervals; can be: “first”, “last”,
-“min gap”, “max gap”, “average”]</td>
+<td>[how to plot overlapping event intervals (relevant for sliding
+windows and per episode); can be: “first”, “last”, “min gap”, “max gap”,
+“average”]</td>
 </tr>
 <tr class="even">
 <td><code>plot.plot.events.vertically.displaced</code></td>
@@ -2182,20 +2210,22 @@ date]</td>
 <td><code>plot.alternating.bands.cols</code></td>
 <td>NO</td>
 <td><code>[&quot;white&quot;, &quot;gray95&quot;]</code></td>
-<td>[the colors of the alternating vertical bands across patients
-(<code>None</code>=don’t draw any; can be &gt;= 1 color)]</td>
+<td>[the colors of the alternating vertical bands across patients;
+’’=don’t draw any; if &gt;= 1 color then a list of comma-separated
+strings]</td>
 </tr>
 <tr class="even">
 <td><code>plot.rotate.text</code></td>
 <td>NO</td>
 <td><code>&quot;-60&quot;</code></td>
-<td></td>
+<td>[some text (e.g., axis labels) may be rotated by this much
+degrees]</td>
 </tr>
 <tr class="odd">
 <td><code>plot.force.draw.text</code></td>
 <td>NO</td>
 <td><code>&quot;FALSE&quot;</code></td>
-<td></td>
+<td>[if true, always draw text even if too big or too small]</td>
 </tr>
 <tr class="even">
 <td><code>plot.bw.plot</code></td>
@@ -2226,7 +2256,7 @@ them with a scheme suitable for grayscale plotting]</td>
 <td><code>plot.suppress.warnings</code></td>
 <td>NO</td>
 <td><code>&quot;FALSE&quot;</code></td>
-<td></td>
+<td>[suppress warnings?]</td>
 </tr>
 <tr class="odd">
 <td><code>plot.do.not.draw.plot</code></td>

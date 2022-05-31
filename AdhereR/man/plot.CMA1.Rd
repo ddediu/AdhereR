@@ -70,7 +70,9 @@
   plot.dose = FALSE,
   lwd.event.max.dose = 8,
   plot.dose.lwd.across.medication.classes = FALSE,
+  alternating.bands.cols = c("white", "gray95"),
   bw.plot = FALSE,
+  rotate.text = -60,
   force.draw.text = FALSE,
   min.plot.size.in.characters.horiz = 0,
   min.plot.size.in.characters.vert = 0,
@@ -227,8 +229,15 @@ the line width of the even is scaled relative to all medication classes (i.e.,
 relative to the global minimum and maximum doses), otherwise it is scale
 relative only to its medication class.}
 
+\item{alternating.bands.cols}{The colors of the alternating vertical bands
+distinguishing the patients; can be \code{NULL} = don't draw the bandes;
+or a vector of colors.}
+
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
+
+\item{rotate.text}{\emph{Numeric}, the angle by which certain text elements
+(e.g., axis labels) should be rotated.}
 
 \item{force.draw.text}{\emph{Logical}, if \code{TRUE}, always draw text even
 if too big or too small}
