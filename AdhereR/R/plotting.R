@@ -1058,6 +1058,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   # There is a confusion in the help concerning align.first.event.at.zero, so negate it:
   align.first.event.at.zero <- !align.first.event.at.zero;
 
+  if( !is.null(medication.groups.to.plot) && length(medication.groups.to.plot) == 1 && is.na(medication.groups.to.plot) ) medication.groups.to.plot <- NULL; # NA has the same effect as NULL
 
   #
   # Initialize the SVG file content ####

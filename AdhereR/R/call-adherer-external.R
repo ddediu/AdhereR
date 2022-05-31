@@ -321,13 +321,13 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   .cast.param.to.type("plot.lwd.event.max.dose",               "numeric", TRUE);
   .cast.param.to.type("plot.plot.dose.lwd.across.medication.classes",    "logical", TRUE);
   .cast.param.to.type("plot.cma.cex",                                    "numeric", TRUE);
-  .cast.param.to.type("plot.partial.CMAs.as.timeseries.vspace",          "numeric", TRUE);
-  .cast.param.to.type("plot.partial.CMAs.as.timeseries.start.from.zero", "logical", TRUE);
-  .cast.param.to.type("plot.partial.CMAs.as.timeseries.lwd.interval",    "numeric", TRUE);
-  .cast.param.to.type("plot.partial.CMAs.as.timeseries.alpha.interval",  "numeric", TRUE);
-  .cast.param.to.type("plot.partial.CMAs.as.timeseries.show.0perc",      "logical", TRUE);
-  .cast.param.to.type("plot.partial.CMAs.as.timeseries.show.100perc",    "logical", TRUE);
-  .cast.param.to.type("plot.partial.CMAs.as.overlapping.alternate",      "logical", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.vspace",          "numeric", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.start.from.zero", "logical", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.lwd.interval",    "numeric", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.alpha.interval",  "numeric", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.show.0perc",      "logical", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.show.100perc",    "logical", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.overlapping.alternate",      "logical", TRUE);
   .cast.param.to.type("plot.observation.window.opacity",                 "numeric", TRUE);
   .cast.param.to.type("plot.rotate.text",                                "numeric", TRUE);
   .cast.param.to.type("plot.force.draw.text",                            "logical", TRUE);
@@ -374,7 +374,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   title.main <- c("aligned"=title.aligned, "notaligned"=title.notaligned);
 
   # medication.groups.to.plot is a bit special:
-  if( (medication.groups.to.plot <- trimws(.get.param.value("plot.medication.groups.to.plot", type="character", default.value="", required=FALSE))) == "" ) medication.groups.to.plot <- NULL;
+  if( (medication.groups.to.plot <- trimws(.get.param.value("plot.medication.groups.to.plot", type="character", default.value="", required=FALSE))) == "" ) medication.groups.to.plot <- NA; # NA and NULL are equivalent
 
   # plot.partial.CMAs.as is a bit special:
   if( (plot.partial.CMAs.as <- trimws(.get.param.value("plot.plot.partial.CMAs.as", type="character", default.value="", required=FALSE))) == "" ) plot.partial.CMAs.as <- NULL;
@@ -644,7 +644,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
       {
         dev.off(); # close the plotting device anyway
         cat(msg); cat(paste0(msg,"\n"), file=msg.file, append=TRUE);
-        quit(save="no", status=0, runLast=FALSE); # Some plotting error seems to have occured
+        quit(save="no", status=0, runLast=FALSE); # Some plotting error seems to have occurred
       }
 
       # close the plotting device:
