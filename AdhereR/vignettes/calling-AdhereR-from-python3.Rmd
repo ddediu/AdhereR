@@ -1033,6 +1033,7 @@ The parameters for these functions are (*N.B.*: the plotting parameters can also
 | `ID.colname` | YES  |  | 
 | `event.date.colname` | YES |  | 
 | `event.duration.colname` | YES |  | 
+| `medication.groups` | NO | `""` | [a named vector of medication group definitions, the name of a column in the data that defines the groups, or ''; the medication groups are flattened into column __MED_GROUP_ID] |
 | `followup.window.start.type` | NO | `"numeric"` | `"numeric"`, `"character"`, `"date"` | 
 | `followup.window.start` | NO | `0` |  | 
 | `followup.window.start.unit` | NO | `"days"` | `"days"`, `"weeks"`, `"months"`, `"years"` | 

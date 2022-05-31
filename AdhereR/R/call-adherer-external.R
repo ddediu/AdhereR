@@ -397,6 +397,9 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
     }
   }
 
+  # medication.groups is a bit special:
+  if( (medication.groups <- trimws(.get.param.value("medication.groups", type="character", default.value="", required=FALSE))) == "" ) params.as.list[["medication.groups"]] <- NULL;
+
   if( suppressWarnings(!is.na(as.numeric(params.as.list[["parallel.threads"]]))) )
   {
     params.as.list[["parallel.threads"]] <- as.numeric(params.as.list[["parallel.threads"]]);
@@ -435,6 +438,9 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
   # add the data to the list of params as well:
   params.as.list <- c(list("data"=data), params.as.list);
+
+  # medication groups: always flatten them:
+  params.as.list[["flatten.medication.groups"]] <- TRUE; params.as.list[["medication.groups.colname"]] <- "__MED_GROUP_ID";
 
   # call the appropriate function:
   function.to.call <- .get.param.value("function", type="character", required=TRUE);

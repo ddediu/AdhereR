@@ -280,6 +280,7 @@ class CMA0(object):
                  event_duration_colname,
                  event_daily_dose_colname=None,
                  medication_class_colname=None,
+                 medication_groups=None,
                  carryover_within_obs_window=False,
                  carryover_into_obs_window=False,
                  carry_only_for_same_medication=False,
@@ -338,6 +339,7 @@ class CMA0(object):
         self._event_duration_colname = event_duration_colname
         self._event_daily_dose_colname = event_daily_dose_colname
         self._medication_class_colname = medication_class_colname
+        self._medication_groups = medication_groups
         self._carryover_within_obs_window = carryover_within_obs_window
         self._carryover_into_obs_window = carryover_into_obs_window
         self._carry_only_for_same_medication = carry_only_for_same_medication
@@ -479,6 +481,8 @@ class CMA0(object):
                                     event_duration_colname=self._event_duration_colname,
                                     event_daily_dose_colname=self._event_daily_dose_colname,
                                     medication_class_colname=self._medication_class_colname,
+                                    
+                                    medication_groups=self._medication_groups,
 
                                     carryover_within_obs_window=self._carryover_within_obs_window,
                                     carryover_into_obs_window=self._carryover_into_obs_window,
@@ -591,6 +595,8 @@ class CMA0(object):
                                     event_duration_colname=self._event_duration_colname,
                                     event_daily_dose_colname=self._event_daily_dose_colname,
                                     medication_class_colname=self._medication_class_colname,
+                                    
+                                    medication_groups=self._medication_groups,
 
                                     carryover_within_obs_window=self._carryover_within_obs_window,
                                     carryover_into_obs_window=self._carryover_into_obs_window,
@@ -1051,6 +1057,8 @@ class CMA0(object):
                                     event_duration_colname=self._event_duration_colname,
                                     event_daily_dose_colname=self._event_daily_dose_colname,
                                     medication_class_colname=self._medication_class_colname,
+                                    
+                                    medication_groups=self._medication_groups,
 
                                     carryover_within_obs_window=self._carryover_within_obs_window,
                                     carryover_into_obs_window=self._carryover_into_obs_window,
@@ -1284,6 +1292,7 @@ class CMA0(object):
                       event_duration_colname,
                       event_daily_dose_colname=None,
                       medication_class_colname=None,
+                      medication_groups=None,
                       carryover_within_obs_window=False,
                       carryover_into_obs_window=False,
                       carry_only_for_same_medication=False,
@@ -1461,6 +1470,9 @@ class CMA0(object):
         medication_class_colname : str
             The name of the column in dataset containing the event medication
             type/class (defaults to None, i.e. undefined)
+        medication_groups : None or str
+            The name of a column in the data that defines the groups, or None 
+            (defaults to None)
         carryover_within_obs_window : bool
             Carry over within the observaion window? (defaults to False)
         carryover_into_obs_window : bool
@@ -1925,6 +1937,7 @@ class CMA0(object):
             return None
         else:
             parameters_file.write('event.daily.dose.colname = "' + event_daily_dose_colname + '"\n')
+            
         if medication_class_colname is None:
             parameters_file.write('medication.class.colname = ""\n')
         elif not medication_class_colname in dataset.columns.values.tolist():
@@ -1933,6 +1946,15 @@ class CMA0(object):
             return None
         else:
             parameters_file.write('medication.class.colname = "' + medication_class_colname + '"\n')
+
+        if medication_groups is None:
+            parameters_file.write('medication.groups = ""\n')
+        elif not medication_groups in dataset.columns.values.tolist():
+            warnings.warn('adhereR: argument "medication_groups" (' +
+                          medication_groups + ') must be a column in "dataset".')
+            return None
+        else:
+            parameters_file.write('medication.groups = "' + medication_groups + '"\n')
 
 
         if (function in ('CMA_per_episode', 'CMA_sliding_window')) and \
@@ -3183,6 +3205,7 @@ class CMA1(CMA0):
                  id_colname,
                  event_date_colname,
                  event_duration_colname,
+                 medication_groups=None,
                  followup_window_start_type='numeric',
                  followup_window_start=0,
                  followup_window_start_unit='days',
@@ -3218,6 +3241,7 @@ class CMA1(CMA0):
                          id_colname=id_colname,
                          event_date_colname=event_date_colname,
                          event_duration_colname=event_duration_colname,
+                         medication_groups=medication_groups,
                          followup_window_start_type=followup_window_start_type,
                          followup_window_start=followup_window_start,
                          followup_window_start_unit=followup_window_start_unit,
@@ -3254,6 +3278,7 @@ class CMA1(CMA0):
                                        id_colname=self._id_colname,
                                        event_date_colname=self._event_date_colname,
                                        event_duration_colname=self._event_duration_colname,
+                                       medication_groups=self._medication_groups,
                                        followup_window_start_type=self._followup_window_start_type,
                                        followup_window_start=self._followup_window_start,
                                        followup_window_start_unit=self._followup_window_start_unit,
@@ -3354,6 +3379,7 @@ class CMA5(CMA0):
                  event_duration_colname,
                  event_daily_dose_colname,
                  medication_class_colname,
+                 medication_groups=None,
                  carry_only_for_same_medication=False,
                  consider_dosage_change=False,
                  followup_window_start_type='numeric',
@@ -3393,6 +3419,7 @@ class CMA5(CMA0):
                          event_duration_colname=event_duration_colname,
                          event_daily_dose_colname=event_daily_dose_colname,
                          medication_class_colname=medication_class_colname,
+                         medication_groups=medication_groups,
                          carry_only_for_same_medication=carry_only_for_same_medication,
                          consider_dosage_change=consider_dosage_change,
                          followup_window_start_type=followup_window_start_type,
@@ -3433,6 +3460,7 @@ class CMA5(CMA0):
                                        event_duration_colname=self._event_duration_colname,
                                        event_daily_dose_colname=self._event_daily_dose_colname,
                                        medication_class_colname=self._medication_class_colname,
+                                       medication_groups=self._medication_groups,
                                        carry_only_for_same_medication=\
                                            self._carry_only_for_same_medication,
                                        consider_dosage_change=self._consider_dosage_change,
@@ -3547,6 +3575,7 @@ class CMAPerEpisode(CMA0):
                  event_duration_colname,
                  event_daily_dose_colname,
                  medication_class_colname,
+                 medication_groups=None,
                  carry_only_for_same_medication=False,
                  consider_dosage_change=False,
                  medication_change_means_new_treatment_episode=False,
@@ -3589,6 +3618,7 @@ class CMAPerEpisode(CMA0):
                          event_duration_colname=event_duration_colname,
                          event_daily_dose_colname=event_daily_dose_colname,
                          medication_class_colname=medication_class_colname,
+                         medication_groups=medication_groups,
                          carry_only_for_same_medication=carry_only_for_same_medication,
                          consider_dosage_change=consider_dosage_change,
                          medication_change_means_new_treatment_episode=\
@@ -3634,6 +3664,7 @@ class CMAPerEpisode(CMA0):
                                        event_duration_colname=self._event_duration_colname,
                                        event_daily_dose_colname=self._event_daily_dose_colname,
                                        medication_class_colname=self._medication_class_colname,
+                                       medication_groups=self._medication_groups,
                                        carry_only_for_same_medication=\
                                            self._carry_only_for_same_medication,
                                        consider_dosage_change=self._consider_dosage_change,
@@ -3714,6 +3745,7 @@ class CMASlidingWindow(CMA0):
                  event_duration_colname,
                  event_daily_dose_colname,
                  medication_class_colname,
+                 medication_groups=None,
                  carry_only_for_same_medication=False,
                  consider_dosage_change=False,
                  followup_window_start_type='numeric',
@@ -3763,6 +3795,7 @@ class CMASlidingWindow(CMA0):
                          event_duration_colname=event_duration_colname,
                          event_daily_dose_colname=event_daily_dose_colname,
                          medication_class_colname=medication_class_colname,
+                         medication_groups=medication_groups,
                          carry_only_for_same_medication=carry_only_for_same_medication,
                          consider_dosage_change=consider_dosage_change,
                          followup_window_start_type=followup_window_start_type,
@@ -3814,6 +3847,7 @@ class CMASlidingWindow(CMA0):
                                        event_duration_colname=self._event_duration_colname,
                                        event_daily_dose_colname=self._event_daily_dose_colname,
                                        medication_class_colname=self._medication_class_colname,
+                                       medication_groups=self._medication_groups,
                                        carry_only_for_same_medication=\
                                            self._carry_only_for_same_medication,
                                        consider_dosage_change=self._consider_dosage_change,
