@@ -3341,7 +3341,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         #return (data.frame(r1s, r2s));
         return (data.frame(r1, r2));
       }
-      proc.inner.event.info <- proc.inner.event.info[ , .combine.overlapping.events(.SD), by=list(PATIENT_ID, DATE, PERDAY, CATEGORY, DURATION)];
+      proc.inner.event.info <- proc.inner.event.info[ , .combine.overlapping.events(.SD),
+                                                      by=c(col.patid, cma$event.date.colname, cma$event.daily.dose.colname, cma$medication.class.colname, cma$event.duration.colname)];
       colnames(proc.inner.event.info)[(-1:0)+ncol(proc.inner.event.info)] <- c("event.interval", "gap.days");
       proc.inner.event.info2 <- cma$data; proc.inner.event.info2$.ORIG.ROW.ORDER <- 1:nrow(proc.inner.event.info2);
       proc.inner.event.info2 <- merge(proc.inner.event.info2, proc.inner.event.info, all.x=TRUE, all.y=FALSE);
