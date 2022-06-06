@@ -311,6 +311,7 @@ class CMA0(object):
                  sliding_window_step_unit='days',
                  sliding_window_no_steps=None,
                  cma_to_apply=None,
+                 return_inner_event_info=False,
                  date_format='%m/%d/%Y',
                  event_interval_colname='event.interval',
                  gap_days_colname='gap.days',
@@ -372,6 +373,7 @@ class CMA0(object):
         self._sliding_window_no_steps = sliding_window_no_steps
         self._cma_to_apply = cma_to_apply
         self._date_format = date_format
+        self._return_inner_event_info = return_inner_event_info
         self._event_interval_colname = event_interval_colname
         self._gap_days_colname = gap_days_colname
         self._force_na_cma_for_failed_patients = force_na_cma_for_failed_patients
@@ -399,6 +401,7 @@ class CMA0(object):
         self._plot_image = None
         self._computation_return_code = None
         self._computation_messages = None
+        self._inner_event_info = None
 
     # Printing:
     def __repr__(self):
@@ -530,6 +533,8 @@ class CMA0(object):
                                     cma_to_apply=self._cma_to_apply,
 
                                     date_format=self._date_format,
+                                    
+                                    return_inner_event_info=self._return_inner_event_info,
 
                                     event_interval_colname=self._event_interval_colname,
                                     gap_days_colname=self._gap_days_colname,
@@ -572,6 +577,8 @@ class CMA0(object):
         # Save the results:
         if 'EVENTINFO' in result:
             self._event_info = result['EVENTINFO']
+        if 'INNEREVENTINFO' in result:
+            self._inner_event_info = result['INNEREVENTINFO']
 
         # Return the results:
         return self.get_event_info()
@@ -644,6 +651,8 @@ class CMA0(object):
                                     cma_to_apply=self._cma_to_apply,
 
                                     date_format=self._date_format,
+                                    
+                                    return_inner_event_info=self._return_inner_event_info,
 
                                     event_interval_colname=self._event_interval_colname,
                                     gap_days_colname=self._gap_days_colname,
@@ -1161,6 +1170,8 @@ class CMA0(object):
                                     plot_pch_start_event=pch_start_event,
                                     plot_pch_end_event=pch_end_event,
                                     plot_show_event_intervals=show_event_intervals,
+                                    return_inner_event_info=(show_event_intervals and \
+                                                             self._adherer_function in ('CMA_per_episode', 'CMA_sliding_window')),
                                     plot_show_overlapping_event_intervals=show_overlapping_event_intervals,
                                     plot_plot_events_vertically_displaced=plot_events_vertically_displaced,
                                     plot_print_dose=print_dose,
@@ -1324,6 +1335,7 @@ class CMA0(object):
                       sliding_window_no_steps=None,
                       cma_to_apply=None,
                       date_format='%m/%d/%Y',
+                      return_inner_event_info=False,
                       event_interval_colname='event.interval',
                       gap_days_colname='gap.days',
                       force_na_cma_for_failed_patients=True,
@@ -1556,6 +1568,10 @@ class CMA0(object):
         date_format : str
             The date format to be used throughout the call (in the standard
             strftime() format)
+        return_inner_event_info : bool
+            Applies only to sliding windows and per episodes; if True, also
+            returns the inner_event_info structure needed for plotting the
+            event intervals and gaps (defaults to False)
         event_interval_colname : str
             What name to use for the internal column saving the event intervals
             (defaults to 'event.interval')
@@ -1863,6 +1879,9 @@ class CMA0(object):
                 - CMA: a pandas.Dataframe containing the computed CMAs
                 - EVENTINFO: if explicitely requested (save_event_info == True),
                 a pandas.Dataframe containing the event intervals and gaps
+                - INNEREVENTINFO: if explicitely requested (return_inner_event_info == True),
+                a pandas.Dataframe containing the event intervals and gaps for
+                sliding windows and per episode only
 
         """
         # Check that the Rscript and data sharing paths work:
@@ -2211,6 +2230,14 @@ class CMA0(object):
         parameters_file.write('date.format = "' + date_format + '"\n')
 
 
+        if not isinstance(return_inner_event_info, bool):
+            warnings.warn('adhereR: argument "return_inner_event_info" must be a bool.')
+            parameters_file.close()
+            return None
+        parameters_file.write('return.inner.event.info = "' +
+                              ('TRUE' if return_inner_event_info else 'FALSE') + '"\n')
+
+
         # Auxiliary columns for event intervals computation:
         if not isinstance(event_interval_colname, str):
             warnings.warn('adhereR: argument "event_interval_colname" must be '
@@ -2316,37 +2343,37 @@ class CMA0(object):
 
         # Caller-specific conventions:
         if not isinstance(na_symbol_numeric, str):
-            warnings.warn('adhereR: argument "save_event_info" must be a bool.')
+            warnings.warn('adhereR: argument "na_symbol_numeric" must be a string.')
             parameters_file.close()
             return None
         parameters_file.write('NA.SYMBOL.NUMERIC = "' + na_symbol_numeric + '"\n')
 
         if not isinstance(na_symbol_string, str):
-            warnings.warn('adhereR: argument "save_event_info" must be a bool.')
+            warnings.warn('adhereR: argument "na_symbol_string" must be a string.')
             parameters_file.close()
             return None
         parameters_file.write('NA.SYMBOL.STRING = "' + na_symbol_string + '"\n')
 
         if not isinstance(logical_symbol_true, str):
-            warnings.warn('adhereR: argument "save_event_info" must be a bool.')
+            warnings.warn('adhereR: argument "logical_symbol_true" must be a string.')
             parameters_file.close()
             return None
         parameters_file.write('LOGICAL.SYMBOL.TRUE = "' + logical_symbol_true + '"\n')
 
         if not isinstance(logical_symbol_false, str):
-            warnings.warn('adhereR: argument "save_event_info" must be a bool.')
+            warnings.warn('adhereR: argument "logical_symbol_false" must be a string.')
             parameters_file.close()
             return None
         parameters_file.write('LOGICAL.SYMBOL.FALSE = "' + logical_symbol_false + '"\n')
 
-        if not isinstance(colnames_dot_symbol, str):
-            warnings.warn('adhereR: argument "save_event_info" must be a bool.')
+        if not isinstance(logical_symbol_false, str):
+            warnings.warn('adhereR: argument "logical_symbol_false" must be a string.')
             parameters_file.close()
             return None
         parameters_file.write('COLNAMES.DOT.SYMBOL = "' + colnames_dot_symbol + '"\n')
 
         if not isinstance(colnames_start_dot, str):
-            warnings.warn('adhereR: argument "save_event_info" must be a bool.')
+            warnings.warn('adhereR: argument "colnames_start_dot" must be a string.')
             parameters_file.close()
             return None
         parameters_file.write('COLNAMES.START.DOT = "' + colnames_start_dot + '"\n')
@@ -3166,6 +3193,15 @@ class CMA0(object):
                                                                      if plot_show else
                                                                      '') +
                                                                     '.csv'), sep='\t', header=0)
+            if function in ('CMA_per_episode', 'CMA_sliding_window'):
+                # Possibly expecting INNEREVENTINFO.csv
+                if return_inner_event_info:
+                    ret_val['INNEREVENTINFO'] = pandas.read_csv(os.path.join(path_to_data_directory,
+                                                                             'INNEREVENTINFO' +
+                                                                             ('-plotted'
+                                                                              if plot_show else
+                                                                              '') +
+                                                                             '.csv'), sep='\t', header=0)
         elif function == 'plot_interactive_cma':
             # Expecting nothing really...
             pass
@@ -3594,6 +3630,7 @@ class CMAPerEpisode(CMA0):
                  observation_window_duration=365*2,
                  observation_window_duration_unit='days',
                  date_format='%m/%d/%Y',
+                 return_inner_event_info=False,
                  event_interval_colname='event.interval',
                  gap_days_colname='gap.days',
                  force_na_cma_for_failed_patients=True,
@@ -3639,6 +3676,7 @@ class CMAPerEpisode(CMA0):
                          observation_window_duration_unit=observation_window_duration_unit,
                          cma_to_apply=cma_to_apply,
                          date_format=date_format,
+                         return_inner_event_info=return_inner_event_info,
                          event_interval_colname=event_interval_colname,
                          gap_days_colname=gap_days_colname,
                          force_na_cma_for_failed_patients=force_na_cma_for_failed_patients,
@@ -3694,6 +3732,7 @@ class CMAPerEpisode(CMA0):
                                            self._observation_window_duration_unit,
                                        cma_to_apply=self._cma_to_apply,
                                        date_format=self._date_format,
+                                       return_inner_event_info=self._return_inner_event_info,
                                        event_interval_colname=self._event_interval_colname,
                                        gap_days_colname=self._gap_days_colname,
                                        force_na_cma_for_failed_patients=\
@@ -3726,6 +3765,8 @@ class CMAPerEpisode(CMA0):
         self._cma = result['CMA']
         if 'EVENTINFO' in result:
             self._event_info = result['EVENTINFO']
+        if 'INNEREVENTINFO' in result:
+            self._inner_event_info = result['INNEREVENTINFO']
 
 
 

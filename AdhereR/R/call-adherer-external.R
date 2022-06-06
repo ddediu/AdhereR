@@ -335,6 +335,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   .cast.param.to.type("plot.min.plot.size.in.characters.vert",           "numeric", TRUE);
   .cast.param.to.type("plot.max.patients.to.plot",                       "numeric", TRUE);
   .cast.param.to.type("plot.do.not.draw.plot",                           "logical", TRUE);
+  .cast.param.to.type("return.inner.event.info",                         "logical", TRUE);
 
   # col.cats is special in that it can be a function name or a color name:
   col.cats <- trimws(.get.param.value("plot.col.cats", type="character", required=FALSE));
@@ -464,7 +465,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   );
 
 
-  if( is.null(results) ) # OOPS! some error occured: make it known and quit!
+  if( is.null(results) ) # OOPS! some error occurred: make it known and quit!
   {
     if( function.to.call == "plot_interactive_cma" )
     {
@@ -540,6 +541,12 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
       if( !is.na(save.event.info <- .get.param.value("save.event.info", type="character", default.value=NA, required=FALSE)) && save.event.info=="TRUE" )
       {
         write.table(.apply.export.conversions(results$event.info), paste0(shared.data.directory,"/EVENTINFO",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
+      }
+      # inner event info:
+      if( !is.na(return.inner.event.info <- .get.param.value("return.inner.event.info", type="character", default.value=NA, required=FALSE)) && return.inner.event.info=="TRUE" &&
+          (inherits(results, "CMA_per_episode") || inherits(results, "CMA_sliding_window")) )
+      {
+        write.table(.apply.export.conversions(results$inner.event.info), paste0(shared.data.directory,"/INNEREVENTINFO",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
       }
     } else if( function.to.call == "compute_event_int_gaps" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
     {
