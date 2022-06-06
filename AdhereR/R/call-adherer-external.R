@@ -445,6 +445,19 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
   # call the appropriate function:
   function.to.call <- .get.param.value("function", type="character", required=TRUE);
+
+  # avoid warnings about the arguments.that.should.not.be.defined:
+  if(function.to.call %in% c("CMA0", "CMA1", "CMA2", "CMA3", "CMA4", "CMA5", "CMA6", "CMA7", "CMA8", "CMA9", "CMA_per_episode", "CMA_sliding_window") )
+  {
+    # get the arguments.that.should.not.be.defined directly from the function definition:
+    arguments.to.undefine <- names(formals(function.to.call)[["arguments.that.should.not.be.defined"]]);
+    if( !is.null(arguments.to.undefine) && length(arguments.to.undefine) > 0 )
+    {
+      arguments.to.undefine <- arguments.to.undefine[ arguments.to.undefine != "" ]; # keep only the named arguments
+      params.as.list <- params.as.list[!(names(params.as.list) %in% arguments.to.undefine)]; # simply remove these arguments from the list (if already there)
+    }
+  }
+  # call the function:
   results <- switch(function.to.call,
                     "CMA0"=,
                     "CMA1"=,
