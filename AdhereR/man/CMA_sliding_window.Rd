@@ -43,6 +43,7 @@ CMA_sliding_window(
     "snow(NWS)")[1],
   parallel.threads = "auto",
   suppress.warnings = FALSE,
+  suppress.special.argument.checks = FALSE,
   ...
 )
 }
@@ -199,6 +200,10 @@ threads, or a more complex specification of the SNOW cluster nodes for
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{suppress.special.argument.checks}{\emph{Logical} parameter for internal
+use; if \code{FALSE} (default) check if the important columns in the \code{data}
+have some of the reserved names, if \code{TRUE} this check is not performed.}
 
 \item{...}{other possible parameters}
 }

@@ -1027,6 +1027,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        highlight.followup.window=TRUE, followup.window.col="green",
                        highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                        show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for CMA8, the real observation window starts at a different date
+                       print.episode.or.sliding.window=FALSE, # should we print the episode or sliding window to which an event belongs?
                        alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL or NA=don't draw any; can be >= 1 color)
                        rotate.text=-60,                       # some text (e.g., axis labels) may be rotated by this much degrees
                        force.draw.text=FALSE,                 # if true, always draw text even if too big or too small
@@ -2269,7 +2270,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                       observation.window.duration=NULL,
                                       observation.window.duration.unit=NULL,
                                       date.format=NULL,
-                                      suppress.warnings=NULL
+                                      suppress.warnings=NULL,
+                                      suppress.special.argument.checks=NULL
       )
       {
         # Call the compute.event.int.gaps() function and use the results:
@@ -2298,6 +2300,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                              parallel.backend="none", # make sure this runs sequentially!
                                              parallel.threads=1,
                                              suppress.warnings=suppress.warnings,
+                                             suppress.special.argument.checks=TRUE,
                                              return.data.table=TRUE);
         if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -2333,6 +2336,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                            followup.window.start.per.medication.group=cma$followup.window.start.per.medication.group,
 
                            suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=TRUE,
                            force.NA.CMA.for.failed.patients=TRUE, # force the failed patients to have NA CMA estimates
                            parallel.backend="none", # make sure this runs sequentially!
                            parallel.threads=1,
@@ -2605,6 +2609,17 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       delta <- ifelse(dose.max == dose.min, 1.0, (dose.max - dose.min)); # avoid dividing by zero when there's only one dose
       return (lwd.min + (lwd.max - lwd.min)*(dose - dose.min) / delta);
     }
+  }
+
+
+  #
+  # Episode or sliding window to which an event belongs ####
+  #
+
+  if( !(inherits(cma, "CMA_per_episode")    && "mapping.episodes.to.events" %in% names(cma) && !is.null(cma$mapping.episodes.to.events)) && # for per episodes
+      !(inherits(cma, "CMA_sliding_window") && "mapping.windows.to.events"  %in% names(cma) && !is.null(cma$mapping.windows.to.events)) )   # for sliding windows
+  {
+    print.episode.or.sliding.window <- FALSE; # can't show this info
   }
 
 
@@ -2968,6 +2983,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
     # Character width and height in the current plotting system:
     if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose);
+    if( print.episode.or.sliding.window ) epiwnd.text.height <- strheight("0",cex=cex.dose);
     char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
     char.height.CMA <- strheight("0",cex=CMA.cex);
 
@@ -3015,6 +3031,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       "lty.event"=lty.event, "lwd.event"=lwd.event, "pch.start.event"=pch.start.event, "pch.end.event"=pch.end.event,
       "show.event.intervals"=show.event.intervals,
       "print.dose"=print.dose, "cex.dose"=cex.dose, "print.dose.col"=print.dose.col, "print.dose.centered"=print.dose.centered,
+      "print.episode.or.sliding.window"=print.episode.or.sliding.window,
       "plot.dose"=plot.dose, "lwd.event.max.dose"=lwd.event.max.dose, "plot.dose.lwd.across.medication.classes"=plot.dose.lwd.across.medication.classes,
       "col.na"=col.na, "col.continuation"=col.continuation, "lty.continuation"=lty.continuation, "lwd.continuation"=lwd.continuation,
       "print.CMA"=print.CMA, "CMA.cex"=CMA.cex,
@@ -3056,6 +3073,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       "xlim"=c(0-5,duration.total+5), "ylim"=c(0,vert.space.events+vert.space.cmas+1),
       "x.min"=0, "x.max"=duration.total, "y.min"=1, "y.max"=vert.space.events+vert.space.cmas,
       "dose.text.height"=ifelse(print.dose, dose.text.height, NA),
+      "epiwnd.text.height"=ifelse(print.episode.or.sliding.window, epiwnd.text.height, NA),
       "char.width"=char.width, "char.height"=char.height,
       "char.height.CMA"=char.height.CMA,
       "is.cma.TS.or.SW"=is.cma.TS.or.SW, "has.estimated.CMA"=has.estimated.CMA,
@@ -3103,6 +3121,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       "lty.event"=lty.event, "lwd.event"=lwd.event, "pch.start.event"=pch.start.event, "pch.end.event"=pch.end.event,
       "show.event.intervals"=show.event.intervals,
       "print.dose"=print.dose, "cex.dose"=cex.dose, "print.dose.col"=print.dose.col, "print.dose.centered"=print.dose.centered,
+      "print.episode.or.sliding.window"=print.episode.or.sliding.window,
       "plot.dose"=plot.dose, "lwd.event.max.dose"=lwd.event.max.dose, "plot.dose.lwd.across.medication.classes"=plot.dose.lwd.across.medication.classes,
       "col.na"=col.na, "col.continuation"=col.continuation, "lty.continuation"=lty.continuation, "lwd.continuation"=lwd.continuation,
       "print.CMA"=print.CMA, "CMA.cex"=CMA.cex,
@@ -4059,19 +4078,17 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                      tooltip=med.class.svg.name, suppress.warnings=suppress.warnings);
       }
 
-      if( print.dose )
+      # Prepare the text to print (dose, episode/window...):
+      text.to.print <- "";
+      if( print.dose || print.episode.or.sliding.window )
       {
-        # Show dose as actual numbers on the plot:
+        # The position of the text on the plot:
         if( .do.R ) # Rplot:
         {
           # Save the info:
           .last.cma.plot.info$baseR$cma$data[i,".X.DOSE"] <- (adh.plot.space[2] + (start + end)/2);
           .last.cma.plot.info$baseR$cma$data[i,".Y.DOSE"] <- (y.cur - ifelse(print.dose.centered, 0, dose.text.height*2/3)); # print it on or below the dose segment?
           .last.cma.plot.info$baseR$cma$data[i,".FONT.SIZE.DOSE"] <- cex.dose;
-
-          # Draw:
-          text(.last.cma.plot.info$baseR$cma$data[i,".X.DOSE"], .last.cma.plot.info$baseR$cma$data[i,".Y.DOSE"],
-               cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=ifelse(is.na(print.dose.col),col,print.dose.col), font=2);
         }
 
         if( .do.SVG ) # SVG:
@@ -4080,12 +4097,46 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           .last.cma.plot.info$SVG$cma$data[i,".X.DOSE"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + (start + end)/2);
           .last.cma.plot.info$SVG$cma$data[i,".Y.DOSE"] <- .scale.y.to.SVG.plot(y.cur - ifelse(print.dose.centered, 0, 3/4));
           .last.cma.plot.info$SVG$cma$data[i,".FONT.SIZE.DOSE"] <- (dims.chr.std * cex.dose);
+        }
+      }
+      if( print.dose )
+      {
+        text.to.print <- paste0(text.to.print, cma$data[i,cma$event.daily.dose.colname]); # the dose
+      }
+      if( print.episode.or.sliding.window )
+      {
+        # Show the corresponding episode or sliding window (if any) as actual numbers on the plot:
+        if( inherits(cma, "CMA_per_episode") )
+        {
+          s.epiwnd <- which(cma$mapping.episodes.to.events$event.index.in.data == i);
+          if( length(s.epiwnd) > 0 )
+          {
+            if( text.to.print != "" ) text.to.print <- paste0(text.to.print," ");
+            text.to.print <- paste0(text.to.print, "[", paste0(cma$mapping.episodes.to.events$episode.ID[s.epiwnd], collapse=","), "]");
+          }
+        }
+        if( inherits(cma, "CMA_sliding_window") )
+        {
+          # TODO
+        }
+      }
+      if( text.to.print != "" )
+      {
+        # Do the actual printing:
+        if( .do.R ) # Rplot:
+        {
+          # Draw:
+          text(.last.cma.plot.info$baseR$cma$data[i,".X.DOSE"], .last.cma.plot.info$baseR$cma$data[i,".Y.DOSE"],
+               text.to.print, cex=cex.dose, col=ifelse(is.na(print.dose.col),col,print.dose.col), font=2);
+        }
 
+        if( .do.SVG ) # SVG:
+        {
           # Draw:
           svg.str[[length(svg.str)+1]] <-
             # The dose text:
             .SVG.text(x=.last.cma.plot.info$SVG$cma$data[i,".X.DOSE"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.DOSE"],
-                      text=cma$data[i,cma$event.daily.dose.colname],
+                      text=text.to.print,
                       font_size=.last.cma.plot.info$SVG$cma$data[i,".FONT.SIZE.DOSE"], h.align="center", v.align="center",
                       col=if(is.na(print.dose.col)) col else print.dose.col,
                       other_params=if(!is.na(print.dose.outline.col)) paste0(' stroke="',.SVG.color(print.dose.outline.col,return_string=TRUE),'" stroke-width="0.5"'),

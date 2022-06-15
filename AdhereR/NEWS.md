@@ -17,6 +17,8 @@
 ## Bug fixes
 
   - `plot()`'s `align.all.patients` and `align.first.event.at.zero` did not work as intended.
+  
+  - the unneeded columns of the `data` argument to the CMA functions are now ignored, avoiding cases where "reserved" column names might be used (moreover, there is now an explicit check against using such reserved column names).
 
   - various other enhancements and bugfixes.
 

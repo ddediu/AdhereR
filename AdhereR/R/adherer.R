@@ -35,7 +35,21 @@ globalVariables(c(".OBS.START.DATE", ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.
                   ".INTERSECT.EPISODE.OBS.WIN.END", ".INTERSECT.EPISODE.OBS.WIN.START", ".OBS.DURATION.UPDATED",
                   ".OBS.END.DATE", ".OBS.END.DATE.PRECOMPUTED",
                   "PERDAY", "CATEGORY",
-                  "episode.ID", "episode.duration", "end.episode.gap.days"));
+                  "episode.ID", "episode.duration", "end.episode.gap.days",
+                  "cma.class.name", "events.in.episode"));
+
+# Reserved column names that cannot be used:
+.special.colnames <- c("..ORIGINAL.ROW.ORDER..", ".CARRY.OVER.FROM.BEFORE", ".DATE.as.Date", ".EVENT.INTERVAL",
+                       ".EVENT.STARTS.AFTER.OBS.WINDOW", ".EVENT.STARTS.BEFORE.OBS.WINDOW", ".EVENT.WITHIN.FU.WINDOW",
+                       ".FU.END.DATE", ".FU.START.DATE", ".FU.START.DATE.PER.PATIENT.ACROSS.MGS", ".FU.START.DATE.UPDATED",
+                       ".GAP.DAYS", ".INTERSECT.EPISODE.OBS.WIN.DURATION", ".INTERSECT.EPISODE.OBS.WIN.END",
+                       ".INTERSECT.EPISODE.OBS.WIN.START", ".MED_GROUP_ID", ".OBS.DURATION.UPDATED", ".OBS.END.DATE",
+                       ".OBS.END.DATE.PRECOMPUTED", ".OBS.START.DATE", ".OBS.START.DATE.PER.PATIENT.ACROSS.MGS",
+                       ".OBS.START.DATE.PRECOMPUTED", ".OBS.START.DATE.UPDATED", ".OBS.WITHIN.FU", ".PATIENT.EPISODE.ID",
+                       ".START.BEFORE.END.WITHIN.OBS.WND", ".TDIFF1", ".TDIFF2", ".WND.DURATION", ".WND.ID",
+                       ".WND.START.DATE", "CMA", "CMA.to.apply", "end.episode.gap.days", "episode.duration",
+                       "episode.end", "episode.ID", "episode.start", "events.in.episode", "window.end", "window.ID",
+                       "window.start");
 
 ## Package private info ####
 # Store various info relevant to the package (such as info about the last plot or the last error).
@@ -428,6 +442,9 @@ assign(".record.ewms", FALSE, envir=.adherer.env); # initially, do not record th
 #' @param summary Metadata as a \emph{string}, briefly describing this CMA.
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
 #' and pre-defined valuesfor which a warning should be thrown if passed to the
 #' function.
@@ -537,6 +554,7 @@ CMA0 <- function(data=NULL, # the data used to compute the CMA on
                  summary="Base CMA object",
                  # Misc:
                  suppress.warnings=FALSE,
+                 suppress.special.argument.checks=FALSE, # used internally to suppress the check that we don't use special argument names
                  arguments.that.should.not.be.defined=NULL, # the list of argument names and values for which a warning should be thrown if passed to the function
                  ...
 )
@@ -1519,7 +1537,8 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
                               observation.window.duration=NULL, # the duration of the observation window in time units
                               observation.window.duration.unit=NULL, # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!)
                               date.format=NULL, # the format of the dates used in this function
-                              suppress.warnings=NULL
+                              suppress.warnings=NULL,
+                              suppress.special.argument.checks=FALSE
 )
 {
   # Quick decision for sequential processing:
@@ -1547,7 +1566,8 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
                 observation.window.duration=observation.window.duration,
                 observation.window.duration.unit=observation.window.duration.unit,
                 date.format=date.format,
-                suppress.warnings=suppress.warnings
+                suppress.warnings=suppress.warnings,
+                suppress.special.argument.checks=suppress.special.argument.checks
            ));
   }
 
@@ -1600,7 +1620,8 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
                                                    observation.window.duration=observation.window.duration,
                                                    observation.window.duration.unit=observation.window.duration.unit,
                                                    date.format=date.format,
-                                                   suppress.warnings=suppress.warnings),
+                                                   suppress.warnings=suppress.warnings,
+                                                   suppress.special.argument.checks=suppress.special.argument.checks),
                                  mc.cores=parallel.threads, # as many cores as threads
                                  mc.preschedule=FALSE # don't preschedule as we know that we have relatively few jobs to do
                                );
@@ -1655,7 +1676,8 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
                 observation.window.duration=observation.window.duration,
                 observation.window.duration.unit=observation.window.duration.unit,
                 date.format=date.format,
-                suppress.warnings=suppress.warnings
+                suppress.warnings=suppress.warnings,
+                suppress.special.argument.checks=suppress.special.argument.checks
            ));
   }
 
@@ -1704,7 +1726,8 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
                 observation.window.duration=observation.window.duration,
                 observation.window.duration.unit=observation.window.duration.unit,
                 date.format=date.format,
-                suppress.warnings=suppress.warnings
+                suppress.warnings=suppress.warnings,
+                suppress.special.argument.checks=suppress.special.argument.checks
            ));
   }
 
@@ -1733,7 +1756,8 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
                                                observation.window.duration=observation.window.duration,
                                                observation.window.duration.unit=observation.window.duration.unit,
                                                date.format=date.format,
-                                               suppress.warnings=suppress.warnings));
+                                               suppress.warnings=suppress.warnings,
+                                               suppress.special.argument.checks=suppress.special.argument.checks));
 
   parallel::stopCluster(cluster); # stop the cluster
 
@@ -1854,6 +1878,9 @@ subsetCMA.CMA0 <- function(cma, patients, suppress.warnings=FALSE)
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param return.data.table \emph{Logical}, if \code{TRUE} return a
 #' \code{data.table} object, otherwise a \code{data.frame}.
 #' @param ... extra arguments.
@@ -1919,6 +1946,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                    parallel.threads="auto", # specification (or number) of parallel threads
                                    # Misc:
                                    suppress.warnings=FALSE,
+                                   suppress.special.argument.checks=FALSE, # used internally to suppress the check that we don't use special argument names
                                    return.data.table=FALSE,  # should the result be converted to data.frame (default) or returned as a data.table (keyed by patient ID and event date)?
                                    ... # other stuff
 )
@@ -2197,7 +2225,8 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # Auxiliary internal function: For a given patient, compute the gaps and return the required columns:
@@ -2525,7 +2554,8 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
                                observation.window.duration=observation.window.duration,
                                observation.window.duration.unit=observation.window.duration.unit,
                                date.format=date.format,
-                               suppress.warnings=suppress.warnings);
+                               suppress.warnings=suppress.warnings,
+                               suppress.special.argument.checks=suppress.special.argument.checks);
 
   if( is.null(ret.val) || nrow(ret.val) < 1 )
   {
@@ -2715,6 +2745,9 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param return.data.table \emph{Logical}, if \code{TRUE} return a
 #' \code{data.table} object, otherwise a \code{data.frame}.
 #' @param ... extra arguments.
@@ -2754,6 +2787,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         # The description of the output (added) columns:
                                         event.interval.colname="event.interval", # contains number of days between the start of current event and the start of the next
                                         gap.days.colname="gap.days", # contains the number of days when medication was not available
+                                        # Return also the mapping between episodes and events?
+                                        return.mapping.events.episodes=FALSE, # if TRUE, return the mapping as an attribute
                                         # Date format:
                                         date.format="%m/%d/%Y", # the format of the dates used in this function
                                         # Parallel processing:
@@ -2761,6 +2796,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         parallel.threads="auto", # specification (or number) of parallel threads
                                         # Misc:
                                         suppress.warnings=FALSE,
+                                        suppress.special.argument.checks=FALSE, # used internally to suppress the check that we don't use special argument names
                                         return.data.table=FALSE,
                                         ... # other stuff
 )
@@ -2789,6 +2825,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                    parallel.backend=parallel.backend,
                    parallel.threads=parallel.threads,
                    suppress.warnings=suppress.warnings,
+                   suppress.special.argument.checks=suppress.special.argument.checks,
                    return.data.table=return.data.table,
                    ...)) ) # delegate default checks to CMA0!
   {
@@ -2840,7 +2877,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # Auxiliary internal function: Compute the CMA for a given patient:
@@ -2852,6 +2890,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       event.duration.column   <- data4ID[,get(event.duration.colname)];
       gap.days.column         <- data4ID[,get(gap.days.colname)];
       if( !is.na(medication.class.colname) ) medication.class.column <- data4ID[,get(medication.class.colname)];
+      event.id.column         <- data4ID$.EVENT.UNIQUE.ID;
       MAX.PERMISSIBLE.GAP     <- switch(as.numeric(maximum.permissible.gap.as.percent)+1,
                                         rep(maximum.permissible.gap,n.events), # FALSE: maximum.permissible.gap is fixed in days
                                         maximum.permissible.gap * event.duration.column); # TRUE: maximum.permissible.gap is a percent of the duration
@@ -2873,9 +2912,11 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       if( n.events == 1 || s.len == 0 || (s.len==1 && s==n.events) )
       {
         # One single treatment episode starting with the first event within the follow-up window and the end of the follow-up window:
+        episode.starting.index <- 1;
         treatment.episodes <- data.table("episode.ID"=as.numeric(1),
-                                         "episode.start"=data4ID$.DATE.as.Date[1],
-                                         "end.episode.gap.days"=gap.days.column[last.event]);
+                                         "episode.start"=data4ID$.DATE.as.Date[episode.starting.index],
+                                         "end.episode.gap.days"=gap.days.column[last.event],
+                                         "events.in.episode"=paste0(event.id.column[ episode.starting.index:last.event ], collapse=",")); # the events contained in each episode
         if( maximum.permissible.gap.append.to.episode )
         {
           # Should we add the maximum permissible gap?
@@ -2897,11 +2938,16 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         if( s[s.len] != n.events )
         {
           # The last event with gap > maximum permissible is not the last event for this patient:
+          episode.starting.index <- c(1,    # the 1st event in the follow-up window
+                                      s+1); # the next event
           treatment.episodes <- data.table("episode.ID"=as.numeric(1:(s.len+1)),
-                                           "episode.start"=c(data4ID$.DATE.as.Date[1],               # the 1st event in the follow-up window
-                                                             data4ID$.DATE.as.Date[s+1]),            # the next event
+                                           "episode.start"=data4ID$.DATE.as.Date[episode.starting.index],
                                            "end.episode.gap.days"=c(gap.days.column[s],              # the corresponding gap.days of the last event in this episode
-                                                                    gap.days.column[last.event]));   # the corresponding gap.days of the last event in this follow-up window
+                                                                    gap.days.column[last.event]),    # the corresponding gap.days of the last event in this follow-up window
+                                           "events.in.episode"=c(vapply(1:(length(episode.starting.index)-1),
+                                                                        function(i) paste0(event.id.column[ episode.starting.index[i]:(episode.starting.index[i+1]-1) ], collapse=","),
+                                                                        character(1)),
+                                                                 paste0(event.id.column[ episode.starting.index[length(episode.starting.index)]:last.event ], collapse=","))); # the events contained in each episode
           if( maximum.permissible.gap.append.to.episode )
           {
             # Should we add the maximum permissible gap?
@@ -2912,10 +2958,15 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         } else
         {
           # The last event with gap > maximum permissible is the last event for this patient:
+          episode.starting.index <- c(1,            # the 1st event in the follow-up window
+                                      s[-s.len]+1); # the next event
           treatment.episodes <- data.table("episode.ID"=as.numeric(1:s.len),
-                                           "episode.start"=c(data4ID$.DATE.as.Date[1],                # the 1st event in the follow-up window
-                                                             data4ID$.DATE.as.Date[s[-s.len]+1]),     # the next event
-                                           "end.episode.gap.days"=c(gap.days.column[s]));             # the corresponding gap.days of the last event in this follow-up window
+                                           "episode.start"=data4ID$.DATE.as.Date[episode.starting.index],
+                                           "end.episode.gap.days"=gap.days.column[s], # the corresponding gap.days of the last event in this follow-up window
+                                           "events.in.episode"=c(vapply(1:(length(episode.starting.index)-1),
+                                                                        function(i) paste0(event.id.column[ episode.starting.index[i]:(episode.starting.index[i+1]-1) ], collapse=","),
+                                                                        character(1)),
+                                                                 paste0(event.id.column[ episode.starting.index[length(episode.starting.index)]:s[s.len] ], collapse=","))); # the events contained in each episode
           if( maximum.permissible.gap.append.to.episode )
           {
             # Should we add the maximum permissible gap?
@@ -2949,6 +3000,9 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       return (treatment.episodes);
     }
 
+    # Add the unique event ID (in fact, its row number in the original data
+    data$.EVENT.UNIQUE.ID <- 1:nrow(data);
+
     # Call the compute.event.int.gaps() function and use the results:
     event.info <- compute.event.int.gaps(data=as.data.frame(data),
                                          ID.colname=ID.colname,
@@ -2975,6 +3029,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                          parallel.backend="none",
                                          parallel.threads=1,
                                          suppress.warnings=suppress.warnings,
+                                         suppress.special.argument.checks=suppress.special.argument.checks,
                                          return.data.table=TRUE);
     if( is.null(event.info) ) return (NULL);
 
@@ -2985,7 +3040,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
     return (episodes);
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
+  # Convert to data.table, cache event date as Date objects, and key by patient ID and event date
   data.copy <- data.table(data);
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
@@ -3015,54 +3070,87 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                            observation.window.duration=followup.window.duration,
                            observation.window.duration.unit=followup.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
+                           suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=suppress.special.argument.checks);
   if( is.null(tmp) ) return (NULL);
   tmp[,end.episode.gap.days := as.integer(end.episode.gap.days)]; # force end.episode.gap.days to be integer to make for pretty printing...
-  if( !return.data.table ) return (as.data.frame(tmp)) else return (tmp);
+  mapping.events.episodes <- tmp[,c(ID.colname, "episode.ID", "events.in.episode"), with=FALSE]; tmp[,events.in.episode := NULL];
+  if( !return.data.table ) tmp <- as.data.frame(tmp);
+  if( return.mapping.events.episodes )
+  {
+    mapping.events.episodes <- mapping.events.episodes[, (function(df){if(is.null(df) || nrow(df) == 0){return (NULL)} else {strsplit(df$events.in.episode,",",fixed=TRUE)[[1]]}})(.SD), by=c(ID.colname, "episode.ID")];
+    names(mapping.events.episodes)[ncol(mapping.events.episodes)] <- "event.index.in.data";
+    attr(tmp, "mapping.episodes.to.events") <- mapping.events.episodes;
+  }
+  return (tmp);
 }
 
 
 # Shared code between multiple CMAs
-.cma.skeleton <- function(data,
-                          ret.val,
-                          cma.class.name,
-                          ID.colname,
-                          event.date.colname,
-                          event.duration.colname,
-                          event.daily.dose.colname,
-                          medication.class.colname,
-                          medication.groups.colname,
-                          flatten.medication.groups,
-                          followup.window.start.per.medication.group,
-                          event.interval.colname,
-                          gap.days.colname,
-                          carryover.within.obs.window,
-                          carryover.into.obs.window,
-                          carry.only.for.same.medication,
-                          consider.dosage.change,
-                          followup.window.start,
-                          followup.window.start.unit,
-                          followup.window.duration,
-                          followup.window.duration.unit,
-                          observation.window.start,
-                          observation.window.start.unit,
-                          observation.window.duration,
-                          observation.window.duration.unit,
-                          date.format,
-                          suppress.warnings,
-                          force.NA.CMA.for.failed.patients,
-                          parallel.backend,
-                          parallel.threads,
-                          .workhorse.function)
+.cma.skeleton <- function(data=NULL,
+                          ret.val=NULL,
+                          cma.class.name=NA,
+                          ID.colname=NA,
+                          event.date.colname=NA,
+                          event.duration.colname=NA,
+                          event.daily.dose.colname=NA,
+                          medication.class.colname=NA,
+                          medication.groups.colname=NA,
+                          flatten.medication.groups=NA,
+                          followup.window.start.per.medication.group=NA,
+                          event.interval.colname=NA,
+                          gap.days.colname=NA,
+                          carryover.within.obs.window=NA,
+                          carryover.into.obs.window=NA,
+                          carry.only.for.same.medication=NA,
+                          consider.dosage.change=NA,
+                          followup.window.start=NA,
+                          followup.window.start.unit=NA,
+                          followup.window.duration=NA,
+                          followup.window.duration.unit=NA,
+                          observation.window.start=NA,
+                          observation.window.start.unit=NA,
+                          observation.window.duration=NA,
+                          observation.window.duration.unit=NA,
+                          date.format=NA,
+                          suppress.warnings=FALSE,
+                          suppress.special.argument.checks=FALSE,
+                          force.NA.CMA.for.failed.patients=TRUE,
+                          parallel.backend="none",
+                          parallel.threads=1,
+                          .workhorse.function=NULL)
 {
-  # Convert to data.table, cache event date as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  # Convert to data.table, cache event date as Date objects keeping only the necessary columns, check for column name conflicts, and key by patient ID and event date:
+  # columns to keep:
+  columns.to.keep <- c();
+  if( !is.null(ID.colname) && !is.na(ID.colname) && length(ID.colname) == 1 && ID.colname %in% names(data) ) columns.to.keep <- c(columns.to.keep, ID.colname);
+  if( !is.null(event.date.colname) && !is.na(event.date.colname) && length(event.date.colname) == 1 && event.date.colname %in% names(data) ) columns.to.keep <- c(columns.to.keep, event.date.colname);
+  if( !is.null(event.duration.colname) && !is.na(event.duration.colname) && length(event.duration.colname) == 1  && event.duration.colname %in% names(data)) columns.to.keep <- c(columns.to.keep, event.duration.colname);
+  if( !is.null(event.daily.dose.colname) && !is.na(event.daily.dose.colname) && length(event.daily.dose.colname) == 1 && event.daily.dose.colname %in% names(data) ) columns.to.keep <- c(columns.to.keep, event.daily.dose.colname);
+  if( !is.null(medication.class.colname) && !is.na(medication.class.colname) && length(medication.class.colname) == 1 && medication.class.colname %in% names(data) ) columns.to.keep <- c(columns.to.keep, medication.class.colname);
+  if( !is.null(mg <- getMGs(ret.val)) && !is.null(medication.groups.colname) && !is.na(medication.groups.colname) && length(medication.groups.colname) == 1  && medication.groups.colname %in% names(data)) columns.to.keep <- c(columns.to.keep, medication.groups.colname);
+  if( !is.null(followup.window.start) && !is.na(followup.window.start) && length(followup.window.start) == 1 && (is.character(followup.window.start) || (is.factor(followup.window.start) && is.character(followup.window.start <- as.character(followup.window.start)))) && followup.window.start %in% names(data) ) columns.to.keep <- c(columns.to.keep, followup.window.start);
+  if( !is.null(followup.window.duration) && !is.na(followup.window.duration) && length(followup.window.duration) == 1 && (is.character(followup.window.duration) || (is.factor(followup.window.duration) && is.character(followup.window.duration <- as.character(followup.window.duration)))) && followup.window.duration %in% names(data) ) columns.to.keep <- c(columns.to.keep, followup.window.duration);
+  if( !is.null(observation.window.start) && !is.na(observation.window.start) && length(observation.window.start) == 1 && (is.character(observation.window.start) || (is.factor(observation.window.start) && is.character(observation.window.start <- as.character(observation.window.start)))) && observation.window.start %in% names(data) ) columns.to.keep <- c(columns.to.keep, observation.window.start);
+  if( !is.null(observation.window.duration) && !is.na(observation.window.duration) && length(observation.window.duration) == 1 && (is.character(observation.window.duration) || (is.factor(observation.window.duration) && is.character(observation.window.duration <- as.character(observation.window.duration)))) && observation.window.duration %in% names(data) ) columns.to.keep <- c(columns.to.keep, observation.window.duration);
+  # special column names that should not be used:
+  if( !suppress.special.argument.checks )
+  {
+    ..special.colnames <- c(.special.colnames, event.interval.colname, gap.days.colname); # don't forget event.interval.colname and gap.days.colname!
+    if( any(s <- ..special.colnames %in% columns.to.keep) )
+    {
+      .report.ewms(paste0("Column name(s) ",paste0("'",..special.colnames[s],"'",collapse=", "),"' are reserved: please don't use them in your input data!\n"), "error", cma.class.name, "AdhereR");
+      return (NULL);
+    }
+  }
+  # copy only the relevant bits of the data:
+  data.copy <- data.table(data)[, columns.to.keep, with=FALSE];
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
   data.copy$..ORIGINAL.ROW.ORDER.. <- 1:nrow(data.copy); # preserve the original order of the rows (needed for medication groups)
   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
 
   # Are there medication groups?
-  if( is.null(mg <- getMGs(ret.val)) )
+  if( is.null(mg) )
   {
     # Nope: do a single estimation on the whole dataset:
 
@@ -3091,7 +3179,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                              observation.window.duration=observation.window.duration,
                              observation.window.duration.unit=observation.window.duration.unit,
                              date.format=date.format,
-                             suppress.warnings=suppress.warnings);
+                             suppress.warnings=suppress.warnings,
+                             suppress.special.argument.checks=suppress.special.argument.checks);
     if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
 
     # Convert to data.frame and return:
@@ -3156,6 +3245,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                            parallel.backend="none", # make sure this runs sequentially!
                                            parallel.threads=1,
                                            suppress.warnings=suppress.warnings,
+                                           suppress.special.argument.checks=suppress.special.argument.checks,
                                            return.data.table=FALSE);
       if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -3235,7 +3325,8 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                observation.window.duration=observation.window.duration,
                                observation.window.duration.unit=observation.window.duration.unit,
                                date.format=date.format,
-                               suppress.warnings=suppress.warnings);
+                               suppress.warnings=suppress.warnings,
+                               suppress.special.argument.checks=suppress.special.argument.checks);
       if( is.null(tmp) || (!is.null(tmp$CMA) && !inherits(tmp$CMA,"data.frame")) || is.null(tmp$event.info) ) return (NULL);
 
       if( !is.null(tmp$CMA) )
@@ -3564,6 +3655,9 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
 #' and pre-defined valuesfor which a warning should be thrown if passed to the
 #' function.
@@ -3685,6 +3779,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
+                  suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                   arguments.that.should.not.be.defined=c("carryover.within.obs.window"=FALSE,
                                                          "carryover.into.obs.window"=FALSE,
                                                          "carry.only.for.same.medication"=FALSE,
@@ -3729,7 +3824,8 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                   observation.window.duration.unit=observation.window.duration.unit,
                   date.format=date.format,
                   summary=summary,
-                  suppress.warnings=suppress.warnings);
+                  suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks);
   if( is.null(ret.val) ) return (NULL); # some serious error upstream
   # The followup.window.start and observation.window.start might have been converted to Date:
   followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
@@ -3756,7 +3852,8 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # Auxiliary internal function: Compute the CMA for a given patient:
@@ -3814,6 +3911,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                                          parallel.backend="none", # make sure this runs sequentially!
                                          parallel.threads=1,
                                          suppress.warnings=suppress.warnings,
+                                         suppress.special.argument.checks=suppress.special.argument.checks,
                                          return.data.table=TRUE);
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -3850,6 +3948,7 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
                            followup.window.start.per.medication.group=followup.window.start.per.medication.group,
 
                            suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=suppress.special.argument.checks,
                            force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
                            parallel.backend=parallel.backend,
                            parallel.threads=parallel.threads,
@@ -4302,6 +4401,9 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
 #' and pre-defined valuesfor which a warning should be thrown if passed to the
 #' function.
@@ -4419,6 +4521,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
+                  suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                   arguments.that.should.not.be.defined=c("carryover.within.obs.window"=FALSE,
                                                          "carryover.into.obs.window"=FALSE,
                                                          "carry.only.for.same.medication"=FALSE,
@@ -4463,7 +4566,8 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                   observation.window.duration.unit=observation.window.duration.unit,
                   date.format=date.format,
                   summary=summary,
-                  suppress.warnings=suppress.warnings);
+                  suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks);
   if( is.null(ret.val) ) return (NULL); # some error upstream
   # The followup.window.start and observation.window.start might have been converted to Date:
   followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
@@ -4490,7 +4594,8 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # Auxiliary internal function: Compute the CMA for a given patient:
@@ -4536,6 +4641,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                                          parallel.backend="none", # make sure this runs sequentially!
                                          parallel.threads=1,
                                          suppress.warnings=suppress.warnings,
+                                         suppress.special.argument.checks=suppress.special.argument.checks,
                                          return.data.table=TRUE);
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -4572,6 +4678,7 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
                            followup.window.start.per.medication.group=followup.window.start.per.medication.group,
 
                            suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=suppress.special.argument.checks,
                            force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
                            parallel.backend=parallel.backend,
                            parallel.threads=parallel.threads,
@@ -4628,6 +4735,7 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
+                  suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                   arguments.that.should.not.be.defined=c("carryover.within.obs.window"=FALSE,
                                                          "carryover.into.obs.window"=FALSE,
                                                          "carry.only.for.same.medication"=FALSE,
@@ -4678,6 +4786,7 @@ CMA3 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.backend=parallel.backend,
                   parallel.threads=parallel.threads,
                   suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks,
                   arguments.that.should.not.be.defined=arguments.that.should.not.be.defined);
   if( is.null(ret.val) ) return (NULL); # some error upstream
 
@@ -4745,6 +4854,7 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
+                  suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                   arguments.that.should.not.be.defined=c("carryover.within.obs.window"=FALSE,
                                                          "carryover.into.obs.window"=FALSE,
                                                          "carry.only.for.same.medication"=FALSE,
@@ -4795,6 +4905,7 @@ CMA4 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.backend=parallel.backend,
                   parallel.threads=parallel.threads,
                   suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks,
                   arguments.that.should.not.be.defined=arguments.that.should.not.be.defined);
   if( is.null(ret.val) ) return (NULL); # some error upstream
 
@@ -4966,6 +5077,9 @@ plot.CMA4 <- function(...) .plot.CMA1plus(...)
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
 #' and pre-defined valuesfor which a warning should be thrown if passed to the
 #' function.
@@ -5088,6 +5202,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
+                  suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                   arguments.that.should.not.be.defined=c("carryover.within.obs.window"=TRUE,
                                                          "carryover.into.obs.window"=FALSE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
@@ -5134,7 +5249,8 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                   observation.window.duration.unit=observation.window.duration.unit,
                   date.format=date.format,
                   summary=summary,
-                  suppress.warnings=suppress.warnings);
+                  suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks);
   if( is.null(ret.val) ) return (NULL); # some error upstream
   # The followup.window.start and observation.window.start might have been converted to Date:
   followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
@@ -5161,7 +5277,8 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # Auxiliary internal function: Compute the CMA for a given patient:
@@ -5207,6 +5324,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                                          parallel.backend="none", # make sure this runs sequentially!
                                          parallel.threads=1,
                                          suppress.warnings=suppress.warnings,
+                                         suppress.special.argument.checks=suppress.special.argument.checks,
                                          return.data.table=TRUE);
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -5243,6 +5361,7 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
                            followup.window.start.per.medication.group=followup.window.start.per.medication.group,
 
                            suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=suppress.special.argument.checks,
                            force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
                            parallel.backend=parallel.backend,
                            parallel.threads=parallel.threads,
@@ -5401,6 +5520,9 @@ plot.CMA5 <- function(...) .plot.CMA1plus(...)
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
 #' and pre-defined valuesfor which a warning should be thrown if passed to the
 #' function.
@@ -5523,6 +5645,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
+                  suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                   arguments.that.should.not.be.defined=c("carryover.within.obs.window"=TRUE,
                                                          "carryover.into.obs.window"=FALSE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
@@ -5569,7 +5692,8 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                   observation.window.duration.unit=observation.window.duration.unit,
                   date.format=date.format,
                   summary=summary,
-                  suppress.warnings=suppress.warnings);
+                  suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks);
   if( is.null(ret.val) ) return (NULL); # some error upstream
   # The followup.window.start and observation.window.start might have been converted to Date:
   followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
@@ -5596,7 +5720,8 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # Auxiliary internal function: Compute the CMA for a given patient:
@@ -5642,6 +5767,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                                          parallel.backend="none", # make sure this runs sequentially!
                                          parallel.threads=1,
                                          suppress.warnings=suppress.warnings,
+                                         suppress.special.argument.checks=suppress.special.argument.checks,
                                          return.data.table=TRUE);
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -5678,6 +5804,7 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
                            followup.window.start.per.medication.group=followup.window.start.per.medication.group,
 
                            suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=suppress.special.argument.checks,
                            force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
                            parallel.backend=parallel.backend,
                            parallel.threads=parallel.threads,
@@ -5840,6 +5967,9 @@ plot.CMA6 <- function(...) .plot.CMA1plus(...)
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
 #' and pre-defined valuesfor which a warning should be thrown if passed to the
 #' function.
@@ -5962,6 +6092,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
+                  suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                   arguments.that.should.not.be.defined=c("carryover.within.obs.window"=TRUE,
                                                          "carryover.into.obs.window"=TRUE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
@@ -6008,7 +6139,8 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                   observation.window.duration.unit=observation.window.duration.unit,
                   date.format=date.format,
                   summary=summary,
-                  suppress.warnings=suppress.warnings);
+                  suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks);
   if( is.null(ret.val) ) return (NULL); # some error upstream
   # The followup.window.start and observation.window.start might have been converted to Date:
   followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
@@ -6035,7 +6167,8 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # Auxiliary internal function: Compute the CMA for a given patient:
@@ -6125,6 +6258,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                                          parallel.backend="none", # make sure this runs sequentially!
                                          parallel.threads=1,
                                          suppress.warnings=suppress.warnings,
+                                         suppress.special.argument.checks=suppress.special.argument.checks,
                                          return.data.table=TRUE);
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -6161,6 +6295,7 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
                            followup.window.start.per.medication.group=followup.window.start.per.medication.group,
 
                            suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=suppress.special.argument.checks,
                            force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
                            parallel.backend=parallel.backend,
                            parallel.threads=parallel.threads,
@@ -6333,6 +6468,9 @@ plot.CMA7 <- function(...) .plot.CMA1plus(...)
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
 #' and pre-defined valuesfor which a warning should be thrown if passed to the
 #' function.
@@ -6455,6 +6593,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
+                  suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                   arguments.that.should.not.be.defined=c("carryover.within.obs.window"=TRUE,
                                                          "carryover.into.obs.window"=TRUE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
@@ -6501,7 +6640,8 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                   observation.window.duration.unit=observation.window.duration.unit,
                   date.format=date.format,
                   summary=summary,
-                  suppress.warnings=suppress.warnings);
+                  suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks);
   if( is.null(ret.val) ) return (NULL); # some error upstream
   # The followup.window.start and observation.window.start might have been converted to Date:
   followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
@@ -6528,7 +6668,8 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # Auxiliary internal function: Compute the new OW start date:
@@ -6565,6 +6706,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                                          parallel.backend="none", # make sure this runs sequentially!
                                          parallel.threads=1,
                                          suppress.warnings=suppress.warnings,
+                                         suppress.special.argument.checks=suppress.special.argument.checks,
                                          return.data.table=TRUE);
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -6599,6 +6741,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                 parallel.backend="none", # make sure this runs sequentially!
                 parallel.threads=1,
                 suppress.warnings=suppress.warnings, # suppress warnings from CMA7
+                suppress.special.argument.checks=suppress.special.argument.checks,
                 force.NA.CMA.for.failed.patients=FALSE # may enforce this afterwards...
     );
     return (list("CMA"=CMA$CMA, "event.info"=event.info)); # make sure to return the non-adjusted event.info prior to computing CMA7!
@@ -6633,6 +6776,7 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                            followup.window.start.per.medication.group=followup.window.start.per.medication.group,
 
                            suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=suppress.special.argument.checks,
                            force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
                            parallel.backend=parallel.backend,
                            parallel.threads=parallel.threads,
@@ -6836,6 +6980,9 @@ plot.CMA8 <- function(...) .plot.CMA1plus(...)
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param arguments.that.should.not.be.defined a \emph{list} of argument names
 #' and pre-defined valuesfor which a warning should be thrown if passed to the
 #' function.
@@ -6951,6 +7098,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   parallel.threads="auto", # specification (or number) of parallel threads
                   # Misc:
                   suppress.warnings=FALSE,
+                  suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                   arguments.that.should.not.be.defined=c("carryover.within.obs.window"=TRUE,
                                                          "carryover.into.obs.window"=TRUE), # the list of argument names and values for which a warning should be thrown if passed to the function
                   ...
@@ -6997,7 +7145,8 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                   observation.window.duration.unit=observation.window.duration.unit,
                   date.format=date.format,
                   summary=summary,
-                  suppress.warnings=suppress.warnings);
+                  suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks);
   if( is.null(ret.val) ) return (NULL); # some error upstream
   # The followup.window.start and observation.window.start might have been converted to Date:
   followup.window.start <- ret.val$followup.window.start; observation.window.start <- ret.val$observation.window.start;
@@ -7024,7 +7173,8 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # Auxiliary internal function: Compute the CMA for a given patient:
@@ -7078,6 +7228,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                                          parallel.backend="none", # make sure this runs sequentially!
                                          parallel.threads=1,
                                          suppress.warnings=suppress.warnings,
+                                         suppress.special.argument.checks=suppress.special.argument.checks,
                                          return.data.table=TRUE);
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -7111,6 +7262,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                                              parallel.backend="none", # make sure this runs sequentially!
                                              parallel.threads=1,
                                              suppress.warnings=suppress.warnings,
+                                             suppress.special.argument.checks=suppress.special.argument.checks,
                                              return.data.table=TRUE);
     if( is.null(actual.obs.win) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -7148,6 +7300,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                                          parallel.backend="none", # make sure this runs sequentially!
                                          parallel.threads=1,
                                          suppress.warnings=suppress.warnings,
+                                         suppress.special.argument.checks=suppress.special.argument.checks,
                                          return.data.table=TRUE);
 
     return (list("CMA"=CMA, "event.info"=event.info));
@@ -7182,6 +7335,7 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                            followup.window.start.per.medication.group=followup.window.start.per.medication.group,
 
                            suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=suppress.special.argument.checks,
                            force.NA.CMA.for.failed.patients=force.NA.CMA.for.failed.patients,
                            parallel.backend=parallel.backend,
                            parallel.threads=parallel.threads,
@@ -7363,6 +7517,9 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA_per_episode} with the
 #' following fields:
@@ -7505,11 +7662,14 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              gap.days.colname="gap.days", # contains the number of days when medication was not available
                              # Dealing with failed estimates:
                              force.NA.CMA.for.failed.patients=TRUE, # force the failed patients to have NA CM estimate?
+                             # Return also the mapping between episodes and events?
+                             return.mapping.events.episodes=FALSE, # if TRUE, return the mapping
                              # Parallel processing:
                              parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[1], # parallel backend to use
                              parallel.threads="auto", # specification (or number) of parallel threads
                              # Misc:
                              suppress.warnings=FALSE,
+                             suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                              # extra parameters to be sent to the CMA function:
                              ...
 )
@@ -7586,6 +7746,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                   observation.window.duration.unit=observation.window.duration.unit,
                   date.format=date.format,
                   suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks,
                   summary=NA);
   if( is.null(ret.val) ) return (NULL);
   # The followup.window.start and observation.window.start might have been converted to Date:
@@ -7621,47 +7782,52 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
-    if(is.null(treat.epi)) {
+    mapping.episodes.to.events <- NULL; # the mapping events <-> episodes, if any
+    if(is.null(treat.epi))
+    {
 
-      # Compute the treatment espisodes:
-      treat.epi <- compute.treatment.episodes( data=data,
-                                               ID.colname=ID.colname,
-                                               event.date.colname=event.date.colname,
-                                               event.duration.colname=event.duration.colname,
-                                               event.daily.dose.colname=event.daily.dose.colname,
-                                               medication.class.colname=medication.class.colname,
-                                               carryover.within.obs.window=carryover.within.obs.window,
-                                               carry.only.for.same.medication=carry.only.for.same.medication,
-                                               consider.dosage.change=consider.dosage.change,
-                                               medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
-                                               dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
-                                               maximum.permissible.gap=maximum.permissible.gap,
-                                               maximum.permissible.gap.unit=maximum.permissible.gap.unit,
-                                               maximum.permissible.gap.append.to.episode=maximum.permissible.gap.append.to.episode,
-                                               followup.window.start=followup.window.start,
-                                               followup.window.start.unit=followup.window.start.unit,
-                                               followup.window.duration=followup.window.duration,
-                                               followup.window.duration.unit=followup.window.duration.unit,
-                                               date.format=date.format,
-                                               parallel.backend="none", # make sure this runs sequentially!
-                                               parallel.threads=1,
-                                               suppress.warnings=suppress.warnings,
-                                               return.data.table=TRUE);
-
-    } else {
+      # Compute the treatment episodes:
+      treat.epi <- compute.treatment.episodes(data=data,
+                                              ID.colname=ID.colname,
+                                              event.date.colname=event.date.colname,
+                                              event.duration.colname=event.duration.colname,
+                                              event.daily.dose.colname=event.daily.dose.colname,
+                                              medication.class.colname=medication.class.colname,
+                                              carryover.within.obs.window=carryover.within.obs.window,
+                                              carry.only.for.same.medication=carry.only.for.same.medication,
+                                              consider.dosage.change=consider.dosage.change,
+                                              medication.change.means.new.treatment.episode=medication.change.means.new.treatment.episode,
+                                              dosage.change.means.new.treatment.episode=dosage.change.means.new.treatment.episode,
+                                              maximum.permissible.gap=maximum.permissible.gap,
+                                              maximum.permissible.gap.unit=maximum.permissible.gap.unit,
+                                              maximum.permissible.gap.append.to.episode=maximum.permissible.gap.append.to.episode,
+                                              followup.window.start=followup.window.start,
+                                              followup.window.start.unit=followup.window.start.unit,
+                                              followup.window.duration=followup.window.duration,
+                                              followup.window.duration.unit=followup.window.duration.unit,
+                                              return.mapping.events.episodes=TRUE, # map the events to episodes anyways
+                                              date.format=date.format,
+                                              parallel.backend="none", # make sure this runs sequentially!
+                                              parallel.threads=1,
+                                              suppress.warnings=suppress.warnings,
+                                              suppress.special.argument.checks=suppress.special.argument.checks,
+                                              return.data.table=TRUE);
+      if("mapping.episodes.to.events" %in% names(attributes(treat.epi))) mapping.episodes.to.events <- attr(treat.epi, "mapping.episodes.to.events"); # store the mapping events <-> episodes
+    } else
+    {
 
       # various checks
 
-      # Convert treat.epi to data.table, cache event dat as Date objects, and key by patient ID and event date
+      # Convert treat.epi to data.table, cache event date as Date objects, and key by patient ID and event date
       treat.epi <- as.data.table(treat.epi);
       treat.epi[, `:=` (episode.start = as.Date(episode.start,format=date.format),
                         episode.end = as.Date(episode.end,format=date.format)
                         )]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
       setkeyv(treat.epi, c(ID.colname, "episode.ID")); # key (and sorting) by patient and episode ID
-
     }
 
     if( is.null(treat.epi) || nrow(treat.epi) == 0 ) return (NULL);
@@ -7694,6 +7860,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                           parallel.backend="none", # make sure this runs sequentially!
                                           parallel.threads=1,
                                           suppress.warnings=suppress.warnings,
+                                          suppress.special.argument.checks=suppress.special.argument.checks,
                                           return.data.table=TRUE);
     if( is.null(event.info2) ) return (NULL);
 
@@ -7746,6 +7913,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                           parallel.backend="none", # make sure this runs sequentially!
                                           parallel.threads=1,
                                           suppress.warnings=suppress.warnings,
+                                          suppress.special.argument.checks=suppress.special.argument.checks,
                                           return.data.table=TRUE);
 
       episode.gap.days <- data.epi2[which(.EVENT.WITHIN.FU.WINDOW), c(ID.colname, "episode.ID", gap.days.colname), by = c(ID.colname, "episode.ID"), with = FALSE]; # gap days during the follow-up window
@@ -7781,6 +7949,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                      parallel.backend="none", # make sure this runs sequentially!
                      parallel.threads=1,
                      suppress.warnings=suppress.warnings,
+                     suppress.special.argument.checks=TRUE, # we know we're using special arguments, so don't do an extra check
                      ...);
     } else
     {
@@ -7806,6 +7975,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                      parallel.backend="none", # make sure this runs sequentially!
                      parallel.threads=1,
                      suppress.warnings=suppress.warnings,
+                     suppress.special.argument.checks=TRUE, # we know we're using special arguments, so don't do an extra check
                      arguments.that.should.not.be.defined=NULL,
                      ...);
     }
@@ -7818,20 +7988,45 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     tmp <- as.data.table(merge(cma$CMA, treat.epi)[,c(ID.colname, "episode.ID", "episode.start", "end.episode.gap.days", "episode.duration", "episode.end", "CMA")]);
     setkeyv(tmp, c(ID.colname,"episode.ID"));
 
-    if( !return.inner.event.info )
+    # The return value:
+    ret.val <- list("CMA"=as.data.frame(tmp),
+                    "event.info"=as.data.frame(event.info2)[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]);
+    if( return.inner.event.info )
     {
-      return (list("CMA"=as.data.frame(tmp),
-                   "event.info"=as.data.frame(event.info2)[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")]));
-    } else
-    {
-      return (list("CMA"=as.data.frame(tmp),
-                   "event.info"=as.data.frame(event.info2)[,c(ID.colname, ".FU.START.DATE", ".FU.END.DATE", ".OBS.START.DATE", ".OBS.END.DATE")],
-                   "inner.event.info"=as.data.frame(event.info2)));
+      ret.val[["inner.event.info"]] <- as.data.frame(event.info2);
     }
+    if( return.mapping.events.episodes )
+    {
+      ret.val[["mapping.episodes.to.events"]] <- merge(mapping.episodes.to.events, tmp[,c(ID.colname, "episode.ID"), with=FALSE], by=c(ID.colname, "episode.ID"), all.x=FALSE, all.y=TRUE);
+    }
+    return (ret.val);
   }
 
   # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
-  data.copy <- data.table(data);
+  # columns to keep:
+  columns.to.keep <- c();
+  if( !is.null(ID.colname) && !is.na(ID.colname) && length(ID.colname) == 1 && ID.colname %in% names(data) ) columns.to.keep <- c(columns.to.keep, ID.colname);
+  if( !is.null(event.date.colname) && !is.na(event.date.colname) && length(event.date.colname) == 1 && event.date.colname %in% names(data) ) columns.to.keep <- c(columns.to.keep, event.date.colname);
+  if( !is.null(event.duration.colname) && !is.na(event.duration.colname) && length(event.duration.colname) == 1  && event.duration.colname %in% names(data)) columns.to.keep <- c(columns.to.keep, event.duration.colname);
+  if( !is.null(event.daily.dose.colname) && !is.na(event.daily.dose.colname) && length(event.daily.dose.colname) == 1 && event.daily.dose.colname %in% names(data) ) columns.to.keep <- c(columns.to.keep, event.daily.dose.colname);
+  if( !is.null(medication.class.colname) && !is.na(medication.class.colname) && length(medication.class.colname) == 1 && medication.class.colname %in% names(data) ) columns.to.keep <- c(columns.to.keep, medication.class.colname);
+  if( !is.null(mg <- getMGs(ret.val)) && !is.null(medication.groups.colname) && !is.na(medication.groups.colname) && length(medication.groups.colname) == 1  && medication.groups.colname %in% names(data)) columns.to.keep <- c(columns.to.keep, medication.groups.colname);
+  if( !is.null(followup.window.start) && !is.na(followup.window.start) && length(followup.window.start) == 1 && (is.character(followup.window.start) || (is.factor(followup.window.start) && is.character(followup.window.start <- as.character(followup.window.start)))) && followup.window.start %in% names(data) ) columns.to.keep <- c(columns.to.keep, followup.window.start);
+  if( !is.null(followup.window.duration) && !is.na(followup.window.duration) && length(followup.window.duration) == 1 && (is.character(followup.window.duration) || (is.factor(followup.window.duration) && is.character(followup.window.duration <- as.character(followup.window.duration)))) && followup.window.duration %in% names(data) ) columns.to.keep <- c(columns.to.keep, followup.window.duration);
+  if( !is.null(observation.window.start) && !is.na(observation.window.start) && length(observation.window.start) == 1 && (is.character(observation.window.start) || (is.factor(observation.window.start) && is.character(observation.window.start <- as.character(observation.window.start)))) && observation.window.start %in% names(data) ) columns.to.keep <- c(columns.to.keep, observation.window.start);
+  if( !is.null(observation.window.duration) && !is.na(observation.window.duration) && length(observation.window.duration) == 1 && (is.character(observation.window.duration) || (is.factor(observation.window.duration) && is.character(observation.window.duration <- as.character(observation.window.duration)))) && observation.window.duration %in% names(data) ) columns.to.keep <- c(columns.to.keep, observation.window.duration);
+  # special column names that should not be used:
+  if( !suppress.special.argument.checks )
+  {
+    ..special.colnames <- c(.special.colnames, event.interval.colname, gap.days.colname); # don't forget event.interval.colname and gap.days.colname!
+    if( any(s <- ..special.colnames %in% columns.to.keep) )
+    {
+      .report.ewms(paste0("Column name(s) ",paste0("'",..special.colnames[s],"'",collapse=", "),"' are reserved: please don't use them in your input data!\n"), "error", cma.class.name, "AdhereR");
+      return (NULL);
+    }
+  }
+  # copy only the relevant bits of the data:
+  data.copy <- data.table(data)[, columns.to.keep, with=FALSE];
   data.copy[, .DATE.as.Date := as.Date(get(event.date.colname),format=date.format)]; # .DATE.as.Date: convert event.date.colname from formatted string to Date
   data.copy$..ORIGINAL.ROW.ORDER.. <- 1:nrow(data.copy); # preserve the original order of the rows (needed for medication groups)
   setkeyv(data.copy, c(ID.colname, ".DATE.as.Date")); # key (and sorting) by patient ID and event date
@@ -7867,7 +8062,8 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                              observation.window.duration=observation.window.duration,
                              observation.window.duration.unit=observation.window.duration.unit,
                              date.format=date.format,
-                             suppress.warnings=suppress.warnings);
+                             suppress.warnings=suppress.warnings,
+                             suppress.special.argument.checks=suppress.special.argument.checks);
     if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
 
     # Construct the return object:
@@ -7878,6 +8074,7 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     ret.val$CMA <- as.data.frame(tmp$CMA);
     setnames(ret.val$CMA, 1, ID.colname);
     if( return.inner.event.info && !is.null(tmp$inner.event.info) ) ret.val$inner.event.info <- as.data.frame(tmp$inner.event.info);
+    if( return.mapping.events.episodes && !is.null(tmp$mapping.episodes.to.events) ) ret.val$mapping.episodes.to.events <- as.data.frame(tmp$mapping.episodes.to.events);
 
     return (ret.val);
 
@@ -7955,7 +8152,8 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
                                observation.window.duration=observation.window.duration,
                                observation.window.duration.unit=observation.window.duration.unit,
                                date.format=date.format,
-                               suppress.warnings=suppress.warnings);
+                               suppress.warnings=suppress.warnings,
+                               suppress.special.argument.checks=suppress.special.argument.checks);
       if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
 
       # Convert to data.frame and return:
@@ -8154,7 +8352,7 @@ print.CMA_per_episode <- function(x,                                     # the C
                                   format=c("text", "latex", "markdown"), # the format to print to
                                   print.params=TRUE,                     # show the parameters?
                                   print.data=TRUE,                       # show the summary of the data?
-                                  exclude.params=c("event.info", "inner.event.info"), # if so, should I not print some?
+                                  exclude.params=c("event.info", "inner.event.info", "mapping.episodes.to.events"), # if so, should I not print some?
                                   skip.header=FALSE,                     # should I print the generic header?
                                   cma.type=class(x)[1]
 )
@@ -8535,6 +8733,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
                                  CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                                  highlight.followup.window=TRUE, followup.window.col="green",
                                  highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.opacity=0.3,
+                                 print.episode.or.sliding.window=FALSE, # should we print the episode or sliding window to which an event belongs?
                                  alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
                                  bw.plot=FALSE,                   # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                                  rotate.text=-60,                 # some text (e.g., axis labels) may be rotated by this much degrees
@@ -8635,6 +8834,7 @@ plot.CMA_per_episode <- function(x,                                     # the CM
              highlight.observation.window=highlight.observation.window,
              observation.window.col=observation.window.col,
              observation.window.opacity=observation.window.opacity,
+             print.episode.or.sliding.window=print.episode.or.sliding.window,
              alternating.bands.cols=alternating.bands.cols,
              bw.plot=bw.plot,
              rotate.text=rotate.text,
@@ -8798,6 +8998,9 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA_sliding_window} with the
 #' following fields:
@@ -8947,6 +9150,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                 parallel.threads="auto", # specification (or number) of parallel threads
                                 # Misc:
                                 suppress.warnings=FALSE,
+                                suppress.special.argument.checks=FALSE, # used internally to suppress the check that we don't use special argument names
                                 # extra parameters to be sent to the CMA function:
                                 ...
 )
@@ -9062,6 +9266,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                   observation.window.duration.unit=observation.window.duration.unit,
                   date.format=date.format,
                   suppress.warnings=suppress.warnings,
+                  suppress.special.argument.checks=suppress.special.argument.checks,
                   summary=NA);
   if( is.null(ret.val) ) return (NULL);
   # The followup.window.start and observation.window.start might have been converted to Date:
@@ -9089,7 +9294,8 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # Auxiliary internal function: Compute the CMA for a given patient:
@@ -9153,6 +9359,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                        parallel.backend="none", # make sure this runs sequentially!
                        parallel.threads=1,
                        suppress.warnings=suppress.warnings,
+                       suppress.special.argument.checks=TRUE, # we know we're using special columns, so supress this check
                        ...);
       } else
       {
@@ -9176,6 +9383,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                        parallel.backend="none", # make sure this runs sequentially!
                        parallel.threads=1,
                        suppress.warnings=suppress.warnings,
+                       suppress.special.argument.checks=TRUE, # we know we're using special columns, so supress this check
                        arguments.that.should.not.be.defined=NULL,
                        ...);
       }
@@ -9229,6 +9437,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                           parallel.backend="none", # make sure this runs sequentially!
                                           parallel.threads=1,
                                           suppress.warnings=suppress.warnings,
+                                          suppress.special.argument.checks=suppress.special.argument.checks,
                                           return.data.table=TRUE);
     if( is.null(event.info2) ) return (NULL);
     # Merge the observation window start and end dates back into the data:
@@ -9306,7 +9515,8 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                              observation.window.duration=observation.window.duration,
                              observation.window.duration.unit=observation.window.duration.unit,
                              date.format=date.format,
-                             suppress.warnings=suppress.warnings);
+                             suppress.warnings=suppress.warnings,
+                             suppress.special.argument.checks=suppress.special.argument.checks);
     if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
 
     # Construct the return object:
@@ -9399,7 +9609,8 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                observation.window.duration=observation.window.duration,
                                observation.window.duration.unit=observation.window.duration.unit,
                                date.format=date.format,
-                               suppress.warnings=suppress.warnings);
+                               suppress.warnings=suppress.warnings,
+                               suppress.special.argument.checks=suppress.special.argument.checks);
       if( is.null(tmp) || is.null(tmp$CMA) || !inherits(tmp$CMA,"data.frame") || is.null(tmp$event.info) ) return (NULL);
 
       # Convert to data.frame and return:

@@ -25,11 +25,13 @@ compute.treatment.episodes(
   followup.window.duration.unit = c("days", "weeks", "months", "years")[1],
   event.interval.colname = "event.interval",
   gap.days.colname = "gap.days",
+  return.mapping.events.episodes = FALSE,
   date.format = "\%m/\%d/\%Y",
   parallel.backend = c("none", "multicore", "snow", "snow(SOCK)", "snow(MPI)",
     "snow(NWS)")[1],
   parallel.threads = "auto",
   suppress.warnings = FALSE,
+  suppress.special.argument.checks = FALSE,
   return.data.table = FALSE,
   ...
 )
@@ -150,6 +152,10 @@ threads, or a more complex specification of the SNOW cluster nodes for
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{suppress.special.argument.checks}{\emph{Logical} parameter for internal
+use; if \code{FALSE} (default) check if the important columns in the \code{data}
+have some of the reserved names, if \code{TRUE} this check is not performed.}
 
 \item{return.data.table}{\emph{Logical}, if \code{TRUE} return a
 \code{data.table} object, otherwise a \code{data.frame}.}

@@ -31,6 +31,7 @@ CMA2(
     "snow(NWS)")[1],
   parallel.threads = "auto",
   suppress.warnings = FALSE,
+  suppress.special.argument.checks = TRUE,
   arguments.that.should.not.be.defined = c(carryover.within.obs.window = FALSE,
     carryover.into.obs.window = FALSE, carry.only.for.same.medication = FALSE,
     consider.dosage.change = FALSE),
@@ -63,6 +64,7 @@ CMA4(
     "snow(NWS)")[1],
   parallel.threads = "auto",
   suppress.warnings = FALSE,
+  suppress.special.argument.checks = TRUE,
   arguments.that.should.not.be.defined = c(carryover.within.obs.window = FALSE,
     carryover.into.obs.window = FALSE, carry.only.for.same.medication = FALSE,
     consider.dosage.change = FALSE),
@@ -190,6 +192,10 @@ threads, or a more complex specification of the SNOW cluster nodes for
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{suppress.special.argument.checks}{\emph{Logical} parameter for internal
+use; if \code{FALSE} (default) check if the important columns in the \code{data}
+have some of the reserved names, if \code{TRUE} this check is not performed.}
 
 \item{arguments.that.should.not.be.defined}{a \emph{list} of argument names
 and pre-defined valuesfor which a warning should be thrown if passed to the
