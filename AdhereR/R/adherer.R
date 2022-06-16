@@ -2788,7 +2788,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
                                         event.interval.colname="event.interval", # contains number of days between the start of current event and the start of the next
                                         gap.days.colname="gap.days", # contains the number of days when medication was not available
                                         # Return also the mapping between episodes and events?
-                                        return.mapping.events.episodes=FALSE, # if TRUE, return the mapping as an attribute
+                                        return.mapping.events.episodes=FALSE, # return the mapping?
                                         # Date format:
                                         date.format="%m/%d/%Y", # the format of the dates used in this function
                                         # Parallel processing:
@@ -2916,7 +2916,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
         treatment.episodes <- data.table("episode.ID"=as.numeric(1),
                                          "episode.start"=data4ID$.DATE.as.Date[episode.starting.index],
                                          "end.episode.gap.days"=gap.days.column[last.event],
-                                         "events.in.episode"=paste0(event.id.column[ episode.starting.index:last.event ], collapse=",")); # the events contained in each episode
+                                         "events.in.episode"=paste0(event.id.column[ episode.starting.index : last.event ], collapse=",")); # the events contained in each episode
         if( maximum.permissible.gap.append.to.episode )
         {
           # Should we add the maximum permissible gap?
@@ -3877,11 +3877,13 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
       if( s.len < 2 || (.date.diff <- .difftime.Dates.as.days(.DATE.as.Date[ss.len], .DATE.as.Date[s1])) == 0 )
       {
         # For less than two events or when the first and the last events are on the same day, CMA1 does not make sense
-        return (NA_real_);
+        return (list("CMA"=NA_real_,
+                     "included.events.original.row.order"=NA_integer_));
       } else
       {
         # Otherwise, the sum of durations of the events excluding the last divided by the number of days between the first and the last event
-        return (as.numeric(sum(event.duration.column[s[-s.len]],na.rm=TRUE) / .date.diff));
+        return (list("CMA"=as.numeric(sum(event.duration.column[s[-s.len]],na.rm=TRUE) / .date.diff),
+                     "included.events.original.row.order"=data4ID$..ORIGINAL.ROW.ORDER..[s[-s.len]]));
       }
     }
 
@@ -3916,7 +3918,8 @@ CMA1 <- function( data=NULL, # the data used to compute the CMA on
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
     CMA <- event.info[, .process.patient(.SD), by=ID.colname];
-    return (list("CMA"=CMA, "event.info"=event.info));
+    event.info$.EVENT.USED.IN.CMA <- (event.info$..ORIGINAL.ROW.ORDER.. %in% CMA$included.events.original.row.order); # store if the event was used to compute the CMA or not
+    return (list("CMA"=unique(CMA[,1:2]), "event.info"=event.info));
   }
 
   ret.val <- .cma.skeleton(data=data,
@@ -4606,12 +4609,14 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
       if( n.events < 1 || sel.data4ID$.DATE.as.Date[1] > sel.data4ID$.OBS.END.DATE[1] )
       {
         # For less than one event or when the first event is on the last day of the observation window, CMA2 does not make sense
-        return (NA_real_);
+        return (list("CMA"=NA_real_,
+                     "included.events.original.row.order"=NA_integer_));
       } else
       {
         # Otherwise, the sum of durations of the events divided by the number of days between the first event and the end of the observation window
-        return (as.numeric(sum(sel.data4ID[, get(event.duration.colname)],na.rm=TRUE) /
-                                 (as.numeric(difftime(sel.data4ID$.OBS.END.DATE[1], sel.data4ID$.DATE.as.Date[1], units="days")))));
+        return (list("CMA"=as.numeric(sum(sel.data4ID[, get(event.duration.colname)],na.rm=TRUE) /
+                                 (as.numeric(difftime(sel.data4ID$.OBS.END.DATE[1], sel.data4ID$.DATE.as.Date[1], units="days")))),
+                     "included.events.original.row.order"=sel.data4ID$..ORIGINAL.ROW.ORDER..));
       }
     }
 
@@ -4646,7 +4651,8 @@ CMA2 <- function( data=NULL, # the data used to compute the CMA on
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
     CMA <- event.info[, .process.patient(.SD), by=ID.colname];
-    return (list("CMA"=CMA, "event.info"=event.info));
+    event.info$.EVENT.USED.IN.CMA <- (event.info$..ORIGINAL.ROW.ORDER.. %in% CMA$included.events.original.row.order); # store if the event was used to compute the CMA or not
+    return (list("CMA"=unique(CMA[,1:2]), "event.info"=event.info));
   }
 
   ret.val <- .cma.skeleton(data=data,
@@ -5289,12 +5295,14 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
       if( n.events < 2 || sel.data4ID$.DATE.as.Date[1] == sel.data4ID$.DATE.as.Date[n.events] )
       {
         # For less than two events or when the first and the last events are on the same day, CMA5 does not make sense
-        return (NA_real_);
+        return (list("CMA"=NA_real_,
+                     "included.events.original.row.order"=NA_integer_));
       } else
       {
         # Otherwise, the sum of durations of the events excluding the last divided by the number of days between the first and the last event
-        return (1 - as.numeric(sum(sel.data4ID[-n.events, get(gap.days.colname)],na.rm=TRUE) /
-                                     (as.numeric(difftime(sel.data4ID$.DATE.as.Date[n.events], sel.data4ID$.DATE.as.Date[1], units="days")))));
+        return (list("CMA"=1 - as.numeric(sum(sel.data4ID[-n.events, get(gap.days.colname)],na.rm=TRUE) /
+                                     (as.numeric(difftime(sel.data4ID$.DATE.as.Date[n.events], sel.data4ID$.DATE.as.Date[1], units="days")))),
+                     "included.events.original.row.order"=sel.data4ID$..ORIGINAL.ROW.ORDER..[-n.events]));
       }
     }
 
@@ -5329,7 +5337,8 @@ CMA5 <- function( data=NULL, # the data used to compute the CMA on
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
     CMA <- event.info[, .process.patient(.SD), by=ID.colname];
-    return (list("CMA"=CMA, "event.info"=event.info));
+    event.info$.EVENT.USED.IN.CMA <- (event.info$..ORIGINAL.ROW.ORDER.. %in% CMA$included.events.original.row.order); # store if the event was used to compute the CMA or not
+    return (list("CMA"=unique(CMA[,1:2]), "event.info"=event.info));
   }
 
   ret.val <- .cma.skeleton(data=data,
@@ -5732,12 +5741,14 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
       if( n.events < 1 || sel.data4ID$.DATE.as.Date[1] > sel.data4ID$.OBS.END.DATE[1] )
       {
         # For less than one event or when the first event is on the last day of the observation window, CMA6 does not make sense
-        return (NA_real_);
+        return (list("CMA"=NA_real_,
+                     "included.events.original.row.order"=NA_integer_));
       } else
       {
         # Otherwise, 1 - (total gap days divided by the number of days between the first event and the end of the observation window)
-        return (1 - as.numeric(sum(sel.data4ID[, get(gap.days.colname)],na.rm=TRUE) /
-                                     (as.numeric(sel.data4ID$.OBS.END.DATE[1] - sel.data4ID$.DATE.as.Date[1]))));
+        return (list("CMA"=1 - as.numeric(sum(sel.data4ID[, get(gap.days.colname)],na.rm=TRUE) /
+                                     (as.numeric(sel.data4ID$.OBS.END.DATE[1] - sel.data4ID$.DATE.as.Date[1]))),
+                     "included.events.original.row.order"=sel.data4ID$..ORIGINAL.ROW.ORDER..));
       }
     }
 
@@ -5772,7 +5783,8 @@ CMA6 <- function( data=NULL, # the data used to compute the CMA on
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
     CMA <- event.info[, .process.patient(.SD), by=ID.colname];
-    return (list("CMA"=CMA, "event.info"=event.info));
+    event.info$.EVENT.USED.IN.CMA <- (event.info$..ORIGINAL.ROW.ORDER.. %in% CMA$included.events.original.row.order); # store if the event was used to compute the CMA or not
+    return (list("CMA"=unique(CMA[,1:2]), "event.info"=event.info));
   }
 
   ret.val <- .cma.skeleton(data=data,
@@ -6186,7 +6198,8 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
         if ( sum(data4ID$.EVENT.STARTS.BEFORE.OBS.WINDOW)==0 )
         {
           # If there are no prior events, CMA7 does not make sense:
-          return (NA_real_);
+          return (list("CMA"=NA_real_,
+                       "included.events.original.row.order"=NA_integer_));
         } else
         {
           # Select the events that start before the observation window begins but continue within the observation window:
@@ -6194,18 +6207,20 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
           if( data4ID$gap.days[event.start.before.continue.in] <= as.numeric(data4ID$.OBS.END.DATE[n.events] - data4ID$.OBS.START.DATE[n.events]) )
           {
             # Otherwise, CMA7 is the gap of the last event entering the observation window minus any days between the end of observation window and date of next event or end of follow-up window, divided by the observation window:
-            return (1.0 - as.numeric(gap.days.column[event.start.before.continue.in] /
-                                       (as.numeric(data4ID$.OBS.END.DATE[event.start.before.continue.in] - data4ID$.OBS.START.DATE[event.start.before.continue.in]))));
+            return (list("CMA"=1.0 - as.numeric(gap.days.column[event.start.before.continue.in] /
+                                                  (as.numeric(data4ID$.OBS.END.DATE[event.start.before.continue.in] - data4ID$.OBS.START.DATE[event.start.before.continue.in]))),
+                         "included.events.original.row.order"=data4ID$..ORIGINAL.ROW.ORDER..[s]));
           } else
           {
-            # If there is no event before that enter into the observation window, CMA7 is 0:
-            return (0.0);
+            # If there is no event before that enters into the observation window, CMA7 is 0:
+            return (list("CMA"=0.0,
+                         "included.events.original.row.order"=NA_integer_));
           }
         }
       } else
       {
         # for all other situations compute the gap days for the last event in the observation window
-        event.after.obs.window <- which(data4ID$.EVENT.STARTS.AFTER.OBS.WINDOW); # the events after the obsevration window
+        event.after.obs.window <- which(data4ID$.EVENT.STARTS.AFTER.OBS.WINDOW); # the events after the observation window
         gap.days.obswin.last.event <- gap.days.column[slast];
 
         # Compute the gap days within the observation window but before the first event:
@@ -6221,13 +6236,15 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
         if( slen == 1  )
         {
           # if there is only one event, there are no "gap.days" to consider
-          return (1 - as.numeric((gap.days.obswin.last.event + gap.days.obswin.before.first.event) /
-                                    (as.numeric(difftime(data4ID$.OBS.END.DATE[s1], data4ID$.OBS.START.DATE[s1], units="days")))));
+          return (list("CMA"=1 - as.numeric((gap.days.obswin.last.event + gap.days.obswin.before.first.event) /
+                                              (as.numeric(difftime(data4ID$.OBS.END.DATE[s1], data4ID$.OBS.START.DATE[s1], units="days")))),
+                       "included.events.original.row.order"=data4ID$..ORIGINAL.ROW.ORDER..[s]));
         } else
         {
           # if there are more events, gap days are the ones from before, the ones for the last event, and the ones in between
-          return (1 - as.numeric((sum(gap.days.column[s[-slen]],na.rm=TRUE) + gap.days.obswin.last.event + gap.days.obswin.before.first.event) /
-                                     (as.numeric(difftime(data4ID$.OBS.END.DATE[s1], data4ID$.OBS.START.DATE[s1], units="days")))));
+          return (list("CMA"=1 - as.numeric((sum(gap.days.column[s[-slen]],na.rm=TRUE) + gap.days.obswin.last.event + gap.days.obswin.before.first.event) /
+                                              (as.numeric(difftime(data4ID$.OBS.END.DATE[s1], data4ID$.OBS.START.DATE[s1], units="days")))),
+                       "included.events.original.row.order"=data4ID$..ORIGINAL.ROW.ORDER..[s]));
         }
       }
     }
@@ -6263,7 +6280,8 @@ CMA7 <- function( data=NULL, # the data used to compute the CMA on
     if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
     CMA <- event.info[, .process.patient(.SD), by=ID.colname];
-    return (list("CMA"=CMA, "event.info"=event.info));
+    event.info$.EVENT.USED.IN.CMA <- (event.info$..ORIGINAL.ROW.ORDER.. %in% CMA$included.events.original.row.order); # store if the event was used to compute the CMA or not
+    return (list("CMA"=unique(CMA[,1:2]), "event.info"=event.info));
   }
 
   ret.val <- .cma.skeleton(data=data,
@@ -6744,6 +6762,8 @@ CMA8 <- function( data=NULL, # the data used to compute the CMA on
                 suppress.special.argument.checks=suppress.special.argument.checks,
                 force.NA.CMA.for.failed.patients=FALSE # may enforce this afterwards...
     );
+    # Recover the rows in data: CMA$event.info$..ORIGINAL.ROW.ORDER.. -> event.info$..ORIGINAL.ROW.ORDER.. -> data:
+    event.info$.EVENT.USED.IN.CMA <- NA; event.info$.EVENT.USED.IN.CMA[ CMA$event.info$..ORIGINAL.ROW.ORDER.. ] <- CMA$event.info$.EVENT.USED.IN.CMA;
     return (list("CMA"=CMA$CMA, "event.info"=event.info)); # make sure to return the non-adjusted event.info prior to computing CMA7!
   }
 
@@ -7187,7 +7207,8 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
       s <- which(data4ID$.DATE.as.Date <= .obs.end.actual);
       if( length(s) == 0 )
       {
-        return (NA_real_);
+        return (list("CMA"=NA_real_,
+                     "included.events.original.row.order"=NA_integer_));
       } else
       {
         # Compute the ratios of CMA within the FUW:
@@ -7196,8 +7217,9 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
         int.start <- pmax(event.start, .obs.start.actual); int.end <- pmin(event.end, .obs.end.actual);
         .EVENT.INTERVAL.IN.OBS.WIN <- pmax(0, as.numeric(int.end - int.start));
         # Weight the days by the ratio:
-        return (sum(.CMA.PER.INTERVAL * .EVENT.INTERVAL.IN.OBS.WIN, na.rm=TRUE) /
-                      as.numeric(.obs.end.actual - .obs.start.actual));
+        return (list("CMA"=sum(.CMA.PER.INTERVAL * .EVENT.INTERVAL.IN.OBS.WIN, na.rm=TRUE) /
+                       as.numeric(.obs.end.actual - .obs.start.actual),
+                     "included.events.original.row.order"=data4ID$..ORIGINAL.ROW.ORDER..[s]));
       }
     }
 
@@ -7302,8 +7324,9 @@ CMA9 <- function( data=NULL, # the data used to compute the CMA on
                                          suppress.warnings=suppress.warnings,
                                          suppress.special.argument.checks=suppress.special.argument.checks,
                                          return.data.table=TRUE);
+    event.info$.EVENT.USED.IN.CMA <- (event.info$..ORIGINAL.ROW.ORDER.. %in% CMA$included.events.original.row.order); # store if the event was used to compute the CMA or not
 
-    return (list("CMA"=CMA, "event.info"=event.info));
+    return (list("CMA"=unique(CMA[,1:2]), "event.info"=event.info));
   }
 
   ret.val <- .cma.skeleton(data=data,
@@ -7997,12 +8020,15 @@ CMA_per_episode <- function( CMA.to.apply,  # the name of the CMA function (e.g.
     }
     if( return.mapping.events.episodes )
     {
+      events.actually.used <- cma$data$..ORIGINAL.ROW.ORDER..[ cma$event.info$..ORIGINAL.ROW.ORDER..[ cma$event.info$.EVENT.USED.IN.CMA ] ]; # translate back to the original data row numbers of the used events
+      mapping.episodes.to.events <- mapping.episodes.to.events[ mapping.episodes.to.events$event.index.in.data %in% events.actually.used, ]; # keep only those events that are used in the episodes
+
       ret.val[["mapping.episodes.to.events"]] <- merge(mapping.episodes.to.events, tmp[,c(ID.colname, "episode.ID"), with=FALSE], by=c(ID.colname, "episode.ID"), all.x=FALSE, all.y=TRUE);
     }
     return (ret.val);
   }
 
-  # Convert to data.table, cache event dat as Date objects, and key by patient ID and event date
+  # Convert to data.table, cache event date as Date objects, and key by patient ID and event date
   # columns to keep:
   columns.to.keep <- c();
   if( !is.null(ID.colname) && !is.na(ID.colname) && length(ID.colname) == 1 && ID.colname %in% names(data) ) columns.to.keep <- c(columns.to.keep, ID.colname);

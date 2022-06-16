@@ -13,6 +13,10 @@
   - the overview vignette now shows an example of modifying an `AdhereR` plot *a posteriori* by adding various elements (lines, symbols and text) to a CMA plot.
   
   - the `Python 3` wrapper (bridge) was updated, as was the associated vignette; `AdhereR` can now be used transparently from Junyper Notebooks (and even through `rpy2`) and two example notebooks have been included. 
+  
+  - the `event.info` table returned by the simple CMAs (`CMA1`..`CMA9`) now includes an extra column, `.EVENT.USED.IN.CMA`, which is `TRUE` if and only if the event on that row was actually used to estimate the CMA; this info can be used by itself, but is aimed at finding out which event is included in which episode or sliding window (see below).
+  
+  - 
 
 ## Bug fixes
 
@@ -24,7 +28,7 @@
 
 ### `CMA_polypharmacy`
 
-  - remove option to supply medication class as list after `.check.medication.class` was suppressed from AdhereR.
+  - remove option to supply medication class as list after `.check.medication.class` was suppressed from `AdhereR`.
   
   - specify columns to merge by.
 
