@@ -21,7 +21,7 @@ plot_interactive_cma(
   observation.window.start.max = followup.window.start.max,
   observation.window.duration.max = followup.window.duration.max,
   align.all.patients = FALSE,
-  align.first.event.at.zero = TRUE,
+  align.first.event.at.zero = FALSE,
   maximum.permissible.gap.max = 2 * 365,
   sliding.window.start.max = followup.window.start.max,
   sliding.window.duration.max = 2 * 365,

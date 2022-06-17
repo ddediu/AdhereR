@@ -532,7 +532,7 @@ ui <- fluidPage(
                                                                     div(title='Should the first event (across patients) be considered as the origin of time?',
                                                                         shinyWidgets::materialSwitch(inputId="plot_align_first_event_at_zero",
                                                                                                      label="Align 1st event at 0?",
-                                                                                                     value=TRUE, status="primary", right=TRUE))
+                                                                                                     value=FALSE, status="primary", right=TRUE))
                                                                   ),
 
                                                                   hr()

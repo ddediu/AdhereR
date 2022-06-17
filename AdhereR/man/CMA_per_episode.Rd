@@ -204,6 +204,15 @@ patients for which the CMA estimation fails are treated: if \code{TRUE}
 they are returned with an \code{NA} CMA estimate, while for
 \code{FALSE} they are omitted.}
 
+\item{return.mapping.events.episodes}{A \emph{Logical}, if \code{TRUE} then
+the mapping between events and episodes is returned as an extra component
+\code{mapping.episodes.to.events}, which is a \code{data.table} giving, for
+each episode, the events that belong to it (an event is given by its row
+number in the \code{data}). Please note that the episodes returned are
+specific to the particular simple CMA used, and should preferentially used
+over those returned by \code{compute.treatment.episodes()}. This component
+can also be accessed using the \code{getEventsToEpisodesMapping()} function.}
+
 \item{parallel.backend}{Can be "none" (the default) for single-threaded
 execution, "multicore"  (using \code{mclapply} in package \code{parallel})
 for multicore processing (NB. not currently implemented on MS Windows and
@@ -351,4 +360,12 @@ The "simple" CMAs that can be computed comprise \code{\link{CMA1}},
 \code{\link{CMA8}}, \code{\link{CMA9}}, as well as user-defined classes
 derived from \code{\link{CMA0}} that have a \code{CMA} component giving the
 estimated CMA per patient as a \code{data.frame}.
+If \code{mapping.episodes.to.events} is \code{TRUE}, then this also has a
+component \code{mapping.episodes.to.events} that gives the mapping between
+episodes and events as a \code{data.table} with the following columns:
+\itemize{
+ \item \code{patid} the patient ID.
+ \item \code{episode.ID} the episode unique ID (increasing sequentially).
+ \item \code{event.index.in.data} the event given by its row number in the \code{data}.
+}
 }

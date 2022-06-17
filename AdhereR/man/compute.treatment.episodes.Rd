@@ -127,6 +127,17 @@ storing the number of days when medication was not available (i.e., the
 "gap days"); the default value "gap.days" should be changed only if there is
 a naming conflict with a pre-existing "gap.days" column in \code{event.info}.}
 
+\item{return.mapping.events.episodes}{A \emph{Logical}, if \code{TRUE} then
+the mapping between events and episodes is returned as the attribute
+\code{mapping.episodes.to.events}, which is a \code{data.table} giving, for
+each episode, the events that belong to it (an event is given by its row
+number in the \code{data}). Please note that the episodes returned are quite
+"generic" (e.g., they include all the events in the FUW), because which events
+will be actually used in the computation of a \code{CMA_per_episode} depend on
+which simple CMA is used (see also \code{CMA_per_episode}), and should be used
+with care (we recommend using the mappings given by \code{CMA_per_episode}
+instead).}
+
 \item{date.format}{A \emph{string} giving the format of the dates used in the
 \code{data} and the other parameters; see the \code{format} parameters of the
 \code{\link[base]{as.Date}} function for details (NB, this concerns only the
@@ -173,6 +184,14 @@ treatment episodes could be computed):
  \item \code{end.episode.gap.days} the corresponding gap days of the last event in this episode.
  \item \code{episode.duration} the episode duration in days.
  \item \code{episode.end} the episode end date.
+}
+If \code{mapping.episodes.to.events} is \code{TRUE}, then this also has an
+\emph{attribute} \code{mapping.episodes.to.events} that gives the mapping between
+episodes and events as a \code{data.table} with the following columns:
+\itemize{
+ \item \code{patid} the patient ID.
+ \item \code{episode.ID} the episode unique ID (increasing sequentially).
+ \item \code{event.index.in.data} the event given by its row number in the \code{data}.
 }
 }
 \description{

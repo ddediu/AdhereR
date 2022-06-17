@@ -18,7 +18,7 @@
   patients.to.plot = NULL,
   duration = NA,
   align.all.patients = FALSE,
-  align.first.event.at.zero = TRUE,
+  align.first.event.at.zero = FALSE,
   show.period = c("dates", "days")[2],
   period.in.days = 90,
   show.legend = TRUE,

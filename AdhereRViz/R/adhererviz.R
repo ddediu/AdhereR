@@ -171,7 +171,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   followup.window.duration.max=5*365, # in days
                                   observation.window.start.max=followup.window.start.max, # in days
                                   observation.window.duration.max=followup.window.duration.max, # in days
-                                  align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place the first event as the horizontal 0?
+                                  align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? if so, place the first event as the horizontal 0?
                                   maximum.permissible.gap.max=2*365, # in days
                                   sliding.window.start.max=followup.window.start.max, # in days
                                   sliding.window.duration.max=2*365, # in days
@@ -719,7 +719,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 sliding.window.step.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
                                 sliding.window.no.steps=NA, # the number of steps to jump; if both sliding.win.no.steps & sliding.win.duration are NA, fill the whole observation window
                                 plot.CMA.as.histogram=TRUE, # plot the CMA as historgram or density plot?
-                                align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
+                                align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? if so, place first event the horizontal 0?
 
                                 # Legend:
                                 show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend
@@ -1130,7 +1130,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                         medication.groups=NULL, # definition of medication groups (NULL = undefined)
                                         # Date format:
                                         date.format=NA, # the format of the dates used in this function (NA = undefined)
-                                        align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
+                                        align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? if so, place first event the horizontal 0?
                                         use.system.browser=FALSE, # by default, don't necessarily use the system browser
                                         get.colnames.fnc=function(d) names(d),
                                         get.patients.fnc=function(d, idcol) unique(d[[idcol]]),

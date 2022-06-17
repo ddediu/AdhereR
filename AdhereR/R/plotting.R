@@ -986,7 +986,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 .plot.CMAs <- function(cma,                                   # the CMA_per_episode or CMA_sliding_window (or derived) object
                        patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
                        duration=NA,                           # duration and end period to plot in days (if missing, determined from the data)
-                       align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? and, if so, place the first event as the horizontal 0?
+                       align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? and, if so, place the first event as the horizontal 0?
                        show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                        period.in.days=90,                     # the interval (in days) at which to draw vertical lines
                        show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position

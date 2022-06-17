@@ -1078,7 +1078,7 @@ plot.CMA0 <- function(x,                                     # the CMA0 (or deri
                       ...,                                   # required for S3 consistency
                       patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
                       duration=NA,                           # duration to plot in days (if missing, determined from the data)
-                      align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? and, if so, place the first event as the horizontal 0?
+                      align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? and, if so, place the first event as the horizontal 0?
                       show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                       period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                       show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
@@ -2723,6 +2723,16 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 #' storing the number of days when medication was not available (i.e., the
 #' "gap days"); the default value "gap.days" should be changed only if there is
 #' a naming conflict with a pre-existing "gap.days" column in \code{event.info}.
+#' @param return.mapping.events.episodes A \emph{Logical}, if \code{TRUE} then
+#' the mapping between events and episodes is returned as the attribute
+#' \code{mapping.episodes.to.events}, which is a \code{data.table} giving, for
+#' each episode, the events that belong to it (an event is given by its row
+#' number in the \code{data}). Please note that the episodes returned are quite
+#' "generic" (e.g., they include all the events in the FUW), because which events
+#' will be actually used in the computation of a \code{CMA_per_episode} depend on
+#' which simple CMA is used (see also \code{CMA_per_episode}), and should be used
+#' with care (we recommend using the mappings given by \code{CMA_per_episode}
+#' instead).
 #' @param date.format A \emph{string} giving the format of the dates used in the
 #' \code{data} and the other parameters; see the \code{format} parameters of the
 #' \code{\link[base]{as.Date}} function for details (NB, this concerns only the
@@ -2761,6 +2771,14 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
 #'  \item \code{end.episode.gap.days} the corresponding gap days of the last event in this episode.
 #'  \item \code{episode.duration} the episode duration in days.
 #'  \item \code{episode.end} the episode end date.
+#' }
+#' If \code{mapping.episodes.to.events} is \code{TRUE}, then this also has an
+#' \emph{attribute} \code{mapping.episodes.to.events} that gives the mapping between
+#' episodes and events as a \code{data.table} with the following columns:
+#' \itemize{
+#'  \item \code{patid} the patient ID.
+#'  \item \code{episode.ID} the episode unique ID (increasing sequentially).
+#'  \item \code{event.index.in.data} the event given by its row number in the \code{data}.
 #' }
 #' @export
 compute.treatment.episodes <- function( data, # this is a per-event data.frame with columns:
@@ -3405,7 +3423,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
 .plot.CMA1plus <- function(cma,                                   # the CMA1 (or derived) object
                            patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
                            duration=NA,                           # duration to plot in days (if missing, determined from the data)
-                           align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? and, if so, place the first event as the horizintal 0?
+                           align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? and, if so, place the first event as the horizintal 0?
                            show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                            period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                            show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
@@ -4163,7 +4181,7 @@ plot.CMA1 <- function(x,                                     # the CMA1 (or deri
                       ...,                                   # required for S3 consistency
                       patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
                       duration=NA,                           # duration to plot in days (if missing, determined from the data)
-                      align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? and, if so, place the first event as the horizintal 0?
+                      align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? and, if so, place the first event as the horizintal 0?
                       show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                       period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                       show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
@@ -7522,6 +7540,14 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' patients for which the CMA estimation fails are treated: if \code{TRUE}
 #' they are returned with an \code{NA} CMA estimate, while for
 #' \code{FALSE} they are omitted.
+#' @param return.mapping.events.episodes A \emph{Logical}, if \code{TRUE} then
+#' the mapping between events and episodes is returned as an extra component
+#' \code{mapping.episodes.to.events}, which is a \code{data.table} giving, for
+#' each episode, the events that belong to it (an event is given by its row
+#' number in the \code{data}). Please note that the episodes returned are
+#' specific to the particular simple CMA used, and should preferentially used
+#' over those returned by \code{compute.treatment.episodes()}. This component
+#' can also be accessed using the \code{getEventsToEpisodesMapping()} function.
 #' @param parallel.backend Can be "none" (the default) for single-threaded
 #' execution, "multicore"  (using \code{mclapply} in package \code{parallel})
 #' for multicore processing (NB. not currently implemented on MS Windows and
@@ -7626,6 +7652,14 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' \code{\link{CMA8}}, \code{\link{CMA9}}, as well as user-defined classes
 #' derived from \code{\link{CMA0}} that have a \code{CMA} component giving the
 #' estimated CMA per patient as a \code{data.frame}.
+#' If \code{mapping.episodes.to.events} is \code{TRUE}, then this also has a
+#' component \code{mapping.episodes.to.events} that gives the mapping between
+#' episodes and events as a \code{data.table} with the following columns:
+#' \itemize{
+#'  \item \code{patid} the patient ID.
+#'  \item \code{episode.ID} the episode unique ID (increasing sequentially).
+#'  \item \code{event.index.in.data} the event given by its row number in the \code{data}.
+#' }
 #' @examples
 #' \dontrun{
 #' cmaE <- CMA_per_episode(CMA="CMA1",
@@ -8260,6 +8294,41 @@ getMGs.CMA_per_episode <- function(x)
   return (cma$medication.groups);
 }
 
+#' getEventsToEpisodesMapping
+#'
+#' This function returns the event-to-episode mapping, if this information exists.
+#'
+#' There are cases where it is interesting to know which events belong to which
+#' episodes and which events have been actually used in computing the simple CMA
+#' for each episode.
+#' This information can be returned by \code{compute.treatment.episodes()} and
+#' \code{CMA_per_episode()} if the parameter \code{return.mapping.events.episodes}
+#' is set to \code{TRUE}.
+#'
+#' @param x Either a \code{data.frame} as returned by \code{compute.treatment.episodes()}
+#' or an \code{CMA_per_episode object}.
+#' @return The mapping between events and episodes, if it exists either as the
+#' attribute \code{mapping.episodes.to.events} of the \code{data.frame} or as the
+#' \code{mapping.episodes.to.events} component of the \code{CMA_per_episode object}
+#' object, or \code{NULL} otherwise.
+#' @export
+getEventsToEpisodesMapping <- function(x)
+{
+  if( is.null(x) )
+  {
+    return (NULL);
+  } else if( inherits(x, "CMA_per_episode") && ("mapping.episodes.to.events" %in% names(x)) && !is.null(x$mapping.episodes.to.events) && inherits(x$mapping.episodes.to.events, "data.frame") )
+  {
+    return (x$mapping.episodes.to.events);
+  } else if( inherits(x, "data.frame") && ("mapping.episodes.to.events" %in% names(attributes(x))) && !is.null(attr(x,"mapping.episodes.to.events")) && inherits(attr(x,"mapping.episodes.to.events"), "data.frame") )
+  {
+    return (attr(x,"mapping.episodes.to.events"));
+  } else
+  {
+    return (NULL);
+  }
+}
+
 #' @export
 getCMA.CMA_per_episode <- function(x, flatten.medication.groups=FALSE, medication.groups.colname=".MED_GROUP_ID")
 {
@@ -8719,7 +8788,7 @@ print.CMA_per_episode <- function(x,                                     # the C
 plot.CMA_per_episode <- function(x,                                     # the CMA_per_episode or CMA_sliding_window (or derived) object
                                  patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
                                  duration=NA,                           # duration and end period to plot in days (if missing, determined from the data)
-                                 align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? and, if so, place the first event as the horizintal 0?
+                                 align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? and, if so, place the first event as the horizintal 0?
                                  show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
                                  period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
                                  show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
