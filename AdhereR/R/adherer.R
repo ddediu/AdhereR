@@ -7652,7 +7652,7 @@ plot.CMA9 <- function(...) .plot.CMA1plus(...)
 #' \code{\link{CMA8}}, \code{\link{CMA9}}, as well as user-defined classes
 #' derived from \code{\link{CMA0}} that have a \code{CMA} component giving the
 #' estimated CMA per patient as a \code{data.frame}.
-#' If \code{mapping.episodes.to.events} is \code{TRUE}, then this also has a
+#' If \code{return.mapping.events.episodes} is \code{TRUE}, then this also has a
 #' component \code{mapping.episodes.to.events} that gives the mapping between
 #' episodes and events as a \code{data.table} with the following columns:
 #' \itemize{
@@ -8648,6 +8648,10 @@ print.CMA_per_episode <- function(x,                                     # the C
 #' @param alternating.bands.cols The colors of the alternating vertical bands
 #' distinguishing the patients; can be \code{NULL} = don't draw the bandes;
 #' or a vector of colors.
+#' @param print.episode.or.sliding.window \emph{Logical}, should we show which
+#' events belong to which episode or sliding window? To work, the CMA must have
+#' been constructed with \code{return.mapping.events.episodes} or
+#' \code{return.mapping.events.sliding.window} set to \code{TRUE}, respectively.
 #' @param bw.plot \emph{Logical}, should the plot use grayscale only (i.e., the
 #' \code{\link[grDevices]{gray.colors}} function)?
 #' @param rotate.text \emph{Numeric}, the angle by which certain text elements
@@ -9075,6 +9079,11 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' patients for which the CMA estimation fails are treated: if \code{TRUE}
 #' they are returned with an \code{NA} CMA estimate, while for
 #' \code{FALSE} they are omitted.
+#' @param return.mapping.events.sliding.window A \emph{Logical}, if \code{TRUE} then
+#' the mapping between events and sliding windows is returned as the component
+#' \code{mapping.windows.to.events}, which is a \code{data.table} giving, for
+#' each sliding window, the events that belong to it (an event is given by its row
+#' number in the \code{data}).
 #' @param parallel.backend Can be "none" (the default) for single-threaded
 #' execution, "multicore"  (using \code{mclapply} in package \code{parallel})
 #' for multicore processing (NB. not currently implemented on MS Windows and
@@ -9173,6 +9182,14 @@ plot.CMA_per_episode <- function(x,                                     # the CM
 #' \code{\link{CMA8}}, \code{\link{CMA9}}, as well as user-defined classes
 #' derived from \code{\link{CMA0}} that have a \code{CMA} component giving the
 #' estimated CMA per patient as a \code{data.frame}.
+#' If \code{return.mapping.events.sliding.window} is \code{TRUE}, then this also has an
+#' attribute \code{mapping.windows.to.events} that gives the mapping between
+#' episodes and events as a \code{data.table} with the following columns:
+#' \itemize{
+#'  \item \code{patid} the patient ID.
+#'  \item \code{window.ID} the episode unique ID (increasing sequentially).
+#'  \item \code{event.index.in.data} the event given by its row number in the \code{data}.
+#' }
 #' @examples
 #' \dontrun{
 #' cmaW <- CMA_sliding_window(CMA="CMA1",
@@ -9634,8 +9651,8 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
     if( return.mapping.events.sliding.window && !is.null(tmp$inner.event.info) && ".EVENT.USED.IN.CMA" %in% names(tmp$inner.event.info) )
     {
       # Unpack the info in the needed format:
-      ret.val$mapping.events.sliding.window <- as.data.frame(tmp$inner.event.info)[ tmp$inner.event.info$.EVENT.USED.IN.CMA, c(ID.colname, "window.ID", "..ORIGINAL.ROW.ORDER.IN.DATA..") ];
-      names(ret.val$mapping.events.sliding.window)[3] <- "event.index.in.data";
+      ret.val$mapping.windows.to.events <- as.data.frame(tmp$inner.event.info)[ tmp$inner.event.info$.EVENT.USED.IN.CMA, c(ID.colname, "window.ID", "..ORIGINAL.ROW.ORDER.IN.DATA..") ];
+      names(ret.val$mapping.windows.to.events)[3] <- "event.index.in.data";
     }
     return (ret.val);
 
@@ -9814,7 +9831,7 @@ getMGs.CMA_sliding_window <- function(x)
 #'
 #' @param x is an \code{CMA_sliding_window object}.
 #' @return The mapping between events and episodes, if it exists as the
-#' \code{mapping.events.sliding.window} component of the \code{CMA_sliding_window object}
+#' \code{mapping.windows.to.events} component of the \code{CMA_sliding_window object}
 #' object, or \code{NULL} otherwise.
 #' @export
 getEventsToSlidingWindowsMapping <- function(x)
@@ -9822,9 +9839,9 @@ getEventsToSlidingWindowsMapping <- function(x)
   if( is.null(x) )
   {
     return (NULL);
-  } else if( inherits(x, "CMA_sliding_window") && ("mapping.events.sliding.window" %in% names(x)) && !is.null(x$mapping.events.sliding.window) && inherits(x$mapping.events.sliding.window, "data.frame") )
+  } else if( inherits(x, "CMA_sliding_window") && ("mapping.windows.to.events" %in% names(x)) && !is.null(x$mapping.windows.to.events) && inherits(x$mapping.windows.to.events, "data.frame") )
   {
-    return (x$mapping.events.sliding.window);
+    return (x$mapping.windows.to.events);
   } else
   {
     return (NULL);

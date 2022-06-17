@@ -4112,12 +4112,17 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
           if( length(s.epiwnd) > 0 )
           {
             if( text.to.print != "" ) text.to.print <- paste0(text.to.print," ");
-            text.to.print <- paste0(text.to.print, "[", paste0(cma$mapping.episodes.to.events$episode.ID[s.epiwnd], collapse=","), "]");
+            text.to.print <- paste0(text.to.print, "[", paste0(sort(cma$mapping.episodes.to.events$episode.ID[s.epiwnd]), collapse=","), "]");
           }
         }
         if( inherits(cma, "CMA_sliding_window") )
         {
-          # TODO
+          s.epiwnd <- which(cma$mapping.windows.to.events$event.index.in.data == i);
+          if( length(s.epiwnd) > 0 )
+          {
+            if( text.to.print != "" ) text.to.print <- paste0(text.to.print," ");
+            text.to.print <- paste0(text.to.print, "[", paste0(sort(cma$mapping.windows.to.events$window.ID[s.epiwnd]), collapse=","), "]");
+          }
         }
       }
       if( text.to.print != "" )
@@ -4223,7 +4228,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                "end"  =as.numeric(cmas$end[s.cmas]   - earliest.date),
                                "x"    =NA,
                                "y"    =cmas$CMA[s.cmas],
-                               "text" =ifelse(!is.na(cmas$CMA[s.cmas]), sprintf("%.0f%%", 100*cmas$CMA[s.cmas]), "?")
+                               "text" =paste0(ifelse(!is.na(cmas$CMA[s.cmas]), sprintf("%.0f%%", 100*cmas$CMA[s.cmas]), "?"),
+                                              if(print.episode.or.sliding.window){paste0(" [",cmas$WND.ID[s.cmas],"]")}else{""})
             );
             ppts$x <- (ppts$start + ppts$end)/2;
 

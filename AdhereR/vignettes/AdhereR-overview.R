@@ -307,6 +307,25 @@ cmaW1 <- CMA_sliding_window(CMA.to.apply="CMA9",
 # Plot:
 plot(cmaW1, patients.to.plot=c("76"), show.legend=FALSE);
 
+## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** Per episodes with CMA 1, showing which events belong to which episode: for events, the number(s) between '[]' represent the event they belong to, while for an event, the number between '[]' is what the events use as its identifier. (e.g., the 3rd even from the left for patient 1 has a '[2]', meaning that it belongs to event '2', which is identified as such with a '[2]' immediately after is estimated CMA of '136%'). Please note that the same plot for CMA9 would be quite different, as the rules for which events are considered differ (e.g., the last events of the episodes would be included).", fig.height=7, fig.width=7, out.width="100%"----
+cmaE <- CMA_per_episode(CMA="CMA1",
+                        data=med.events[med.events$PATIENT_ID %in% 1:2,],
+                        ID.colname="PATIENT_ID",
+                        event.date.colname="DATE",
+                        event.duration.colname="DURATION",
+                        event.daily.dose.colname="PERDAY",
+                        medication.class.colname="CATEGORY",
+                        followup.window.start=-90,
+                        observation.window.start=0,
+                        observation.window.duration=365,
+                        maximum.permissible.gap=10,
+                        return.mapping.events.episodes=TRUE, # ask for the mapping
+                        medication.change.means.new.treatment.episode=TRUE,
+                        date.format="%m/%d/%Y");
+getEventsToEpisodesMapping(cmaE); # get the mapping (here, print it)
+plot(cmaE, align.all.patients=TRUE, print.dose.centered=TRUE, 
+     print.episode.or.sliding.window=TRUE); # show the mapping visually
+
 ## ---- echo=FALSE--------------------------------------------------------------
 knitr::kable(head(med.events.ATC, n=5), row.names=FALSE,
              caption="First 5 lines of the `med.events.ATC` dataset.");
@@ -401,7 +420,7 @@ getCMA(cma1_mg);
 ## -----------------------------------------------------------------------------
 getCMA(cma1_mg, flatten.medication.groups=TRUE);
 
-## ----echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** CMA 1 with medication groups.", fig.height=9, fig.width=9, out.width="100%"----
+## ----echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-15\"></a>**Figure 15.** CMA 1 with medication groups.", fig.height=9, fig.width=9, out.width="100%"----
 plot(cma1_mg,
      #medication.groups.to.plot=c("VitaResp", "VitaShort", "VitaComb"),
      patients.to.plot=1:3,
@@ -464,7 +483,7 @@ cat(paste0("c(",
 #                       date.format="%m/%d/%Y") %>%
 #    plot(align.all.patients=TRUE, show.legend=TRUE); # plot it
 
-## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-15\"></a>**Figure 15.** Modifying an `AdhereR` plot is easy using the `get.plotted.events()` function.", fig.height=8, fig.width=8, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-16\"></a>**Figure 16.** Modifying an `AdhereR` plot is easy using the `get.plotted.events()` function.", fig.height=8, fig.width=8, out.width="100%"----
 # Plot CMA7 for patients 5 and 8:
 cma7 <- CMA7(data=med.events,
              ID.colname="PATIENT_ID",

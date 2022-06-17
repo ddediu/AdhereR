@@ -362,6 +362,11 @@ window be plotted?}
 
 \item{observation.window.col, observation.window.opacity}{Attributes of the observation window (colour, transparency).}
 
+\item{print.episode.or.sliding.window}{\emph{Logical}, should we show which
+events belong to which episode or sliding window? To work, the CMA must have
+been constructed with \code{return.mapping.events.episodes} or
+\code{return.mapping.events.sliding.window} set to \code{TRUE}, respectively.}
+
 \item{alternating.bands.cols}{The colors of the alternating vertical bands
 distinguishing the patients; can be \code{NULL} = don't draw the bandes;
 or a vector of colors.}

@@ -181,6 +181,12 @@ patients for which the CMA estimation fails are treated: if \code{TRUE}
 they are returned with an \code{NA} CMA estimate, while for
 \code{FALSE} they are omitted.}
 
+\item{return.mapping.events.sliding.window}{A \emph{Logical}, if \code{TRUE} then
+the mapping between events and sliding windows is returned as the component
+\code{mapping.windows.to.events}, which is a \code{data.table} giving, for
+each sliding window, the events that belong to it (an event is given by its row
+number in the \code{data}).}
+
 \item{parallel.backend}{Can be "none" (the default) for single-threaded
 execution, "multicore"  (using \code{mclapply} in package \code{parallel})
 for multicore processing (NB. not currently implemented on MS Windows and
@@ -326,4 +332,12 @@ The "simple" CMAs that can be computed comprise \code{\link{CMA1}},
 \code{\link{CMA8}}, \code{\link{CMA9}}, as well as user-defined classes
 derived from \code{\link{CMA0}} that have a \code{CMA} component giving the
 estimated CMA per patient as a \code{data.frame}.
+If \code{return.mapping.events.sliding.window} is \code{TRUE}, then this also has an
+attribute \code{mapping.windows.to.events} that gives the mapping between
+episodes and events as a \code{data.table} with the following columns:
+\itemize{
+ \item \code{patid} the patient ID.
+ \item \code{window.ID} the episode unique ID (increasing sequentially).
+ \item \code{event.index.in.data} the event given by its row number in the \code{data}.
+}
 }

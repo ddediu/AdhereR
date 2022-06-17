@@ -649,6 +649,33 @@ plot(cmaW1, patients.to.plot=c("76"), show.legend=FALSE);
 ```
 
 
+#### Mapping events to episodes and sliding windows
+
+The functions `compute.treatment.episodes`, `CMA_per_episode` and `CMA_sliding_window` can return the mapping between events and episodes or sliding windows, respectively, in the sense that they can specify, for each episode or sliding which, which events participate in it.
+For the latter two, this correspondence can also be shown visually in plots (see [Figure 14](#Figure-14)).
+Please note that, as the details of which events belong to which episode may depend on the particular simple CMA used, it is recommended to take the mapping produced by `compute.treatment.episodes` as orientative, and use instead the mapping produced by `CMA_per_episode` for a particular simple CMA.
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** Per episodes with CMA 1, showing which events belong to which episode: for events, the number(s) between '[]' represent the event they belong to, while for an event, the number between '[]' is what the events use as its identifier. (e.g., the 3rd even from the left for patient 1 has a '[2]', meaning that it belongs to event '2', which is identified as such with a '[2]' immediately after is estimated CMA of '136%'). Please note that the same plot for CMA9 would be quite different, as the rules for which events are considered differ (e.g., the last events of the episodes would be included).", fig.height=7, fig.width=7, out.width="100%"}
+cmaE <- CMA_per_episode(CMA="CMA1",
+                        data=med.events[med.events$PATIENT_ID %in% 1:2,],
+                        ID.colname="PATIENT_ID",
+                        event.date.colname="DATE",
+                        event.duration.colname="DURATION",
+                        event.daily.dose.colname="PERDAY",
+                        medication.class.colname="CATEGORY",
+                        followup.window.start=-90,
+                        observation.window.start=0,
+                        observation.window.duration=365,
+                        maximum.permissible.gap=10,
+                        return.mapping.events.episodes=TRUE, # ask for the mapping
+                        medication.change.means.new.treatment.episode=TRUE,
+                        date.format="%m/%d/%Y");
+getEventsToEpisodesMapping(cmaE); # get the mapping (here, print it)
+plot(cmaE, align.all.patients=TRUE, print.dose.centered=TRUE, 
+     print.episode.or.sliding.window=TRUE); # show the mapping visually
+```
+
+
 ## Interactive plotting
 <a name="Section-interactive-plotting"></a>
 
@@ -843,7 +870,7 @@ Please note that, by default, all medication groups belonging to one patient sha
 
 The medication groups also affect the plotting:
 
-```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** CMA 1 with medication groups.", fig.height=9, fig.width=9, out.width="100%"}
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-15\"></a>**Figure 15.** CMA 1 with medication groups.", fig.height=9, fig.width=9, out.width="100%"}
 plot(cma1_mg,
      #medication.groups.to.plot=c("VitaResp", "VitaShort", "VitaComb"),
      patients.to.plot=1:3,
@@ -952,7 +979,7 @@ med.events %>% # use med.events
 <a name="modify-plots"></a>
 
 
-```{r echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-15\"></a>**Figure 15.** Modifying an `AdhereR` plot is easy using the `get.plotted.events()` function.", fig.height=8, fig.width=8, out.width="100%"}
+```{r echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-16\"></a>**Figure 16.** Modifying an `AdhereR` plot is easy using the `get.plotted.events()` function.", fig.height=8, fig.width=8, out.width="100%"}
 # Plot CMA7 for patients 5 and 8:
 cma7 <- CMA7(data=med.events,
              ID.colname="PATIENT_ID",

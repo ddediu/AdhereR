@@ -360,7 +360,7 @@ The "simple" CMAs that can be computed comprise \code{\link{CMA1}},
 \code{\link{CMA8}}, \code{\link{CMA9}}, as well as user-defined classes
 derived from \code{\link{CMA0}} that have a \code{CMA} component giving the
 estimated CMA per patient as a \code{data.frame}.
-If \code{mapping.episodes.to.events} is \code{TRUE}, then this also has a
+If \code{return.mapping.events.episodes} is \code{TRUE}, then this also has a
 component \code{mapping.episodes.to.events} that gives the mapping between
 episodes and events as a \code{data.table} with the following columns:
 \itemize{
