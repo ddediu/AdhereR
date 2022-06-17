@@ -39,6 +39,7 @@ CMA_sliding_window(
   event.interval.colname = "event.interval",
   gap.days.colname = "gap.days",
   force.NA.CMA.for.failed.patients = TRUE,
+  return.mapping.events.sliding.window = FALSE,
   parallel.backend = c("none", "multicore", "snow", "snow(SOCK)", "snow(MPI)",
     "snow(NWS)")[1],
   parallel.threads = "auto",

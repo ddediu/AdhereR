@@ -9240,6 +9240,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                                 gap.days.colname="gap.days", # contains the number of days when medication was not available
                                 # Dealing with failed estimates:
                                 force.NA.CMA.for.failed.patients=TRUE, # force the failed patients to have NA CM estimate?
+                                return.mapping.events.sliding.window=FALSE, # return the mapping of events to sliding windows?
                                 # Parallel processing:
                                 parallel.backend=c("none","multicore","snow","snow(SOCK)","snow(MPI)","snow(NWS)")[1], # parallel backend to use
                                 parallel.threads="auto", # specification (or number) of parallel threads
@@ -9493,7 +9494,9 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
                         "CMA.to.apply"=class(cma)[1]);
       setnames(wnd.info, c("window.ID", "window.start", "window.end", "CMA", "CMA.to.apply"));
 
-      if( return.inner.event.info )
+      cma$event.info$..ORIGINAL.ROW.ORDER.IN.DATA.. <- data4ID.wnds$..ORIGINAL.ROW.ORDER..[ cma$event.info$..ORIGINAL.ROW.ORDER.. ]; # restore the row numbers in the original data
+
+      if( return.inner.event.info || return.mapping.events.sliding.window )
       {
         # Add the event.info to also return it:
         wnd.info <- merge(wnd.info, cma$event.info, by.x="window.ID", by.y=".WND.ID", all=TRUE);
@@ -9539,7 +9542,7 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
     data <- merge(data, event.info2[,c(ID.colname, ".OBS.START.DATE", ".OBS.END.DATE"),with=FALSE], all.x=TRUE);
     setnames(data, ncol(data)-c(1,0), c(".OBS.START.DATE.PRECOMPUTED", ".OBS.END.DATE.PRECOMPUTED"));
 
-    if( return.inner.event.info )
+    if( return.inner.event.info || return.mapping.events.sliding.window )
     {
       CMA.and.event.info <- data[, .process.patient(.SD), by=ID.colname ]; # contains both the CMAs per sliding window and the event.info's for each event
       CMA <- unique(CMA.and.event.info[,1:6,with=FALSE]); # the per-window CMAs...
@@ -9628,6 +9631,12 @@ CMA_sliding_window <- function( CMA.to.apply,  # the name of the CMA function (e
     ret.val$summary <- summary;
     ret.val$CMA <- as.data.frame(tmp$CMA); setnames(ret.val$CMA, 1, ID.colname); ret.val$CMA <- ret.val$CMA[,-ncol(ret.val$CMA)];
     if( return.inner.event.info && !is.null(tmp$inner.event.info) ) ret.val$inner.event.info <- as.data.frame(tmp$inner.event.info);
+    if( return.mapping.events.sliding.window && !is.null(tmp$inner.event.info) && ".EVENT.USED.IN.CMA" %in% names(tmp$inner.event.info) )
+    {
+      # Unpack the info in the needed format:
+      ret.val$mapping.events.sliding.window <- as.data.frame(tmp$inner.event.info)[ tmp$inner.event.info$.EVENT.USED.IN.CMA, c(ID.colname, "window.ID", "..ORIGINAL.ROW.ORDER.IN.DATA..") ];
+      names(ret.val$mapping.events.sliding.window)[3] <- "event.index.in.data";
+    }
     return (ret.val);
 
   } else
@@ -9791,6 +9800,35 @@ getMGs.CMA_sliding_window <- function(x)
   cma <- x; # parameter x is required for S3 consistency, but I like cma more
   if( is.null(cma) || !inherits(cma, "CMA_sliding_window") || is.null(cma$medication.groups) ) return (NULL);
   return (cma$medication.groups);
+}
+
+#' getEventsToSlidingWindowsMapping
+#'
+#' This function returns the event-to-sliding-window mapping, if this information exists.
+#'
+#' There are cases where it is interesting to know which events belong to which
+#' sliding windows and which events have been actually used in computing the simple CMA
+#' for each sliding window
+#' This information can be returned by \code{CMA_sliding_window()} if the
+#' parameter \code{return.mapping.events.episodes} is set to \code{TRUE}.
+#'
+#' @param x is an \code{CMA_sliding_window object}.
+#' @return The mapping between events and episodes, if it exists as the
+#' \code{mapping.events.sliding.window} component of the \code{CMA_sliding_window object}
+#' object, or \code{NULL} otherwise.
+#' @export
+getEventsToSlidingWindowsMapping <- function(x)
+{
+  if( is.null(x) )
+  {
+    return (NULL);
+  } else if( inherits(x, "CMA_sliding_window") && ("mapping.events.sliding.window" %in% names(x)) && !is.null(x$mapping.events.sliding.window) && inherits(x$mapping.events.sliding.window, "data.frame") )
+  {
+    return (x$mapping.events.sliding.window);
+  } else
+  {
+    return (NULL);
+  }
 }
 
 #' @export
