@@ -934,7 +934,7 @@ A working implementation for `Python 3` is included in the package (and inteded 
 ## AdhereR is pipe (`%>%` or `|>`)-friendly
 <a name="pipe-friendly"></a>
 
-The [pipe operator (`%>%`)](https://r4ds.had.co.nz/pipes.html) has been originally introduced in `R` by the [`magrittr` package](https://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html) and is a central feature of the [Tidyverse](https://www.tidyverse.org/), and is since `R` 4.1 also available natively as `|>` [(but there are some subtle differences from `%>%`)](https://www.infoworld.com/article/3621369/use-the-new-r-pipe-built-into-r-41.html).
+The [pipe operator (`%>%`)](https://r4ds.had.co.nz/pipes.html) has been originally introduced in `R` by the [`magrittr` package](https://cran.r-project.org/package=magrittr/vignettes/magrittr.html) and is a central feature of the [Tidyverse](https://www.tidyverse.org/), and is since `R` 4.1 also available natively as `|>` [(but there are some subtle differences from `%>%`)](https://www.infoworld.com/article/3621369/use-the-new-r-pipe-built-into-r-41.html).
 `AdhereR` is compatible with pipe (because for all functions the first parameter encapsulates the "important" data, with the others providing various "tweaks"), so, code such as the following is fully functional:
 
 ```{r eval=FALSE}
@@ -1144,11 +1144,11 @@ We have also aimed to facilitate replicability. Thus, summaries of functions inc
 
 ## References
 
-<a name="Ref-Arnet2016"></a>Arnet I., Kooij M.J., Messerli M., Hersberger K.E., Heerdink E.R., Bouvy M. (2016) [Proposal of Standardization to Assess Adherence With Medication Records Methodology Matters](https://pubmed.ncbi.nlm.nih.gov/26917817/). *The Annals of Pharmacotherapy* **50**(5):360–8. [doi:10.1177/1060028016634106](http://dx.doi.org/10.1177/1060028016634106).
+<a name="Ref-Arnet2016"></a>Arnet I., Kooij M.J., Messerli M., Hersberger K.E., Heerdink E.R., Bouvy M. (2016) [Proposal of Standardization to Assess Adherence With Medication Records Methodology Matters](https://pubmed.ncbi.nlm.nih.gov/26917817/). *The Annals of Pharmacotherapy* **50**(5):360–8. [doi:10.1177/1060028016634106](https://pubmed.ncbi.nlm.nih.gov/26917817/).
 
 <a name="Ref-Gardarsdottir2010"></a>Gardarsdottir H., Souverein P.C., Egberts T.C.G., Heerdink E.R. (2010) [Construction of drug treatment episodes from drug-dispensing histories is influenced by the gap length](https://pubmed.ncbi.nlm.nih.gov/19880282/). *J Clin Epidemiol.* **63**(4):422–7. [doi:10.1016/j.jclinepi.2009.07.001](http://dx.doi.org/10.1016/j.jclinepi.2009.07.001).
 
-<a name="Ref-Greevy2011"></a>Greevy R.A., Huizinga M.M., Roumie C.L., Grijalva C.G., Murff H., Liu X., Griffin, M.R. (2011). [Comparisons of Persistence and Durability Among Three Oral Antidiabetic Therapies Using Electronic Prescription-Fill Data: The Impact of Adherence Requirements and Stockpiling](https://pubmed.ncbi.nlm.nih.gov/22048232/). *Clinical Pharmacology & Therapeutics* **90**(6):813–819. [doi:10.1038/clpt.2011.228](http://dx.doi.org/10.1038/clpt.2011.228).
+<a name="Ref-Greevy2011"></a>Greevy R.A., Huizinga M.M., Roumie C.L., Grijalva C.G., Murff H., Liu X., Griffin, M.R. (2011). [Comparisons of Persistence and Durability Among Three Oral Antidiabetic Therapies Using Electronic Prescription-Fill Data: The Impact of Adherence Requirements and Stockpiling](https://pubmed.ncbi.nlm.nih.gov/22048232/). *Clinical Pharmacology & Therapeutics* **90**(6):813–819. [10.1038/clpt.2011.228](https://pubmed.ncbi.nlm.nih.gov/22048232/).
 
 <a name="Ref-Peterson2007"></a>Peterson A.M., Nau D.P., Cramer J.A., Benner J., Gwadry-Sridhar F., Nichol M. (2007) [A checklist for medication compliance and persistence studies using retrospective databases](https://pubmed.ncbi.nlm.nih.gov/17261111/). *Value in Health: Journal of the International Society for Pharmacoeconomics and Outcomes Research* **10**(1):3–12. [doi:10.1111/j.1524-4733.2006.00139.x](http://dx.doi.org/10.1111/j.1524-4733.2006.00139.x).
 
@@ -1156,7 +1156,7 @@ We have also aimed to facilitate replicability. Thus, summaries of functions inc
 
 <a name="Ref-Vollmer2012"></a>Vollmer W.M., Xu M., Feldstein A., Smith D., Waterbury A., Rand C. (2012) [Comparison of pharmacy-based measures of medication adherence](https://pubmed.ncbi.nlm.nih.gov/22691240/). *BMC Health Services Research* **12**(1):155. [doi:10.1186/1472-6963-12-155](http://dx.doi.org/10.1186/1472-6963-12-155).
 
-<a name="Ref-Vrijens2012"></a>Vrijens B., De Geest S., Hughes D.A., Przemyslaw K., Demonceau J., Ruppar T., Dobbels F., Fargher E., Morrison V., Lewek P., Matyjaszczyk M., Mshelia C., Clyne W., Aronson J.K., Urquhart J.; ABC Project Team (2012) [A new taxonomy for describing and defining adherence to medications](https://pubmed.ncbi.nlm.nih.gov/22486599/). *British Journal of Clinical Pharmacology* **73**(5):691–705. [doi:10.1111/j.1365-2125.2012.04167.x](http://dx.doi.org/10.1111/j.1365-2125.2012.04167.x).
+<a name="Ref-Vrijens2012"></a>Vrijens B., De Geest S., Hughes D.A., Przemyslaw K., Demonceau J., Ruppar T., Dobbels F., Fargher E., Morrison V., Lewek P., Matyjaszczyk M., Mshelia C., Clyne W., Aronson J.K., Urquhart J.; ABC Project Team (2012) [A new taxonomy for describing and defining adherence to medications](https://pubmed.ncbi.nlm.nih.gov/22486599/). *British Journal of Clinical Pharmacology* **73**(5):691–705. [doi:10.1111/j.1365-2125.2012.04167.x](https://pubmed.ncbi.nlm.nih.gov/22486599/).
 
 <a name="Ref-VanWijk2006"></a>Van Wijk B.L.G., Klungel O.H., Heerdink E.R., de Boer A. (2006). [Refill persistence with chronic medication assessed from a pharmacy database was influenced by method of calculation](https://pubmed.ncbi.nlm.nih.gov/16360556/). *Journal of Clinical Epidemiology* **59**(1), 11–17. [doi:10.1016/j.jclinepi.2005.05.005](http://dx.doi.org/10.1016/j.jclinepi.2005.05.005).
 

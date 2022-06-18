@@ -540,7 +540,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
     }
 
     # Depending on the computation, we may export different things:
-    if( length(class(results)) == 1 && class(results) == "CMA0" )
+    if( length(cl_res <- class(results)) == 1 && cl_res == "CMA0" )
     {
       # Nothing to export....
     } else if( inherits(results, "CMA0") || inherits(results, "CMA_per_episode") || inherits(results, "CMA_sliding_window") )

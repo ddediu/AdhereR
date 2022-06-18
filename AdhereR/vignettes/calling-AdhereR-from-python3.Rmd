@@ -261,7 +261,7 @@ When the `adherer` module is imported for the first time, it runs the following 
 
 The `adherer` module tries to emulate the same philosophy as the `AhereR` package, where various *types* of *CMAs* ("continuous multiple-interval measures of medication availability/gaps") that implement different ways of computing adherence encapsulate the data on which they were computed, the various relevant parameter values used, as well as the results of the computation.
 
-Here, we implemented this through the following class hierarchy (image generated with [pyreverse](https://www.logilab.org/blogentry/6883), not showing the private attributes):
+Here, we implemented this through the following class hierarchy (image generated with [pyreverse](https://pypi.org/project/pyreverse/), not showing the private attributes):
 
 <img src="classes_adherer.png" alt="class hierarchy" style="width: 100%;"/>
 
@@ -916,7 +916,7 @@ The machines are called `workhorse1` and `workhorse2`, have differen hardware co
 These two machines are connected to the same WiFi router (but they could be on different networks or even across the Internet).
 The "master" is the same `macOS` laptop used before, connected to the same WiFi router (not a requirement).
 
-As pre-requisites, the worker machines should allow [`SSH`](https://help.ubuntu.com/community/SSH/OpenSSH/Configuring) access (for easiness, we use here *passwordless SSH access* from the "master"; see for example [here](http://www.linuxproblem.org/art_9.html) for this setup) and should have the `snow` package installed in `R`.
+As pre-requisites, the worker machines should allow [`SSH`](https://ubuntu.com/server/docs/service-openssh) access (for easiness, we use here *passwordless SSH access* from the "master"; see for example [here](http://www.linuxproblem.org/art_9.html) for this setup) and should have the `snow` package installed in `R`.
 Let's assume that the username allowing `ssh` into the workers is `user`, so that
 ``` bash
 laptop:~> ssh user@workhorse1
@@ -1011,7 +1011,7 @@ While this is a very good way to transparently distribute processing to more pow
 
   - *latency over the network*: starting the "workers" and especially transmitting the data to the "workers" and the results back to the "master" may take a non-negligible time, especially on slow networks (such as the Internet) and for large datasets; therefore, the best scenarios would involve relatively large computations (but not too large; see below) distributed to several nodes over a fast network;
   
-  - *you need to wait for the results*: this process assumes that the "master" will wait for the "workers" to finish and return their results; thus, putting the "master" to sleep, shutting it down or disconnecting it from the network will probably result in not being able to collect the resuls back. If one needs very long computations (say 3+ hours), offline mobility or the network is unreliable, we would suggest setting up a separate compute process (that may itself parallelise computations) on the remote machines using, for example, [`screen`](https://www.howtoforge.com/linux_screen), [`nohup`](https://en.wikipedia.org/wiki/Nohup) or a more specialised cluster management platform such as [Son of a Grid Engine (SGE)](https://arc.liv.ac.uk/trac/SGE).
+  - *you need to wait for the results*: this process assumes that the "master" will wait for the "workers" to finish and return their results; thus, putting the "master" to sleep, shutting it down or disconnecting it from the network will probably result in not being able to collect the resuls back. If one needs very long computations (say 3+ hours), offline mobility or the network is unreliable, we would suggest setting up a separate compute process (that may itself parallelise computations) on the remote machines using, for example, [`screen`](https://www.howtoforge.com/linux_screen), [`nohup`](https://en.wikipedia.org/wiki/Nohup) or a more specialised cluster management platform such as [Son of a Grid Engine (SGE)](https://github.com/daimh/sge).
 
 
 ## Appendix I: the communication protocol

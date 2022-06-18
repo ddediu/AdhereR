@@ -3413,7 +3413,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         ##
 
         # Draw the alternating bands
-        if( !is.null(alternating.bands.cols) && !is.na(alternating.bands.cols) )
+        if( !is.null(alternating.bands.cols) && !(length(alternating.bands.cols) == 1 && is.na(alternating.bands.cols)) )
         {
           if( .do.R ) # Rplot:
           {
