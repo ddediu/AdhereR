@@ -10,7 +10,7 @@
   patients.to.plot = NULL,
   duration = NA,
   align.all.patients = FALSE,
-  align.first.event.at.zero = TRUE,
+  align.first.event.at.zero = FALSE,
   show.period = c("dates", "days")[2],
   period.in.days = 90,
   show.legend = TRUE,
@@ -39,6 +39,9 @@
   lwd.event = 2,
   pch.start.event = 15,
   pch.end.event = 16,
+  show.event.intervals = FALSE,
+  show.overlapping.event.intervals = c("first", "last", "min gap", "max gap",
+    "average")[1],
   plot.events.vertically.displaced = TRUE,
   print.dose = FALSE,
   cex.dose = 0.75,
@@ -83,8 +86,10 @@
   highlight.observation.window = TRUE,
   observation.window.col = "yellow",
   observation.window.opacity = 0.3,
+  print.episode.or.sliding.window = FALSE,
   alternating.bands.cols = c("white", "gray95"),
   bw.plot = FALSE,
+  rotate.text = -60,
   force.draw.text = FALSE,
   min.plot.size.in.characters.horiz = 0,
   min.plot.size.in.characters.vert = 0,
@@ -101,6 +106,7 @@
   export.formats.html.css = NULL,
   export.formats.directory = NA,
   generate.R.plot = TRUE,
+  do.not.draw.plot = FALSE,
   suppress.warnings = FALSE,
   ...
 )
@@ -110,7 +116,7 @@
   patients.to.plot = NULL,
   duration = NA,
   align.all.patients = FALSE,
-  align.first.event.at.zero = TRUE,
+  align.first.event.at.zero = FALSE,
   show.period = c("dates", "days")[2],
   period.in.days = 90,
   show.legend = TRUE,
@@ -139,6 +145,9 @@
   lwd.event = 2,
   pch.start.event = 15,
   pch.end.event = 16,
+  show.event.intervals = FALSE,
+  show.overlapping.event.intervals = c("first", "last", "min gap", "max gap",
+    "average")[1],
   plot.events.vertically.displaced = TRUE,
   print.dose = FALSE,
   cex.dose = 0.75,
@@ -183,8 +192,10 @@
   highlight.observation.window = TRUE,
   observation.window.col = "yellow",
   observation.window.opacity = 0.3,
+  print.episode.or.sliding.window = FALSE,
   alternating.bands.cols = c("white", "gray95"),
   bw.plot = FALSE,
+  rotate.text = -60,
   force.draw.text = FALSE,
   min.plot.size.in.characters.horiz = 0,
   min.plot.size.in.characters.vert = 0,
@@ -201,6 +212,7 @@
   export.formats.html.css = NULL,
   export.formats.directory = NA,
   generate.R.plot = TRUE,
+  do.not.draw.plot = FALSE,
   suppress.warnings = FALSE,
   ...
 )
@@ -283,6 +295,17 @@ use for the implicit \code{__ALL_OTHERS__} medication group (defaults to "*").}
 \item{lty.event, lwd.event, pch.start.event, pch.end.event}{The style of the
 event (line style, width, and start and end symbols).}
 
+\item{show.event.intervals}{\emph{Logical}, should the actual event intervals
+be shown? As per-episode and sliding windows might have overlapping intervals,
+it is better not to show them by default (\code{FALSE}).}
+
+\item{show.overlapping.event.intervals}{specifies how to plot the event
+intervals that appear in multiple sliding windows or episodes. We can plot
+how thye look in the \emph{first} sliding window or episode (the default),
+how they appear in the \emph{last}, pick the one that minimizes the gap
+(\emph{min gap}) or maximizes it (\emph{max gap}), or compute their
+\emph{average} across all sliding windows or episodes containing them.}
+
 \item{plot.events.vertically.displaced}{Should consecutive events be plotted
 on separate rows (i.e., separated vertically, the default) or on the same row?}
 
@@ -339,12 +362,20 @@ window be plotted?}
 
 \item{observation.window.col, observation.window.opacity}{Attributes of the observation window (colour, transparency).}
 
+\item{print.episode.or.sliding.window}{\emph{Logical}, should we show which
+events belong to which episode or sliding window? To work, the CMA must have
+been constructed with \code{return.mapping.events.episodes} or
+\code{return.mapping.events.sliding.window} set to \code{TRUE}, respectively.}
+
 \item{alternating.bands.cols}{The colors of the alternating vertical bands
 distinguishing the patients; can be \code{NULL} = don't draw the bandes;
 or a vector of colors.}
 
 \item{bw.plot}{\emph{Logical}, should the plot use grayscale only (i.e., the
 \code{\link[grDevices]{gray.colors}} function)?}
+
+\item{rotate.text}{\emph{Numeric}, the angle by which certain text elements
+(e.g., axis labels) should be rotated.}
 
 \item{force.draw.text}{\emph{Logical}, if \code{TRUE}, always draw text even
 if too big or too small}
@@ -402,6 +433,12 @@ directory.}
 
 \item{generate.R.plot}{a \emph{logical}, if \code{TRUE} (the default),
 generate the standard (base \code{R}) plot for plotting within \code{R}.}
+
+\item{do.not.draw.plot}{a \emph{logical}, if \code{TRUE} (\emph{not} the default),
+does not draw the plot itself, but only the legend (if \code{show.legend} is
+\code{TRUE}) at coordinates (0,0) irrespective of the given legend coordinates.
+This is intended to allow (together with the \code{get.legend.plotting.area()}
+function) the separate plotting of the legend.}
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}

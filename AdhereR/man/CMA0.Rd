@@ -30,6 +30,7 @@ CMA0(
   date.format = "\%m/\%d/\%Y",
   summary = "Base CMA object",
   suppress.warnings = FALSE,
+  suppress.special.argument.checks = FALSE,
   arguments.that.should.not.be.defined = NULL,
   ...
 )
@@ -144,6 +145,10 @@ only the dates given as strings and not as \code{Date} objects).}
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{suppress.special.argument.checks}{\emph{Logical} parameter for internal
+use; if \code{FALSE} (default) check if the important columns in the \code{data}
+have some of the reserved names, if \code{TRUE} this check is not performed.}
 
 \item{arguments.that.should.not.be.defined}{a \emph{list} of argument names
 and pre-defined valuesfor which a warning should be thrown if passed to the

@@ -1,3 +1,14 @@
+# AdhereRViz 0.2.1
+
+In sync with `AdhereR` 0.8:
+
+- allows the plotting of event intervals and gaps also for sliding windows and per episodes (controlled from Aesthetics -> Event intervals; by default not shown).
+
+- `align.first.event.at.zero` is now `FALSE` by default.
+
+Small bug fixes.
+
+
 # AdhereRViz 0.2
 
 In sync with `AdhereR` 0.7, implements medication groups and `maximum.permissible.gap.append.to.episode` for `CMA_per_episode`, plus some small bug fixes and enhancements.

@@ -947,7 +947,7 @@ ui <- fluidPage(
 
                                                                 # Show event intervals:
                                                                 conditionalPanel(
-                                                                  condition="(input.cma_class == 'simple' && input.cma_to_compute != 'CMA0')",
+                                                                  condition="(input.cma_class == 'simple' && input.cma_to_compute != 'CMA0') || (input.cma_class == 'per episode' || input.cma_class == 'sliding window')",
 
                                                                   div(title='Event intervals',
                                                                       span(p("Event intervals"), style="color:RoyalBlue; font-weight: bold;")),
@@ -956,6 +956,22 @@ ui <- fluidPage(
                                                                       shinyWidgets::materialSwitch(inputId="show_event_intervals",
                                                                                                    label="Show event interv.?",
                                                                                                    value=TRUE, status="primary", right=TRUE)),
+
+
+                                                                  # What to do with overlapping event interval estimates (for sliding windows and per episode only)?
+                                                                  conditionalPanel(
+                                                                    condition="input.show_event_intervals && (input.cma_class == 'per episode' || input.cma_class == 'sliding window')",
+
+                                                                    div(title='For sliding windows and per episode, for the overlapping event interval estimates, which one to show?',
+                                                                        selectInput(inputId="overlapping_evint",
+                                                                                    label="The estimate for which windows/episode?",
+                                                                                    choices=c("first"="first",
+                                                                                              "last"="last",
+                                                                                              "minimizes gap"="min gap",
+                                                                                              "maximizes gap"="max gap",
+                                                                                              "average"="average"),
+                                                                                    selected="first"))
+                                                                  ),
 
                                                                   hr()
                                                                 ),
@@ -2307,6 +2323,7 @@ server <- function(input, output, session)
                                                          plot.dose=input$plot_dose,
                                                          lwd.event.max.dose=input$lwd_event_max_dose,
                                                          plot.dose.lwd.across.medication.classes=input$plot_dose_lwd_across_medication_classes,
+                                                         show.overlapping.event.intervals=input$overlapping_evint,
                                                          xlab=if(input$show_xlab) {c("dates"="Date", "days"="Days")} else {NULL},
                                                          ylab=if(input$show_ylab) {c("withoutCMA"="patient", "withCMA"="patient (& CMA)")} else {NULL},
                                                          title=if(input$show_plot_title) {c("aligned"="Event patterns (all patients aligned)", "notaligned"="Event patterns")} else {NULL},
@@ -2489,6 +2506,20 @@ server <- function(input, output, session)
       dev.off();
     }
   )
+
+  # Make sure by default the event intervals are not shown for complex CMAs ----
+  observeEvent(input$cma_class,
+               {
+                 shinyWidgets::updateMaterialSwitch(session,
+                                                    inputId="show_event_intervals",
+                                                    value=(input$cma_class == "simple" && input$cma_to_compute != "CMA0")); # by default, it is TRUE for simple (non-CMA0) CMAs and FALSE otherwise
+               })
+  observeEvent(input$cma_to_compute,
+               {
+                 shinyWidgets::updateMaterialSwitch(session,
+                                                    inputId="show_event_intervals",
+                                                    value=(input$cma_class == "simple" && input$cma_to_compute != "CMA0")); # by default, it is TRUE for simple (non-CMA0) CMAs and FALSE otherwise
+               })
 
 
   # About and help box ----
@@ -2856,6 +2887,7 @@ server <- function(input, output, session)
                      "plot.dose"=input$plot_dose,
                      "lwd.event.max.dose"=input$lwd_event_max_dose,
                      "plot.dose.lwd.across.medication.classes"=input$plot_dose_lwd_across_medication_classes,
+                     "show.overlapping.event.intervals"=input$overlapping_evint,
                      "min.plot.size.in.characters.horiz"=input$min_plot_size_in_characters_horiz,
                      "min.plot.size.in.characters.vert"=input$min_plot_size_in_characters_vert,
                      "medication.groups.to.plot"=ifelse(!is.null(.GlobalEnv$.plotting.params$medication.groups) && input$mg_use_medication_groups,
@@ -3370,7 +3402,7 @@ server <- function(input, output, session)
     .GlobalEnv$.plotting.params$get.patients.fnc <- get.patients.fnc;
     .GlobalEnv$.plotting.params$get.data.for.patients.fnc <- get.data.for.patients.fnc;
     # CMA class:
-    .GlobalEnv$.plotting.params$cma.class <- "CMA0";
+    .GlobalEnv$.plotting.params$cma.class <- "simple";
     # Patient IDs and selected ID:
     .GlobalEnv$.plotting.params$all.IDs <- all.IDs;
     .GlobalEnv$.plotting.params$ID <- all.IDs[1];

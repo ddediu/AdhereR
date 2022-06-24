@@ -1,3 +1,40 @@
+# AdhereR 0.7.1
+  
+## New features
+
+  - now `plot()` respects the order of patients given through the `patients.to.plot` argument.
+  
+  - plotting sliding windows and per episodes can now show the events and gaps (as for simple plots, but things are a bit more complicated as different windows/events might result in different estimates).
+  
+  - `plot()` has an "advanced" parameter `do.not.draw.plot` which, when `TRUE`, does not draw the plot but only the legend, allowing its display separate from (or next to) the plot.
+  
+  - `AdhereR` is compatible with the pipe operator (`%>%` or `|>`), the overview vignette now shows several examples.
+  
+  - the overview vignette now shows an example of modifying an `AdhereR` plot *a posteriori* by adding various elements (lines, symbols and text) to a CMA plot.
+  
+  - the `Python 3` wrapper (bridge) was updated, as was the associated vignette; `AdhereR` can now be used transparently from Junyper Notebooks (and even through `rpy2`) and two example notebooks have been included. 
+  
+  - the `event.info` table returned by the simple CMAs (`CMA1`..`CMA9`) now includes an extra column, `.EVENT.USED.IN.CMA`, which is `TRUE` if and only if the event on that row was actually used to estimate the CMA; this info can be used by itself, but is aimed at finding out which event is included in which episode or sliding window (see below).
+  
+  - `CMA_per_episode` and `CMA_sliding_window` can now return the mapping between events and episodes or sliding windows, if the parameter `return.mapping.events.episodes` or `return.mapping.events.sliding.window` (respectively) is set to `TRUE`; in this case, there is an extra component of the constructed object, called `mapping.episodes.to.events` or `mapping.windows.to.events` respectively, which give, for each event or sliding window, the row number (in the data) of the event(s) that participate in it.
+  
+  - plotting a `CMA_per_episode` or `CMA_sliding_window` object with a `mapping.episodes.to.events` or `mapping.windows.to.events` component, respectively, can how which events belong to which episode or sliding window visually, if the parameter `print.episode.or.sliding.window` is set to `TRUE`.
+
+## Bug fixes
+
+  - `plot()`'s `align.all.patients` and `align.first.event.at.zero` did not work as intended.
+  
+  - the unneeded columns of the `data` argument to the CMA functions are now ignored, avoiding cases where "reserved" column names might be used (moreover, there is now an explicit check against using such reserved column names).
+
+  - various other enhancements and bugfixes.
+
+### `CMA_polypharmacy`
+
+  - remove option to supply medication class as list after `.check.medication.class` was suppressed from `AdhereR`.
+  
+  - specify columns to merge by.
+
+  
 # AdhereR 0.7
   
 ## New features

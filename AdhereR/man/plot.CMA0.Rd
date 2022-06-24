@@ -10,7 +10,7 @@
   patients.to.plot = NULL,
   duration = NA,
   align.all.patients = FALSE,
-  align.first.event.at.zero = TRUE,
+  align.first.event.at.zero = FALSE,
   show.period = c("dates", "days")[2],
   period.in.days = 90,
   show.legend = TRUE,
@@ -58,6 +58,7 @@
   observation.window.angle = -30,
   observation.window.opacity = 0.3,
   alternating.bands.cols = c("white", "gray95"),
+  rotate.text = -60,
   force.draw.text = FALSE,
   bw.plot = FALSE,
   min.plot.size.in.characters.horiz = 0,
@@ -75,7 +76,8 @@
   export.formats.html.javascript = NULL,
   export.formats.html.css = NULL,
   export.formats.directory = NA,
-  generate.R.plot = TRUE
+  generate.R.plot = TRUE,
+  do.not.draw.plot = FALSE
 )
 }
 \arguments{
@@ -200,6 +202,9 @@ opacity).}
 distinguishing the patients; can be \code{NULL} = don't draw the bandes;
 or a vector of colors.}
 
+\item{rotate.text}{\emph{Numeric}, the angle by which certain text elements
+(e.g., axis labels) should be rotated.}
+
 \item{force.draw.text}{\emph{Logical}, if \code{TRUE}, always draw text even
 if too big or too small}
 
@@ -261,6 +266,12 @@ directory.}
 
 \item{generate.R.plot}{a \emph{logical}, if \code{TRUE} (the default),
 generate the standard (base \code{R}) plot for plotting within \code{R}.}
+
+\item{do.not.draw.plot}{a \emph{logical}, if \code{TRUE} (\emph{not} the default),
+does not draw the plot itself, but only the legend (if \code{show.legend} is
+\code{TRUE}) at coordinates (0,0) irrespective of the given legend coordinates.
+This is intended to allow (together with the \code{get.legend.plotting.area()}
+function) the separate plotting of the legend.}
 }
 \description{
 Plots the events (prescribing or dispensing) data encapsulated in a basic

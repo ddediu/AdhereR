@@ -231,7 +231,6 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   params.as.list <- Filter(Negate(is.null), params.as.list); # get rid of the NULL ("default") elemens
 
   # some params have special meaning and should be processed as such:
-  # various window types:
   .cast.param.to.type <- function(value.param, type.param, is.type.param.fixed=FALSE)
   {
     if( !is.null(params.as.list[[value.param]]) )
@@ -289,9 +288,12 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   .cast.param.to.type("plot.dpi",                        "numeric", TRUE);
   .cast.param.to.type("plot.period.in.days",             "numeric", TRUE);
   .cast.param.to.type("plot.legend.bkg.opacity",         "numeric", TRUE);
+  .cast.param.to.type("plot.legend.cex",                 "numeric", TRUE);
+  .cast.param.to.type("plot.legend.cex.title",           "numeric", TRUE);
   .cast.param.to.type("plot.cex",                        "numeric", TRUE);
   .cast.param.to.type("plot.cex.axis",                   "numeric", TRUE);
   .cast.param.to.type("plot.cex.lab",                    "numeric", TRUE);
+  .cast.param.to.type("plot.cex.title",                  "numeric", TRUE);
   .cast.param.to.type("plot.lwd.event",                  "numeric", TRUE);
   .cast.param.to.type("plot.pch.start.event",            "numeric", TRUE);
   .cast.param.to.type("plot.pch.end.event",              "numeric", TRUE);
@@ -308,6 +310,96 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   .cast.param.to.type("consider.dosage.change",          "logical", TRUE);
   .cast.param.to.type("medication.change.means.new.treatment.episode", "logical", TRUE);
   .cast.param.to.type("dosage_change_means_new_treatment_episode",     "logical", TRUE);
+
+  .cast.param.to.type("plot.medication.groups.separator.show", "logical", TRUE);
+  .cast.param.to.type("plot.medication.groups.separator.lwd",  "numeric", TRUE);
+  .cast.param.to.type("plot.plot.events.vertically.displaced", "logical", TRUE);
+  .cast.param.to.type("plot.print.dose",                       "logical", TRUE);
+  .cast.param.to.type("plot.cex.dose",                         "numeric", TRUE);
+  .cast.param.to.type("plot.print.dose.centered",              "logical", TRUE);
+  .cast.param.to.type("plot.plot.dose",                        "logical", TRUE);
+  .cast.param.to.type("plot.lwd.event.max.dose",               "numeric", TRUE);
+  .cast.param.to.type("plot.plot.dose.lwd.across.medication.classes",    "logical", TRUE);
+  .cast.param.to.type("plot.cma.cex",                                    "numeric", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.vspace",          "numeric", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.start.from.zero", "logical", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.lwd.interval",    "numeric", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.alpha.interval",  "numeric", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.show.0perc",      "logical", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.timeseries.show.100perc",    "logical", TRUE);
+  .cast.param.to.type("plot.plot.partial.CMAs.as.overlapping.alternate",      "logical", TRUE);
+  .cast.param.to.type("plot.observation.window.opacity",                 "numeric", TRUE);
+  .cast.param.to.type("plot.rotate.text",                                "numeric", TRUE);
+  .cast.param.to.type("plot.force.draw.text",                            "logical", TRUE);
+  .cast.param.to.type("plot.min.plot.size.in.characters.horiz",          "numeric", TRUE);
+  .cast.param.to.type("plot.min.plot.size.in.characters.vert",           "numeric", TRUE);
+  .cast.param.to.type("plot.max.patients.to.plot",                       "numeric", TRUE);
+  .cast.param.to.type("plot.do.not.draw.plot",                           "logical", TRUE);
+  .cast.param.to.type("return.inner.event.info",                         "logical", TRUE);
+
+  # col.cats is special in that it can be a function name or a color name:
+  col.cats <- trimws(.get.param.value("plot.col.cats", type="character", required=FALSE));
+  if( substring(col.cats, nchar(col.cats)-1, nchar(col.cats)) == "()" )
+  {
+    # it seems to be a function name, so match it to the ones we currently support:
+    col.cats <- switch(col.cats,
+                       "rainbow()"=rainbow,
+                       "heat.colors()"=heat.colors,
+                       "terrain.colors()"=terrain.colors,
+                       "topo.colors()"=topo.colors,
+                       "cm.colors()"=cm.colors,
+                       "viridis()"=viridisLite::viridis,
+                       "magma()"=viridisLite::magma,
+                       "inferno()"=viridisLite::inferno,
+                       "plasma()"=viridisLite::plasma,
+                       "cividis()"=viridisLite::cividis,
+                       "rocket()"=viridisLite::rocket,
+                       "mako"=viridisLite::mako,
+                       "turbo"=viridisLite::turbo,
+                       rainbow); # defaults to rainbow
+  } # otherwise it is a color name, so use it as such
+
+  # xlab.* are special in that they need assembly into a single named vector:
+  xlab.dates <- trimws(.get.param.value("plot.xlab.dates", type="character", required=FALSE));
+  xlab.days  <- trimws(.get.param.value("plot.xlab.days",  type="character", required=FALSE));
+  xlab <- c("dates"=xlab.dates, "days"=xlab.days);
+
+  # ylab.* are special in that they need assembly into a single named vector:
+  ylab.withoutcma <- trimws(.get.param.value("plot.ylab.withoutcma", type="character", required=FALSE));
+  ylab.withcma    <- trimws(.get.param.value("plot.ylab.withcma",    type="character", required=FALSE));
+  ylab <- c("withoutCMA"=ylab.withoutcma, "withCMA"=ylab.withcma);
+
+  # title.* are special in that they need assembly into a single named vector:
+  title.aligned    <- trimws(.get.param.value("plot.title.aligned",    type="character", required=FALSE));
+  title.notaligned <- trimws(.get.param.value("plot.title.notaligned", type="character", required=FALSE));
+  title.main <- c("aligned"=title.aligned, "notaligned"=title.notaligned);
+
+  # medication.groups.to.plot is a bit special:
+  if( (medication.groups.to.plot <- trimws(.get.param.value("plot.medication.groups.to.plot", type="character", default.value="", required=FALSE))) == "" ) medication.groups.to.plot <- NA; # NA and NULL are equivalent
+
+  # plot.partial.CMAs.as is a bit special:
+  if( (plot.partial.CMAs.as <- trimws(.get.param.value("plot.plot.partial.CMAs.as", type="character", default.value="", required=FALSE))) == "" ) plot.partial.CMAs.as <- NULL;
+
+  # plot.partial.CMAs.as is special in that it might be a vector of strings:
+  alternating.bands.cols <- trimws(.get.param.value("plot.alternating.bands.cols", type="character", default.value="", required=FALSE));
+  if( alternating.bands.cols == "" )
+  {
+    alternating.bands.cols <- NA;
+  } else
+  {
+    # see if it is a list of strings:
+    alternating.bands.cols <- strsplit(alternating.bands.cols, ",", fixed=TRUE)[[1]];
+    if( length(alternating.bands.cols) == 1 )
+    {
+      alternating.bands.cols <- .remove.spaces.and.quotes(alternating.bands.cols);
+    } else
+    {
+      alternating.bands.cols <- vapply(alternating.bands.cols, .remove.spaces.and.quotes, character(1));
+    }
+  }
+
+  # medication.groups is a bit special:
+  if( (medication.groups <- trimws(.get.param.value("medication.groups", type="character", default.value="", required=FALSE))) == "" ) params.as.list[["medication.groups"]] <- NULL;
 
   if( suppressWarnings(!is.na(as.numeric(params.as.list[["parallel.threads"]]))) )
   {
@@ -348,8 +440,24 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   # add the data to the list of params as well:
   params.as.list <- c(list("data"=data), params.as.list);
 
+  # medication groups: always flatten them:
+  params.as.list[["flatten.medication.groups"]] <- TRUE; params.as.list[["medication.groups.colname"]] <- "__MED_GROUP_ID";
+
   # call the appropriate function:
   function.to.call <- .get.param.value("function", type="character", required=TRUE);
+
+  # avoid warnings about the arguments.that.should.not.be.defined:
+  if(function.to.call %in% c("CMA0", "CMA1", "CMA2", "CMA3", "CMA4", "CMA5", "CMA6", "CMA7", "CMA8", "CMA9", "CMA_per_episode", "CMA_sliding_window") )
+  {
+    # get the arguments.that.should.not.be.defined directly from the function definition:
+    arguments.to.undefine <- names(formals(function.to.call)[["arguments.that.should.not.be.defined"]]);
+    if( !is.null(arguments.to.undefine) && length(arguments.to.undefine) > 0 )
+    {
+      arguments.to.undefine <- arguments.to.undefine[ arguments.to.undefine != "" ]; # keep only the named arguments
+      params.as.list <- params.as.list[!(names(params.as.list) %in% arguments.to.undefine)]; # simply remove these arguments from the list (if already there)
+    }
+  }
+  # call the function:
   results <- switch(function.to.call,
                     "CMA0"=,
                     "CMA1"=,
@@ -370,7 +478,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
   );
 
 
-  if( is.null(results) ) # OOPS! some error occured: make it known and quit!
+  if( is.null(results) ) # OOPS! some error occurred: make it known and quit!
   {
     if( function.to.call == "plot_interactive_cma" )
     {
@@ -432,7 +540,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
     }
 
     # Depending on the computation, we may export different things:
-    if( length(class(results)) == 1 && class(results) == "CMA0" )
+    if( length(cl_res <- class(results)) == 1 && cl_res == "CMA0" )
     {
       # Nothing to export....
     } else if( inherits(results, "CMA0") || inherits(results, "CMA_per_episode") || inherits(results, "CMA_sliding_window") )
@@ -446,6 +554,12 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
       if( !is.na(save.event.info <- .get.param.value("save.event.info", type="character", default.value=NA, required=FALSE)) && save.event.info=="TRUE" )
       {
         write.table(.apply.export.conversions(results$event.info), paste0(shared.data.directory,"/EVENTINFO",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
+      }
+      # inner event info:
+      if( !is.na(return.inner.event.info <- .get.param.value("return.inner.event.info", type="character", default.value=NA, required=FALSE)) && return.inner.event.info=="TRUE" &&
+          (inherits(results, "CMA_per_episode") || inherits(results, "CMA_sliding_window")) )
+      {
+        write.table(.apply.export.conversions(results$inner.event.info), paste0(shared.data.directory,"/INNEREVENTINFO",file.name.suffix,".csv"), row.names=FALSE, col.names=TRUE, sep="\t", quote=FALSE);
       }
     } else if( function.to.call == "compute_event_int_gaps" && inherits(results, "data.frame") && nrow(results) > 0 && ncol(results) > 0 )
     {
@@ -475,6 +589,27 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
       # patients.to.plot has already been parsed:
       if( "patients.to.plot" %in% names(plotting.params) ) plotting.params[["patients.to.plot"]] <- patients.to.plot;
+
+      # col.cats has already been parsed:
+      if( "col.cats" %in% names(plotting.params) ) plotting.params[["col.cats"]] <- col.cats;
+
+      # xlab has already been parsed:
+      if( "xlab.dates" %in% names(plotting.params) && "xlab.days" %in% names(plotting.params) ){ plotting.params[["xlab"]] <- xlab; plotting.params["xlab.dates"] <- NULL; plotting.params["xlab.days"] <- NULL; }
+
+      # ylab has already been parsed:
+      if( "ylab.withoutcma" %in% names(plotting.params) && "ylab.withcma" %in% names(plotting.params) ){ plotting.params[["ylab"]] <- ylab; plotting.params["ylab.withoutcma"] <- NULL; plotting.params["ylab.withcma"] <- NULL; }
+
+      # title has already been parsed:
+      if( "title.aligned" %in% names(plotting.params) && "title.notaligned" %in% names(plotting.params) ){ plotting.params[["title"]] <- title.main; plotting.params["title.aligned"] <- NULL; plotting.params["title.notaligned"] <- NULL; }
+
+      # medication.groups.to.plot has already been parsed:
+      if( "medication.groups.to.plot" %in% names(plotting.params) ) plotting.params[["medication.groups.to.plot"]] <- medication.groups.to.plot;
+
+      # plot.partial.CMAs.as has already been parsed:
+      if( "plot.partial.CMAs.as" %in% names(plotting.params) ) plotting.params[["plot.partial.CMAs.as"]] <- plot.partial.CMAs.as;
+
+      # alternating.bands.cols has already been parsed:
+      plotting.params[["alternating.bands.cols"]] <- alternating.bands.cols;
 
       # Get the info about the plot exporting process:
       plot.file.dir <- .get.param.value("plot.save.to", type="character", default.value=shared.data.directory, required=FALSE);
@@ -523,13 +658,13 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
             onefile=FALSE, paper="special");
       }
 
-      # attemt to plot:
+      # attempt to plot:
       msg <- capture.output(do.call("plot", c(list(results), plotting.params)), file=NULL, type="output");
       if( length(msg) > 0 )
       {
         dev.off(); # close the plotting device anyway
         cat(msg); cat(paste0(msg,"\n"), file=msg.file, append=TRUE);
-        quit(save="no", status=0, runLast=FALSE); # Some plotting error seems to have occured
+        quit(save="no", status=0, runLast=FALSE); # Some plotting error seems to have occurred
       }
 
       # close the plotting device:

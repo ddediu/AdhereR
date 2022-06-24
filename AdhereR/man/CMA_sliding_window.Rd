@@ -33,15 +33,18 @@ CMA_sliding_window(
   sliding.window.step.duration = 30,
   sliding.window.step.unit = c("days", "weeks", "months", "years")[1],
   sliding.window.no.steps = NA,
+  return.inner.event.info = FALSE,
   date.format = "\%m/\%d/\%Y",
   summary = "CMA per sliding window",
   event.interval.colname = "event.interval",
   gap.days.colname = "gap.days",
   force.NA.CMA.for.failed.patients = TRUE,
+  return.mapping.events.sliding.window = FALSE,
   parallel.backend = c("none", "multicore", "snow", "snow(SOCK)", "snow(MPI)",
     "snow(NWS)")[1],
   parallel.threads = "auto",
   suppress.warnings = FALSE,
+  suppress.special.argument.checks = FALSE,
   ...
 )
 }
@@ -149,6 +152,12 @@ window in time units.}
 of sliding windows to cover the observation window (if possible); trumps
 \code{sliding.window.step.duration} and \code{sliding.window.step.unit}.}
 
+\item{return.inner.event.info}{\emph{Logical} specifying if the function
+should also return the event.info for all the individual events in each
+sliding window; by default it is \code{FALSE} as this information is useful
+only in very specific cases (e.g., plotting the event intervals) and adds a
+small but non-negligible computational overhead.}
+
 \item{date.format}{A \emph{string} giving the format of the dates used in the
 \code{data} and the other parameters; see the \code{format} parameters of the
 \code{\link[base]{as.Date}} function for details (NB, this concerns only the
@@ -172,6 +181,12 @@ patients for which the CMA estimation fails are treated: if \code{TRUE}
 they are returned with an \code{NA} CMA estimate, while for
 \code{FALSE} they are omitted.}
 
+\item{return.mapping.events.sliding.window}{A \emph{Logical}, if \code{TRUE} then
+the mapping between events and sliding windows is returned as the component
+\code{mapping.windows.to.events}, which is a \code{data.table} giving, for
+each sliding window, the events that belong to it (an event is given by its row
+number in the \code{data}).}
+
 \item{parallel.backend}{Can be "none" (the default) for single-threaded
 execution, "multicore"  (using \code{mclapply} in package \code{parallel})
 for multicore processing (NB. not currently implemented on MS Windows and
@@ -192,6 +207,10 @@ threads, or a more complex specification of the SNOW cluster nodes for
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{suppress.special.argument.checks}{\emph{Logical} parameter for internal
+use; if \code{FALSE} (default) check if the important columns in the \code{data}
+have some of the reserved names, if \code{TRUE} this check is not performed.}
 
 \item{...}{other possible parameters}
 }
@@ -313,4 +332,12 @@ The "simple" CMAs that can be computed comprise \code{\link{CMA1}},
 \code{\link{CMA8}}, \code{\link{CMA9}}, as well as user-defined classes
 derived from \code{\link{CMA0}} that have a \code{CMA} component giving the
 estimated CMA per patient as a \code{data.frame}.
+If \code{return.mapping.events.sliding.window} is \code{TRUE}, then this also has an
+attribute \code{mapping.windows.to.events} that gives the mapping between
+episodes and events as a \code{data.table} with the following columns:
+\itemize{
+ \item \code{patid} the patient ID.
+ \item \code{window.ID} the episode unique ID (increasing sequentially).
+ \item \code{event.index.in.data} the event given by its row number in the \code{data}.
+}
 }

@@ -172,7 +172,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                   followup.window.duration.max=5*365, # in days
                                   observation.window.start.max=followup.window.start.max, # in days
                                   observation.window.duration.max=followup.window.duration.max, # in days
-                                  align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place the first event as the horizontal 0?
+                                  align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? if so, place the first event as the horizontal 0?
                                   maximum.permissible.gap.max=2*365, # in days
                                   sliding.window.start.max=followup.window.start.max, # in days
                                   sliding.window.duration.max=2*365, # in days
@@ -720,7 +720,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 sliding.window.step.unit=c("days", "weeks", "months", "years")[1], # the time units; can be "days", "weeks", "months" or "years" (if months or years, using an actual calendar!) (NA = undefined)
                                 sliding.window.no.steps=NA, # the number of steps to jump; if both sliding.win.no.steps & sliding.win.duration are NA, fill the whole observation window
                                 plot.CMA.as.histogram=TRUE, # plot the CMA as historgram or density plot?
-                                align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
+                                align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? if so, place first event the horizontal 0?
 
                                 # Legend:
                                 show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend
@@ -745,7 +745,12 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                 highlight.followup.window=TRUE, followup.window.col="green",
                                 highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                                 show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30,
-                                show.event.intervals=TRUE,
+
+                                # Event intervals:
+                                show.event.intervals=!(cma %in% c("per episode", "sliding window")),
+                                show.overlapping.event.intervals="first",
+
+                                # CMAs:
                                 print.CMA=TRUE, CMA.cex=0.50,
                                 plot.CMA=TRUE, CMA.plot.ratio=0.10, CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text="darkgreen",
                                 plot.partial.CMAs.as=c("stacked"),
@@ -859,7 +864,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                 !identical(pp$medication.change.means.new.treatment.episode, medication.change.means.new.treatment.episode) ||
                 !identical(pp$dosage.change.means.new.treatment.episode, dosage.change.means.new.treatment.episode) ||
                 !identical(pp$maximum.permissible.gap.unit, maximum.permissible.gap.unit) ||
-                !identical(pp$maximum.permissible.gap.append.to.episode, maximum.permissible.gap.append.to.episode))) ||
+                !identical(pp$maximum.permissible.gap.append.to.episode, maximum.permissible.gap.append.to.episode) ||
+                !identical(pp$show.event.intervals, show.event.intervals) ||
+                !identical(pp$show.overlapping.event.intervals, show.overlapping.event.intervals))) ||
               (cma == "siding window" && # sliding window specifically
                (!identical(pp$cma.to.apply, cma.to.apply) ||
                 !identical(pp$sliding.window.start, sliding.window.start) ||
@@ -868,7 +875,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                 !identical(pp$sliding.window.duration.unit, sliding.window.duration.unit) ||
                 !identical(pp$sliding.window.step.duration, sliding.window.step.duration) ||
                 !identical(pp$sliding.window.step.unit, sliding.window.step.unit) ||
-                !identical(pp$sliding.window.no.steps, sliding.window.no.steps))) ||
+                !identical(pp$sliding.window.no.steps, sliding.window.no.steps) ||
+                !identical(pp$show.event.intervals, show.event.intervals) ||
+                !identical(pp$show.overlapping.event.intervals, show.overlapping.event.intervals))) ||
               (!identical(pp$carryover.within.obs.window, carryover.within.obs.window) ||
                !identical(pp$carryover.into.obs.window, carryover.into.obs.window) ||
                !identical(pp$carry.only.for.same.medication, carry.only.for.same.medication) ||
@@ -931,6 +940,9 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
         "sliding.window.step.duration"=sliding.window.step.duration,
         "sliding.window.step.unit"=sliding.window.step.unit,
         "sliding.window.no.steps"=sliding.window.no.steps,
+        # Event intervals:
+        "show.event.intervals"=show.event.intervals,
+        "show.overlapping.event.intervals"=show.overlapping.event.intervals,
         # Data accessor functions:
         "get.colnames.fnc"=get.colnames.fnc,
         "get.patients.fnc"=get.patients.fnc,
@@ -1008,6 +1020,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                                   sliding.window.step.duration=sliding.window.step.duration,
                                                   sliding.window.step.unit=sliding.window.step.unit,
                                                   sliding.window.no.steps=sliding.window.no.steps,
+                                                  return.inner.event.info=show.event.intervals,
                                                   arguments.that.should.not.be.defined=NULL # avoid spurious warnings about overridden arguments
     ),
     error  =function(e) return(list(results=results,error=conditionMessage(e))),
@@ -1096,6 +1109,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
            align.all.patients=align.all.patients,
            align.first.event.at.zero=align.first.event.at.zero,
            print.dose=print.dose, cex.dose=cex.dose, print.dose.outline.col=print.dose.outline.col, print.dose.centered=print.dose.centered,
+           show.overlapping.event.intervals=show.overlapping.event.intervals,
            plot.dose=plot.dose, lwd.event.max.dose=lwd.event.max.dose, plot.dose.lwd.across.medication.classes=plot.dose.lwd.across.medication.classes
       );
     }
@@ -1117,7 +1131,7 @@ plot_interactive_cma <- function( data=NULL, # the data used to compute the CMA 
                                         medication.groups=NULL, # definition of medication groups (NULL = undefined)
                                         # Date format:
                                         date.format=NA, # the format of the dates used in this function (NA = undefined)
-                                        align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? if so, place first event the horizontal 0?
+                                        align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? if so, place first event the horizontal 0?
                                         use.system.browser=FALSE, # by default, don't necessarily use the system browser
                                         get.colnames.fnc=function(d) names(d),
                                         get.patients.fnc=function(d, idcol) unique(d[[idcol]]),

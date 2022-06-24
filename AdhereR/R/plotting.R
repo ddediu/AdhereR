@@ -765,12 +765,12 @@ get.legend.plotting.area <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       return (NULL);
     } else
     {
-      if( is.null(lcpi$baseR$legend) )
+      if( is.null(lcpi$baseR$legend$box) )
       {
         return (NULL); # no legend being shown
       } else
       {
-        return (c("x.min"=lcpi$baseR$legend$x.start, "x.max"=lcpi$baseR$legend$x.end, "y.min"=lcpi$baseR$legend$y.start, "y.max"=lcpi$baseR$legend$y.end));
+        return (c("x.min"=lcpi$baseR$legend$box$x.start, "x.max"=lcpi$baseR$legend$box$x.end, "y.min"=lcpi$baseR$legend$box$y.start, "y.max"=lcpi$baseR$legend$box$y.end));
       }
     }
   } else if( plot.type[1] == "SVG" )
@@ -781,12 +781,12 @@ get.legend.plotting.area <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       return (NULL);
     } else
     {
-      if( is.null(lcpi$SVG$legend) )
+      if( is.null(lcpi$SVG$legend$box) )
       {
         return (NULL); # no legend being shown
       } else
       {
-        return (c("x.min"=lcpi$SVG$legend$x.start, "x.max"=lcpi$SVG$legend$x.end, "y.min"=lcpi$SVG$legend$y.start, "y.max"=lcpi$SVG$legend$y.end));
+        return (c("x.min"=lcpi$SVG$legend$box$x.start, "x.max"=lcpi$SVG$legend$box$x.end, "y.min"=lcpi$SVG$legend$box$y.start, "y.max"=lcpi$SVG$legend$box$y.end));
       }
     }
   } else
@@ -986,9 +986,9 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 .plot.CMAs <- function(cma,                                   # the CMA_per_episode or CMA_sliding_window (or derived) object
                        patients.to.plot=NULL,                 # list of patient IDs to plot or NULL for all
                        duration=NA,                           # duration and end period to plot in days (if missing, determined from the data)
-                       align.all.patients=FALSE, align.first.event.at.zero=TRUE, # should all patients be aligned? and, if so, place the first event as the horizontal 0?
+                       align.all.patients=FALSE, align.first.event.at.zero=FALSE, # should all patients be aligned? and, if so, place the first event as the horizontal 0?
                        show.period=c("dates","days")[2],      # draw vertical bars at regular interval as dates or days?
-                       period.in.days=90,                     # the interval (in days) at which to draw veritcal lines
+                       period.in.days=90,                     # the interval (in days) at which to draw vertical lines
                        show.legend=TRUE, legend.x="right", legend.y="bottom", legend.bkg.opacity=0.5, legend.cex=0.75, legend.cex.title=1.0, # legend params and position
                        cex=1.0, cex.axis=0.75, cex.lab=1.0, cex.title=1.5,   # various graphical params
                        show.cma=TRUE,                         # show the CMA type
@@ -1002,14 +1002,15 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        medication.groups.allother.label="*",  # the label to use for the __ALL_OTHERS__ medication class (defaults to *)
                        lty.event="solid", lwd.event=2, pch.start.event=15, pch.end.event=16, # event style
                        show.event.intervals=TRUE,             # show the actual prescription intervals
+                       show.overlapping.event.intervals=c("first", "last", "min gap", "max gap", "average")[1], # how to plot overlapping event intervals (relevant for sliding windows and per episode)
                        plot.events.vertically.displaced=TRUE, # display the events on different lines (vertical displacement) or not (defaults to TRUE)?
                        print.dose=FALSE, cex.dose=0.75, print.dose.col="black", print.dose.outline.col="white", print.dose.centered=FALSE, # print daily dose
                        plot.dose=FALSE, lwd.event.max.dose=8, plot.dose.lwd.across.medication.classes=FALSE, # draw daily dose as line width
                        col.na="lightgray",                    # color for missing data
                        col.continuation="black", lty.continuation="dotted", lwd.continuation=1, # style of the continuation lines connecting consecutive events
-                       print.CMA=TRUE, CMA.cex=0.50, # print CMA next to the participant's ID?
-                       plot.CMA=TRUE,                   # plot the CMA next to the participant ID?
-                       plot.CMA.as.histogram=TRUE,      # plot CMA as a histogram or as a density plot?
+                       print.CMA=TRUE, CMA.cex=0.50,          # print CMA next to the participant's ID?
+                       plot.CMA=TRUE,                         # plot the CMA next to the participant ID?
+                       plot.CMA.as.histogram=TRUE,            # plot CMA as a histogram or as a density plot?
                        plot.partial.CMAs.as=c("stacked", "overlapping", "timeseries")[1], # how to plot the "partial" (i.e., intervals/episodes) CMAs (NULL for none)?
                        plot.partial.CMAs.as.stacked.col.bars="gray90", plot.partial.CMAs.as.stacked.col.border="gray30", plot.partial.CMAs.as.stacked.col.text="black",
                        plot.partial.CMAs.as.timeseries.vspace=7, # how much vertical space to reserve for the timeseries plot (in character lines)
@@ -1021,27 +1022,29 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                        plot.partial.CMAs.as.timeseries.show.0perc=TRUE, plot.partial.CMAs.as.timeseries.show.100perc=FALSE, #show the 0% and 100% lines?
                        plot.partial.CMAs.as.overlapping.alternate=TRUE, # should successive intervals be plotted low/high?
                        plot.partial.CMAs.as.overlapping.col.interval="gray70", plot.partial.CMAs.as.overlapping.col.text="firebrick", # setting any of these to NA results in them not being plotted
-                       CMA.plot.ratio=0.10,             # the proportion of the total horizontal plot to be taken by the CMA plot
+                       CMA.plot.ratio=0.10,                   # the proportion of the total horizontal plot to be taken by the CMA plot
                        CMA.plot.col="lightgreen", CMA.plot.border="darkgreen", CMA.plot.bkg="aquamarine", CMA.plot.text=CMA.plot.border, # attributes of the CMA plot
                        highlight.followup.window=TRUE, followup.window.col="green",
                        highlight.observation.window=TRUE, observation.window.col="yellow", observation.window.density=35, observation.window.angle=-30, observation.window.opacity=0.3,
                        show.real.obs.window.start=TRUE, real.obs.window.density=35, real.obs.window.angle=30, # for CMA8, the real observation window starts at a different date
-                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL=don't draw any; can be >= 1 color)
-                       rotate.text=-60,                 # some text (e.g., axis labels) may be rotated by this much degrees
-                       force.draw.text=FALSE,           # if true, always draw text even if too big or too small
-                       bw.plot=FALSE,                   # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
+                       print.episode.or.sliding.window=FALSE, # should we print the episode or sliding window to which an event belongs?
+                       alternating.bands.cols=c("white", "gray95"), # the colors of the alternating vertical bands across patients (NULL or NA=don't draw any; can be >= 1 color)
+                       rotate.text=-60,                       # some text (e.g., axis labels) may be rotated by this much degrees
+                       force.draw.text=FALSE,                 # if true, always draw text even if too big or too small
+                       bw.plot=FALSE,                         # if TRUE, override all user-given colors and replace them with a scheme suitable for grayscale plotting
                        min.plot.size.in.characters.horiz=0, min.plot.size.in.characters.vert=0, # the minimum plot size (in characters: horizontally, for the whole duration, vertically, per event (and, if shown, per episode/sliding window))
-                       max.patients.to.plot=100,        # maximum number of patients to plot
-                       suppress.warnings=FALSE,         # suppress warnings?
-                       export.formats=NULL,             # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
+                       max.patients.to.plot=100,              # maximum number of patients to plot
+                       suppress.warnings=FALSE,               # suppress warnings?
+                       export.formats=NULL,                   # the formats to export the figure to (by default, none); can be any subset of "svg" (just SVG file), "html" (SVG + HTML + CSS + JavaScript all embedded within the HTML document), "jpg", "png", "webp", "ps" and "pdf"
                        export.formats.fileprefix="AdhereR-plot", # the file name prefix for the exported formats
                        export.formats.height=NA, export.formats.width=NA, # desired dimensions (in pixels) for the exported figure (defaults to sane values)
                        export.formats.save.svg.placeholder=TRUE,
                        export.formats.svg.placeholder.type=c("jpg", "png", "webp")[2],
                        export.formats.svg.placeholder.embed=FALSE, # save a placeholder for the SVG image?
                        export.formats.html.template=NULL, export.formats.html.javascript=NULL, export.formats.html.css=NULL, # HTML, JavaScript and CSS templates for exporting HTML+SVG
-                       export.formats.directory=NA,     # if exporting, which directory to export to (if not give, creates files in the temporary directory)
-                       generate.R.plot=TRUE,            # generate standard (base R) plot for plotting within R?
+                       export.formats.directory=NA,           # if exporting, which directory to export to (if not give, creates files in the temporary directory)
+                       generate.R.plot=TRUE,                  # generate standard (base R) plot for plotting within R?
+                       do.not.draw.plot=FALSE,                # if TRUE, don't draw the actual plot, but only the legend (if required)
                        ...
 )
 {
@@ -1053,6 +1056,10 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     return (invisible(NULL));
   }
 
+  # There is a confusion in the help concerning align.first.event.at.zero, so negate it:
+  align.first.event.at.zero <- !align.first.event.at.zero;
+
+  if( !is.null(medication.groups.to.plot) && length(medication.groups.to.plot) == 1 && is.na(medication.groups.to.plot) ) medication.groups.to.plot <- NULL; # NA has the same effect as NULL
 
   #
   # Initialize the SVG file content ####
@@ -2017,6 +2024,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   #
 
   # The patients:
+  patients.to.plot <- patients.to.plot[ !duplicated(patients.to.plot) ]; # remove duplicates keeping the order
   patids <- unique(as.character(cma$data[,col.patid])); patids <- patids[!is.na(patids)];
   if( !is.null(patients.to.plot) ) patids <- intersect(patids, as.character(patients.to.plot));
   if( length(patids) == 0 )
@@ -2116,6 +2124,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( length(patids.no.events.to.plot) > 0 )
     {
       cma$data <- cma$data[ !(cma$data[,col.patid] %in% patids.no.events.to.plot), ];
+      cma$event.info <- cma$event.info[ !(cma$event.info[,col.patid] %in% patids.no.events.to.plot), ];
       #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), col.patid ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
       if( !suppress.warnings ) .report.ewms(paste0("Patient",
                                                    ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
@@ -2133,6 +2142,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( length(patids.no.events.to.plot) > 0 )
     {
       cma$data <- cma$data[ !(cma$data[,col.patid] %in% patids.no.events.to.plot), ];
+      cma$event.info <- cma$event.info[ !(cma$event.info[,col.patid] %in% patids.no.events.to.plot), ];
       #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), col.patid ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
       if( !suppress.warnings ) .report.ewms(paste0("Patient",
                                                    ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
@@ -2216,6 +2226,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
         if( length(patids.no.events.to.plot) > 0 )
         {
           cma$data <- cma$data[ !(cma$data[,col.patid] %in% patids.no.events.to.plot), ];
+          cma$event.info <- cma$event.info[ !(cma$event.info[,col.patid] %in% patids.no.events.to.plot), ];
           #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), col.patid ] <- patids.no.events.to.plot; # everything ese is NA except for the patient id
           if( !suppress.warnings ) .report.ewms(paste0("Patient",
                                                        ifelse(length(patids.no.events.to.plot) > 1, "s ", " "),
@@ -2259,7 +2270,8 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                       observation.window.duration=NULL,
                                       observation.window.duration.unit=NULL,
                                       date.format=NULL,
-                                      suppress.warnings=NULL
+                                      suppress.warnings=NULL,
+                                      suppress.special.argument.checks=NULL
       )
       {
         # Call the compute.event.int.gaps() function and use the results:
@@ -2288,6 +2300,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                              parallel.backend="none", # make sure this runs sequentially!
                                              parallel.threads=1,
                                              suppress.warnings=suppress.warnings,
+                                             suppress.special.argument.checks=TRUE,
                                              return.data.table=TRUE);
         if( is.null(event.info) ) return (list("CMA"=NA, "event.info"=NULL));
 
@@ -2323,6 +2336,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                            followup.window.start.per.medication.group=cma$followup.window.start.per.medication.group,
 
                            suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=TRUE,
                            force.NA.CMA.for.failed.patients=TRUE, # force the failed patients to have NA CMA estimates
                            parallel.backend="none", # make sure this runs sequentially!
                            parallel.threads=1,
@@ -2337,6 +2351,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
     if( length(patids.no.events.to.plot) > 0 )
     {
       cma$data <- cma$data[ !(cma$data[,col.patid] %in% patids.no.events.to.plot), ];
+      cma$event.info <- cma$event.info[ !(cma$event.info[,col.patid] %in% patids.no.events.to.plot), ];
       #cma$data[ nrow(cma$data) + 1:length(patids.no.events.to.plot), col.patid ] <- patids.no.events.to.plot; # everything else is NA except for the patient id
       cmas <- cmas[ !(cmas[,col.patid] %in% patids.no.events.to.plot),  ]
       if( !suppress.warnings ) .report.ewms(paste0("Patient",
@@ -2445,21 +2460,29 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   }
 
   # Make sure the patients are ordered by ID, medication group (if the case), and date:
+  if( !is.null(patients.to.plot) && any(patients.to.plot %in% patids) )
+  {
+    # Respect the order given in patients.to.plot by converting everything to factor with a given levels order:
+    patids.ordered <- factor(patids, levels=patients.to.plot[patients.to.plot %in% patids]);
+    cma$data[,col.patid] <- factor(cma$data[,col.patid], levels=patients.to.plot[patients.to.plot %in% cma$data[,col.patid]]);
+    if( cma.mg ) patmgids[,col.patid] <- factor(patmgids[,col.patid], levels=patients.to.plot[patients.to.plot %in% patmgids[,col.patid]]);
+    cmas[,col.patid] <- factor(cmas[,col.patid], levels=patients.to.plot[patients.to.plot %in% cmas[,col.patid]]);
+  }
   patids <- patids[ order(patids) ];
   if( !cma.mg )
   {
-    cma$data <- cma$data[ order( cma$data[,col.patid], cma$data$.DATE.as.Date), ];
+    cma$data <- cma$data[ order(cma$data[,col.patid], cma$data$.DATE.as.Date), ];
   } else
   {
-    cma$data <- cma$data[ order( cma$data[,col.patid], cma$data[,col.mg], cma$data$.DATE.as.Date), ];
-    patmgids <- patmgids[ order( patmgids[,col.patid], patmgids[,col.mg]), ];
+    cma$data <- cma$data[ order(cma$data[,col.patid], cma$data[,col.mg], cma$data$.DATE.as.Date), ];
+    patmgids <- patmgids[ order(patmgids[,col.patid], patmgids[,col.mg]), ];
   }
   if( all(c("WND.ID","start") %in% names(cmas)) )
   {
-    cmas <- cmas[ order( cmas[,col.patid], cmas$WND.ID, cmas$start), ];
+    cmas <- cmas[ order(cmas[,col.patid], cmas$WND.ID, cmas$start), ];
   } else
   {
-    cmas <- cmas[ order( cmas[,col.patid]), ];
+    cmas <- cmas[ order(cmas[,col.patid]), ];
   }
 
 
@@ -2590,6 +2613,17 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
 
   #
+  # Episode or sliding window to which an event belongs ####
+  #
+
+  if( !(inherits(cma, "CMA_per_episode")    && "mapping.episodes.to.events" %in% names(cma) && !is.null(cma$mapping.episodes.to.events)) && # for per episodes
+      !(inherits(cma, "CMA_sliding_window") && "mapping.windows.to.events"  %in% names(cma) && !is.null(cma$mapping.windows.to.events)) )   # for sliding windows
+  {
+    print.episode.or.sliding.window <- FALSE; # can't show this info
+  }
+
+
+  #
   # Event dates and durations ####
   #
 
@@ -2639,7 +2673,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   {
     latest.date <- max(cma$data$.DATE.as.Date + cma$data[,cma$event.duration.colname], cmas$.FU.END.DATE, cmas$.OBS.END.DATE, na.rm=TRUE);
     if( "end" %in% names(cmas) ) latest.date <- max(cmas$end, latest.date, na.rm=TRUE);
-    duration <- as.numeric(latest.date - earliest.date) + correct.earliest.followup.window;
+    duration <- as.numeric(latest.date - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0);
   }
   endperiod <- duration;
 
@@ -2734,26 +2768,14 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   date.labels <- NULL;
   if( period.in.days > 0 )
   {
+    xpos <- seq(0, as.numeric(endperiod), by=period.in.days); # where to put lables and guidelines
     if( show.period=="dates" )
     {
-      xpos <- seq(0, as.numeric(endperiod), by=period.in.days); # where to put lables and guidelines
       axis.labels <- as.character(earliest.date + round(xpos, 1), format=cma$date.format);
     } else
     {
-      if( align.first.event.at.zero )
-      {
-        # Correctly deal with events starting before the FUW (i.e., correct.earliest.followup.window < 0):
-        xpos <- c(correct.earliest.followup.window - seq(0, correct.earliest.followup.window, by=period.in.days * sign(correct.earliest.followup.window)),
-                  seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
-        xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
-        axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
-      } else
-      {
-        xpos <- seq(0, as.numeric(endperiod), by=period.in.days);
-        axis.labels <- as.character(round(xpos, 1));
-      }
+      axis.labels <- as.character(round(xpos - ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0), 1));
     }
-
     date.labels <- data.frame("position"=adh.plot.space[2] + xpos, "string"=axis.labels);
   }
 
@@ -2961,6 +2983,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
     # Character width and height in the current plotting system:
     if( print.dose ) dose.text.height <- strheight("0",cex=cex.dose);
+    if( print.episode.or.sliding.window ) epiwnd.text.height <- strheight("0",cex=cex.dose);
     char.width <- strwidth("O",cex=cex); char.height <- strheight("O",cex=cex);
     char.height.CMA <- strheight("0",cex=CMA.cex);
 
@@ -3008,6 +3031,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       "lty.event"=lty.event, "lwd.event"=lwd.event, "pch.start.event"=pch.start.event, "pch.end.event"=pch.end.event,
       "show.event.intervals"=show.event.intervals,
       "print.dose"=print.dose, "cex.dose"=cex.dose, "print.dose.col"=print.dose.col, "print.dose.centered"=print.dose.centered,
+      "print.episode.or.sliding.window"=print.episode.or.sliding.window,
       "plot.dose"=plot.dose, "lwd.event.max.dose"=lwd.event.max.dose, "plot.dose.lwd.across.medication.classes"=plot.dose.lwd.across.medication.classes,
       "col.na"=col.na, "col.continuation"=col.continuation, "lty.continuation"=lty.continuation, "lwd.continuation"=lwd.continuation,
       "print.CMA"=print.CMA, "CMA.cex"=CMA.cex,
@@ -3049,6 +3073,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       "xlim"=c(0-5,duration.total+5), "ylim"=c(0,vert.space.events+vert.space.cmas+1),
       "x.min"=0, "x.max"=duration.total, "y.min"=1, "y.max"=vert.space.events+vert.space.cmas,
       "dose.text.height"=ifelse(print.dose, dose.text.height, NA),
+      "epiwnd.text.height"=ifelse(print.episode.or.sliding.window, epiwnd.text.height, NA),
       "char.width"=char.width, "char.height"=char.height,
       "char.height.CMA"=char.height.CMA,
       "is.cma.TS.or.SW"=is.cma.TS.or.SW, "has.estimated.CMA"=has.estimated.CMA,
@@ -3096,6 +3121,7 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
       "lty.event"=lty.event, "lwd.event"=lwd.event, "pch.start.event"=pch.start.event, "pch.end.event"=pch.end.event,
       "show.event.intervals"=show.event.intervals,
       "print.dose"=print.dose, "cex.dose"=cex.dose, "print.dose.col"=print.dose.col, "print.dose.centered"=print.dose.centered,
+      "print.episode.or.sliding.window"=print.episode.or.sliding.window,
       "plot.dose"=plot.dose, "lwd.event.max.dose"=lwd.event.max.dose, "plot.dose.lwd.across.medication.classes"=plot.dose.lwd.across.medication.classes,
       "col.na"=col.na, "col.continuation"=col.continuation, "lty.continuation"=lty.continuation, "lwd.continuation"=lwd.continuation,
       "print.CMA"=print.CMA, "CMA.cex"=CMA.cex,
@@ -3232,14 +3258,34 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
   ## Plot most of the plot components ####
   ##
 
-  # Initialisations
-  y.cur <- 1; # the current vertical line at which plotting takes place
-  alternating.band.to.draw <- 1; # for this patient, which alternating band to draw?
-
-  # For each event in cma$data, as well as for each of the partial CMAs (if the case), record important plotting info
-  if( .do.R )
+  if( !do.not.draw.plot )
   {
-    .last.cma.plot.info$baseR$cma$data <- cbind(.last.cma.plot.info$baseR$cma$data,
+    # Only if we actually draw the plot...
+
+    # Initialisations
+    y.cur <- 1; # the current vertical line at which plotting takes place
+    alternating.band.to.draw <- 1; # for this patient, which alternating band to draw?
+
+    # For each event in cma$data, as well as for each of the partial CMAs (if the case), record important plotting info
+    if( .do.R )
+    {
+      .last.cma.plot.info$baseR$cma$data <- cbind(.last.cma.plot.info$baseR$cma$data,
+                                                  ".X.OW.START"=NA,   ".X.OW.END"=NA,   ".Y.OW.START"=NA,   ".Y.OW.END"=NA,   # observation window extension on the plot
+                                                  ".X.ROW.START"=NA,  ".X.ROW.END"=NA,  ".Y.ROW.START"=NA,  ".Y.ROW.END"=NA,  # "real" observation window extension on the plot
+                                                  ".X.FUW.START"=NA,  ".X.FUW.END"=NA,  ".Y.FUW.START"=NA,  ".Y.FUW.END"=NA,  # follow-up window extension on the plot
+                                                  ".X.START"=NA,      ".X.END"=NA,      ".Y.START"=NA,      ".Y.END"=NA,      # event extension on the plot
+                                                  ".EV.LWD"=NA, # the event's line width
+                                                  ".X.DOSE"=NA, ".Y.DOSE"=NA, ".FONT.SIZE.DOSE"=NA, # dose text position and size
+                                                  ".X.EVC.START"=NA,  ".X.EVC.END"=NA,  ".Y.EVC.START"=NA,  ".Y.EVC.END"=NA,  # event covered extension on the plot
+                                                  ".X.EVNC.START"=NA, ".X.EVNC.END"=NA, ".Y.EVNC.START"=NA, ".Y.EVNC.END"=NA, # event not covered extension on the plot
+                                                  ".X.CNT.START"=NA,  ".X.CNT.END"=NA,  ".Y.CNT.START"=NA,  ".Y.CNT.END"=NA,  # continuation lines extension on the plot
+                                                  ".X.SCMA.START"=NA, ".X.SCMA.END"=NA, ".Y.SCMA.START"=NA, ".Y.SCMA.END"=NA  # summary CMA extension on the plot
+      );
+      .last.cma.plot.info$baseR$partialCMAs <- NULL;
+    }
+    if( .do.SVG )
+    {
+      .last.cma.plot.info$SVG$cma$data <- cbind(.last.cma.plot.info$SVG$cma$data,
                                                 ".X.OW.START"=NA,   ".X.OW.END"=NA,   ".Y.OW.START"=NA,   ".Y.OW.END"=NA,   # observation window extension on the plot
                                                 ".X.ROW.START"=NA,  ".X.ROW.END"=NA,  ".Y.ROW.START"=NA,  ".Y.ROW.END"=NA,  # "real" observation window extension on the plot
                                                 ".X.FUW.START"=NA,  ".X.FUW.END"=NA,  ".Y.FUW.START"=NA,  ".Y.FUW.END"=NA,  # follow-up window extension on the plot
@@ -3250,942 +3296,988 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                                                 ".X.EVNC.START"=NA, ".X.EVNC.END"=NA, ".Y.EVNC.START"=NA, ".Y.EVNC.END"=NA, # event not covered extension on the plot
                                                 ".X.CNT.START"=NA,  ".X.CNT.END"=NA,  ".Y.CNT.START"=NA,  ".Y.CNT.END"=NA,  # continuation lines extension on the plot
                                                 ".X.SCMA.START"=NA, ".X.SCMA.END"=NA, ".Y.SCMA.START"=NA, ".Y.SCMA.END"=NA  # summary CMA extension on the plot
-    );
-    .last.cma.plot.info$baseR$partialCMAs <- NULL;
-  }
-  if( .do.SVG )
-  {
-    .last.cma.plot.info$SVG$cma$data <- cbind(.last.cma.plot.info$SVG$cma$data,
-                                              ".X.OW.START"=NA,   ".X.OW.END"=NA,   ".Y.OW.START"=NA,   ".Y.OW.END"=NA,   # observation window extension on the plot
-                                              ".X.ROW.START"=NA,  ".X.ROW.END"=NA,  ".Y.ROW.START"=NA,  ".Y.ROW.END"=NA,  # "real" observation window extension on the plot
-                                              ".X.FUW.START"=NA,  ".X.FUW.END"=NA,  ".Y.FUW.START"=NA,  ".Y.FUW.END"=NA,  # follow-up window extension on the plot
-                                              ".X.START"=NA,      ".X.END"=NA,      ".Y.START"=NA,      ".Y.END"=NA,      # event extension on the plot
-                                              ".EV.LWD"=NA, # the event's line width
-                                              ".X.DOSE"=NA, ".Y.DOSE"=NA, ".FONT.SIZE.DOSE"=NA, # dose text position and size
-                                              ".X.EVC.START"=NA,  ".X.EVC.END"=NA,  ".Y.EVC.START"=NA,  ".Y.EVC.END"=NA,  # event covered extension on the plot
-                                              ".X.EVNC.START"=NA, ".X.EVNC.END"=NA, ".Y.EVNC.START"=NA, ".Y.EVNC.END"=NA, # event not covered extension on the plot
-                                              ".X.CNT.START"=NA,  ".X.CNT.END"=NA,  ".Y.CNT.START"=NA,  ".Y.CNT.END"=NA,  # continuation lines extension on the plot
-                                              ".X.SCMA.START"=NA, ".X.SCMA.END"=NA, ".Y.SCMA.START"=NA, ".Y.SCMA.END"=NA  # summary CMA extension on the plot
-    );
-    .last.cma.plot.info$SVG$partialCMAs <- NULL;
-  }
-
-  # For each individual event in turn:
-  alternating.band.mg.to.draw <- FALSE;
-  y.old.mg <- y.cur;
-  for( i in 1:nrow(cma$data) )
-  {
-    # The current plot ID:
-    cur_plot_id <- cma$data[i,col.plotid];
-
-    # For a new patient, draw the alternating bands, show the CMA and print the y-axis label:
-    if( i == 1 || (cur_plot_id != cma$data[i-1,col.plotid]) )
-    {
-      # Save the current vertical position (for drawing the FUW and OW windows):
-      y.old <- y.cur;
-
-      # Select the events and partial CMAs belonging to this patient:
-      s.events <- which(cma$data[,col.plotid] == cur_plot_id);
-      s.cmas   <- which(cmas[,col.plotid]     == cur_plot_id);
-
-      # Vertical space needed by this patient for the events and overall:
-      vspace.needed.events <- ifelse(plot.events.vertically.displaced, length(s.events), 1);
-      vspace.needed.partial.cmas <- ifelse(has.estimated.CMA,
-                                           (length(s.cmas)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
-                                             3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
-                                             plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
-                                           0);
-      vspace.needed.total  <- vspace.needed.events + vspace.needed.partial.cmas;
-
-
-      ##
-      ## The alternating bands ####
-      ##
-
-      # Draw the alternating bands
-      if( !is.null(alternating.bands.cols) )
-      {
-        if( .do.R ) # Rplot:
-        {
-          rect( 0.0 - 1.0, y.cur - 0.5, duration.total + 1.0, y.cur + vspace.needed.total - 0.5, col=alternating.bands.cols[alternating.band.to.draw], border=NA );
-        }
-
-        if( .do.SVG ) # SVG:
-        {
-          svg.str[[length(svg.str)+1]] <-
-            .SVG.rect(x=.scale.x.to.SVG.plot(0), y=.scale.y.to.SVG.plot(y.cur - 0.5 + vspace.needed.total),
-                      width=dims.plot.width, height=.scale.height.to.SVG.plot(vspace.needed.total),
-                      fill=alternating.bands.cols[alternating.band.to.draw],
-                      class=paste0("alternating-bands-",alternating.band.to.draw), comment="The alternating band");
-        }
-
-        alternating.band.to.draw <- if(alternating.band.to.draw >= length(alternating.bands.cols)) 1 else (alternating.band.to.draw + 1); # move to the next band
-      }
+      );
+      .last.cma.plot.info$SVG$partialCMAs <- NULL;
     }
 
-    ##
-    ## Medication groups within patients ####
-    ##
-
-    # Draw the separators over the alternating bands but bellow all other graphical elements:
-    if( cma.mg &&
-        medication.groups.separator.show &&
-        (i == 1 || (i > 1 && cma$data[i,col.patid] != cma$data[i-1,col.patid]) || i == nrow(cma$data)) )
+    ## For sliding windows and per episode, prepare the inner.event.info (if it exists) for plotting ####
+    # Prepare the plot title:
+    title.inner.event.info <- ""; # empty in most cases
+    # Check the conditions:
+    if( (inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window")) &&
+        "inner.event.info" %in% names(cma) && !is.null(cma$inner.event.info) &&
+        show.event.intervals )
     {
-      # The y coordinates:
-      y.mg.start <- ifelse(i == nrow(cma$data), y.cur + vspace.needed.partial.cmas + 0.5, y.cur - 0.5);
-      y.mg.end   <- (y.old.mg - 0.5);
-
-      if( .do.R ) # Rplot:
+      if( !(show.overlapping.event.intervals %in% c("first", "last", "min gap", "max gap", "average")) )
       {
-        # The separating line:
-        segments(par("usr")[1], y.mg.start, par("usr")[2], y.mg.start,
-                 col=medication.groups.separator.color, lty=medication.groups.separator.lty, lwd=medication.groups.separator.lwd);
-        if( i > 1 && alternating.band.mg.to.draw )
-        {
-          rect( par("usr")[1],        y.mg.start, 0.0,           y.mg.end, col=medication.groups.separator.color, border=NA );
-          rect( duration.total + 1.0, y.mg.start, par("usr")[2], y.mg.end, col=medication.groups.separator.color, border=NA );
-        }
+        if( !suppress.warnings ) .report.ewms(paste0("Unknown 'show.overlapping.event.intervals' value '",show.overlapping.event.intervals,"': assuming 'first'.\n"), "warning", "plot", "AdhereR");
+        show.overlapping.event.intervals <- "first";
       }
 
-      if( .do.SVG ) # SVG:
+      # Identify the overlapping events (i.e., those events that belong to the patient but fall in different windows/episodes):
+      proc.inner.event.info <- as.data.table(cma$inner.event.info);
+
+      .combine.overlapping.events <- function(data4event)
       {
-        # Draw:
-        svg.str[[length(svg.str)+1]] <-
-          # The separating line:
-          .SVG.lines(x=c(dims.plot.x, dims.plot.x+dims.plot.width),
-                     y=rep(.scale.y.to.SVG.plot(y.mg.start),2),
-                     connected=FALSE,
-                     stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
-                     class="medication-groups-separator-hline", comment="Medication groups separator: horizontal line", suppress.warnings=suppress.warnings);
-        if( i > 1 && alternating.band.mg.to.draw )
+        if( nrow(data4event) == 0 ) return (NULL);
+
+        # The non-missing-data rows:
+        s <- which(!is.na(data4event$event.interval) & !is.na(data4event$gap.days));
+        if( length(s) == 0 )
         {
-          svg.str[[length(svg.str)+1]] <-
-            # The left and right lines:
-            .SVG.lines(x=c(dims.plot.x, dims.plot.x),
-                       y=c(.scale.y.to.SVG.plot(y.mg.start), .scale.y.to.SVG.plot(y.mg.end)),
-                       connected=FALSE,
-                       stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
-                       class="medication-groups-separator-vline", comment="Medication groups separator: vertical lines", suppress.warnings=suppress.warnings);
-          svg.str[[length(svg.str)+1]] <-
-            .SVG.lines(x=c(dims.plot.x, dims.plot.x)+dims.plot.width,
-                       y=c(.scale.y.to.SVG.plot(y.mg.start), .scale.y.to.SVG.plot(y.mg.end)),
-                       connected=FALSE,
-                       stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
-                       class="medication-groups-separator-vline", comment="Medication groups separator: vertical lines", suppress.warnings=suppress.warnings);
-        }
-      }
-
-      alternating.band.mg.to.draw <- !alternating.band.mg.to.draw;
-      y.old.mg <- y.cur;
-    }
-
-
-    # Continue doing things for a new patient...
-    if( i == 1 || (cur_plot_id != cma$data[i-1,col.plotid]) )
-    {
-
-      ##
-      ## FUW and OW ####
-      ##
-
-      # The follow-up and observation windows (these are drawn only after all the other stuff for this patient has been drawn):
-      if( highlight.followup.window )
-      {
-        if( .do.R ) # Rplot:
+          r1 <- r2 <- NA_real_;
+        } else
         {
-          # Save the info:
-          .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.START"] <- (y.cur - 0.5);
-          .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.END"]   <- (y.cur + vspace.needed.events - 0.5);
-
-          # Draw:
-          rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.FUW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.FUW.START"],
-               .last.cma.plot.info$baseR$cma$data[s.events[1],".X.FUW.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.FUW.END"],
-               col=NA, border=followup.window.col, lty="dashed", lwd=2);
-        }
-
-        if( .do.SVG ) # SVG:
-        {
-          # Save the info:
-          .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
-          .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
-
-          # Draw:
-          svg.str[[length(svg.str)+1]] <-
-            # FUW:
-            .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.FUW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.FUW.START"],
-                      width=.scale.width.to.SVG.plot(as.numeric(cmas$.FU.END.DATE[s.cmas[1]] - cmas$.FU.START.DATE[s.cmas[1]])),
-                      height=.scale.height.to.SVG.plot(vspace.needed.events),
-                      stroke=followup.window.col, stroke_width=2, lty="dashed", fill="white", fill_opacity=0.0, # fully transparent but tooltips also work
-                      class="fuw", comment="The Follow-Up Window (FUW)", tooltip="Follow-Up Window (FUW)");
-        }
-      }
-      if( highlight.observation.window )
-      {
-        # The "given" OW:
-        if( .do.R ) # Rplot:
-        {
-          # Save the info:
-          .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.START"] <- (y.cur - 0.5);
-          .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.END"]   <- (y.cur + vspace.needed.events - 0.5);
-
-          # Draw:
-          rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.OW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.OW.START"],
-               .last.cma.plot.info$baseR$cma$data[s.events[1],".X.OW.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.OW.END"],
-               col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA); #, density=observation.window.density, angle=observation.window.angle);
-        }
-
-        if( .do.SVG ) # SVG:
-        {
-          # Save the info:
-          .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
-          .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + correct.earliest.followup.window);
-          .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
-
-          # Draw:
-          svg.str[[length(svg.str)+1]] <-
-            # OW:
-            .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.OW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.OW.START"],
-                      width=.scale.width.to.SVG.plot(as.numeric(cmas$.OBS.END.DATE[s.cmas[1]] - cmas$.OBS.START.DATE[s.cmas[1]])),
-                      height=.scale.height.to.SVG.plot(vspace.needed.events),
-                      stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                      class="ow", comment="The Observation Window (OW)", tooltip="Observation Window (OW)");
-        }
-
-        if( !is.null(cma.realOW) )
-        {
-          # For CMA8, the OW might have been changed, so we also have a "real" OW:
-          s.realOW <- which(cma.realOW[,col.plotid] == cur_plot_id);
-
-          # Find the beginning of the "real" OW:
-          if( length(s.realOW) == 1)
+          if( show.overlapping.event.intervals == "first" )
           {
-            if( !is.null(cma.realOW$window.start) && !is.na(cma.realOW$window.start[s.realOW]) )
-            {
-              real.obs.window.start <- cma.realOW$window.start[s.realOW];
-            } else
-            {
-              real.obs.window.start <- evinfo$.OBS.START.DATE[s.events[1]];
-            }
-            if( !is.null(cma.realOW$window.end) && !is.na(cma.realOW$window.end[s.realOW]) )
-            {
-              real.obs.window.end <- cma.realOW$window.end[s.realOW];
-            } else
-            {
-              real.obs.window.end <- evinfo$.OBS.END.DATE[s.events[1]];
-            }
-
-            # Draw the "real" OW:
-            if( .do.R ) # Rplot:
-            {
-              # Save the info:
-              .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.START"] <- (adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
-              .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.START"] <- (y.cur - 0.5);
-              .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.END"]   <- (adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + correct.earliest.followup.window);
-              .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.END"]   <- (y.cur + vspace.needed.events - 0.5);
-
-              # Draw:
-              rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.ROW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.ROW.START"],
-                   .last.cma.plot.info$baseR$cma$data[s.events[1],".X.ROW.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.ROW.END"],
-                   col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA); #, density=real.obs.window.density, angle=real.obs.window.angle);
-            }
-
-            if( .do.SVG ) # SVG:
-            {
-              # Save the info:
-              .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
-              .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
-              .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + correct.earliest.followup.window);
-              .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
-
-              # Draw:
-              svg.str[[length(svg.str)+1]] <-
-                # "real" OW:
-                .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.ROW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.ROW.START"],
-                          width=.scale.width.to.SVG.plot(as.numeric(real.obs.window.end - real.obs.window.start)),
-                          height=.scale.height.to.SVG.plot(vspace.needed.events),
-                          stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
-                          class="ow-real", comment="The 'real' Observation Window", tooltip="'Real' Observation Window");
-            }
+            # Use the values of the first window/episode with non-NA:
+            i <- min(s); r1 <- data4event$event.interval[i]; r2 <- data4event$gap.days[i];
+          } else if( show.overlapping.event.intervals == "last" )
+          {
+            # Use the values of the last window/episode with non-NA:
+            i <- max(s); r1 <- data4event$event.interval[i]; r2 <- data4event$gap.days[i];
+          } else if( show.overlapping.event.intervals == "min gap" )
+          {
+            # Use the minimum gap:
+            i <- s[which.min(data4event$gap.days[s])]; r1 <- data4event$event.interval[i]; r2 <- data4event$gap.days[i];
+          }  else if( show.overlapping.event.intervals == "max gap" )
+          {
+            # Use the maximum gap:
+            i <- s[which.max(data4event$gap.days[s])]; r1 <- data4event$event.interval[i]; r2 <- data4event$gap.days[i];
+          }  else if( show.overlapping.event.intervals == "average" )
+          {
+            # Use the average event interval and gap:
+            r1 <- mean(data4event$event.interval[s]); r2 <- mean(data4event$gap.days[s]);
+          } else
+          {
+            # This should now have happened! Assume "first":
+            i <- min(s); r1 <- data4event$event.interval[i]; r2 <- data4event$gap.days[i];
           }
         }
+
+        # Return the value:
+        #r1s <- r2s <- rep(NA, nrow(data4event)); r1s[s] <- r1; r2s[s] <- r2; # use the new values only for the originally non-NA ones...
+        #return (data.frame(r1s, r2s));
+        return (data.frame(r1, r2));
       }
+      proc.inner.event.info <- proc.inner.event.info[ , .combine.overlapping.events(.SD),
+                                                      by=c(col.patid, cma$event.date.colname, cma$event.daily.dose.colname, cma$medication.class.colname, cma$event.duration.colname)];
+      colnames(proc.inner.event.info)[(-1:0)+ncol(proc.inner.event.info)] <- c("event.interval", "gap.days");
+      proc.inner.event.info2 <- cma$data; proc.inner.event.info2$.ORIG.ROW.ORDER <- 1:nrow(proc.inner.event.info2);
+      proc.inner.event.info2 <- merge(proc.inner.event.info2, proc.inner.event.info, all.x=TRUE, all.y=FALSE);
+      proc.inner.event.info2 <- proc.inner.event.info2[ order(proc.inner.event.info2$.ORIG.ROW.ORDER), ];
 
-      ##
-      ## The y-axis labels ####
-      ##
+      # Put back the information needed for plotting:
+      cma$inner.event.info <- as.data.frame(proc.inner.event.info2);
 
-      # The y-axis label:
-      pid <- cur_plot_id;
-      y.mean <- y.cur + vspace.needed.total/2 - ifelse(plot.events.vertically.displaced, 0.0, 0.5); # vertical position of the label (centered on patient)
-      if( .do.R ) # Rplot:
+      # Prepare the plot title:
+      title.inner.event.info <- paste0("; overlapping events: ", show.overlapping.event.intervals);
+    }
+
+    # For each individual event in turn:
+    alternating.band.mg.to.draw <- FALSE;
+    y.old.mg <- y.cur;
+    for( i in 1:nrow(cma$data) )
+    {
+      # The current plot ID:
+      cur_plot_id <- cma$data[i,col.plotid];
+
+      # For a new patient, draw the alternating bands, show the CMA and print the y-axis label:
+      if( i == 1 || (cur_plot_id != cma$data[i-1,col.plotid]) )
       {
-        text(par("usr")[1], y.mean, pid, cex=cex.axis, srt=-rotate.text, pos=2, xpd=TRUE);
+        # Save the current vertical position (for drawing the FUW and OW windows):
+        y.old <- y.cur;
 
-        # Save the info:
-        .last.cma.plot.info$baseR$y.labels <- rbind(.last.cma.plot.info$baseR$y.labels,
-                                                    data.frame("string"=pid,
-                                                               "x"=par("usr")[1],
-                                                               "y"=y.mean,
-                                                               "cex"=cex.axis));
-      }
-      if( .do.SVG ) # SVG:
-      {
-        svg.str[[length(svg.str)+1]] <-
-          .SVG.text(x=(dims.plot.x - dims.chr.axis), y=.scale.y.to.SVG.plot(y.cur + vspace.needed.total/2), text=pid,
-                    font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
-                    class="axis-labels-y", comment="The y-axis labels", suppress.warnings=suppress.warnings);
+        # Select the events and partial CMAs belonging to this patient:
+        s.events <- which(cma$data[,col.plotid] == cur_plot_id);
+        s.cmas   <- which(cmas[,col.plotid]     == cur_plot_id);
 
-        # Save the info:
-        .last.cma.plot.info$SVG$y.labels <- rbind(.last.cma.plot.info$SVG$y.labels,
-                                                  data.frame("string"=pid,
-                                                             "x"=(dims.plot.x - dims.chr.axis),
-                                                             "y"=.scale.y.to.SVG.plot(y.cur + vspace.needed.total/2),
-                                                             "font.size"=dims.chr.axis));
-      }
+        # Vertical space needed by this patient for the events and overall:
+        vspace.needed.events <- ifelse(plot.events.vertically.displaced, length(s.events), 1);
+        vspace.needed.partial.cmas <- ifelse(has.estimated.CMA,
+                                             (length(s.cmas)+1) * as.numeric("stacked" %in% plot.partial.CMAs.as) +
+                                               3 * as.numeric("overlapping" %in% plot.partial.CMAs.as) +
+                                               plot.partial.CMAs.as.timeseries.vspace * as.numeric("timeseries" %in% plot.partial.CMAs.as),
+                                             0);
+        vspace.needed.total  <- vspace.needed.events + vspace.needed.partial.cmas;
 
 
-      ##
-      ## The summary CMA plots ####
-      ##
-
-      # The patient's CMA plot:
-      if( plot.CMA && has.estimated.CMA && adh.plot.space[2] > 0 )
-      {
-        if( is.cma.TS.or.SW )
+        # Reset the clipping region to the whole plotting area...
+        if( .do.R ) # Rplot:
         {
-          # For per episode and sliding windows we show the distribution of the "partial" CMAs:
+          clip(.last.cma.plot.info$baseR$xlim[1], .last.cma.plot.info$baseR$xlim[2], .last.cma.plot.info$baseR$ylim[1], .last.cma.plot.info$baseR$ylim[2]);
+        }
+
+        ##
+        ## The alternating bands ####
+        ##
+
+        # Draw the alternating bands
+        if( !is.null(alternating.bands.cols) && !(length(alternating.bands.cols) == 1 && is.na(alternating.bands.cols)) )
+        {
           if( .do.R ) # Rplot:
           {
-            # The CMA plot background:
+            rect( 0.0 - 1.0, y.cur - 0.5, duration.total + 1.0, y.cur + vspace.needed.total - 0.5, col=alternating.bands.cols[alternating.band.to.draw], border=NA );
+          }
+
+          if( .do.SVG ) # SVG:
+          {
+            svg.str[[length(svg.str)+1]] <-
+              .SVG.rect(x=.scale.x.to.SVG.plot(0), y=.scale.y.to.SVG.plot(y.cur - 0.5 + vspace.needed.total),
+                        width=dims.plot.width, height=.scale.height.to.SVG.plot(vspace.needed.total),
+                        fill=alternating.bands.cols[alternating.band.to.draw],
+                        class=paste0("alternating-bands-",alternating.band.to.draw), comment="The alternating band");
+          }
+
+          alternating.band.to.draw <- if(alternating.band.to.draw >= length(alternating.bands.cols)) 1 else (alternating.band.to.draw + 1); # move to the next band
+        }
+      }
+
+      ##
+      ## Medication groups within patients ####
+      ##
+
+      # Draw the separators over the alternating bands but bellow all other graphical elements:
+      if( cma.mg &&
+          medication.groups.separator.show &&
+          (i == 1 || (i > 1 && cma$data[i,col.patid] != cma$data[i-1,col.patid]) || i == nrow(cma$data)) )
+      {
+        # The y coordinates:
+        y.mg.start <- ifelse(i == nrow(cma$data), y.cur + vspace.needed.partial.cmas + 0.5, y.cur - 0.5);
+        y.mg.end   <- (y.old.mg - 0.5);
+
+        if( .do.R ) # Rplot:
+        {
+          # The separating line:
+          segments(par("usr")[1], y.mg.start, par("usr")[2], y.mg.start,
+                   col=medication.groups.separator.color, lty=medication.groups.separator.lty, lwd=medication.groups.separator.lwd);
+          if( i > 1 && alternating.band.mg.to.draw )
+          {
+            rect( par("usr")[1],        y.mg.start, 0.0,           y.mg.end, col=medication.groups.separator.color, border=NA );
+            rect( duration.total + 1.0, y.mg.start, par("usr")[2], y.mg.end, col=medication.groups.separator.color, border=NA );
+          }
+        }
+
+        if( .do.SVG ) # SVG:
+        {
+          # Draw:
+          svg.str[[length(svg.str)+1]] <-
+            # The separating line:
+            .SVG.lines(x=c(dims.plot.x, dims.plot.x+dims.plot.width),
+                       y=rep(.scale.y.to.SVG.plot(y.mg.start),2),
+                       connected=FALSE,
+                       stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
+                       class="medication-groups-separator-hline", comment="Medication groups separator: horizontal line", suppress.warnings=suppress.warnings);
+          if( i > 1 && alternating.band.mg.to.draw )
+          {
+            svg.str[[length(svg.str)+1]] <-
+              # The left and right lines:
+              .SVG.lines(x=c(dims.plot.x, dims.plot.x),
+                         y=c(.scale.y.to.SVG.plot(y.mg.start), .scale.y.to.SVG.plot(y.mg.end)),
+                         connected=FALSE,
+                         stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
+                         class="medication-groups-separator-vline", comment="Medication groups separator: vertical lines", suppress.warnings=suppress.warnings);
+            svg.str[[length(svg.str)+1]] <-
+              .SVG.lines(x=c(dims.plot.x, dims.plot.x)+dims.plot.width,
+                         y=c(.scale.y.to.SVG.plot(y.mg.start), .scale.y.to.SVG.plot(y.mg.end)),
+                         connected=FALSE,
+                         stroke=medication.groups.separator.color, lty=medication.groups.separator.lty, stroke_width=medication.groups.separator.lwd,
+                         class="medication-groups-separator-vline", comment="Medication groups separator: vertical lines", suppress.warnings=suppress.warnings);
+          }
+        }
+
+        alternating.band.mg.to.draw <- !alternating.band.mg.to.draw;
+        y.old.mg <- y.cur;
+      }
+
+
+      # Continue doing things for a new patient...
+      if( i == 1 || (cur_plot_id != cma$data[i-1,col.plotid]) )
+      {
+
+        ##
+        ## FUW and OW ####
+        ##
+
+        # The follow-up and observation windows (these are drawn only after all the other stuff for this patient has been drawn):
+        if( highlight.followup.window )
+        {
+          if( .do.R ) # Rplot:
+          {
             # Save the info:
-            .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.START"] <- .rescale.xcoord.for.CMA.plot(0.0);
-            .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.START"] <- (y.mean - 2);
-            .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.END"]   <- .rescale.xcoord.for.CMA.plot(1.0);
-            .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.END"]   <- (y.mean + 2);
+            .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+            .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.START"] <- (y.cur - 0.5);
+            .last.cma.plot.info$baseR$cma$data[s.events,".X.FUW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+            .last.cma.plot.info$baseR$cma$data[s.events,".Y.FUW.END"]   <- (y.cur + vspace.needed.events - 0.5);
 
             # Draw:
-            segments(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
-                     .last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
-                     lty="solid", col=CMA.plot.col);
-            segments(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
-                     .last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
-                     lty="solid", col=CMA.plot.col);
+            rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.FUW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.FUW.START"],
+                 .last.cma.plot.info$baseR$cma$data[s.events[1],".X.FUW.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.FUW.END"],
+                 col=NA, border=followup.window.col, lty="dashed", lwd=2);
           }
 
           if( .do.SVG ) # SVG:
           {
             # Save the info:
-            .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.START"] <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0));
-            .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.START"] <- .scale.y.to.SVG.plot(y.mean - 2);
-            .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.END"]   <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0));
-            .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.END"]   <- .scale.y.to.SVG.plot(y.mean + 2);
+            .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.START.DATE[s.cmas[1]] - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+            .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
+            .last.cma.plot.info$SVG$cma$data[s.events,".X.FUW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.FU.END.DATE[s.cmas[1]]   - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+            .last.cma.plot.info$SVG$cma$data[s.events,".Y.FUW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
 
             # Draw:
             svg.str[[length(svg.str)+1]] <-
-              # The CMA plot background:
-              .SVG.lines(x=c(.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
-                             .last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.END"],
-                             .last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
-                             .last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.END"]),
-                         y=c(.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
-                             .last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
-                             .last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.END"],
-                             .last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.END"]),
-                         connected=FALSE,
-                         stroke=CMA.plot.col, stroke_width=1,
-                         class="cma-drawing-area-background", comment="The CMA plot background", suppress.warnings=suppress.warnings);
+              # FUW:
+              .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.FUW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.FUW.START"],
+                        width=.scale.width.to.SVG.plot(as.numeric(cmas$.FU.END.DATE[s.cmas[1]] - cmas$.FU.START.DATE[s.cmas[1]])),
+                        height=.scale.height.to.SVG.plot(vspace.needed.events),
+                        stroke=followup.window.col, stroke_width=2, lty="dashed", fill="white", fill_opacity=0.0, # fully transparent but tooltips also work
+                        class="fuw", comment="The Follow-Up Window (FUW)", tooltip="Follow-Up Window (FUW)");
           }
-
-          # The non-missing CMA values:
-          adh <- na.omit(cmas[s.cmas,"CMA"]);
-
-          # Scale the CMA (itself or density) in such a way that if within 0..1 stays within 0..1 but scales if it goes outside this interval to accommodate it
-          if( plot.CMA.as.histogram )
-          {
-            # Plot CMA as histogram (or nothing, if too little data):
-            if( length(adh) > 0 ) svg.str <- .plot.summary.CMA.as.histogram(adh, svg.str);
-          } else
-          {
-            if( length(adh) > 2 )
-            {
-              # Plot CMA as density plot:
-              adh.density <- density(adh);
-              ss <- (adh.density$x >= min(adh,na.rm=TRUE) & adh.density$x <= max(adh,na.rm=TRUE));
-              if( sum(ss) == 0 )
-              {
-                # Probably constant numbers? Plot the individual lines:
-                svg.str <- .plot.summary.CMA.as.lines(adh, svg.str);
-              } else
-              {
-                # Plot as density:
-                svg.str <- .plot.summary.CMA.as.density(adh.density$x[ss], adh.density$y[ss], svg.str);
-              }
-            } else
-            {
-              if( length(adh) == 0 )
-              {
-                # No points at all: nothing to plot!
-              } else
-              {
-                # Plot the individual lines:
-                svg.str <- .plot.summary.CMA.as.lines(adh, svg.str);
-              }
-            }
-          }
-        } else if( inherits(cma, "CMA1") )
+        }
+        if( highlight.observation.window )
         {
-          # For CMA1+ we show the actual point estimate:
-
-          # The adherence estimate:
-          adh <- cmas[s.cmas,"CMA"];
-
-          if( !is.na(adh) )
+          # The "given" OW:
+          if( .do.R ) # Rplot:
           {
-            # The vertical position where it will be drawn and its vertical extent:
-            if( plot.events.vertically.displaced )
-            {
-              # Events are vertically displaced:
-              adh.y <- mean(s.events);
-              adh.h <- ifelse(length(s.events) < 2, 0.5, ifelse(length(s.events) == 2, 0.75, 1.0));
-            } else
-            {
-              # Events are all on a single line:
-              adh.y <- y.cur;
-              adh.h <- 0.25;
-            }
+            # Save the info:
+            .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.START"] <- (adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+            .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.START"] <- (y.cur - 0.5);
+            .last.cma.plot.info$baseR$cma$data[s.events,".X.OW.END"]   <- (adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+            .last.cma.plot.info$baseR$cma$data[s.events,".Y.OW.END"]   <- (y.cur + vspace.needed.events - 0.5);
 
+            # Draw:
+            rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.OW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.OW.START"],
+                 .last.cma.plot.info$baseR$cma$data[s.events[1],".X.OW.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.OW.END"],
+                 col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA); #, density=observation.window.density, angle=observation.window.angle);
+          }
+
+          if( .do.SVG ) # SVG:
+          {
+            # Save the info:
+            .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.START.DATE[s.cmas[1]] - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+            .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
+            .last.cma.plot.info$SVG$cma$data[s.events,".X.OW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(cmas$.OBS.END.DATE[s.cmas[1]]   - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+            .last.cma.plot.info$SVG$cma$data[s.events,".Y.OW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
+
+            # Draw:
+            svg.str[[length(svg.str)+1]] <-
+              # OW:
+              .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.OW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.OW.START"],
+                        width=.scale.width.to.SVG.plot(as.numeric(cmas$.OBS.END.DATE[s.cmas[1]] - cmas$.OBS.START.DATE[s.cmas[1]])),
+                        height=.scale.height.to.SVG.plot(vspace.needed.events),
+                        stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
+                        class="ow", comment="The Observation Window (OW)", tooltip="Observation Window (OW)");
+          }
+
+          if( !is.null(cma.realOW) )
+          {
+            # For CMA8, the OW might have been changed, so we also have a "real" OW:
+            s.realOW <- which(cma.realOW[,col.plotid] == cur_plot_id);
+
+            # Find the beginning of the "real" OW:
+            if( length(s.realOW) == 1)
+            {
+              if( !is.null(cma.realOW$window.start) && !is.na(cma.realOW$window.start[s.realOW]) )
+              {
+                real.obs.window.start <- cma.realOW$window.start[s.realOW];
+              } else
+              {
+                real.obs.window.start <- evinfo$.OBS.START.DATE[s.events[1]];
+              }
+              if( !is.null(cma.realOW$window.end) && !is.na(cma.realOW$window.end[s.realOW]) )
+              {
+                real.obs.window.end <- cma.realOW$window.end[s.realOW];
+              } else
+              {
+                real.obs.window.end <- evinfo$.OBS.END.DATE[s.events[1]];
+              }
+
+              # Draw the "real" OW:
+              if( .do.R ) # Rplot:
+              {
+                # Save the info:
+                .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.START"] <- (adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+                .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.START"] <- (y.cur - 0.5);
+                .last.cma.plot.info$baseR$cma$data[s.events,".X.ROW.END"]   <- (adh.plot.space[2] + as.numeric(real.obs.window.end   - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+                .last.cma.plot.info$baseR$cma$data[s.events,".Y.ROW.END"]   <- (y.cur + vspace.needed.events - 0.5);
+
+                # Draw:
+                rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.ROW.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.ROW.START"],
+                     .last.cma.plot.info$baseR$cma$data[s.events[1],".X.ROW.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.ROW.END"],
+                     col=adjustcolor(observation.window.col,alpha.f=observation.window.opacity), border=NA); #, density=real.obs.window.density, angle=real.obs.window.angle);
+              }
+
+              if( .do.SVG ) # SVG:
+              {
+                # Save the info:
+                .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+                .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.START"] <- .scale.y.to.SVG.plot(y.cur + vspace.needed.events - 0.5);
+                .last.cma.plot.info$SVG$cma$data[s.events,".X.ROW.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + as.numeric(real.obs.window.start - earliest.date) + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+                .last.cma.plot.info$SVG$cma$data[s.events,".Y.ROW.END"]   <- .scale.y.to.SVG.plot(y.cur + 0.5);
+
+                # Draw:
+                svg.str[[length(svg.str)+1]] <-
+                  # "real" OW:
+                  .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.ROW.START"], y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.ROW.START"],
+                            width=.scale.width.to.SVG.plot(as.numeric(real.obs.window.end - real.obs.window.start)),
+                            height=.scale.height.to.SVG.plot(vspace.needed.events),
+                            stroke="none", fill=observation.window.col, fill_opacity=observation.window.opacity,
+                            class="ow-real", comment="The 'real' Observation Window", tooltip="'Real' Observation Window");
+              }
+            }
+          }
+        }
+
+        ##
+        ## The y-axis labels ####
+        ##
+
+        # The y-axis label:
+        pid <- cur_plot_id;
+        y.mean <- y.cur + vspace.needed.total/2 - ifelse(plot.events.vertically.displaced, 0.0, 0.5); # vertical position of the label (centered on patient)
+        if( .do.R ) # Rplot:
+        {
+          text(par("usr")[1], y.mean, pid, cex=cex.axis, srt=-rotate.text, pos=2, xpd=TRUE);
+
+          # Save the info:
+          .last.cma.plot.info$baseR$y.labels <- rbind(.last.cma.plot.info$baseR$y.labels,
+                                                      data.frame("string"=pid,
+                                                                 "x"=par("usr")[1],
+                                                                 "y"=y.mean,
+                                                                 "cex"=cex.axis));
+        }
+        if( .do.SVG ) # SVG:
+        {
+          svg.str[[length(svg.str)+1]] <-
+            .SVG.text(x=(dims.plot.x - dims.chr.axis), y=.scale.y.to.SVG.plot(y.cur + vspace.needed.total/2), text=pid,
+                      font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
+                      class="axis-labels-y", comment="The y-axis labels", suppress.warnings=suppress.warnings);
+
+          # Save the info:
+          .last.cma.plot.info$SVG$y.labels <- rbind(.last.cma.plot.info$SVG$y.labels,
+                                                    data.frame("string"=pid,
+                                                               "x"=(dims.plot.x - dims.chr.axis),
+                                                               "y"=.scale.y.to.SVG.plot(y.cur + vspace.needed.total/2),
+                                                               "font.size"=dims.chr.axis));
+        }
+
+
+        ##
+        ## The summary CMA plots ####
+        ##
+
+        # The patient's CMA plot:
+        if( plot.CMA && has.estimated.CMA && adh.plot.space[2] > 0 )
+        {
+          if( is.cma.TS.or.SW )
+          {
+            # For per episode and sliding windows we show the distribution of the "partial" CMAs:
             if( .do.R ) # Rplot:
             {
-              # Draw the background rectangle:
+              # The CMA plot background:
               # Save the info:
               .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.START"] <- .rescale.xcoord.for.CMA.plot(0.0);
-              .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.START"] <- (adh.y - adh.h);
-              .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.END"]   <- .rescale.xcoord.for.CMA.plot(max(1.0,adh.max));
-              .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.END"]   <- (adh.y + adh.h);
+              .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.START"] <- (y.mean - 2);
+              .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.END"]   <- .rescale.xcoord.for.CMA.plot(1.0);
+              .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.END"]   <- (y.mean + 2);
 
               # Draw:
-              rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
-                   .rescale.xcoord.for.CMA.plot(min(adh,adh.max)),                  .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
-                   col=CMA.plot.col, border=NA);
-              rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
-                   .last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
-                   col=NA, border=CMA.plot.border);
+              segments(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
+                       .last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
+                       lty="solid", col=CMA.plot.col);
+              segments(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
+                       .last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
+                       lty="solid", col=CMA.plot.col);
             }
 
             if( .do.SVG ) # SVG:
             {
               # Save the info:
               .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.START"] <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0));
-              .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.START"] <- .scale.y.to.SVG.plot(adh.y + adh.h);
-              .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.END"]   <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)));
-              .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.END"]   <- .scale.y.to.SVG.plot(adh.y - adh.h);
+              .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.START"] <- .scale.y.to.SVG.plot(y.mean - 2);
+              .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.END"]   <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0));
+              .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.END"]   <- .scale.y.to.SVG.plot(y.mean + 2);
 
               # Draw:
               svg.str[[length(svg.str)+1]] <-
-                # Draw the CMA estimate background rectangle:
-                .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
-                          y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
-                          width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(min(adh,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)),
-                          height=.scale.height.to.SVG.plot(2*adh.h),
-                          stroke="none", fill=CMA.plot.col,
-                          class="cma-estimate-bkg", comment="The CMA estimate backgound");
-              svg.str[[length(svg.str)+1]] <-
-                .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
-                          y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
-                          width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)),
-                          height=.scale.height.to.SVG.plot(2*adh.h),
-                          stroke=CMA.plot.border, stroke_width=1, fill="none",
-                          class="cma-estimate-bkg");
+                # The CMA plot background:
+                .SVG.lines(x=c(.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
+                               .last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.END"],
+                               .last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
+                               .last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.END"]),
+                           y=c(.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
+                               .last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
+                               .last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.END"],
+                               .last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.END"]),
+                           connected=FALSE,
+                           stroke=CMA.plot.col, stroke_width=1,
+                           class="cma-drawing-area-background", comment="The CMA plot background", suppress.warnings=suppress.warnings);
             }
 
-            cma.string <- sprintf("%.1f%%",adh*100);
-            available.x.space <- abs(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0));
+            # The non-missing CMA values:
+            adh <- na.omit(cmas[s.cmas,"CMA"]);
 
-            if( .do.R ) # Rplot:
+            # Scale the CMA (itself or density) in such a way that if within 0..1 stays within 0..1 but scales if it goes outside this interval to accommodate it
+            if( plot.CMA.as.histogram )
             {
-              if( strwidth(cma.string, cex=CMA.cex) <= available.x.space )
-              { # horizontal writing of the CMA:
-                text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
-                     labels=cma.string, col=CMA.plot.text, cex=CMA.cex);
-              } else if( strheight(cma.string, cex=CMA.cex) <= available.x.space )
-              { # vertical writing of the CMA:
-                text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
-                     labels=cma.string, col=CMA.plot.text, cex=CMA.cex, srt=90);
-              } else if( force.draw.text )
-              { # force horizontal writing of the CMA:
-                text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
-                     labels=cma.string, col=CMA.plot.text, cex=CMA.cex);
-              } # otherwise, there's no space for showing the CMA here
-            }
-
-            if( .do.SVG ) # SVG:
+              # Plot CMA as histogram (or nothing, if too little data):
+              if( length(adh) > 0 ) svg.str <- .plot.summary.CMA.as.histogram(adh, svg.str);
+            } else
             {
-              if( available.x.space * dims.event.x >= dims.chr.cma )
+              if( length(adh) > 2 )
               {
+                # Plot CMA as density plot:
+                adh.density <- density(adh);
+                ss <- (adh.density$x >= min(adh,na.rm=TRUE) & adh.density$x <= max(adh,na.rm=TRUE));
+                if( sum(ss) == 0 )
+                {
+                  # Probably constant numbers? Plot the individual lines:
+                  svg.str <- .plot.summary.CMA.as.lines(adh, svg.str);
+                } else
+                {
+                  # Plot as density:
+                  svg.str <- .plot.summary.CMA.as.density(adh.density$x[ss], adh.density$y[ss], svg.str);
+                }
+              } else
+              {
+                if( length(adh) == 0 )
+                {
+                  # No points at all: nothing to plot!
+                } else
+                {
+                  # Plot the individual lines:
+                  svg.str <- .plot.summary.CMA.as.lines(adh, svg.str);
+                }
+              }
+            }
+          } else if( inherits(cma, "CMA1") )
+          {
+            # For CMA1+ we show the actual point estimate:
+
+            # The adherence estimate:
+            adh <- cmas[s.cmas,"CMA"];
+
+            if( !is.na(adh) )
+            {
+              # The vertical position where it will be drawn and its vertical extent:
+              if( plot.events.vertically.displaced )
+              {
+                # Events are vertically displaced:
+                adh.y <- mean(s.events);
+                adh.h <- ifelse(length(s.events) < 2, 0.5, ifelse(length(s.events) == 2, 0.75, 1.0));
+              } else
+              {
+                # Events are all on a single line:
+                adh.y <- y.cur;
+                adh.h <- 0.25;
+              }
+
+              if( .do.R ) # Rplot:
+              {
+                # Draw the background rectangle:
+                # Save the info:
+                .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.START"] <- .rescale.xcoord.for.CMA.plot(0.0);
+                .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.START"] <- (adh.y - adh.h);
+                .last.cma.plot.info$baseR$cma$data[s.events,".X.SCMA.END"]   <- .rescale.xcoord.for.CMA.plot(max(1.0,adh.max));
+                .last.cma.plot.info$baseR$cma$data[s.events,".Y.SCMA.END"]   <- (adh.y + adh.h);
+
+                # Draw:
+                rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
+                     .rescale.xcoord.for.CMA.plot(min(adh,adh.max)),                  .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
+                     col=CMA.plot.col, border=NA);
+                rect(.last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.START"], .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.START"],
+                     .last.cma.plot.info$baseR$cma$data[s.events[1],".X.SCMA.END"],   .last.cma.plot.info$baseR$cma$data[s.events[1],".Y.SCMA.END"],
+                     col=NA, border=CMA.plot.border);
+              }
+
+              if( .do.SVG ) # SVG:
+              {
+                # Save the info:
+                .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.START"] <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0));
+                .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.START"] <- .scale.y.to.SVG.plot(adh.y + adh.h);
+                .last.cma.plot.info$SVG$cma$data[s.events,".X.SCMA.END"]   <- .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)));
+                .last.cma.plot.info$SVG$cma$data[s.events,".Y.SCMA.END"]   <- .scale.y.to.SVG.plot(adh.y - adh.h);
+
+                # Draw:
                 svg.str[[length(svg.str)+1]] <-
-                  # Write the CMA estimate (always vertically):
-                  .SVG.text(x=.scale.x.to.SVG.plot((.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2),
-                            y=.scale.y.to.SVG.plot(adh.y),
-                            text=cma.string,
-                            col=CMA.plot.text, font_size=dims.chr.cma, h.align="center", v.align="center", rotate=-90,
-                            class="cma-estimate-text", comment="The CMA estimate (as text)", suppress.warnings=suppress.warnings);
+                  # Draw the CMA estimate background rectangle:
+                  .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
+                            y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
+                            width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(min(adh,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)),
+                            height=.scale.height.to.SVG.plot(2*adh.h),
+                            stroke="none", fill=CMA.plot.col,
+                            class="cma-estimate-bkg", comment="The CMA estimate backgound");
+                svg.str[[length(svg.str)+1]] <-
+                  .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[s.events[1],".X.SCMA.START"],
+                            y=.last.cma.plot.info$SVG$cma$data[s.events[1],".Y.SCMA.START"],
+                            width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0)),
+                            height=.scale.height.to.SVG.plot(2*adh.h),
+                            stroke=CMA.plot.border, stroke_width=1, fill="none",
+                            class="cma-estimate-bkg");
+              }
+
+              cma.string <- sprintf("%.1f%%",adh*100);
+              available.x.space <- abs(.rescale.xcoord.for.CMA.plot(max(1.0,adh.max)) - .rescale.xcoord.for.CMA.plot(0.0));
+
+              if( .do.R ) # Rplot:
+              {
+                if( strwidth(cma.string, cex=CMA.cex) <= available.x.space )
+                { # horizontal writing of the CMA:
+                  text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
+                       labels=cma.string, col=CMA.plot.text, cex=CMA.cex);
+                } else if( strheight(cma.string, cex=CMA.cex) <= available.x.space )
+                { # vertical writing of the CMA:
+                  text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
+                       labels=cma.string, col=CMA.plot.text, cex=CMA.cex, srt=90);
+                } else if( force.draw.text )
+                { # force horizontal writing of the CMA:
+                  text(x=(.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2, y=adh.y,
+                       labels=cma.string, col=CMA.plot.text, cex=CMA.cex);
+                } # otherwise, there's no space for showing the CMA here
+              }
+
+              if( .do.SVG ) # SVG:
+              {
+                if( available.x.space * dims.event.x >= dims.chr.cma )
+                {
+                  svg.str[[length(svg.str)+1]] <-
+                    # Write the CMA estimate (always vertically):
+                    .SVG.text(x=.scale.x.to.SVG.plot((.rescale.xcoord.for.CMA.plot(0.0) + .rescale.xcoord.for.CMA.plot(max(1.0,adh.max)))/2),
+                              y=.scale.y.to.SVG.plot(adh.y),
+                              text=cma.string,
+                              col=CMA.plot.text, font_size=dims.chr.cma, h.align="center", v.align="center", rotate=-90,
+                              class="cma-estimate-text", comment="The CMA estimate (as text)", suppress.warnings=suppress.warnings);
+                }
               }
             }
           }
         }
+
+        # Set the clipping region to make sure no events "overflows" in other bits of the plot...
+        if( .do.R ) # Rplot:
+        {
+          clip(.last.cma.plot.info$baseR$adh.plot.space[2]-1, .last.cma.plot.info$baseR$xlim[2], .last.cma.plot.info$baseR$ylim[1], .last.cma.plot.info$baseR$ylim[2]);
+        }
       }
-    }
 
-    ##
-    ## The event ####
-    ##
+      ##
+      ## The event ####
+      ##
 
-    # Get the event start and end dates:
-    start <- as.numeric(cma$data$.DATE.as.Date[i] - earliest.date);
-    end   <- start + cma$data[i,cma$event.duration.colname];
+      # Get the event start and end dates:
+      start <- as.numeric(cma$data$.DATE.as.Date[i] - earliest.date + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+      end   <- start + cma$data[i,cma$event.duration.colname];
 
-    # Map medication classes to colors:
-    if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
-    {
-      col <- .map.category.to.color(unspecified.category.label);
-      if( .do.SVG ){ med.class.svg <- NA; med.class.svg.name <- unspecified.category.label; }
-    } else
-    {
-      col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
-      if( .do.SVG ) med.class.svg <- .map.category.to.class(med.class.svg.name <- cma$data[i,cma$medication.class.colname]);
-    }
-
-    if( .do.R ) # Rplot:
-    {
-      # Save the info:
-      .last.cma.plot.info$baseR$cma$data[i,".X.START"] <- (adh.plot.space[2] + start + correct.earliest.followup.window);
-      .last.cma.plot.info$baseR$cma$data[i,".Y.START"] <- (y.cur);
-      .last.cma.plot.info$baseR$cma$data[i,".X.END"]   <- (adh.plot.space[2] + end   + correct.earliest.followup.window);
-      .last.cma.plot.info$baseR$cma$data[i,".Y.END"]   <- (y.cur);
-
-      # Plot the beging and end of the event:
-      points(.last.cma.plot.info$baseR$cma$data[i,".X.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.START"], pch=pch.start.event, col=col, cex=cex);
-      points(.last.cma.plot.info$baseR$cma$data[i,".X.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.END"],   pch=pch.end.event,   col=col, cex=cex);
-    }
-
-    if( .do.SVG ) # SVG:
-    {
-      # Save the info:
-      .last.cma.plot.info$SVG$cma$data[i,".X.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window);
-      .last.cma.plot.info$SVG$cma$data[i,".Y.START"] <- .scale.y.to.SVG.plot(y.cur);
-      .last.cma.plot.info$SVG$cma$data[i,".X.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window);
-      .last.cma.plot.info$SVG$cma$data[i,".Y.END"]   <- .scale.y.to.SVG.plot(y.cur);
-
-      # Draw:
-      # svg.str[[length(svg.str)+1]] <- c(
-      #   # The beginning of the event:
-      #   .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.START"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.START"],
-      #               pch=pch.start.event, col=col, cex=cex,
-      #               class=paste0("event-start",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-      #               tooltip=med.class.svg.name, suppress.warnings=suppress.warnings),
-      #   # The end of the event:
-      #   .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.END"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.END"],
-      #               pch=pch.end.event, col=col, cex=cex,
-      #               class=paste0("event-end",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-      #               tooltip=med.class.svg.name, suppress.warnings=suppress.warnings)
-      # );
-      svg.str[[length(svg.str)+1]] <-
-        # The beginning of the event:
-        .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.START"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.START"],
-                    pch=pch.start.event, col=col, cex=cex,
-                    class=paste0("event-start",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                    tooltip=med.class.svg.name, suppress.warnings=suppress.warnings);
-      svg.str[[length(svg.str)+1]] <-
-        # The end of the event:
-        .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.END"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.END"],
-                    pch=pch.end.event, col=col, cex=cex,
-                    class=paste0("event-end",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                    tooltip=med.class.svg.name, suppress.warnings=suppress.warnings);
-    }
-
-
-    # Show event intervals as rectangles?
-    if( show.event.intervals && !is.null(evinfo) && !is.na(evinfo$event.interval[i]) )
-    {
-      # The end of the prescription:
-      end.pi <- start + evinfo$event.interval[i] - evinfo$gap.days[i];
+      # Map medication classes to colors:
+      if( is.na(cma$medication.class.colname) || !(cma$medication.class.colname %in% names(cma$data)) )
+      {
+        col <- .map.category.to.color(unspecified.category.label);
+        if( .do.SVG ){ med.class.svg <- NA; med.class.svg.name <- unspecified.category.label; }
+      } else
+      {
+        col <- .map.category.to.color(cma$data[i,cma$medication.class.colname]);
+        if( .do.SVG ) med.class.svg <- .map.category.to.class(med.class.svg.name <- cma$data[i,cma$medication.class.colname]);
+      }
 
       if( .do.R ) # Rplot:
       {
         # Save the info:
-        .last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"] <- (adh.plot.space[2] + start  + correct.earliest.followup.window);
-        .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"] <- (y.cur - char.height/2);
-        .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"]   <- (adh.plot.space[2] + end.pi + correct.earliest.followup.window);
-        .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"]   <- (y.cur + char.height/2);
+        .last.cma.plot.info$baseR$cma$data[i,".X.START"] <- (adh.plot.space[2] + start);
+        .last.cma.plot.info$baseR$cma$data[i,".Y.START"] <- (y.cur);
+        .last.cma.plot.info$baseR$cma$data[i,".X.END"]   <- (adh.plot.space[2] + end);
+        .last.cma.plot.info$baseR$cma$data[i,".Y.END"]   <- (y.cur);
 
-        # Draw:
-        rect(.last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"],
-             .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"],
-             col=adjustcolor(col,alpha.f=0.2), border=col);
-        if( evinfo$gap.days[i] > 0 )
-        {
-          # Save the info:
-          .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"] <- (adh.plot.space[2] + end.pi + correct.earliest.followup.window);
-          .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"] <- (y.cur - char.height/2);
-          .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"]   <- (adh.plot.space[2] + end.pi + evinfo$gap.days[i] + correct.earliest.followup.window);
-          .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"]   <- (y.cur + char.height/2);
-
-          # Draw:
-          rect(.last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"],
-               .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"],
-               #density=25, col=adjustcolor(col,alpha.f=0.5),
-               col=NA, border=col);
-        }
+        # Plot the beginning and end of the event:
+        points(.last.cma.plot.info$baseR$cma$data[i,".X.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.START"], pch=pch.start.event, col=col, cex=cex);
+        points(.last.cma.plot.info$baseR$cma$data[i,".X.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.END"],   pch=pch.end.event,   col=col, cex=cex);
       }
 
       if( .do.SVG ) # SVG:
       {
         # Save the info:
-        .last.cma.plot.info$SVG$cma$data[i,".X.EVC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + start + correct.earliest.followup.window);
-        .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"] <- .scale.y.to.SVG.plot(y.cur) - dims.event.y/2;
-        .last.cma.plot.info$SVG$cma$data[i,".X.EVC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window);
-        .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.END"]   <- .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"] + dims.event.y;
+        .last.cma.plot.info$SVG$cma$data[i,".X.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + start);
+        .last.cma.plot.info$SVG$cma$data[i,".Y.START"] <- .scale.y.to.SVG.plot(y.cur);
+        .last.cma.plot.info$SVG$cma$data[i,".X.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end);
+        .last.cma.plot.info$SVG$cma$data[i,".Y.END"]   <- .scale.y.to.SVG.plot(y.cur);
 
         # Draw:
+        # svg.str[[length(svg.str)+1]] <- c(
+        #   # The beginning of the event:
+        #   .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.START"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.START"],
+        #               pch=pch.start.event, col=col, cex=cex,
+        #               class=paste0("event-start",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+        #               tooltip=med.class.svg.name, suppress.warnings=suppress.warnings),
+        #   # The end of the event:
+        #   .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.END"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.END"],
+        #               pch=pch.end.event, col=col, cex=cex,
+        #               class=paste0("event-end",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+        #               tooltip=med.class.svg.name, suppress.warnings=suppress.warnings)
+        # );
         svg.str[[length(svg.str)+1]] <-
-          .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[i,".X.EVC.START"],
-                    y=.last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"],
-                    xend=.last.cma.plot.info$SVG$cma$data[i,".X.EVC.END"],
-                    height=dims.event.y,
-                    stroke=col, fill=col, fill_opacity=0.2,
-                    class=paste0("event-interval-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                    tooltip=med.class.svg.name);
-        if( evinfo$gap.days[i] > 0 )
+          # The beginning of the event:
+          .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.START"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.START"],
+                      pch=pch.start.event, col=col, cex=cex,
+                      class=paste0("event-start",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                      tooltip=med.class.svg.name, suppress.warnings=suppress.warnings);
+        svg.str[[length(svg.str)+1]] <-
+          # The end of the event:
+          .SVG.points(x=.last.cma.plot.info$SVG$cma$data[i,".X.END"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.END"],
+                      pch=pch.end.event, col=col, cex=cex,
+                      class=paste0("event-end",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                      tooltip=med.class.svg.name, suppress.warnings=suppress.warnings);
+      }
+
+
+      # Show event intervals as rectangles?
+      # Cache the event info for plotting the events:
+      if( inherits(cma, "CMA0") )
+      {
+        # For simple CMAs, use the "standard" event info data:
+        plot_evinfo <- evinfo;
+      } else if( inherits(cma, "CMA_per_episode") || inherits(cma, "CMA_sliding_window") )
+      {
+        # Complex CMAs are a bit more complicated: if the have the "inner" event info, use it (if the user wants to plot the information within):
+        if( "inner.event.info" %in% names(cma) && show.event.intervals )
+        {
+          plot_evinfo <- cma$inner.event.info;
+        } else
+        {
+          plot_evinfo <- NULL;
+        }
+      }
+      if( show.event.intervals && !is.null(plot_evinfo) && !is.na(plot_evinfo$event.interval[i]) )
+      {
+        # The end of the prescription:
+        end.pi <- start + plot_evinfo$event.interval[i] - plot_evinfo$gap.days[i];
+
+        if( .do.R ) # Rplot:
         {
           # Save the info:
-          .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + correct.earliest.followup.window);
-          .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] <- .scale.y.to.SVG.plot(y.cur) - dims.event.y/2;
-          .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + evinfo$gap.days[i] + correct.earliest.followup.window);
-          .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.END"]   <- .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] + dims.event.y;
+          .last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"] <- (adh.plot.space[2] + start);
+          .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"] <- (y.cur - char.height/2);
+          .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"]   <- (adh.plot.space[2] + end.pi);
+          .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"]   <- (y.cur + char.height/2);
+
+          # Draw:
+          rect(.last.cma.plot.info$baseR$cma$data[i,".X.EVC.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.START"],
+               .last.cma.plot.info$baseR$cma$data[i,".X.EVC.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.EVC.END"],
+               col=adjustcolor(col,alpha.f=0.2), border=col);
+          if( plot_evinfo$gap.days[i] > 0 )
+          {
+            # Save the info:
+            .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"] <- (adh.plot.space[2] + end.pi);
+            .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"] <- (y.cur - char.height/2);
+            .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"]   <- (adh.plot.space[2] + end.pi + plot_evinfo$gap.days[i]);
+            .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"]   <- (y.cur + char.height/2);
+
+            # Draw:
+            rect(.last.cma.plot.info$baseR$cma$data[i,".X.EVNC.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.START"],
+                 .last.cma.plot.info$baseR$cma$data[i,".X.EVNC.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.EVNC.END"],
+                 #density=25, col=adjustcolor(col,alpha.f=0.5),
+                 col=NA, border=col);
+          }
+        }
+
+        if( .do.SVG ) # SVG:
+        {
+          # Save the info:
+          .last.cma.plot.info$SVG$cma$data[i,".X.EVC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + start);
+          .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"] <- .scale.y.to.SVG.plot(y.cur) - dims.event.y/2;
+          .last.cma.plot.info$SVG$cma$data[i,".X.EVC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi);
+          .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.END"]   <- .last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"] + dims.event.y;
 
           # Draw:
           svg.str[[length(svg.str)+1]] <-
-            .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[i,".X.EVNC.START"],
-                      y=.last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"],
-                      xend=.last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"],
+            .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[i,".X.EVC.START"],
+                      y=.last.cma.plot.info$SVG$cma$data[i,".Y.EVC.START"],
+                      xend=.last.cma.plot.info$SVG$cma$data[i,".X.EVC.END"],
                       height=dims.event.y,
-                      stroke=col, fill="none",
-                      class=paste0("event-interval-not-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                      stroke=col, fill=col, fill_opacity=0.2,
+                      class=paste0("event-interval-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
                       tooltip=med.class.svg.name);
-        }
-      }
-    }
+          if( plot_evinfo$gap.days[i] > 0 )
+          {
+            # Save the info:
+            .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi);
+            .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] <- .scale.y.to.SVG.plot(y.cur) - dims.event.y/2;
+            .last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + end.pi + plot_evinfo$gap.days[i]);
+            .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.END"]   <- .last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"] + dims.event.y;
 
-    # Do we show dose?
-    seg.x1 <- adh.plot.space[2] + start + correct.earliest.followup.window;
-    seg.x2 <- adh.plot.space[2] + end   + correct.earliest.followup.window;
-    seg.lwd <- NA;
-    if( plot.dose )
-    {
-      # Show dose using event line width:
-      if( nrow(dose.range) == 1 )
-      {
-        # Just one dose:
-        seg.lwd <- adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname])
-      } else
-      {
-        # There is a range of doses:
-        if( plot.dose.lwd.across.medication.classes )
-        {
-          # Line width across all medication classes:
-          seg.lwd <- adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max);
-        } else
-        {
-          # Line width per medication class:
-          dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
-          if( sum(dose.for.cat,na.rm=TRUE) == 1 )
-          {
-            # Found the corresponding medication class:
-            seg.lwd <- adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]);
-          } else
-          {
-            # Use a fixed width:
-            seg.lwd <- lwd.event;
+            # Draw:
+            svg.str[[length(svg.str)+1]] <-
+              .SVG.rect(x=.last.cma.plot.info$SVG$cma$data[i,".X.EVNC.START"],
+                        y=.last.cma.plot.info$SVG$cma$data[i,".Y.EVNC.START"],
+                        xend=.last.cma.plot.info$SVG$cma$data[i,".X.EVNC.END"],
+                        height=dims.event.y,
+                        stroke=col, fill="none",
+                        class=paste0("event-interval-not-covered",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                        tooltip=med.class.svg.name);
           }
         }
       }
-    } else
-    {
-      # Use a fixed line width:
-      seg.lwd <- lwd.event;
-    }
-    if( .do.R ) # Rplot:
-    {
-      # Save the info:
-      .last.cma.plot.info$baseR$cma$data[s.events,".EV.LWD"] <- seg.lwd;
 
-      # Draw:
-      segments( seg.x1, y.cur, seg.x2, y.cur, col=col, lty=lty.event, lwd=seg.lwd);
-    }
-    if( .do.SVG ) # SVG:
-    {
-      # Save the info:
-      .last.cma.plot.info$SVG$cma$data[s.events,".EV.LWD"] <- seg.lwd;
-
-      # Draw:
-      svg.str[[length(svg.str)+1]] <-
-        # The beginning of the event:
-        .SVG.lines(x=c(.scale.x.to.SVG.plot(seg.x1), .scale.x.to.SVG.plot(seg.x2)),
-                   y=rep(.scale.y.to.SVG.plot(y.cur),2),
-                   connected=FALSE,
-                   stroke=col, stroke_width=seg.lwd,
-                   class=paste0("event-segment",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                   tooltip=med.class.svg.name, suppress.warnings=suppress.warnings);
-    }
-
-    if( print.dose )
-    {
-      # Show dose as actual numbers on the plot:
+      # Do we show dose?
+      seg.x1 <- adh.plot.space[2] + start;
+      seg.x2 <- adh.plot.space[2] + end;
+      seg.lwd <- NA;
+      if( plot.dose )
+      {
+        # Show dose using event line width:
+        if( nrow(dose.range) == 1 )
+        {
+          # Just one dose:
+          seg.lwd <- adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname])
+        } else
+        {
+          # There is a range of doses:
+          if( plot.dose.lwd.across.medication.classes )
+          {
+            # Line width across all medication classes:
+            seg.lwd <- adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range.global$min, dose.max=dose.range.global$max);
+          } else
+          {
+            # Line width per medication class:
+            dose.for.cat <- (dose.range$category == cma$data[i,cma$medication.class.colname]);
+            if( sum(dose.for.cat,na.rm=TRUE) == 1 )
+            {
+              # Found the corresponding medication class:
+              seg.lwd <- adjust.dose.lwd(cma$data[i,cma$event.daily.dose.colname], dose.min=dose.range$min[dose.for.cat], dose.max=dose.range$max[dose.for.cat]);
+            } else
+            {
+              # Use a fixed width:
+              seg.lwd <- lwd.event;
+            }
+          }
+        }
+      } else
+      {
+        # Use a fixed line width:
+        seg.lwd <- lwd.event;
+      }
       if( .do.R ) # Rplot:
       {
         # Save the info:
-        .last.cma.plot.info$baseR$cma$data[i,".X.DOSE"] <- (adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window);
-        .last.cma.plot.info$baseR$cma$data[i,".Y.DOSE"] <- (y.cur - ifelse(print.dose.centered, 0, dose.text.height*2/3)); # print it on or below the dose segment?
-        .last.cma.plot.info$baseR$cma$data[i,".FONT.SIZE.DOSE"] <- cex.dose;
+        .last.cma.plot.info$baseR$cma$data[s.events,".EV.LWD"] <- seg.lwd;
 
         # Draw:
-        text(.last.cma.plot.info$baseR$cma$data[i,".X.DOSE"], .last.cma.plot.info$baseR$cma$data[i,".Y.DOSE"],
-             cma$data[i,cma$event.daily.dose.colname], cex=cex.dose, col=ifelse(is.na(print.dose.col),col,print.dose.col), font=2);
+        segments( seg.x1, y.cur, seg.x2, y.cur, col=col, lty=lty.event, lwd=seg.lwd);
       }
-
       if( .do.SVG ) # SVG:
       {
         # Save the info:
-        .last.cma.plot.info$SVG$cma$data[i,".X.DOSE"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + (start + end)/2 + correct.earliest.followup.window);
-        .last.cma.plot.info$SVG$cma$data[i,".Y.DOSE"] <- .scale.y.to.SVG.plot(y.cur - ifelse(print.dose.centered, 0, 3/4));
-        .last.cma.plot.info$SVG$cma$data[i,".FONT.SIZE.DOSE"] <- (dims.chr.std * cex.dose);
+        .last.cma.plot.info$SVG$cma$data[s.events,".EV.LWD"] <- seg.lwd;
 
         # Draw:
         svg.str[[length(svg.str)+1]] <-
-          # The dose text:
-          .SVG.text(x=.last.cma.plot.info$SVG$cma$data[i,".X.DOSE"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.DOSE"],
-                    text=cma$data[i,cma$event.daily.dose.colname],
-                    font_size=.last.cma.plot.info$SVG$cma$data[i,".FONT.SIZE.DOSE"], h.align="center", v.align="center",
-                    col=if(is.na(print.dose.col)) col else print.dose.col,
-                    other_params=if(!is.na(print.dose.outline.col)) paste0(' stroke="',.SVG.color(print.dose.outline.col,return_string=TRUE),'" stroke-width="0.5"'),
-                    class=paste0("event-dose-text",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                    tooltip=med.class.svg.name, suppress.warnings=suppress.warnings);
+          # The beginning of the event:
+          .SVG.lines(x=c(.scale.x.to.SVG.plot(seg.x1), .scale.x.to.SVG.plot(seg.x2)),
+                     y=rep(.scale.y.to.SVG.plot(y.cur),2),
+                     connected=FALSE,
+                     stroke=col, stroke_width=seg.lwd,
+                     class=paste0("event-segment",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                     tooltip=med.class.svg.name, suppress.warnings=suppress.warnings);
       }
-    }
 
-    # Advance to the next vertical line:
-    if( plot.events.vertically.displaced )
-    {
-      y.cur <- y.cur + 1;
-    }
-
-    # Continuation between successive events:
-    if( i < nrow(cma$data) && (cur_plot_id == cma$data[i+1,col.plotid]) )
-    {
-      # We're still plotting the same patient: show the continuation line:
-      start.next <- as.numeric(cma$data$.DATE.as.Date[i+1] - earliest.date);
-
-      # How many lines to jump?
-      cont.v.jump <- ifelse(plot.events.vertically.displaced, 1, 0);
-
-      if( .do.R ) # Rplot:
+      # Prepare the text to print (dose, episode/window...):
+      text.to.print <- "";
+      if( print.dose || print.episode.or.sliding.window )
       {
-        # Save the info:
-        .last.cma.plot.info$baseR$cma$data[i,".X.CNT.START"] <- (adh.plot.space[2] + end        + correct.earliest.followup.window);
-        .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"] <- (y.cur - cont.v.jump);
-        .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"]   <- (adh.plot.space[2] + start.next + correct.earliest.followup.window);
-        .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.END"]   <- (y.cur);
+        # The position of the text on the plot:
+        if( .do.R ) # Rplot:
+        {
+          # Save the info:
+          .last.cma.plot.info$baseR$cma$data[i,".X.DOSE"] <- (adh.plot.space[2] + (start + end)/2);
+          .last.cma.plot.info$baseR$cma$data[i,".Y.DOSE"] <- (y.cur - ifelse(print.dose.centered, 0, dose.text.height*2/3)); # print it on or below the dose segment?
+          .last.cma.plot.info$baseR$cma$data[i,".FONT.SIZE.DOSE"] <- cex.dose;
+        }
 
-        # Draw:
-        segments( .last.cma.plot.info$baseR$cma$data[i,".X.CNT.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"],
-                  .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"],
-                  col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
-        segments( .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"], .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"],
-                  .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"], .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.END"],
-                  col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
+        if( .do.SVG ) # SVG:
+        {
+          # Save the info:
+          .last.cma.plot.info$SVG$cma$data[i,".X.DOSE"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + (start + end)/2);
+          .last.cma.plot.info$SVG$cma$data[i,".Y.DOSE"] <- .scale.y.to.SVG.plot(y.cur - ifelse(print.dose.centered, 0, 3/4));
+          .last.cma.plot.info$SVG$cma$data[i,".FONT.SIZE.DOSE"] <- (dims.chr.std * cex.dose);
+        }
       }
-
-      if( .do.SVG ) # SVG:
+      if( print.dose )
       {
-        # Save the info:
-        .last.cma.plot.info$SVG$cma$data[i,".X.CNT.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end + correct.earliest.followup.window);
-        .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"] <- .scale.y.to.SVG.plot(y.cur - cont.v.jump);
-        .last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + start.next + correct.earliest.followup.window);
-        .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.END"]   <- .scale.y.to.SVG.plot(y.cur);
-
-        # Draw:
-        svg.str[[length(svg.str)+1]] <-
-          # The continuation line:
-          .SVG.lines(x=c(.last.cma.plot.info$SVG$cma$data[i,".X.CNT.START"],
-                         rep(.last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"],3)),
-                     y=c(rep(.last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"],3),
-                         .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.END"]),
-                     connected=TRUE,
-                     stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
-                     class=paste0("continuation-line",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
-                     tooltip=med.class.svg, suppress.warnings=suppress.warnings);
+        text.to.print <- paste0(text.to.print, cma$data[i,cma$event.daily.dose.colname]); # the dose
       }
-    } else
-    { # The patient is changing or is the last one:
+      if( print.episode.or.sliding.window )
+      {
+        # Show the corresponding episode or sliding window (if any) as actual numbers on the plot:
+        if( inherits(cma, "CMA_per_episode") )
+        {
+          s.epiwnd <- which(cma$mapping.episodes.to.events$event.index.in.data == i);
+          if( length(s.epiwnd) > 0 )
+          {
+            if( text.to.print != "" ) text.to.print <- paste0(text.to.print," ");
+            text.to.print <- paste0(text.to.print, "[", paste0(sort(cma$mapping.episodes.to.events$episode.ID[s.epiwnd]), collapse=","), "]");
+          }
+        }
+        if( inherits(cma, "CMA_sliding_window") )
+        {
+          s.epiwnd <- which(cma$mapping.windows.to.events$event.index.in.data == i);
+          if( length(s.epiwnd) > 0 )
+          {
+            if( text.to.print != "" ) text.to.print <- paste0(text.to.print," ");
+            text.to.print <- paste0(text.to.print, "[", paste0(sort(cma$mapping.windows.to.events$window.ID[s.epiwnd]), collapse=","), "]");
+          }
+        }
+      }
+      if( text.to.print != "" )
+      {
+        # Do the actual printing:
+        if( .do.R ) # Rplot:
+        {
+          # Draw:
+          text(.last.cma.plot.info$baseR$cma$data[i,".X.DOSE"], .last.cma.plot.info$baseR$cma$data[i,".Y.DOSE"],
+               text.to.print, cex=cex.dose, col=ifelse(is.na(print.dose.col),col,print.dose.col), font=2);
+        }
 
-      # Advance to next line of need be:
-      if( !plot.events.vertically.displaced )
+        if( .do.SVG ) # SVG:
+        {
+          # Draw:
+          svg.str[[length(svg.str)+1]] <-
+            # The dose text:
+            .SVG.text(x=.last.cma.plot.info$SVG$cma$data[i,".X.DOSE"], y=.last.cma.plot.info$SVG$cma$data[i,".Y.DOSE"],
+                      text=text.to.print,
+                      font_size=.last.cma.plot.info$SVG$cma$data[i,".FONT.SIZE.DOSE"], h.align="center", v.align="center",
+                      col=if(is.na(print.dose.col)) col else print.dose.col,
+                      other_params=if(!is.na(print.dose.outline.col)) paste0(' stroke="',.SVG.color(print.dose.outline.col,return_string=TRUE),'" stroke-width="0.5"'),
+                      class=paste0("event-dose-text",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                      tooltip=med.class.svg.name, suppress.warnings=suppress.warnings);
+        }
+      }
+
+      # Advance to the next vertical line:
+      if( plot.events.vertically.displaced )
       {
         y.cur <- y.cur + 1;
       }
 
-
-      ##
-      ## Partial CMAs ####
-      ##
-
-      # Draw its sub-periods (if so requested, meaningful and possible):
-      if( is.cma.TS.or.SW && has.estimated.CMA )
+      # Continuation between successive events:
+      if( i < nrow(cma$data) && (cur_plot_id == cma$data[i+1,col.plotid]) )
       {
-        if( length(s.cmas) > 0 && !all(is.na(cmas$CMA[s.cmas])) )
+        # We're still plotting the same patient: show the continuation line:
+        start.next <- as.numeric(cma$data$.DATE.as.Date[i+1] - earliest.date + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+
+        # How many lines to jump?
+        cont.v.jump <- ifelse(plot.events.vertically.displaced, 1, 0);
+
+        if( .do.R ) # Rplot:
         {
-          # We do have non-missing partial CMAs to plot:
+          # Save the info:
+          .last.cma.plot.info$baseR$cma$data[i,".X.CNT.START"] <- (adh.plot.space[2] + end);
+          .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"] <- (y.cur - cont.v.jump);
+          .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"]   <- (adh.plot.space[2] + start.next);
+          .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.END"]   <- (y.cur);
 
-          # Compute the start, end, location and string to display for these partial estimates:
-          ppts <- data.frame("start"=as.numeric(cmas$start[s.cmas] - earliest.date),
-                             "end"  =as.numeric(cmas$end[s.cmas]   - earliest.date),
-                             "x"    =NA,
-                             "y"    =cmas$CMA[s.cmas],
-                             "text" =ifelse(!is.na(cmas$CMA[s.cmas]), sprintf("%.0f%%", 100*cmas$CMA[s.cmas]), "?")
-                            );
-          ppts$x <- (ppts$start + ppts$end)/2;
+          # Draw:
+          segments( .last.cma.plot.info$baseR$cma$data[i,".X.CNT.START"], .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"],
+                    .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"],   .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"],
+                    col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
+          segments( .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"], .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.START"],
+                    .last.cma.plot.info$baseR$cma$data[i,".X.CNT.END"], .last.cma.plot.info$baseR$cma$data[i,".Y.CNT.END"],
+                    col=col.continuation, lty=lty.continuation, lwd=lwd.continuation);
+        }
 
-          # Cache stuff:
-          corrected.x <- (adh.plot.space[2] + correct.earliest.followup.window);
-          corrected.x.start <- (corrected.x+ppts$start);
-          corrected.x.end   <- (corrected.x+ppts$end);
-          x.start.min <- min(ppts$start,na.rm=TRUE);
-          x.end.max   <- max(ppts$end,  na.rm=TRUE);
-          corrected.x.text <- (corrected.x + ppts$x);
-          min.y <- min(ppts$y,na.rm=TRUE);
-          max.y <- max(ppts$y,na.rm=TRUE);
+        if( .do.SVG ) # SVG:
+        {
+          # Save the info:
+          .last.cma.plot.info$SVG$cma$data[i,".X.CNT.START"] <- .scale.x.to.SVG.plot(adh.plot.space[2] + end);
+          .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"] <- .scale.y.to.SVG.plot(y.cur - cont.v.jump);
+          .last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"]   <- .scale.x.to.SVG.plot(adh.plot.space[2] + start.next);
+          .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.END"]   <- .scale.y.to.SVG.plot(y.cur);
 
-          # Plotting type:
-          if( "stacked" %in% plot.partial.CMAs.as )
+          # Draw:
+          svg.str[[length(svg.str)+1]] <-
+            # The continuation line:
+            .SVG.lines(x=c(.last.cma.plot.info$SVG$cma$data[i,".X.CNT.START"],
+                           rep(.last.cma.plot.info$SVG$cma$data[i,".X.CNT.END"],3)),
+                       y=c(rep(.last.cma.plot.info$SVG$cma$data[i,".Y.CNT.START"],3),
+                           .last.cma.plot.info$SVG$cma$data[i,".Y.CNT.END"]),
+                       connected=TRUE,
+                       stroke=col.continuation, stroke_width=lwd.continuation, lty=lty.continuation,
+                       class=paste0("continuation-line",if(!is.na(med.class.svg)) paste0("-",med.class.svg)),
+                       tooltip=med.class.svg, suppress.warnings=suppress.warnings);
+        }
+      } else
+      { # The patient is changing or is the last one:
+
+        # Advance to next line of need be:
+        if( !plot.events.vertically.displaced )
+        {
+          y.cur <- y.cur + 1;
+        }
+
+
+        ##
+        ## Partial CMAs ####
+        ##
+
+        # Draw its sub-periods (if so requested, meaningful and possible):
+        if( is.cma.TS.or.SW && has.estimated.CMA )
+        {
+          if( length(s.cmas) > 0 ) #&& !all(is.na(cmas$CMA[s.cmas])) ) # also show the partial (empty) frame even when all are NA
           {
-            # Show subperiods as stacked:
-            ys <- (y.cur + 1:nrow(ppts) - 1); # cache this
-            h <- (ppts$end - ppts$start) * pmax(pmin(ppts$y, 1.0), 0.0); # cache the actual CMA estimates scaled for plotting
+            # We do have non-missing partial CMAs to plot:
 
-            if( .do.R ) # Rplot:
+            # Compute the start, end, location and string to display for these partial estimates:
+            ppts <- data.frame("start"=as.numeric(cmas$start[s.cmas] - earliest.date),
+                               "end"  =as.numeric(cmas$end[s.cmas]   - earliest.date),
+                               "x"    =NA,
+                               "y"    =cmas$CMA[s.cmas],
+                               "text" =paste0(ifelse(!is.na(cmas$CMA[s.cmas]), sprintf("%.0f%%", 100*cmas$CMA[s.cmas]), "?"),
+                                              if(print.episode.or.sliding.window){paste0(" [",cmas$WND.ID[s.cmas],"]")}else{""})
+            );
+            ppts$x <- (ppts$start + ppts$end)/2;
+
+            # Cache stuff:
+            corrected.x <- (adh.plot.space[2] + ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0));
+            corrected.x.start <- (corrected.x+ppts$start);
+            corrected.x.end   <- (corrected.x+ppts$end);
+            x.start.min <- min(ppts$start,na.rm=TRUE);
+            x.end.max   <- max(ppts$end,  na.rm=TRUE);
+            corrected.x.text <- (corrected.x + ppts$x);
+            if(all(is.na(ppts$y))) # guard against warnings when talking the min and max of only NAs
             {
-              # Save the info:
-              .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
-                                                             data.frame("pid"=cur_plot_id, "type"="stacked",
-                                                                        "x.region.start"=min(corrected.x.start, na.rm=TRUE),
-                                                                        "y.region.start"=min(ys, na.rm=TRUE),
-                                                                        "x.region.end"=max(corrected.x.end, na.rm=TRUE),
-                                                                        "y.region.end"=max(ys, na.rm=TRUE)+1,
-                                                                        "x.partial.start"=corrected.x.start,
-                                                                        "y.partial.start"=ys + 0.10,
-                                                                        "x.partial.end"=corrected.x.end,
-                                                                        "y.partial.end"=ys + 0.90));
-              # The intervals as empty rectangles:
-              rect(corrected.x.start, ys + 0.10, corrected.x.end,   ys + 0.90, border=gray(0.7), col="white");
-              # The CMAs as filled rectangles of length proportional to the CMA:
-              rect(corrected.x.start, ys + 0.10, corrected.x.start + h, ys + 0.90, border=plot.partial.CMAs.as.stacked.col.border, col=plot.partial.CMAs.as.stacked.col.bars);
-              if( force.draw.text || print.CMA && char.height.CMA <= 0.80 )
-              {
-                text(corrected.x.text, ys + 0.5, ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.stacked.col.text);
-              }
+              min.y <- NA;
+              max.y <- NA;
+            } else
+            {
+              min.y <- min(ppts$y,na.rm=TRUE);
+              max.y <- max(ppts$y,na.rm=TRUE);
             }
 
-            if( .do.SVG ) # SVG:
+            # Plotting type:
+            if( "stacked" %in% plot.partial.CMAs.as )
             {
-              # Save the info:
-              .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
-                                                           data.frame("pid"=cur_plot_id, "type"="stacked",
-                                                                      "x.region.start"=.scale.x.to.SVG.plot(min(corrected.x.start, na.rm=TRUE)),
-                                                                      "y.region.start"=.scale.y.to.SVG.plot(max(ys, na.rm=TRUE)+1),
-                                                                      "x.region.end"=.scale.x.to.SVG.plot(max(corrected.x.end, na.rm=TRUE)),
-                                                                      "y.region.end"=.scale.y.to.SVG.plot(min(ys, na.rm=TRUE)),
-                                                                      "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start),
-                                                                      "y.partial.start"=.scale.y.to.SVG.plot(ys + 0.90),
-                                                                      "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end),
-                                                                      "y.partial.end"=.scale.y.to.SVG.plot(ys + 0.10)));
-              svg.str[[length(svg.str)+1]] <-
-                .SVG.comment("Partial CMAs as stacked bars:", newpara=TRUE);
-              for( j in 1:nrow(ppts) )
-              {
-                svg.str[[length(svg.str)+1]] <- list(
-                  # The background rect:
-                  .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.90),
-                            xend=.scale.x.to.SVG.plot(corrected.x.end[j]), yend=.scale.y.to.SVG.plot(ys[j] + 0.10),
-                            stroke="gray70", fill="white",
-                            class="partial_cma_stacked_rect_bkg"),
-                  # The CMA estimate rect:
-                  .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.90),
-                            xend=.scale.x.to.SVG.plot(corrected.x.start[j] + h[j]), yend=.scale.y.to.SVG.plot(ys[j] + 0.10),
-                            stroke=plot.partial.CMAs.as.stacked.col.border, fill=plot.partial.CMAs.as.stacked.col.bars,
-                            class="partial_cma_stacked_rect_estimate"),
-                  # The numeric estimate:
-                  if( force.draw.text || print.CMA && dims.chr.cma <= dims.chr.event )
-                  {
-                    .SVG.text(.scale.x.to.SVG.plot(corrected.x.text[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.50),
-                              text=ppts$text[j], font_size=dims.chr.cma, col=plot.partial.CMAs.as.stacked.col.text,
-                              h.align="center", v.align="center",
-                              class="partial_cma_stacked_text_estimate", suppress.warnings=suppress.warnings)
-                  }
-                );
-              }
-            }
-
-            # Advance to next patient:
-            y.cur <- (y.cur + nrow(ppts) + 1);
-          }
-
-          if( "overlapping" %in% plot.partial.CMAs.as )
-          {
-            # Show subperiods as overlapping segments:
-            if( !((range.y <- (max.y - min.y)) > 0) ) range.y <- 1; # avoid division by 0 if there's only one value
-            ppts$y.norm <- (ppts$y - min.y)/range.y;
-
-            if( .do.SVG ) # SVG:
-            {
-              svg.str[[length(svg.str)+1]] <-
-                .SVG.comment("Partial CMAs as overlapping segments:", newpara=TRUE);
-            }
-
-            if( !is.na(plot.partial.CMAs.as.overlapping.col.interval) )
-            {
-              if( plot.partial.CMAs.as.overlapping.alternate )
-              {
-                v <- rep(c(0,1), nrow(ppts))[1:nrow(ppts)]; # alternate between low (0) and high (1) -- not the best way but works fine
-              } else
-              {
-                v <- rep(0,nrow(ppts)); # all segments are drawn low (0)
-              }
-              y.norm.v <- (ppts$y.norm * -(v*2-1)); # -(v*2-1) maps 0 to 1 and 1 to -1
+              # Show subperiods as stacked:
+              ys <- (y.cur + 1:nrow(ppts) - 1); # cache this
+              h <- (ppts$end - ppts$start) * pmax(pmin(ppts$y, 1.0), 0.0); # cache the actual CMA estimates scaled for plotting
 
               if( .do.R ) # Rplot:
               {
                 # Save the info:
                 .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
-                                                               data.frame("pid"=cur_plot_id, "type"="overlapping",
+                                                               data.frame("pid"=cur_plot_id, "type"="stacked",
                                                                           "x.region.start"=min(corrected.x.start, na.rm=TRUE),
-                                                                          "y.region.start"=min(y.cur + 0.5 + v, na.rm=TRUE),
+                                                                          "y.region.start"=min(ys, na.rm=TRUE),
                                                                           "x.region.end"=max(corrected.x.end, na.rm=TRUE),
-                                                                          "y.region.end"=max(y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0), na.rm=TRUE),
+                                                                          "y.region.end"=max(ys, na.rm=TRUE)+1,
                                                                           "x.partial.start"=corrected.x.start,
-                                                                          "y.partial.start"=y.cur + 0.5 + v,
+                                                                          "y.partial.start"=ys + 0.10,
                                                                           "x.partial.end"=corrected.x.end,
-                                                                          "y.partial.end"=y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0)));
-                segments(corrected.x.start, y.cur + 0.5 + v, corrected.x.end,   y.cur + 0.5 + v, col=plot.partial.CMAs.as.overlapping.col.interval);
-                segments(corrected.x.start, y.cur + 0.5 + v, corrected.x.start, y.cur + 0.5 + v + y.norm.v, col=plot.partial.CMAs.as.overlapping.col.interval);
-                segments(corrected.x.end,   y.cur + 0.5 + v, corrected.x.end,   y.cur + 0.5 + v + y.norm.v, col=plot.partial.CMAs.as.overlapping.col.interval);
+                                                                          "y.partial.end"=ys + 0.90));
+                # The intervals as empty rectangles:
+                rect(corrected.x.start, ys + 0.10, corrected.x.end,   ys + 0.90, border=gray(0.7), col="white");
+                # The CMAs as filled rectangles of length proportional to the CMA:
+                rect(corrected.x.start, ys + 0.10, corrected.x.start + h, ys + 0.90, border=plot.partial.CMAs.as.stacked.col.border, col=plot.partial.CMAs.as.stacked.col.bars);
+                if( force.draw.text || print.CMA && char.height.CMA <= 0.80 )
+                {
+                  text(corrected.x.text, ys + 0.5, ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.stacked.col.text);
+                }
               }
 
               if( .do.SVG ) # SVG:
@@ -4194,699 +4286,793 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
                 .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
                                                              data.frame("pid"=cur_plot_id, "type"="stacked",
                                                                         "x.region.start"=.scale.x.to.SVG.plot(min(corrected.x.start, na.rm=TRUE)),
-                                                                        "y.region.start"=.scale.y.to.SVG.plot(max(y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0), na.rm=TRUE)),
+                                                                        "y.region.start"=.scale.y.to.SVG.plot(max(ys, na.rm=TRUE)+1),
                                                                         "x.region.end"=.scale.x.to.SVG.plot(max(corrected.x.end, na.rm=TRUE)),
-                                                                        "y.region.end"=.scale.y.to.SVG.plot(min(y.cur + 0.5 + v, na.rm=TRUE)),
+                                                                        "y.region.end"=.scale.y.to.SVG.plot(min(ys, na.rm=TRUE)),
                                                                         "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start),
-                                                                        "y.partial.start"=.scale.y.to.SVG.plot(y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0)),
+                                                                        "y.partial.start"=.scale.y.to.SVG.plot(ys + 0.90),
                                                                         "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end),
-                                                                        "y.partial.end"=.scale.y.to.SVG.plot(y.cur + 0.5 + v)));
+                                                                        "y.partial.end"=.scale.y.to.SVG.plot(ys + 0.10)));
+                svg.str[[length(svg.str)+1]] <-
+                  .SVG.comment("Partial CMAs as stacked bars:", newpara=TRUE);
                 for( j in 1:nrow(ppts) )
                 {
-                  svg.str[[length(svg.str)+1]] <-
-                    # The connected segments one by one:
-                    .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.end[j])),
-                               y=.scale.y.to.SVG.plot(c(y.cur + 0.5 + v[j], y.cur + 0.5 + v[j])),
-                               connected=FALSE, stroke=plot.partial.CMAs.as.overlapping.col.interval,
-                               class="partial_cma_overlapping_segments", suppress.warnings=suppress.warnings);
-                  if(!is.na(y.norm.v[j]))
-                    svg.str[[length(svg.str)+1]] <- .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.start[j],
-                                                                                        corrected.x.end[j],   corrected.x.end[j])),
-                                                               y=.scale.y.to.SVG.plot(c(y.cur + 0.5 + v[j], y.cur + 0.5 + v[j] + y.norm.v[j],
-                                                                                        y.cur + 0.5 + v[j], y.cur + 0.5 + v[j] + y.norm.v[j])),
-                                                               connected=FALSE, stroke=plot.partial.CMAs.as.overlapping.col.interval,
-                                                               class="partial_cma_overlapping_segments", suppress.warnings=suppress.warnings);
+                  svg.str[[length(svg.str)+1]] <- list(
+                    # The background rect:
+                    .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.90),
+                              xend=.scale.x.to.SVG.plot(corrected.x.end[j]), yend=.scale.y.to.SVG.plot(ys[j] + 0.10),
+                              stroke="gray70", fill="white",
+                              class="partial_cma_stacked_rect_bkg"),
+                    # The CMA estimate rect:
+                    .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.90),
+                              xend=.scale.x.to.SVG.plot(corrected.x.start[j] + h[j]), yend=.scale.y.to.SVG.plot(ys[j] + 0.10),
+                              stroke=plot.partial.CMAs.as.stacked.col.border, fill=plot.partial.CMAs.as.stacked.col.bars,
+                              class="partial_cma_stacked_rect_estimate"),
+                    # The numeric estimate:
+                    if( force.draw.text || print.CMA && dims.chr.cma <= dims.chr.event )
+                    {
+                      .SVG.text(.scale.x.to.SVG.plot(corrected.x.text[j]), y=.scale.y.to.SVG.plot(ys[j] + 0.50),
+                                text=ppts$text[j], font_size=dims.chr.cma, col=plot.partial.CMAs.as.stacked.col.text,
+                                h.align="center", v.align="center",
+                                class="partial_cma_stacked_text_estimate", suppress.warnings=suppress.warnings)
+                    }
+                  );
                 }
               }
+
+              # Advance to next patient:
+              y.cur <- (y.cur + nrow(ppts) + 1);
             }
 
-            if( .do.R ) # Rplot:
+            if( "overlapping" %in% plot.partial.CMAs.as )
             {
-              if( print.CMA && (force.draw.text || char.height.CMA <= 0.80) && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
-              {
-                text(corrected.x.text, y.cur + 1.0, ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.overlapping.col.text);
-              }
-            }
+              # Show subperiods as overlapping segments:
+              if( is.na(range.y <- (max.y - min.y)) || range.y <= 0 ) range.y <- 1; # avoid division by 0 if there's only one value or if there's none
+              ppts$y.norm <- (ppts$y - min.y)/range.y;
 
-            if( .do.SVG ) # SVG:
-            {
-              if( print.CMA && (force.draw.text || dims.chr.cma <= dims.chr.event) && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
-              {
-                svg.str[[length(svg.str)+1]] <-
-                  # The text estimates:
-                  .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(rep(y.cur + 1.0,length(corrected.x.text))), text=ppts$text,
-                            col=plot.partial.CMAs.as.overlapping.col.text, font_size=dims.chr.cma,
-                            h.align="center", v.align="center",
-                            class="partial_cma_overlapping_text", suppress.warnings=suppress.warnings);
-              }
-            }
-
-            # Advance to next patient:
-            y.cur <- y.cur+3;
-          }
-
-          if( "timeseries" %in% plot.partial.CMAs.as )
-          {
-            # Show subperiods as a time series
-            if( plot.partial.CMAs.as.timeseries.start.from.zero ) min.y <- min(min.y,0,na.rm=TRUE);
-
-            if( !((range.y <- (max.y - min.y)) > 0) ) range.y <- 1; # avoid division by 0 if there's only one value
-            ppts$y.norm <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace - 3) * (ppts$y - min.y)/range.y);
-
-            if( .do.SVG ) # SVG:
-            {
-              svg.str[[length(svg.str)+1]] <-
-                .SVG.comment("Partial CMAs as time series:", newpara=TRUE);
-            }
-
-            # The axes:
-            min.y.norm <- min(ppts$y.norm,na.rm=TRUE);
-            max.y.norm <- max(ppts$y.norm,na.rm=TRUE);
-            if( .do.R ) # Rplot:
-            {
-              segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.end.max,   y.cur + 0.5, lty="solid", col="black"); # horizontal axis
-              segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.start.min, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0, lty="solid", col="black"); # vertical axis
-              segments(corrected.x + x.start.min, min.y.norm, corrected.x + x.end.max, min.y.norm, lty="dashed", col="black"); # the minimum value
-              segments(corrected.x + x.start.min, max.y.norm, corrected.x + x.end.max, max.y.norm, lty="dashed", col="black"); # the minimum value
-            }
-            if( .do.SVG ) # SVG
-            {
-              svg.str[[length(svg.str)+1]] <-
-                # The axes:
-                .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max,
-                                                    corrected.x + x.start.min, corrected.x + x.start.min,
-                                                    corrected.x + x.start.min, corrected.x + x.end.max,
-                                                    corrected.x + x.start.min, corrected.x + x.end.max)),
-                           y=.scale.y.to.SVG.plot(c(y.cur + 0.5,               y.cur + 0.5,
-                                                    y.cur + 0.5,               y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                    min.y.norm,                min.y.norm,
-                                                    max.y.norm,                max.y.norm)),
-                           connected=FALSE,
-                           stroke="black", lty=c("solid", "solid", "dashed", "dashed"),
-                           class="partial_cma_timeseries_axes", suppress.warnings=suppress.warnings);
-            }
-
-            # 0%
-            if( plot.partial.CMAs.as.timeseries.show.0perc &&
-                (y.for.0perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (0 - min.y)/range.y)) >= y.cur + 0.5 )
-            {
-              if( .do.R ) # Rplot:
-              {
-                segments(corrected.x + x.start.min, y.for.0perc, corrected.x + x.end.max, y.for.0perc, lty="dotted", col="red"); # 0%
-              }
               if( .do.SVG ) # SVG:
               {
                 svg.str[[length(svg.str)+1]] <-
-                  # 0% line
-                  .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max)),
-                             y=.scale.y.to.SVG.plot(c(y.for.0perc,               y.for.0perc)),
-                             connected=FALSE, stroke="red", lty="dotted",
-                             class="partial_cma_timeseries_0perc-line", suppress.warnings=suppress.warnings);
+                  .SVG.comment("Partial CMAs as overlapping segments:", newpara=TRUE);
               }
-            }
 
-            # 100%
-            if( plot.partial.CMAs.as.timeseries.show.100perc &&
-                (y.for.100perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (1.0 - min.y)/range.y)) <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
-            {
-              if( .do.R ) # Rplot:
+              if( !is.na(plot.partial.CMAs.as.overlapping.col.interval) )
               {
-                segments(corrected.x + x.start.min, y.for.100perc, corrected.x + x.end.max, y.for.100perc, lty="dotted", col="red"); # 100%
-              }
-              if( .do.SVG ) # SVG:
-              {
-                svg.str[[length(svg.str)+1]] <-
-                  # 100% line
-                  .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max)),
-                             y=.scale.y.to.SVG.plot(c(y.for.100perc,             y.for.100perc)),
-                             connected=FALSE, stroke="red", lty="dotted",
-                             class="partial_cma_timeseries_100perc-line", suppress.warnings=suppress.warnings);
-              }
-            }
+                if( plot.partial.CMAs.as.overlapping.alternate )
+                {
+                  v <- rep(c(0,1), nrow(ppts))[1:nrow(ppts)]; # alternate between low (0) and high (1) -- not the best way but works fine
+                } else
+                {
+                  v <- rep(0,nrow(ppts)); # all segments are drawn low (0)
+                }
+                y.norm.v <- (ppts$y.norm * -(v*2-1)); # -(v*2-1) maps 0 to 1 and 1 to -1
 
-            # Numeric values:
-            if( .do.R ) # Rplot:
-            {
-              if( print.CMA && (force.draw.text || char.height.CMA <= 0.80) )
-              {
-                text(corrected.x + x.start.min, min.y.norm, sprintf("%.1f%%",100*min.y), pos=2, cex=CMA.cex, col="black");
-                text(corrected.x + x.start.min, max.y.norm, sprintf("%.1f%%",100*max.y), pos=2, cex=CMA.cex, col="black");
-                if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
-                {
-                  text(corrected.x + x.start.min, y.for.0perc, "0%", pos=2, cex=CMA.cex, col="red");
-                }
-                if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
-                {
-                  text(corrected.x + x.start.min, y.for.100perc, "100%", pos=2, cex=CMA.cex, col="red");
-                }
-              }
-            }
-            if( .do.SVG ) # SVG:
-            {
-              if( print.CMA && (force.draw.text || dims.chr.cma <= dims.chr.event) )
-              {
-                svg.str[[length(svg.str)+1]] <-
-                  # Text
-                  .SVG.text(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.start.min)),
-                            y=.scale.y.to.SVG.plot(c(min.y.norm,                max.y.norm)),
-                            text=c(                sprintf("%.1f%%",100*min.y), sprintf("%.1f%%",100*max.y)),
-                            col="black", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
-                            class="partial_cma_timeseries_axis_text", suppress.warnings=suppress.warnings);
-                if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
-                {
-                  svg.str[[length(svg.str)+1]] <- .SVG.text(x=.scale.x.to.SVG.plot(corrected.x + x.start.min),
-                                                            y=.scale.y.to.SVG.plot(y.for.0perc),
-                                                            text="0%",
-                                                            col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
-                                                            class="partial_cma_timeseries_axis_text", suppress.warnings=suppress.warnings);
-                }
-                if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
-                {
-                  svg.str[[length(svg.str)+1]] <- .SVG.text(x=.scale.x.to.SVG.plot(corrected.x + x.start.min),
-                                                            y=.scale.y.to.SVG.plot(y.for.100perc),
-                                                            text="100%",
-                                                            col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
-                                                            class="partial_cma_timeseries_axis_text", suppress.warnings=suppress.warnings);
-                }
-              }
-            }
-
-            # The intervals:
-            if( !is.na(plot.partial.CMAs.as.timeseries.col.interval) )
-            {
-              if( plot.partial.CMAs.as.timeseries.interval.type == "none" )
-              {
-                # Nothing to plot, but save the actual points:
-                if( .do.R )
-                {
-                  .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
-                                                                 data.frame("pid"=cur_plot_id, type="timeseries",
-                                                                            "x.region.start"=corrected.x + x.start.min,
-                                                                            "y.region.start"=y.cur + 0.5,
-                                                                            "x.region.end"=corrected.x + x.end.max,
-                                                                            "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                                            "x.partial.start"=corrected.x.text[!is.na(ppts$y.norm)],
-                                                                            "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)],
-                                                                            "x.partial.end"=corrected.x.text[!is.na(ppts$y.norm)],
-                                                                            "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)]));
-                }
-                if( .do.SVG )
-                {
-                  .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
-                                                               data.frame("pid"=cur_plot_id, type="timeseries",
-                                                                          "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
-                                                                          "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
-                                                                          "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
-                                                                          "y.region.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                          "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.text[!is.na(ppts$y.norm)]),
-                                                                          "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)]),
-                                                                          "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.text[!is.na(ppts$y.norm)]),
-                                                                          "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)])));
-                }
-              } else if( plot.partial.CMAs.as.timeseries.interval.type %in% c("segments", "arrows", "lines") )
-              {
                 if( .do.R ) # Rplot:
                 {
-                  # The lines:
-                  segments(corrected.x.start, ppts$y.norm, corrected.x.end, ppts$y.norm, col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                  if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
-                  {
-                    # The segment endings:
-                    segments(corrected.x.start, ppts$y.norm - 0.2, corrected.x.start, ppts$y.norm + 0.2,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                    segments(corrected.x.end,   ppts$y.norm - 0.2, corrected.x.end,   ppts$y.norm + 0.2,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                    # Save the info:
-                    .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
-                                                                   data.frame("pid"=cur_plot_id, type="timeseries",
-                                                                              "x.region.start"=corrected.x + x.start.min,
-                                                                              "y.region.start"=y.cur + 0.5,
-                                                                              "x.region.end"=corrected.x + x.end.max,
-                                                                              "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                                              "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
-                                                                              "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)] - 0.2,
-                                                                              "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
-                                                                              "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)] + 0.2));
-                  } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
-                  {
-                    # The arrow endings:
-                    segments(corrected.x.start + char.width/2, ppts$y.norm - char.height/2, corrected.x.start, ppts$y.norm,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                    segments(corrected.x.start + char.width/2, ppts$y.norm + char.height/2, corrected.x.start, ppts$y.norm,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                    segments(corrected.x.end - char.width/2, ppts$y.norm - char.height/2, corrected.x.end, ppts$y.norm,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                    segments(corrected.x.end - char.width/2, ppts$y.norm + char.height/2, corrected.x.end, ppts$y.norm,
-                             col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
-                    # Save the info:
-                    .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
-                                                                   data.frame("pid"=cur_plot_id, type="timeseries",
-                                                                              "x.region.start"=corrected.x + x.start.min,
-                                                                              "y.region.start"=y.cur + 0.5,
-                                                                              "x.region.end"=corrected.x + x.end.max,
-                                                                              "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                                              "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
-                                                                              "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)] - char.height/2,
-                                                                              "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
-                                                                              "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)] + char.height/2));
-                  } else
-                  {
-                    # Just the lines:
-                    # Save the info:
-                    .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
-                                                                   data.frame("pid"=cur_plot_id, type="timeseries",
-                                                                              "x.region.start"=corrected.x + x.start.min,
-                                                                              "y.region.start"=y.cur + 0.5,
-                                                                              "x.region.end"=corrected.x + x.end.max,
-                                                                              "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                                              "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
-                                                                              "y.partial.start"=ppts$y.norm[!is.na(ppts$y.norm)],
-                                                                              "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
-                                                                              "y.partial.end"=ppts$y.norm[!is.na(ppts$y.norm)]));
-                  }
+                  # Save the info:
+                  .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                 data.frame("pid"=cur_plot_id, "type"="overlapping",
+                                                                            "x.region.start"=min(corrected.x.start, na.rm=TRUE),
+                                                                            "y.region.start"=min(y.cur + 0.5 + v, na.rm=TRUE),
+                                                                            "x.region.end"=max(corrected.x.end, na.rm=TRUE),
+                                                                            "y.region.end"=max(y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0), na.rm=TRUE),
+                                                                            "x.partial.start"=corrected.x.start,
+                                                                            "y.partial.start"=y.cur + 0.5 + v,
+                                                                            "x.partial.end"=corrected.x.end,
+                                                                            "y.partial.end"=y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0)));
+                  segments(corrected.x.start, y.cur + 0.5 + v, corrected.x.end,   y.cur + 0.5 + v, col=plot.partial.CMAs.as.overlapping.col.interval);
+                  segments(corrected.x.start, y.cur + 0.5 + v, corrected.x.start, y.cur + 0.5 + v + y.norm.v, col=plot.partial.CMAs.as.overlapping.col.interval);
+                  segments(corrected.x.end,   y.cur + 0.5 + v, corrected.x.end,   y.cur + 0.5 + v + y.norm.v, col=plot.partial.CMAs.as.overlapping.col.interval);
                 }
 
                 if( .do.SVG ) # SVG:
                 {
+                  # Save the info:
+                  .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                               data.frame("pid"=cur_plot_id, "type"="stacked",
+                                                                          "x.region.start"=.scale.x.to.SVG.plot(min(corrected.x.start, na.rm=TRUE)),
+                                                                          "y.region.start"=.scale.y.to.SVG.plot(max(y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0), na.rm=TRUE)),
+                                                                          "x.region.end"=.scale.x.to.SVG.plot(max(corrected.x.end, na.rm=TRUE)),
+                                                                          "y.region.end"=.scale.y.to.SVG.plot(min(y.cur + 0.5 + v, na.rm=TRUE)),
+                                                                          "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start),
+                                                                          "y.partial.start"=.scale.y.to.SVG.plot(y.cur + 0.5 + v + ifelse(!is.na(y.norm.v),y.norm.v,0)),
+                                                                          "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end),
+                                                                          "y.partial.end"=.scale.y.to.SVG.plot(y.cur + 0.5 + v)));
                   for( j in 1:nrow(ppts) )
                   {
                     svg.str[[length(svg.str)+1]] <-
-                      # The lines:
+                      # The connected segments one by one:
                       .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.end[j])),
-                                 y=.scale.y.to.SVG.plot(c(ppts$y.norm[j], ppts$y.norm[j])),
-                                 stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
-                                 class="partial_cma_timeseries_lines", suppress.warnings=suppress.warnings);
+                                 y=.scale.y.to.SVG.plot(c(y.cur + 0.5 + v[j], y.cur + 0.5 + v[j])),
+                                 connected=FALSE, stroke=plot.partial.CMAs.as.overlapping.col.interval,
+                                 class="partial_cma_overlapping_segments", suppress.warnings=suppress.warnings);
+                    if(!is.na(y.norm.v[j]))
+                      svg.str[[length(svg.str)+1]] <- .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.start[j],
+                                                                                          corrected.x.end[j],   corrected.x.end[j])),
+                                                                 y=.scale.y.to.SVG.plot(c(y.cur + 0.5 + v[j], y.cur + 0.5 + v[j] + y.norm.v[j],
+                                                                                          y.cur + 0.5 + v[j], y.cur + 0.5 + v[j] + y.norm.v[j])),
+                                                                 connected=FALSE, stroke=plot.partial.CMAs.as.overlapping.col.interval,
+                                                                 class="partial_cma_overlapping_segments", suppress.warnings=suppress.warnings);
+                  }
+                }
+              }
+
+              if( .do.R ) # Rplot:
+              {
+                if( print.CMA && (force.draw.text || char.height.CMA <= 0.80) && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
+                {
+                  text(corrected.x.text, y.cur + 1.0, ppts$text, cex=CMA.cex, col=plot.partial.CMAs.as.overlapping.col.text);
+                }
+              }
+
+              if( .do.SVG ) # SVG:
+              {
+                if( print.CMA && (force.draw.text || dims.chr.cma <= dims.chr.event) && !is.na(plot.partial.CMAs.as.overlapping.col.text) )
+                {
+                  svg.str[[length(svg.str)+1]] <-
+                    # The text estimates:
+                    .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(rep(y.cur + 1.0,length(corrected.x.text))), text=ppts$text,
+                              col=plot.partial.CMAs.as.overlapping.col.text, font_size=dims.chr.cma,
+                              h.align="center", v.align="center",
+                              class="partial_cma_overlapping_text", suppress.warnings=suppress.warnings);
+                }
+              }
+
+              # Advance to next patient:
+              y.cur <- y.cur+3;
+            }
+
+            if( "timeseries" %in% plot.partial.CMAs.as )
+            {
+              # Show subperiods as a time series
+              if( plot.partial.CMAs.as.timeseries.start.from.zero ) min.y <- min(min.y,0,na.rm=TRUE);
+
+              if( is.na(range.y <- (max.y - min.y)) || range.y <= 0 ) range.y <- 1; # avoid division by 0 if there's only one value or if there's none
+              ppts$y.norm <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace - 3) * (ppts$y - min.y)/range.y);
+
+              if( .do.SVG ) # SVG:
+              {
+                svg.str[[length(svg.str)+1]] <-
+                  .SVG.comment("Partial CMAs as time series:", newpara=TRUE);
+              }
+
+              # The axes:
+              if(all(is.na(ppts$y.norm))) # guard against warnings when talking the min and max of only NAs
+              {
+                min.y.norm <- NA;
+                max.y.norm <- NA;
+              } else
+              {
+                min.y.norm <- min(ppts$y.norm,na.rm=TRUE);
+                max.y.norm <- max(ppts$y.norm,na.rm=TRUE);
+              }
+
+              if( .do.R ) # Rplot:
+              {
+                segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.end.max,   y.cur + 0.5, lty="solid", col="black"); # horizontal axis
+                segments(corrected.x + x.start.min, y.cur + 0.5, corrected.x + x.start.min, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0, lty="solid", col="black"); # vertical axis
+                segments(corrected.x + x.start.min, min.y.norm, corrected.x + x.end.max, min.y.norm, lty="dashed", col="black"); # the minimum value
+                segments(corrected.x + x.start.min, max.y.norm, corrected.x + x.end.max, max.y.norm, lty="dashed", col="black"); # the minimum value
+              }
+              if( .do.SVG ) # SVG
+              {
+                svg.str[[length(svg.str)+1]] <-
+                  # The axes:
+                  .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max,
+                                                      corrected.x + x.start.min, corrected.x + x.start.min,
+                                                      corrected.x + x.start.min, corrected.x + x.end.max,
+                                                      corrected.x + x.start.min, corrected.x + x.end.max)),
+                             y=.scale.y.to.SVG.plot(c(y.cur + 0.5,               y.cur + 0.5,
+                                                      y.cur + 0.5,               y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                      min.y.norm,                min.y.norm,
+                                                      max.y.norm,                max.y.norm)),
+                             connected=FALSE,
+                             stroke="black", lty=c("solid", "solid", "dashed", "dashed"),
+                             class="partial_cma_timeseries_axes", suppress.warnings=suppress.warnings);
+              }
+
+              # 0%
+              if( plot.partial.CMAs.as.timeseries.show.0perc &&
+                  (y.for.0perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (0 - min.y)/range.y)) >= y.cur + 0.5 )
+              {
+                if( .do.R ) # Rplot:
+                {
+                  segments(corrected.x + x.start.min, y.for.0perc, corrected.x + x.end.max, y.for.0perc, lty="dotted", col="red"); # 0%
+                }
+                if( .do.SVG ) # SVG:
+                {
+                  svg.str[[length(svg.str)+1]] <-
+                    # 0% line
+                    .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max)),
+                               y=.scale.y.to.SVG.plot(c(y.for.0perc,               y.for.0perc)),
+                               connected=FALSE, stroke="red", lty="dotted",
+                               class="partial_cma_timeseries_0perc-line", suppress.warnings=suppress.warnings);
+                }
+              }
+
+              # 100%
+              if( plot.partial.CMAs.as.timeseries.show.100perc &&
+                  (y.for.100perc <- (y.cur + 1 + (plot.partial.CMAs.as.timeseries.vspace-3) * (1.0 - min.y)/range.y)) <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
+              {
+                if( .do.R ) # Rplot:
+                {
+                  segments(corrected.x + x.start.min, y.for.100perc, corrected.x + x.end.max, y.for.100perc, lty="dotted", col="red"); # 100%
+                }
+                if( .do.SVG ) # SVG:
+                {
+                  svg.str[[length(svg.str)+1]] <-
+                    # 100% line
+                    .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.end.max)),
+                               y=.scale.y.to.SVG.plot(c(y.for.100perc,             y.for.100perc)),
+                               connected=FALSE, stroke="red", lty="dotted",
+                               class="partial_cma_timeseries_100perc-line", suppress.warnings=suppress.warnings);
+                }
+              }
+
+              # Numeric values:
+              if( .do.R ) # Rplot:
+              {
+                if( print.CMA && (force.draw.text || char.height.CMA <= 0.80) )
+                {
+                  if( !is.na(min.y.norm) && !is.na(max.y.norm) )
+                  {
+                    if(min.y.norm < max.y.norm) text(corrected.x + x.start.min, min.y.norm, sprintf("%.1f%%",100*min.y), pos=2, cex=CMA.cex, col="black"); # avoid collisions
+                    text(corrected.x + x.start.min, max.y.norm, sprintf("%.1f%%",100*max.y), pos=2, cex=CMA.cex, col="black");
+                  }
+                  if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
+                  {
+                    text(corrected.x + x.start.min, y.for.0perc, "0%", pos=2, cex=CMA.cex, col="red");
+                  }
+                  if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
+                  {
+                    text(corrected.x + x.start.min, y.for.100perc, "100%", pos=2, cex=CMA.cex, col="red");
+                  }
+                }
+              }
+              if( .do.SVG ) # SVG:
+              {
+                if( print.CMA && (force.draw.text || dims.chr.cma <= dims.chr.event) )
+                {
+                  svg.str[[length(svg.str)+1]] <-
+                    # Text
+                    .SVG.text(x=.scale.x.to.SVG.plot(c(corrected.x + x.start.min, corrected.x + x.start.min)),
+                              y=.scale.y.to.SVG.plot(c(min.y.norm,                max.y.norm)),
+                              text=c(                sprintf("%.1f%%",100*min.y), sprintf("%.1f%%",100*max.y)),
+                              col="black", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
+                              class="partial_cma_timeseries_axis_text", suppress.warnings=suppress.warnings);
+                  if( plot.partial.CMAs.as.timeseries.show.0perc && y.for.0perc >= y.cur + 0.5 )
+                  {
+                    svg.str[[length(svg.str)+1]] <- .SVG.text(x=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                              y=.scale.y.to.SVG.plot(y.for.0perc),
+                                                              text="0%",
+                                                              col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
+                                                              class="partial_cma_timeseries_axis_text", suppress.warnings=suppress.warnings);
+                  }
+                  if( plot.partial.CMAs.as.timeseries.show.100perc && y.for.100perc <= y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0 )
+                  {
+                    svg.str[[length(svg.str)+1]] <- .SVG.text(x=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                              y=.scale.y.to.SVG.plot(y.for.100perc),
+                                                              text="100%",
+                                                              col="red", font_size=dims.chr.cma, h.align="right", v.align="center", rotate=rotate.text,
+                                                              class="partial_cma_timeseries_axis_text", suppress.warnings=suppress.warnings);
+                  }
+                }
+              }
+
+              # The intervals:
+              if(all(is.na(ppts$y.norm))) ppts_y.norm_notna <- 1 else ppts_y.norm_notna <- !is.na(ppts$y.norm); # cache the non-NA ppts$y.norm and avoid crashing if all are NAs
+              if( !is.na(plot.partial.CMAs.as.timeseries.col.interval) )
+              {
+                if( plot.partial.CMAs.as.timeseries.interval.type == "none" )
+                {
+                  # Nothing to plot, but save the actual points:
+                  if( .do.R )
+                  {
+                    .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                   data.frame("pid"=cur_plot_id, type="timeseries",
+                                                                              "x.region.start"=corrected.x + x.start.min,
+                                                                              "y.region.start"=y.cur + 0.5,
+                                                                              "x.region.end"=corrected.x + x.end.max,
+                                                                              "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                                              "x.partial.start"=corrected.x.text[ppts_y.norm_notna],
+                                                                              "y.partial.start"=ppts$y.norm[ppts_y.norm_notna],
+                                                                              "x.partial.end"=corrected.x.text[ppts_y.norm_notna],
+                                                                              "y.partial.end"=ppts$y.norm[ppts_y.norm_notna]));
+                  }
+                  if( .do.SVG )
+                  {
+                    .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                                 data.frame("pid"=cur_plot_id, type="timeseries",
+                                                                            "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                                            "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                            "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
+                                                                            "y.region.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.text[ppts_y.norm_notna]),
+                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna]),
+                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.text[ppts_y.norm_notna]),
+                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna])));
+                  }
+                } else if( plot.partial.CMAs.as.timeseries.interval.type %in% c("segments", "arrows", "lines") )
+                {
+                  if( .do.R ) # Rplot:
+                  {
+                    # The lines:
+                    segments(corrected.x.start, ppts$y.norm, corrected.x.end, ppts$y.norm, col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
                     if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
                     {
                       # The segment endings:
-                      svg.str[[length(svg.str)+1]] <- .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.start[j], corrected.x.end[j],   corrected.x.end[j])),
-                                                                 y=.scale.y.to.SVG.plot(c(ppts$y.norm[j] - 0.2, ppts$y.norm[j] + 0.2, ppts$y.norm[j] - 0.2, ppts$y.norm[j] + 0.2)),
-                                                                 connected=FALSE,
-                                                                 stroke=plot.partial.CMAs.as.timeseries.col.interval,
-                                                                 stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
-                                                                 class="partial_cma_timeseries_lines", suppress.warnings=suppress.warnings);
+                      segments(corrected.x.start, ppts$y.norm - 0.2, corrected.x.start, ppts$y.norm + 0.2,
+                               col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                      segments(corrected.x.end,   ppts$y.norm - 0.2, corrected.x.end,   ppts$y.norm + 0.2,
+                               col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                      # Save the info:
+                      .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                     data.frame("pid"=cur_plot_id, type="timeseries",
+                                                                                "x.region.start"=corrected.x + x.start.min,
+                                                                                "y.region.start"=y.cur + 0.5,
+                                                                                "x.region.end"=corrected.x + x.end.max,
+                                                                                "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                                                "x.partial.start"=corrected.x.start[ppts_y.norm_notna],
+                                                                                "y.partial.start"=ppts$y.norm[ppts_y.norm_notna] - 0.2,
+                                                                                "x.partial.end"=corrected.x.end[ppts_y.norm_notna],
+                                                                                "y.partial.end"=ppts$y.norm[ppts_y.norm_notna] + 0.2));
                     } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
                     {
                       # The arrow endings:
-                      svg.str[[length(svg.str)+1]] <- .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j] + dims.event.x/2, corrected.x.start[j],
-                                                                                          corrected.x.start[j] + dims.event.x/2, corrected.x.start[j],
-                                                                                          corrected.x.end[j]   - dims.event.x/2, corrected.x.end[j],
-                                                                                          corrected.x.end[j]   - dims.event.x/2, corrected.x.end[j])),
-                                                                 y=.scale.y.to.SVG.plot(c(ppts$y.norm[j]       - 0.2, ppts$y.norm[j],
-                                                                                          ppts$y.norm[j]       + 0.2, ppts$y.norm[j],
-                                                                                          ppts$y.norm[j]       - 0.2, ppts$y.norm[j],
-                                                                                          ppts$y.norm[j]       + 0.2, ppts$y.norm[j])),
-                                                                 connected=FALSE,
-                                                                 stroke=plot.partial.CMAs.as.timeseries.col.interval,
-                                                                 stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
-                                                                 class="partial_cma_timeseries_lines", suppress.warnings=suppress.warnings);
+                      segments(corrected.x.start + char.width/2, ppts$y.norm - char.height/2, corrected.x.start, ppts$y.norm,
+                               col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                      segments(corrected.x.start + char.width/2, ppts$y.norm + char.height/2, corrected.x.start, ppts$y.norm,
+                               col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                      segments(corrected.x.end - char.width/2, ppts$y.norm - char.height/2, corrected.x.end, ppts$y.norm,
+                               col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                      segments(corrected.x.end - char.width/2, ppts$y.norm + char.height/2, corrected.x.end, ppts$y.norm,
+                               col=plot.partial.CMAs.as.timeseries.col.interval, lwd=plot.partial.CMAs.as.timeseries.lwd.interval);
+                      # Save the info:
+                      .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                     data.frame("pid"=cur_plot_id, type="timeseries",
+                                                                                "x.region.start"=corrected.x + x.start.min,
+                                                                                "y.region.start"=y.cur + 0.5,
+                                                                                "x.region.end"=corrected.x + x.end.max,
+                                                                                "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                                                "x.partial.start"=corrected.x.start[ppts_y.norm_notna],
+                                                                                "y.partial.start"=ppts$y.norm[ppts_y.norm_notna] - char.height/2,
+                                                                                "x.partial.end"=corrected.x.end[ppts_y.norm_notna],
+                                                                                "y.partial.end"=ppts$y.norm[ppts_y.norm_notna] + char.height/2));
+                    } else
+                    {
+                      # Just the lines:
+                      # Save the info:
+                      .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                     data.frame("pid"=cur_plot_id, type="timeseries",
+                                                                                "x.region.start"=corrected.x + x.start.min,
+                                                                                "y.region.start"=y.cur + 0.5,
+                                                                                "x.region.end"=corrected.x + x.end.max,
+                                                                                "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                                                "x.partial.start"=corrected.x.start[ppts_y.norm_notna],
+                                                                                "y.partial.start"=ppts$y.norm[ppts_y.norm_notna],
+                                                                                "x.partial.end"=corrected.x.end[ppts_y.norm_notna],
+                                                                                "y.partial.end"=ppts$y.norm[ppts_y.norm_notna]));
                     }
                   }
-                  # Save the info:
-                  if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
+
+                  if( .do.SVG ) # SVG:
                   {
+                    for( j in 1:nrow(ppts) )
+                    {
+                      svg.str[[length(svg.str)+1]] <-
+                        # The lines:
+                        .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.end[j])),
+                                   y=.scale.y.to.SVG.plot(c(ppts$y.norm[j], ppts$y.norm[j])),
+                                   stroke=plot.partial.CMAs.as.timeseries.col.interval, stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
+                                   class="partial_cma_timeseries_lines", suppress.warnings=suppress.warnings);
+                      if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
+                      {
+                        # The segment endings:
+                        svg.str[[length(svg.str)+1]] <- .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j], corrected.x.start[j], corrected.x.end[j],   corrected.x.end[j])),
+                                                                   y=.scale.y.to.SVG.plot(c(ppts$y.norm[j] - 0.2, ppts$y.norm[j] + 0.2, ppts$y.norm[j] - 0.2, ppts$y.norm[j] + 0.2)),
+                                                                   connected=FALSE,
+                                                                   stroke=plot.partial.CMAs.as.timeseries.col.interval,
+                                                                   stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
+                                                                   class="partial_cma_timeseries_lines", suppress.warnings=suppress.warnings);
+                      } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
+                      {
+                        # The arrow endings:
+                        svg.str[[length(svg.str)+1]] <- .SVG.lines(x=.scale.x.to.SVG.plot(c(corrected.x.start[j] + dims.event.x/2, corrected.x.start[j],
+                                                                                            corrected.x.start[j] + dims.event.x/2, corrected.x.start[j],
+                                                                                            corrected.x.end[j]   - dims.event.x/2, corrected.x.end[j],
+                                                                                            corrected.x.end[j]   - dims.event.x/2, corrected.x.end[j])),
+                                                                   y=.scale.y.to.SVG.plot(c(ppts$y.norm[j]       - 0.2, ppts$y.norm[j],
+                                                                                            ppts$y.norm[j]       + 0.2, ppts$y.norm[j],
+                                                                                            ppts$y.norm[j]       - 0.2, ppts$y.norm[j],
+                                                                                            ppts$y.norm[j]       + 0.2, ppts$y.norm[j])),
+                                                                   connected=FALSE,
+                                                                   stroke=plot.partial.CMAs.as.timeseries.col.interval,
+                                                                   stroke_width=plot.partial.CMAs.as.timeseries.lwd.interval,
+                                                                   class="partial_cma_timeseries_lines", suppress.warnings=suppress.warnings);
+                      }
+                    }
+                    # Save the info:
+                    if( plot.partial.CMAs.as.timeseries.interval.type == "segments" )
+                    {
+                      .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                                   data.frame("pid"=cur_plot_id, "type"="timeseries",
+                                                                              "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                                              "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                              "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
+                                                                              "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                              "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[ppts_y.norm_notna]),
+                                                                              "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna] - 0.2),
+                                                                              "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[ppts_y.norm_notna]),
+                                                                              "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna] + 0.2)));
+                    } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
+                    {
+                      .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                                   data.frame("pid"=cur_plot_id, "type"="timeseries",
+                                                                              "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                                              "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                              "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
+                                                                              "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                              "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[ppts_y.norm_notna]),
+                                                                              "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna] - 0.2),
+                                                                              "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[ppts_y.norm_notna]),
+                                                                              "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna] + 0.2)));
+                    } else # just lines
+                    {
+                      .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
+                                                                   data.frame("pid"=cur_plot_id, "type"="timeseries",
+                                                                              "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
+                                                                              "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                              "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
+                                                                              "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                              "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[ppts_y.norm_notna]),
+                                                                              "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna]),
+                                                                              "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[ppts_y.norm_notna]),
+                                                                              "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[ppts_y.norm_notna])));
+                    }
+                  }
+                } else if( plot.partial.CMAs.as.timeseries.interval.type == "rectangles" )
+                {
+                  if( .do.R ) # Rplot:
+                  {
+                    # As semi-transparent rectangles:
+                    rect(corrected.x.start, y.cur + 0.5, corrected.x.end, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                         #col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
+                         col=adjustcolor(plot.partial.CMAs.as.timeseries.col.interval, alpha.f=plot.partial.CMAs.as.timeseries.alpha.interval),
+                         border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
+                    # Save the info:
+                    .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
+                                                                   data.frame("pid"=cur_plot_id, "type"="timeseries",
+                                                                              "x.region.start"=corrected.x + x.start.min,
+                                                                              "y.region.start"=y.cur + 0.5,
+                                                                              "x.region.end"=corrected.x + x.end.max,
+                                                                              "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
+                                                                              "x.partial.start"=corrected.x.start[ppts_y.norm_notna],
+                                                                              "y.partial.start"=y.cur + 0.5,
+                                                                              "x.partial.end"=corrected.x.end[ppts_y.norm_notna],
+                                                                              "y.partial.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0));
+                  }
+
+                  if( .do.SVG ) # SVG:
+                  {
+                    for( j in 1:nrow(ppts) )
+                    {
+                      svg.str[[length(svg.str)+1]] <-
+                        # As semi-transparent rectangles:
+                        .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]),  y=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                  xend=.scale.x.to.SVG.plot(corrected.x.end[j]), yend=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                  fill=plot.partial.CMAs.as.timeseries.col.interval, fill_opacity=plot.partial.CMAs.as.timeseries.alpha.interval,
+                                  stroke=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted",
+                                  class="partial_cma_timeseries_rect");
+                    }
+                    # Save the info:
                     .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
                                                                  data.frame("pid"=cur_plot_id, "type"="timeseries",
                                                                             "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
-                                                                            "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                            "y.region.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
                                                                             "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
-                                                                            "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] - 0.2),
-                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] + 0.2)));
-                  } else if( plot.partial.CMAs.as.timeseries.interval.type == "arrows" )
-                  {
-                    .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
-                                                                 data.frame("pid"=cur_plot_id, "type"="timeseries",
-                                                                            "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
-                                                                            "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
-                                                                            "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
-                                                                            "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] - 0.2),
-                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)] + 0.2)));
-                  } else # just lines
-                  {
-                    .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
-                                                                 data.frame("pid"=cur_plot_id, "type"="timeseries",
-                                                                            "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
-                                                                            "y.region.start"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
-                                                                            "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
-                                                                            "y.region.end"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.start"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)]),
-                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
-                                                                            "y.partial.end"=.scale.y.to.SVG.plot(ppts$y.norm[!is.na(ppts$y.norm)])));
+                                                                            "y.region.end"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
+                                                                            "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[ppts_y.norm_notna]),
+                                                                            "y.partial.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
+                                                                            "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[ppts_y.norm_notna]),
+                                                                            "y.partial.end"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0)));
                   }
                 }
-              } else if( plot.partial.CMAs.as.timeseries.interval.type == "rectangles" )
+              }
+
+              # The points and connecting lines:
+              if( !is.na(plot.partial.CMAs.as.timeseries.col.dot) )
               {
                 if( .do.R ) # Rplot:
                 {
-                  # As semi-transparent rectangles:
-                  rect(corrected.x.start, y.cur + 0.5, corrected.x.end, y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                       #col=scales::alpha(plot.partial.CMAs.as.timeseries.col.interval, alpha=plot.partial.CMAs.as.timeseries.alpha.interval),
-                       col=adjustcolor(plot.partial.CMAs.as.timeseries.col.interval, alpha.f=plot.partial.CMAs.as.timeseries.alpha.interval),
-                       border=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted");
-                  # Save the info:
-                  .last.cma.plot.info$baseR$partialCMAs <- rbind(.last.cma.plot.info$baseR$partialCMAs,
-                                                                 data.frame("pid"=cur_plot_id, "type"="timeseries",
-                                                                            "x.region.start"=corrected.x + x.start.min,
-                                                                            "y.region.start"=y.cur + 0.5,
-                                                                            "x.region.end"=corrected.x + x.end.max,
-                                                                            "y.region.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0,
-                                                                            "x.partial.start"=corrected.x.start[!is.na(ppts$y.norm)],
-                                                                            "y.partial.start"=y.cur + 0.5,
-                                                                            "x.partial.end"=corrected.x.end[!is.na(ppts$y.norm)],
-                                                                            "y.partial.end"=y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0));
+                  points(corrected.x.text, ppts$y.norm, col=plot.partial.CMAs.as.timeseries.col.dot, cex=CMA.cex, type="o", pch=19, lty="solid");
                 }
 
                 if( .do.SVG ) # SVG:
                 {
-                  for( j in 1:nrow(ppts) )
-                  {
-                    svg.str[[length(svg.str)+1]] <-
-                      # As semi-transparent rectangles:
-                      .SVG.rect(x=.scale.x.to.SVG.plot(corrected.x.start[j]),  y=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
-                                xend=.scale.x.to.SVG.plot(corrected.x.end[j]), yend=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                fill=plot.partial.CMAs.as.timeseries.col.interval, fill_opacity=plot.partial.CMAs.as.timeseries.alpha.interval,
-                                stroke=plot.partial.CMAs.as.timeseries.col.interval, lty="dotted",
-                                class="partial_cma_timeseries_rect");
-                  }
-                  # Save the info:
-                  .last.cma.plot.info$SVG$partialCMAs <- rbind(.last.cma.plot.info$SVG$partialCMAs,
-                                                               data.frame("pid"=cur_plot_id, "type"="timeseries",
-                                                                          "x.region.start"=.scale.x.to.SVG.plot(corrected.x + x.start.min),
-                                                                          "y.region.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                          "x.region.end"=.scale.x.to.SVG.plot(corrected.x + x.end.max),
-                                                                          "y.region.end"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0),
-                                                                          "x.partial.start"=.scale.x.to.SVG.plot(corrected.x.start[!is.na(ppts$y.norm)]),
-                                                                          "y.partial.start"=.scale.y.to.SVG.plot(y.cur + 0.5),
-                                                                          "x.partial.end"=.scale.x.to.SVG.plot(corrected.x.end[!is.na(ppts$y.norm)]),
-                                                                          "y.partial.end"=.scale.y.to.SVG.plot(y.cur + plot.partial.CMAs.as.timeseries.vspace - 1.0)));
+                  svg.str[[length(svg.str)+1]] <-
+                    # The connecting lines:
+                    .SVG.lines(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm),
+                               connected=TRUE,
+                               stroke=plot.partial.CMAs.as.timeseries.col.dot, lty="solid",
+                               class="partial_cma_timeseries_connecting_lines", suppress.warnings=(suppress.warnings || length(ppts$y.norm) == 1)); # avoid useless warning when only 1
+                  svg.str[[length(svg.str)+1]] <-
+                    # The points:
+                    .SVG.points(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm),
+                                col=plot.partial.CMAs.as.timeseries.col.dot, cex=CMA.cex, pch=19,
+                                class="partial_cma_timeseries_points", suppress.warnings=suppress.warnings);
                 }
               }
-            }
 
-            # The points and connecting lines:
-            if( !is.na(plot.partial.CMAs.as.timeseries.col.dot) )
-            {
+              # The actual values:
               if( .do.R ) # Rplot:
               {
-                points(corrected.x.text, ppts$y.norm, col=plot.partial.CMAs.as.timeseries.col.dot, cex=CMA.cex, type="o", pch=19, lty="solid");
+                if( print.CMA && (force.draw.text || char.height.CMA <= 0.80) && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
+                {
+                  text(corrected.x.text, ppts$y.norm, ppts$text, adj=c(0.5,-0.5), cex=CMA.cex, col=plot.partial.CMAs.as.timeseries.col.text);
+                }
               }
-
               if( .do.SVG ) # SVG:
               {
-                svg.str[[length(svg.str)+1]] <-
-                  # The connecting lines:
-                  .SVG.lines(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm),
-                             connected=TRUE,
-                             stroke=plot.partial.CMAs.as.timeseries.col.dot, lty="solid",
-                             class="partial_cma_timeseries_connecting_lines", suppress.warnings=suppress.warnings);
-                svg.str[[length(svg.str)+1]] <-
-                  # The points:
-                  .SVG.points(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm),
-                              col=plot.partial.CMAs.as.timeseries.col.dot, cex=CMA.cex, pch=19,
-                              class="partial_cma_timeseries_points", suppress.warnings=suppress.warnings);
+                if( print.CMA && (force.draw.text || dims.chr.cma <= dims.chr.event) && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
+                {
+                  svg.str[[length(svg.str)+1]] <-
+                    # The actual values:
+                    .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm) + dims.chr.cma, text=ppts$text,
+                              col=plot.partial.CMAs.as.timeseries.col.text, font_size=dims.chr.cma,
+                              h.align="center", v.align="center",
+                              class="partial_cma_timeseries_values", suppress.warnings=suppress.warnings);
+                }
               }
-            }
 
-            # The actual values:
-            if( .do.R ) # Rplot:
-            {
-              if( print.CMA && (force.draw.text || char.height.CMA <= 0.80) && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
-              {
-                text(corrected.x.text, ppts$y.norm, ppts$text, adj=c(0.5,-0.5), cex=CMA.cex, col=plot.partial.CMAs.as.timeseries.col.text);
-              }
+              # Advance to next patient:
+              y.cur <- y.cur + plot.partial.CMAs.as.timeseries.vspace;
             }
-            if( .do.SVG ) # SVG:
-            {
-              if( print.CMA && (force.draw.text || dims.chr.cma <= dims.chr.event) && !is.na(plot.partial.CMAs.as.timeseries.col.text) )
-              {
-                svg.str[[length(svg.str)+1]] <-
-                  # The actual values:
-                  .SVG.text(x=.scale.x.to.SVG.plot(corrected.x.text), y=.scale.y.to.SVG.plot(ppts$y.norm) + dims.chr.cma, text=ppts$text,
-                            col=plot.partial.CMAs.as.timeseries.col.text, font_size=dims.chr.cma,
-                            h.align="center", v.align="center",
-                            class="partial_cma_timeseries_values", suppress.warnings=suppress.warnings);
-              }
-            }
-
-            # Advance to next patient:
-            y.cur <- y.cur + plot.partial.CMAs.as.timeseries.vspace;
           }
         }
       }
     }
-  }
 
 
-  ##
-  ## Separator between CMA and event plotting areas ####
-  ##
-
-  # Mark the drawing area for the CMAs:
-  if( has.estimated.CMA && adh.plot.space[2] > 0 )
-  {
-    if( is.cma.TS.or.SW )
+    # Reset the clipping region to the whole plotting area...
+    if( .do.R ) # Rplot:
     {
-      if( .do.R ) # Rplot:
-      {
-        # Background:
-        rect(.rescale.xcoord.for.CMA.plot(0.0), par("usr")[3], .rescale.xcoord.for.CMA.plot(max(adh.max,1.0)), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
-        # Vertical guides:
-        abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.col, lty=c("solid","dotted"), lwd=1);
-      }
+      clip(.last.cma.plot.info$baseR$xlim[1], .last.cma.plot.info$baseR$xlim[2], .last.cma.plot.info$baseR$ylim[1], .last.cma.plot.info$baseR$ylim[2]);
+    }
 
-      if( .do.SVG ) # SVG:
+
+    ##
+    ## Separator between CMA and event plotting areas ####
+    ##
+
+    # Mark the drawing area for the CMAs:
+    if( has.estimated.CMA && adh.plot.space[2] > 0 )
+    {
+      if( is.cma.TS.or.SW )
       {
-        svg.str[[length(svg.str)+1]] <- list(
+        if( .do.R ) # Rplot:
+        {
           # Background:
-          .SVG.rect(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
-                    y=dims.plot.y + dims.adjust.for.tall.legend,
-                    width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)),
-                    height=dims.plot.height,
-                    stroke="none", fill=CMA.plot.bkg, fill_opacity=0.25,
-                    class="cma-drawing-area-bkg", tooltip="CMA estimate"),
-
+          rect(.rescale.xcoord.for.CMA.plot(0.0), par("usr")[3], .rescale.xcoord.for.CMA.plot(max(adh.max,1.0)), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
           # Vertical guides:
-          .SVG.comment("The vertical guides for the CMA drawing area"),
-          .SVG.lines(x=rep(c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0))), each=2),
-                     y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=2) + dims.adjust.for.tall.legend,
-                     connected=FALSE,
-                     stroke=CMA.plot.border, stroke_width=1, lty=c("solid", "dotted"),
-                     class="cma-drawing-area-guides-lines", suppress.warnings=suppress.warnings)
-        );
-      }
-    } else
-    {
-      if( .do.R ) # Rplot:
-      {
-        if( adh.max > 1.0 )
-        {
-          rect(.rescale.xcoord.for.CMA.plot(0.0), par("usr")[3], .rescale.xcoord.for.CMA.plot(adh.max), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
-          abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0), .rescale.xcoord.for.CMA.plot(adh.max)), col=CMA.plot.border, lty=c("solid","dotted","solid"), lwd=1);
-          mtext( c("0%",sprintf("%.1f%%",adh.max*100)), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(adh.max)), las=2, cex=cex.axis, col=CMA.plot.border );
-          if( (.rescale.xcoord.for.CMA.plot(adh.max) - .rescale.xcoord.for.CMA.plot(1.0)) > 1.5*strwidth("0", cex=cex.axis) ) # Don't overcrowd the 100% and maximum CMA by omitting 100%
-          {
-            mtext( c("100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col=CMA.plot.border );
-          }
-        } else
-        {
-          rect(.rescale.xcoord.for.CMA.plot(0.0), par("usr")[3], .rescale.xcoord.for.CMA.plot(1.0), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
-          abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.border, lty="solid", lwd=1);
-          mtext( c("0%","100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col=CMA.plot.border );
+          abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.col, lty=c("solid","dotted"), lwd=1);
         }
-      }
 
-      if( .do.SVG ) # SVG:
+        if( .do.SVG ) # SVG:
+        {
+          svg.str[[length(svg.str)+1]] <- list(
+            # Background:
+            .SVG.rect(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
+                      y=dims.plot.y + dims.adjust.for.tall.legend,
+                      width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)),
+                      height=dims.plot.height,
+                      stroke="none", fill=CMA.plot.bkg, fill_opacity=0.25,
+                      class="cma-drawing-area-bkg", tooltip="CMA estimate"),
+
+            # Vertical guides:
+            .SVG.comment("The vertical guides for the CMA drawing area"),
+            .SVG.lines(x=rep(c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0))), each=2),
+                       y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=2) + dims.adjust.for.tall.legend,
+                       connected=FALSE,
+                       stroke=CMA.plot.border, stroke_width=1, lty=c("solid", "dotted"),
+                       class="cma-drawing-area-guides-lines", suppress.warnings=suppress.warnings)
+          );
+        }
+      } else
       {
-        svg.str[[length(svg.str)+1]] <- list(
-          # Background:
-          .SVG.rect(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
-                    y=dims.plot.y + dims.adjust.for.tall.legend,
-                    width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)),
-                    height=dims.plot.height,
-                    stroke="none", fill=CMA.plot.bkg, fill_opacity=0.25,
-                    class="cma-drawing-area-bkg", tooltip="CMA estimate"),
-
-          # Vertical guides:
-          .SVG.lines(x=rep(c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
-                             .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)),
-                             if(adh.max > 1.0) .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max))),
-                           each=2),
-                     y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=ifelse(adh.max > 1.0, 3, 2)) + dims.adjust.for.tall.legend,
-                     connected=FALSE,
-                     stroke=CMA.plot.border, stroke_width=1, lty=if(adh.max > 1.0) c("solid", "dotted", "solid") else "solid",
-                     class="cma-drawing-area-guides-lines", suppress.warnings=suppress.warnings),
-
-          # Text guides:
-          .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
-                    text="0%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
-                    class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings),
-          if(adh.max > 1.0)
+        if( .do.R ) # Rplot:
+        {
+          if( adh.max > 1.0 )
           {
-            c(
-              .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
-                        text=sprintf("%.1f%%",adh.max*100), col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
-                        class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings),
-              if(dims.event.x*(.rescale.xcoord.for.CMA.plot(adh.max) - .rescale.xcoord.for.CMA.plot(1.0))/dims.day > 2.0*dims.chr.axis)
-              {
-                # Don't overcrowd the 100% and maximum CMA
-                .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
-                          text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
-                          class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings)
-              }
-            )
+            rect(.rescale.xcoord.for.CMA.plot(0.0), par("usr")[3], .rescale.xcoord.for.CMA.plot(adh.max), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
+            abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0), .rescale.xcoord.for.CMA.plot(adh.max)), col=CMA.plot.border, lty=c("solid","dotted","solid"), lwd=1);
+            mtext( c("0%",sprintf("%.1f%%",adh.max*100)), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(adh.max)), las=2, cex=cex.axis, col=CMA.plot.border );
+            if( (.rescale.xcoord.for.CMA.plot(adh.max) - .rescale.xcoord.for.CMA.plot(1.0)) > 1.5*strwidth("0", cex=cex.axis) ) # Don't overcrowd the 100% and maximum CMA by omitting 100%
+            {
+              mtext( c("100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col=CMA.plot.border );
+            }
           } else
           {
-            .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
-                      text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
-                      class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings)
+            rect(.rescale.xcoord.for.CMA.plot(0.0), par("usr")[3], .rescale.xcoord.for.CMA.plot(1.0), par("usr")[4], col=adjustcolor(CMA.plot.bkg,alpha.f=0.25), border=NA);
+            abline(v=c(.rescale.xcoord.for.CMA.plot(0.0), .rescale.xcoord.for.CMA.plot(1.0)), col=CMA.plot.border, lty="solid", lwd=1);
+            mtext( c("0%","100%"), 3, line=0.5, at=c(.rescale.xcoord.for.CMA.plot(0), .rescale.xcoord.for.CMA.plot(1.0)), las=2, cex=cex.axis, col=CMA.plot.border );
           }
-        );
+        }
+
+        if( .do.SVG ) # SVG:
+        {
+          svg.str[[length(svg.str)+1]] <- list(
+            # Background:
+            .SVG.rect(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
+                      y=dims.plot.y + dims.adjust.for.tall.legend,
+                      width=.scale.width.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)),
+                      height=dims.plot.height,
+                      stroke="none", fill=CMA.plot.bkg, fill_opacity=0.25,
+                      class="cma-drawing-area-bkg", tooltip="CMA estimate"),
+
+            # Vertical guides:
+            .SVG.lines(x=rep(c(.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)),
+                               .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)),
+                               if(adh.max > 1.0) .scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max))),
+                             each=2),
+                       y=rep(c(dims.plot.y, dims.plot.y + dims.plot.height), times=ifelse(adh.max > 1.0, 3, 2)) + dims.adjust.for.tall.legend,
+                       connected=FALSE,
+                       stroke=CMA.plot.border, stroke_width=1, lty=if(adh.max > 1.0) c("solid", "dotted", "solid") else "solid",
+                       class="cma-drawing-area-guides-lines", suppress.warnings=suppress.warnings),
+
+            # Text guides:
+            .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(0.0)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
+                      text="0%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
+                      class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings),
+            if(adh.max > 1.0)
+            {
+              c(
+                .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(adh.max)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
+                          text=sprintf("%.1f%%",adh.max*100), col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-30,
+                          class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings),
+                if(dims.event.x*(.rescale.xcoord.for.CMA.plot(adh.max) - .rescale.xcoord.for.CMA.plot(1.0))/dims.day > 2.0*dims.chr.axis)
+                {
+                  # Don't overcrowd the 100% and maximum CMA
+                  .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
+                            text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
+                            class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings)
+                }
+              )
+            } else
+            {
+              .SVG.text(x=.scale.x.to.SVG.plot(.rescale.xcoord.for.CMA.plot(1.0)), y=(dims.plot.y + dims.adjust.for.tall.legend - dims.chr.axis/2),
+                        text="100%", col="black", font="Arial", font_size=dims.chr.axis, h.align="left", v.align="center", rotate=-(90+rotate.text),
+                        class="cma-drawing-area-guides-text", suppress.warnings=suppress.warnings)
+            }
+          );
+        }
       }
     }
-  }
 
 
-  ##
-  ## Title, box and axes ####
-  ##
+    ##
+    ## Title, box and axes ####
+    ##
 
-  title.string <- paste0(ifelse(is.null(title),"", # the plot title
-                                ifelse(length(title)==1,
-                                       title,
-                                       ifelse(align.all.patients,
-                                              title["aligned"],
-                                              title["notaligned"]))),
-                         ifelse(!is.null(title) && show.cma,
-                                paste0(" ",
-                                       switch(class(cma)[1],
-                                              "CMA_sliding_window"=paste0("sliding window (",cma$computed.CMA,")"),
-                                              "CMA_per_episode"=   paste0("per episode (",cma$computed.CMA,")"),
-                                              class(cma)[1])
-                                ),
-                                ""));
-
-  if( .do.R ) # Rplot:
-  {
-    box(); # bounding box
-    xlab.string <- ifelse(is.null(xlab), # x axis label
-                      "",
-                      ifelse(length(xlab)==1,
-                             xlab,
-                             xlab[show.period]));
-    title(main=title.string, # title
-          xlab=xlab.string, cex.lab=cex.lab);
-    mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3); # y-axis label
-
-    # Save the info:
-    .last.cma.plot.info$baseR$title   <- data.frame("string"=title.string,   "x"=NA, "y"=NA, "cex"=NA);
-    .last.cma.plot.info$baseR$x.label <- data.frame("string"=xlab.string,    "x"=NA, "y"=NA, "cex"=cex.lab);
-    .last.cma.plot.info$baseR$y.label <- data.frame("string"=y.label$string, "x"=par("mar")[2]-1, "y"=(par("usr")[4] + par("usr")[3])/2, "cex"=cex.lab);
-  }
-
-  if( .do.SVG ) # SVG:
-  {
-    svg.str[[length(svg.str)+1]] <- list(
-      # The bounding box:
-      .SVG.rect(x=dims.plot.x,
-                y=dims.plot.y,
-                width=dims.plot.width,
-                height=dims.plot.height + dims.adjust.for.tall.legend,
-                stroke="black", stroke_width=1, fill="none",
-                class="bounding-box", comment="The bounding box"),
-
-      # The title:
-      .SVG.text(x=(dims.plot.x + dims.total.width)/2, y=dims.chr.title,
-                text=title.string, col="black", font="Arial", font_size=dims.chr.title, h.align="center", v.align="center",
-                class="main-title", comment="The main title", suppress.warnings=suppress.warnings),
-
-      # The y axis label:
-      .SVG.text(x=dims.chr.axis, y=dims.total.height/2,
-                text=as.character(y.label$string), col="black", font="Arial", font_size=dims.chr.lab, h.align="center", v.align="center", rotate=-90,
-                class="axis-name-y", comment="The y-axis label", tooltip="Y axis: patients, events and (possibly) CMA estimates", suppress.warnings=suppress.warnings),
-
-      # The x axis label:
-      .SVG.text(x=(dims.plot.x + dims.total.width)/2, y=(dims.total.height - dims.chr.axis),
-                text=as.character(x.label), col="black", font="Arial", font_size=dims.chr.lab, h.align="center", v.align="center",
-                class="axis-name-x", comment="The x-axis label", tooltip="X axis: the events ordered in time (from left to right)", suppress.warnings=suppress.warnings)
-    );
-
-    # Save the info:
-    .last.cma.plot.info$SVG$title   <- data.frame("string"=title.string, "x"=(dims.plot.x + dims.total.width)/2, "y"=dims.chr.title, "font.size"=dims.chr.title);
-    .last.cma.plot.info$SVG$x.label <- data.frame("string"=as.character(x.label), "x"=(dims.plot.x + dims.total.width)/2, "y"=(dims.total.height - dims.chr.axis), "font.size"=dims.chr.lab);
-    .last.cma.plot.info$SVG$y.label <- data.frame("string"=as.character(y.label$string), "x"=dims.chr.axis, "y"=dims.total.height/2, "font.size"=dims.chr.lab);
-  }
-
-  # The x-axis and vertical guides:
-  if( period.in.days > 0 )
-  {
-    if( show.period=="dates" )
-    {
-      xpos <- seq(0, as.numeric(endperiod), by=period.in.days); # where to put lables and guidelines
-      axis.labels <- as.character(earliest.date + round(xpos, 1), format=cma$date.format);
-    } else
-    {
-        if( align.first.event.at.zero )
-        {
-          # Correctly deal with events starting before the FUW (i.e., correct.earliest.followup.window < 0):
-          xpos <- c(correct.earliest.followup.window - seq(0, correct.earliest.followup.window, by=period.in.days * sign(correct.earliest.followup.window)),
-                    seq(0, as.numeric(endperiod), by=period.in.days) + correct.earliest.followup.window);
-          xpos <- xpos[ xpos >= 0 & xpos <= endperiod ];
-          axis.labels <- as.character(round(xpos - correct.earliest.followup.window, 1));
-        } else
-        {
-          xpos <- seq(0, as.numeric(endperiod), by=period.in.days);
-          axis.labels <- as.character(round(xpos, 1));
-        }
-    }
+    title.string <- paste0(ifelse(is.null(title),"", # the plot title
+                                  ifelse(length(title)==1,
+                                         title,
+                                         ifelse(align.all.patients,
+                                                title["aligned"],
+                                                title["notaligned"]))),
+                           ifelse(!is.null(title) && show.cma,
+                                  paste0(" ",
+                                         switch(class(cma)[1],
+                                                "CMA_sliding_window"=paste0("sliding window (",cma$computed.CMA, title.inner.event.info,")"),
+                                                "CMA_per_episode"=   paste0("per episode (",cma$computed.CMA, title.inner.event.info,")"),
+                                                class(cma)[1])
+                                  ),
+                                  ""));
 
     if( .do.R ) # Rplot:
     {
-      axis( 1, at=adh.plot.space[2] + xpos, labels=FALSE);
-      text(adh.plot.space[2] + xpos, par("usr")[3], labels=axis.labels, cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
-      abline( v=adh.plot.space[2] + xpos,       lty="dotted", col=gray(0.5) );
-      abline( v=adh.plot.space[2] + endperiod,  lty="solid",  col=gray(0.5) );
+      box(); # bounding box
+      xlab.string <- ifelse(is.null(xlab), # x axis label
+                            "",
+                            ifelse(length(xlab)==1,
+                                   xlab,
+                                   xlab[show.period]));
+      title(main=title.string, cex.main=cex.title, # title
+            xlab=xlab.string, cex.lab=cex.lab); # x-axis label
+      mtext(y.label$string, side=2, line=par("mar")[2]-1, at=(par("usr")[4] + par("usr")[3])/2, cex=cex.lab, las=3); # y-axis label
 
       # Save the info:
-      .last.cma.plot.info$baseR$x.labels <- data.frame("string"=axis.labels, "x"=adh.plot.space[2] + xpos, "y"=par("usr")[3], "cex"=cex.axis);
+      .last.cma.plot.info$baseR$title   <- data.frame("string"=title.string,   "x"=NA, "y"=NA, "cex"=NA);
+      .last.cma.plot.info$baseR$x.label <- data.frame("string"=xlab.string,    "x"=NA, "y"=NA, "cex"=cex.lab);
+      .last.cma.plot.info$baseR$y.label <- data.frame("string"=y.label$string, "x"=par("mar")[2]-1, "y"=(par("usr")[4] + par("usr")[3])/2, "cex"=cex.lab);
     }
-  }
 
-  if( .do.SVG ) # SVG:
-  {
-    if( !is.null(date.labels) )
+    if( .do.SVG ) # SVG:
     {
-      xs <- (dims.plot.x + dims.event.x * date.labels$position/dims.day);
-      ys <- (dims.plot.y + dims.plot.height + dims.chr.axis + dims.adjust.for.tall.legend);
       svg.str[[length(svg.str)+1]] <- list(
-        # Axis labels:
-        .SVG.text(x=xs, y=rep(ys, length(xs)),
-                  text=as.character(date.labels$string), col="black", font="Arial", font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
-                  class="axis-labels-x", suppress.warnings=suppress.warnings),
+        # The bounding box:
+        .SVG.rect(x=dims.plot.x,
+                  y=dims.plot.y,
+                  width=dims.plot.width,
+                  height=dims.plot.height + dims.adjust.for.tall.legend,
+                  stroke="black", stroke_width=1, fill="none",
+                  class="bounding-box", comment="The bounding box"),
 
-        # Axis ticks:
-        .SVG.lines(x=rep(xs,each=2),
-                   y=dims.plot.y + dims.plot.height + dims.adjust.for.tall.legend + rep(c(0, dims.chr.axis/2), times=length(xs)),
-                   connected=FALSE,
-                   stroke="black", stroke_width=1,
-                   class="axis-ticks-x", suppress.warnings=suppress.warnings),
+        # The title:
+        .SVG.text(x=(dims.plot.x + dims.total.width)/2, y=dims.chr.title,
+                  text=title.string, col="black", font="Arial", font_size=dims.chr.title, h.align="center", v.align="center",
+                  class="main-title", comment="The main title", suppress.warnings=suppress.warnings),
 
-        # Vertical dotted lines:
-        .SVG.lines(x=rep(xs,each=2),
-                   y=dims.plot.y + rep(c(dims.plot.height + dims.adjust.for.tall.legend, 0), times=length(xs)),
-                   connected=FALSE,
-                   stroke="gray50", stroke_width=1, lty="dotted",
-                   class="vertical-date-lines", suppress.warnings=suppress.warnings)
+        # The y axis label:
+        .SVG.text(x=dims.chr.axis, y=dims.total.height/2,
+                  text=as.character(y.label$string), col="black", font="Arial", font_size=dims.chr.lab, h.align="center", v.align="center", rotate=-90,
+                  class="axis-name-y", comment="The y-axis label", tooltip="Y axis: patients, events and (possibly) CMA estimates", suppress.warnings=suppress.warnings),
+
+        # The x axis label:
+        .SVG.text(x=(dims.plot.x + dims.total.width)/2, y=(dims.total.height - dims.chr.axis),
+                  text=as.character(x.label), col="black", font="Arial", font_size=dims.chr.lab, h.align="center", v.align="center",
+                  class="axis-name-x", comment="The x-axis label", tooltip="X axis: the events ordered in time (from left to right)", suppress.warnings=suppress.warnings)
       );
 
       # Save the info:
-      .last.cma.plot.info$SVG$x.labels <- data.frame("string"=as.character(date.labels$string), "x"=xs, "y"=rep(ys, length(xs)), "font.size"=dims.chr.axis);
+      .last.cma.plot.info$SVG$title   <- data.frame("string"=title.string, "x"=(dims.plot.x + dims.total.width)/2, "y"=dims.chr.title, "font.size"=dims.chr.title);
+      .last.cma.plot.info$SVG$x.label <- data.frame("string"=as.character(x.label), "x"=(dims.plot.x + dims.total.width)/2, "y"=(dims.total.height - dims.chr.axis), "font.size"=dims.chr.lab);
+      .last.cma.plot.info$SVG$y.label <- data.frame("string"=as.character(y.label$string), "x"=dims.chr.axis, "y"=dims.total.height/2, "font.size"=dims.chr.lab);
+    }
+
+    # The x-axis and vertical guides:
+    if( period.in.days > 0 )
+    {
+      #xpos <- seq(0, as.numeric(endperiod), by=period.in.days); # where to put lables and guidelines
+      #if( show.period=="dates" )
+      #{
+      #  axis.labels <- as.character(earliest.date + round(xpos, 1), format=cma$date.format);
+      #} else
+      #{
+      #  axis.labels <- as.character(round(xpos - ifelse(align.first.event.at.zero, correct.earliest.followup.window, 0), 1));
+      #}
+
+      if( .do.R ) # Rplot:
+      {
+        axis( 1, at=adh.plot.space[2] + xpos, labels=FALSE);
+        text(adh.plot.space[2] + xpos, par("usr")[3], labels=axis.labels, cex=cex.axis, srt=30, adj=c(1,3), xpd=TRUE);
+        abline( v=adh.plot.space[2] + xpos,       lty="dotted", col=gray(0.5) );
+        abline( v=adh.plot.space[2] + endperiod,  lty="solid",  col=gray(0.5) );
+
+        # Save the info:
+        .last.cma.plot.info$baseR$x.labels <- data.frame("string"=axis.labels, "x"=adh.plot.space[2] + xpos, "y"=par("usr")[3], "cex"=cex.axis);
+      }
+    }
+
+    if( .do.SVG ) # SVG:
+    {
+      if( !is.null(date.labels) )
+      {
+        xs <- (dims.plot.x + dims.event.x * date.labels$position/dims.day);
+        ys <- (dims.plot.y + dims.plot.height + dims.chr.axis + dims.adjust.for.tall.legend);
+        svg.str[[length(svg.str)+1]] <- list(
+          # Axis labels:
+          .SVG.text(x=xs, y=rep(ys, length(xs)),
+                    text=as.character(date.labels$string), col="black", font="Arial", font_size=dims.chr.axis, h.align="right", v.align="center", rotate=-(90+rotate.text),
+                    class="axis-labels-x", suppress.warnings=suppress.warnings),
+
+          # Axis ticks:
+          .SVG.lines(x=rep(xs,each=2),
+                     y=dims.plot.y + dims.plot.height + dims.adjust.for.tall.legend + rep(c(0, dims.chr.axis/2), times=length(xs)),
+                     connected=FALSE,
+                     stroke="black", stroke_width=1,
+                     class="axis-ticks-x", suppress.warnings=suppress.warnings),
+
+          # Vertical dotted lines:
+          .SVG.lines(x=rep(xs,each=2),
+                     y=dims.plot.y + rep(c(dims.plot.height + dims.adjust.for.tall.legend, 0), times=length(xs)),
+                     connected=FALSE,
+                     stroke="gray50", stroke_width=1, lty="dotted",
+                     class="vertical-date-lines", suppress.warnings=suppress.warnings)
+        );
+
+        # Save the info:
+        .last.cma.plot.info$SVG$x.labels <- data.frame("string"=as.character(date.labels$string), "x"=xs, "y"=rep(ys, length(xs)), "font.size"=dims.chr.axis);
+      }
     }
   }
 
@@ -4897,6 +5083,12 @@ get.plotted.partial.cmas <- function(plot.type=c("baseR", "SVG")[1], suppress.wa
 
   if( show.legend )
   {
+    if( do.not.draw.plot )
+    {
+      # Just draw the legend by itself: do it in (0,0):
+      legend.x <- legend.y <- 0;
+    }
+
     if( .do.R ) # Rplot:
     {
       # Character size for the legend:

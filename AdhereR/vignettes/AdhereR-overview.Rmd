@@ -29,7 +29,7 @@ Many methodological studies show that the same data can generate different preva
 These parametrisation choices are usually not transparently reported in published empirical studies, and adherence algorithms are either developed ad-hoc or for proprietary software. 
 This lack of transparency and standardization has been one of the main methodological barriers against the development of a solid evidence base on adherence from EHD, and may lead to misinformed clinical decisions.
 
-Here we describe `AdhereR` (version 0.1.0), an R package that aims to facilitate the computing of adherence from EHD, as well as the transparent reporting of the chosen calculations. 
+Here we describe `AdhereR`, an R package that aims to facilitate the computing of adherence from EHD, as well as the transparent reporting of the chosen calculations. 
 It contains a set of `R` `S3` *classes* and *functions* that *compute*, *summarize* and *plot* various estimates of adherence. 
 A hypothetical dataset of medication events is included for demonstration and testing purposes. 
 In this vignette, we start by defining the terms used in `AdhereR`. 
@@ -649,6 +649,33 @@ plot(cmaW1, patients.to.plot=c("76"), show.legend=FALSE);
 ```
 
 
+#### Mapping events to episodes and sliding windows
+
+The functions `compute.treatment.episodes`, `CMA_per_episode` and `CMA_sliding_window` can return the mapping between events and episodes or sliding windows, respectively, in the sense that they can specify, for each episode or sliding which, which events participate in it.
+For the latter two, this correspondence can also be shown visually in plots (see [Figure 14](#Figure-14)).
+Please note that, as the details of which events belong to which episode may depend on the particular simple CMA used, it is recommended to take the mapping produced by `compute.treatment.episodes` as orientative, and use instead the mapping produced by `CMA_per_episode` for a particular simple CMA.
+
+```{r, echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** Per episodes with CMA 1, showing which events belong to which episode: for events, the number(s) between '[]' represent the event they belong to, while for an event, the number between '[]' is what the events use as its identifier. (e.g., the 3rd even from the left for patient 1 has a '[2]', meaning that it belongs to event '2', which is identified as such with a '[2]' immediately after is estimated CMA of '136%'). Please note that the same plot for CMA9 would be quite different, as the rules for which events are considered differ (e.g., the last events of the episodes would be included).", fig.height=7, fig.width=7, out.width="100%"}
+cmaE <- CMA_per_episode(CMA="CMA1",
+                        data=med.events[med.events$PATIENT_ID %in% 1:2,],
+                        ID.colname="PATIENT_ID",
+                        event.date.colname="DATE",
+                        event.duration.colname="DURATION",
+                        event.daily.dose.colname="PERDAY",
+                        medication.class.colname="CATEGORY",
+                        followup.window.start=-90,
+                        observation.window.start=0,
+                        observation.window.duration=365,
+                        maximum.permissible.gap=10,
+                        return.mapping.events.episodes=TRUE, # ask for the mapping
+                        medication.change.means.new.treatment.episode=TRUE,
+                        date.format="%m/%d/%Y");
+getEventsToEpisodesMapping(cmaE); # get the mapping (here, print it)
+plot(cmaE, align.all.patients=TRUE, print.dose.centered=TRUE, 
+     print.episode.or.sliding.window=TRUE); # show the mapping visually
+```
+
+
 ## Interactive plotting
 <a name="Section-interactive-plotting"></a>
 
@@ -843,7 +870,7 @@ Please note that, by default, all medication groups belonging to one patient sha
 
 The medication groups also affect the plotting:
 
-```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** CMA 1 with medication groups.", fig.height=9, fig.width=9, out.width="100%"}
+```{r echo=TRUE, message=FALSE, warning=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-15\"></a>**Figure 15.** CMA 1 with medication groups.", fig.height=9, fig.width=9, out.width="100%"}
 plot(cma1_mg,
      #medication.groups.to.plot=c("VitaResp", "VitaShort", "VitaComb"),
      patients.to.plot=1:3,
@@ -902,6 +929,98 @@ All these are detailed in a dedicated vignette *"Using `AdhereR` with various da
 
 `AdhereR` can be transparently used from other programming languages than `R` (such as `Python`) or platforms (such as `Stata`) by implementing a startdized interface defined for these purposes.
 A working implementation for `Python 3` is included in the package (and inteded also as a hands-on guide to further implementations) and is described in detailed in a dedicated vignette *"Calling AdhereR from Python3"*.
+
+
+## AdhereR is pipe (`%>%` or `|>`)-friendly
+<a name="pipe-friendly"></a>
+
+The [pipe operator (`%>%`)](https://r4ds.had.co.nz/pipes.html) has been originally introduced in `R` by the [`magrittr` package](https://cran.r-project.org/package=magrittr/vignettes/magrittr.html) and is a central feature of the [Tidyverse](https://www.tidyverse.org/), and is since `R` 4.1 also available natively as `|>` [(but there are some subtle differences from `%>%`)](https://www.infoworld.com/article/3621369/use-the-new-r-pipe-built-into-r-41.html).
+`AdhereR` is compatible with pipe (because for all functions the first parameter encapsulates the "important" data, with the others providing various "tweaks"), so, code such as the following is fully functional:
+
+```{r eval=FALSE}
+library(dplyr);
+
+# Compute, then get the CMA, change it and print it:
+x <- med.events %>%                      # use med.events
+  filter(PATIENT_ID %in% c(1,2,3)) %>%   # first 3 patients
+  CMA9(ID.colname="PATIENT_ID",          # compute CMA9
+       event.date.colname="DATE",
+       event.duration.colname="DURATION",
+       event.daily.dose.colname="PERDAY",
+       medication.class.colname="CATEGORY",
+       followup.window.start=230,
+       followup.window.duration=705,
+       observation.window.start=41,
+       observation.window.duration=100,
+       date.format="%m/%d/%Y") %>%
+  getCMA() %>% # get the CMA estimates
+  mutate(CMA=sprintf("%.1f%%",100*CMA)); # make them percents
+print(x); # print it
+
+# Plot some CMAs:
+med.events %>% # use med.events
+  filter(PATIENT_ID %in% c(1,2,3)) %>%             # first 3 patients
+  CMA_sliding_window(CMA.to.apply="CMA7",          # sliding windows CMA7
+                     ID.colname="PATIENT_ID",
+                     event.date.colname="DATE",
+                     event.duration.colname="DURATION",
+                     event.daily.dose.colname="PERDAY",
+                     medication.class.colname="CATEGORY",
+                     followup.window.start=230,
+                     followup.window.duration=705,
+                     observation.window.start=41,
+                     observation.window.duration=100,
+                     date.format="%m/%d/%Y") %>%
+  plot(align.all.patients=TRUE, show.legend=TRUE); # plot it
+```
+
+
+## Modifying `AdhereR` plots *a posteriori*
+<a name="modify-plots"></a>
+
+
+```{r echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-16\"></a>**Figure 16.** Modifying an `AdhereR` plot is easy using the `get.plotted.events()` function.", fig.height=8, fig.width=8, out.width="100%"}
+# Plot CMA7 for patients 5 and 8:
+cma7 <- CMA7(data=med.events,
+             ID.colname="PATIENT_ID",
+             event.date.colname="DATE",
+             event.duration.colname="DURATION",
+             event.daily.dose.colname="PERDAY",
+             medication.class.colname="CATEGORY",
+             followup.window.start=30,
+             observation.window.start=30,
+             observation.window.duration=365,
+             date.format="%m/%d/%Y"
+);
+plot(cma7, patients.to.plot=c(5,8), show.legend=TRUE); # good plot after an error plot
+
+# Access the plotting info:
+pevs <- get.plotted.events(); # get the plotted events with their plotting info
+
+# Let's add a vertical line for patient 8 between the medication change:
+# Find the event where the medication changes:
+i <- which(pevs$PATIENT_ID == "8" & 
+             pevs$CATEGORY != c(pevs$CATEGORY[-1], pevs$CATEGORY[nrow(pevs)]));
+# Half-way between the events where medication changes:
+x <- (pevs$.X.END[i] + pevs$.X.START[i+1])/2;
+# Draw the line:
+segments(x, pevs$.Y.OW.START[i], x, pevs$.Y.OW.END[i],
+         col="blue", lty="solid", lwd=3);
+
+# Put a star * next to the 4th event of patient 5:
+# Find the event:
+i <- which(pevs$PATIENT_ID == "5")[4];
+# Plot the star:
+text(pevs$.X.START[i]-strwidth("*   "), pevs$.Y.START[i],
+     "*", cex=3.0, col="darkgreen");
+
+# Add some random text over the figure:
+text((pevs$.X.FUW.START[1] + pevs$.X.FUW.END[1])/2, # X center of patient 5's FUW
+     (pevs$.Y.FUW.START[nrow(pevs)] + pevs$.Y.FUW.END[nrow(pevs)])/2, # Y center of 8's FUW
+     "Change with care!!!", srt=45, cex=1.5, col="darkred")
+```
+
+
 
 
 ## Technical details
@@ -1025,11 +1144,11 @@ We have also aimed to facilitate replicability. Thus, summaries of functions inc
 
 ## References
 
-<a name="Ref-Arnet2016"></a>Arnet I., Kooij M.J., Messerli M., Hersberger K.E., Heerdink E.R., Bouvy M. (2016) [Proposal of Standardization to Assess Adherence With Medication Records Methodology Matters](https://pubmed.ncbi.nlm.nih.gov/26917817/). *The Annals of Pharmacotherapy* **50**(5):360–8. [doi:10.1177/1060028016634106](http://dx.doi.org/10.1177/1060028016634106).
+<a name="Ref-Arnet2016"></a>Arnet I., Kooij M.J., Messerli M., Hersberger K.E., Heerdink E.R., Bouvy M. (2016) [Proposal of Standardization to Assess Adherence With Medication Records Methodology Matters](https://pubmed.ncbi.nlm.nih.gov/26917817/). *The Annals of Pharmacotherapy* **50**(5):360–8. [doi:10.1177/1060028016634106](https://pubmed.ncbi.nlm.nih.gov/26917817/).
 
 <a name="Ref-Gardarsdottir2010"></a>Gardarsdottir H., Souverein P.C., Egberts T.C.G., Heerdink E.R. (2010) [Construction of drug treatment episodes from drug-dispensing histories is influenced by the gap length](https://pubmed.ncbi.nlm.nih.gov/19880282/). *J Clin Epidemiol.* **63**(4):422–7. [doi:10.1016/j.jclinepi.2009.07.001](http://dx.doi.org/10.1016/j.jclinepi.2009.07.001).
 
-<a name="Ref-Greevy2011"></a>Greevy R.A., Huizinga M.M., Roumie C.L., Grijalva C.G., Murff H., Liu X., Griffin, M.R. (2011). [Comparisons of Persistence and Durability Among Three Oral Antidiabetic Therapies Using Electronic Prescription-Fill Data: The Impact of Adherence Requirements and Stockpiling](https://pubmed.ncbi.nlm.nih.gov/22048232/). *Clinical Pharmacology & Therapeutics* **90**(6):813–819. [doi:10.1038/clpt.2011.228](http://dx.doi.org/10.1038/clpt.2011.228).
+<a name="Ref-Greevy2011"></a>Greevy R.A., Huizinga M.M., Roumie C.L., Grijalva C.G., Murff H., Liu X., Griffin, M.R. (2011). [Comparisons of Persistence and Durability Among Three Oral Antidiabetic Therapies Using Electronic Prescription-Fill Data: The Impact of Adherence Requirements and Stockpiling](https://pubmed.ncbi.nlm.nih.gov/22048232/). *Clinical Pharmacology & Therapeutics* **90**(6):813–819. [10.1038/clpt.2011.228](https://pubmed.ncbi.nlm.nih.gov/22048232/).
 
 <a name="Ref-Peterson2007"></a>Peterson A.M., Nau D.P., Cramer J.A., Benner J., Gwadry-Sridhar F., Nichol M. (2007) [A checklist for medication compliance and persistence studies using retrospective databases](https://pubmed.ncbi.nlm.nih.gov/17261111/). *Value in Health: Journal of the International Society for Pharmacoeconomics and Outcomes Research* **10**(1):3–12. [doi:10.1111/j.1524-4733.2006.00139.x](http://dx.doi.org/10.1111/j.1524-4733.2006.00139.x).
 
@@ -1037,7 +1156,7 @@ We have also aimed to facilitate replicability. Thus, summaries of functions inc
 
 <a name="Ref-Vollmer2012"></a>Vollmer W.M., Xu M., Feldstein A., Smith D., Waterbury A., Rand C. (2012) [Comparison of pharmacy-based measures of medication adherence](https://pubmed.ncbi.nlm.nih.gov/22691240/). *BMC Health Services Research* **12**(1):155. [doi:10.1186/1472-6963-12-155](http://dx.doi.org/10.1186/1472-6963-12-155).
 
-<a name="Ref-Vrijens2012"></a>Vrijens B., De Geest S., Hughes D.A., Przemyslaw K., Demonceau J., Ruppar T., Dobbels F., Fargher E., Morrison V., Lewek P., Matyjaszczyk M., Mshelia C., Clyne W., Aronson J.K., Urquhart J.; ABC Project Team (2012) [A new taxonomy for describing and defining adherence to medications](https://pubmed.ncbi.nlm.nih.gov/22486599/). *British Journal of Clinical Pharmacology* **73**(5):691–705. [doi:10.1111/j.1365-2125.2012.04167.x](http://dx.doi.org/10.1111/j.1365-2125.2012.04167.x).
+<a name="Ref-Vrijens2012"></a>Vrijens B., De Geest S., Hughes D.A., Przemyslaw K., Demonceau J., Ruppar T., Dobbels F., Fargher E., Morrison V., Lewek P., Matyjaszczyk M., Mshelia C., Clyne W., Aronson J.K., Urquhart J.; ABC Project Team (2012) [A new taxonomy for describing and defining adherence to medications](https://pubmed.ncbi.nlm.nih.gov/22486599/). *British Journal of Clinical Pharmacology* **73**(5):691–705. [doi:10.1111/j.1365-2125.2012.04167.x](https://pubmed.ncbi.nlm.nih.gov/22486599/).
 
 <a name="Ref-VanWijk2006"></a>Van Wijk B.L.G., Klungel O.H., Heerdink E.R., de Boer A. (2006). [Refill persistence with chronic medication assessed from a pharmacy database was influenced by method of calculation](https://pubmed.ncbi.nlm.nih.gov/16360556/). *Journal of Clinical Epidemiology* **59**(1), 11–17. [doi:10.1016/j.jclinepi.2005.05.005](http://dx.doi.org/10.1016/j.jclinepi.2005.05.005).
 
