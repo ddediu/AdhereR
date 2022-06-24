@@ -1,7 +1,7 @@
 Package: AdhereR
 Type: Package
 Title: Adherence to Medications
-Version: 0.8.0
+Version: 0.8.1
 Authors@R: c(person("Dan", "Dediu", role = c("aut", "cre"),
                      email = "ddediu@gmail.com"),
              person("Alexandra", "Dima", role = "aut",

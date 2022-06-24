@@ -1,4 +1,10 @@
-# AdhereR 0.7.1
+# AdhereR 0.8.1
+  
+## New features
+
+  - now `AdhereR` can also be used from Julia.
+  
+# AdhereR 0.8.0
   
 ## New features
 
