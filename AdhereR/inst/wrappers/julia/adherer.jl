@@ -25,15 +25,36 @@ Internally, it uses `RCall` (https://juliainterop.github.io/RCall.jl/stable/) to
 """ 
 module AdhereR
 
-errormsgrcall = "The RCall package is required: please make sure RCall and R are correctly installed, and that RCall can 'see' R "*
-                "(if there are multiple versions of R, please make sure RCall 'sees' the correct one). "*
-                "In particular, make sure that on Apple Sillicon machines Julia and R are compiled for the same architecture. "*
-                "Please see the manual for more info."
+# The AdhereR R package minimum required versions:
+rpkgnameminver = Dict("AdhereR"=>"0.8.1", "AdhereRViz"=>"0.2.1") # minimum required versions
 
+# Error messages:
+errmsgs = Dict("UnknownError"=>"Error using RCall to talk to R or AdhereR: please check the details below.",
+               "AllGood"=>"AdhereR: all seems good to go!",
+               "RError"=>"The RCall package is required: please make sure RCall and R are correctly installed, and that RCall can 'see' R "*
+                            "(if there are multiple versions of R, please make sure RCall 'sees' the correct one). "*
+                            "In particular, make sure that on Apple Sillicon machines Julia and R are compiled for the same architecture. "*
+                            "Please see the manual for more info.",
+               "AdhereRNotInstalled"=>"The AdhereR package seems to not be installed in R: "*
+                            "please make sure it is corretly installed in the R version that RCall uses. "*
+                            "Please see the manual for more info.",
+               "AdhereRVersion"=>"The AdhereR package seems to be installed in R, "*
+                                 "but it needs to be at least version '"*rpkgnameminver["AdhereR"]*"'.",
+               "AdhereRVizNotInstalled"=>"The AdhereRViz package seems to not be installed in R: "*
+                                 "while not a show stopper, it means that you cannot do interactive (Shiny) plots. "*
+                                 "If do want to do so, please make sure it is corretly installed in the R version that RCall uses. "*
+                                 "Please see the manual for more info.",
+               "AdhereRVizVersion"=>"The AdhereRViz package seems to be installed in R, "*
+                                      "but it needs to be at least version '"*rpkgnameminver["AdhereRViz"]*"'."*
+                                      "While not a show stopper, it means that you cannot do interactive (Shiny) plots. "*
+                                      "If do want to do so, please make sure it is corretly installed in the R version that RCall uses. ")
+
+
+# Try to load RCall:
 try
     using RCall
 catch
-    error(errormsgrcall)
+    error(errmsgs["RError"])
 end
 
 """
@@ -49,10 +70,10 @@ function __init__()
     try
         x = reval("1.0")
         if rcopy(x) != 1
-            error(errormsgrcall)
+            error(errmsgs["RError"])
         end
     catch
-        error(errormsgrcall)
+        error(errmsgs["RError"])
     end
 
     # 2. Try to load a base library and do some fancier stuff:
@@ -63,23 +84,55 @@ function __init__()
         xa = rcopy(R"$x$coefficients['(Intercept)']")
         xb = rcopy(R"$x$coefficients['Petal.Length']")
         if round(xa,digits=2) != 4.31 || round(xb,digits=2) != 0.41
-            error(errormsgrcall)
+            error(errmsgs["RError"])
         end
     catch
-        error(errormsgrcall)
+        error(errmsgs["RError"])
     end
 
     # 3. Check AdhereR:
     try
-        
+        R"library(AdhereR)"
+    catch
+        error(errmsgs["AdhereRNotInstalled"])
+    end
+    try
+        rscript = "if(!require(AdhereR)) {return(-1)} else {if( compareVersion('" * rpkgnameminver["AdhereR"] * "', as.character(packageVersion('AdhereR'))) > 0 ) {return (-2)} else {return (0)}}"
+        x = rcopy(reval(rscript))
+        if x == (-1)
+            error(errmsgs["AdhereRNotInstalled"])
+        elseif x == (-2)
+            error(errmsgs["AdhereRVersion"])
+        elseif x != 0
+            error(errmsgs["UnknownError"])
+        end
+    catch
+    end
+
+    # 3. Check AdhereRViz:
+    try
+        R"library(AdhereRViz)"
+    catch
+        warn(errmsgs["AdhereVizRNotInstalled"])
+    end
+    try
+        rscript = "if(!require(AdhereRViz)) {return(-1)} else {if( compareVersion('" * rpkgnameminver["AdhereRViz"] * "', as.character(packageVersion('AdhereRViz'))) > 0 ) {return (-2)} else {return (0)}}"
+        x = rcopy(reval(rscript))
+        if x == (-1)
+            error(errmsgs["AdhereRVizNotInstalled"])
+        elseif x == (-2)
+            error(errmsgs["AdhereRVizVersion"])
+        elseif x != 0
+            error(errmsgs["UnknownError"])
+        end
     catch
     end
 
     # All looks good: let the user know:
-    println("AdhereR: all seems good to go!")
+    println(errmsgs["AllGood"])
 end
 
-# See if 
+# The CMA hierarchy:  
 
 end
 
