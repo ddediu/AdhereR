@@ -136,6 +136,9 @@ globalVariables(c(".PATIENT.MED.ID", ".new.ID", ".obs.duration", "EVENT.ID", "ID
 #' \code{snow} for details).
 #' @param suppress.warnings \emph{Logical}, if \code{TRUE} don't show any
 #' warnings.
+#' @param suppress.special.argument.checks \emph{Logical} parameter for internal
+#' use; if \code{FALSE} (default) check if the important columns in the \code{data}
+#' have some of the reserved names, if \code{TRUE} this check is not performed.
 #' @param ... other possible parameters
 #' @return An \code{S3} object of class \code{CMA_polypharmacy} with the
 #' following fields:
@@ -260,6 +263,7 @@ CMA_polypharmacy <- function(data = data,
                              parallel.threads="auto", # specification (or number) of parallel threads
                              # Misc:
                              suppress.warnings=FALSE,
+                             suppress.special.argument.checks=TRUE, # used internally to suppress the check that we don't use special argument names
                              ...){
 
   # Get the CMA function corresponding to the name:
@@ -369,7 +373,8 @@ CMA_polypharmacy <- function(data = data,
                                   observation.window.duration=NULL,
                                   observation.window.duration.unit=NULL,
                                   date.format=NULL,
-                                  suppress.warnings=NULL
+                                  suppress.warnings=NULL,
+                                  suppress.special.argument.checks=NULL
   )
   {
     # auxiliary function to compute intersection of episodes (when aggregate.first = TRUE)
@@ -487,7 +492,8 @@ CMA_polypharmacy <- function(data = data,
                                   observation.window.duration=observation.window.duration.2,
                                   observation.window.duration.unit=observation.window.duration.unit.2,
                                   carry.only.for.same.medication=carry.only.for.same.medication,
-                                  date.format=date.format,parallel.backend="none")
+                                  date.format=date.format,parallel.backend="none",
+                                  suppress.special.argument.checks=suppress.special.argument.checks)
 
       # get CMA values
       CMA_per_group <- as.data.table(getCMA(CMA_all_by_group))
@@ -517,7 +523,7 @@ CMA_polypharmacy <- function(data = data,
       # event_info <- rbindlist(event_info)
 
       # merge back original ID and group and sort by original ID
-      setkeyv(event_info, "PATIENT_ID")
+      # setkeyv(event_info, "PATIENT_ID") # <- DD: I think this is an error, as there's no PATIENT_ID column in this event_info (as it uses ID.colname.2 as patient ID)...
 
       # aggregate CMAs
 
@@ -577,7 +583,8 @@ CMA_polypharmacy <- function(data = data,
                                           carry.only.for.same.medication = carry.only.for.same.medication,
                                           date.format=date.format,
                                           force.NA.CMA.for.failed.patients = TRUE,
-                                          suppress.warnings = TRUE
+                                          suppress.warnings = TRUE,
+                                          suppress.special.argument.checks=suppress.special.argument.checks
                                           )
 
       # select ID.colnames
@@ -724,17 +731,17 @@ CMA_polypharmacy <- function(data = data,
   # } else if(.check.medication.groups(medication.groups,
   #                                    list.of.medication.classes = unique(data[[medication.class.colname]])))
   # {
-  # 
+  #
   #   if(is.null(medication.groups)){
   #     medication.groups <- unique(data[[medication.class.colname]])
   #   }
-  # 
+  #
   #   med.groups.dt <- as.data.table(.fill.medication.groups(medication.groups,
   #                                                          list.of.medication.classes = unique(data[[medication.class.colname]]),
   #                                                          already.checked = TRUE))
-  # 
+  #
   #   setnames(med.groups.dt, old = "class", new = medication.class.colname)
-  # 
+  #
   #   data.copy <- merge(data.copy, med.groups.dt, by = medication.class.colname)
 
   } else {
@@ -771,7 +778,8 @@ CMA_polypharmacy <- function(data = data,
                            observation.window.duration=observation.window.duration,
                            observation.window.duration.unit=observation.window.duration.unit,
                            date.format=date.format,
-                           suppress.warnings=suppress.warnings);
+                           suppress.warnings=suppress.warnings,
+                           suppress.special.argument.checks=suppress.special.argument.checks);
   if( is.null(tmp) || is.null(tmp$CMA) || is.null(tmp$event.info) || is.null(tmp$CMA.intermediate)) return (NULL);
 
   # Construct the return object:
