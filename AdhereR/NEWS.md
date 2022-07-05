@@ -1,7 +1,5 @@
 # AdhereR 0.8.1
   
-## New features
-
 ## Bug fixes
 
   - fix `CMA_polypharmacy()` crash due to not properly handling the new internal `suppress.special.argument.checks` argument (now there's also a unit test for `CMA_polypharmacy` to avoid such bugs in the future).
