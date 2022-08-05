@@ -78,7 +78,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
 
   # Check to see if the folder exists:
-  if( !file.exists(shared.data.directory) )
+  if( !dir.exists(shared.data.directory) )
   {
     msg <- paste0("AdhereR: The given directory '",shared.data.directory,"' does not seem to exist: ABORTING...\n");
     cat(msg);
@@ -339,7 +339,11 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 
   # col.cats is special in that it can be a function name or a color name:
   col.cats <- trimws(.get.param.value("plot.col.cats", type="character", required=FALSE));
-  if( substring(col.cats, nchar(col.cats)-1, nchar(col.cats)) == "()" )
+  if( is.na(col.cats) )
+  {
+    # Go for the default:
+    col.cats <- rainbow;
+  } else if( substring(col.cats, nchar(col.cats)-1, nchar(col.cats)) == "()" )
   {
     # it seems to be a function name, so match it to the ones we currently support:
     col.cats <- switch(col.cats,
@@ -614,7 +618,7 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
       # Get the info about the plot exporting process:
       plot.file.dir <- .get.param.value("plot.save.to", type="character", default.value=shared.data.directory, required=FALSE);
       # Check if the directory exists and is writtable:
-      if( !file.exists(plot.file.dir) || file.access(plot.file.dir, 2) != 0 )
+      if( !dir.exists(plot.file.dir) || file.access(plot.file.dir, 2) != 0 )
       {
         msg <- paste0("\nThe destination directory for plots '",plot.file.dir,"' does not exist or does not have write access!\n");
         cat(msg); cat(msg, file=msg.file, append=TRUE);
