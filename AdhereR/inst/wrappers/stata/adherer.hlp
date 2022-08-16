@@ -1,0 +1,204 @@
+{smcl}
+{* *! version 13.0 15aug2022}{...}
+{viewerjumpto "Syntax" "adherer##syntax"}{...}
+{viewerjumpto "Description" "adherer##description"}{...}
+{viewerjumpto "Options" "adherer##options"}{...}
+{viewerjumpto "Examples" "adherer##examples"}{...}
+
+{p2col:{bf:adherer}}Estimate and plot adherence to treatment from electronic helathcare data
+
+{marker syntax}{...}
+{title:Syntax}
+{p}
+{cmd:adherer} [using/] cma(string) id_col(string) ev_date_col(string) ev_dur_col(string){cmd:,} [ev_dose_col(string) med_class_col(string) fuw_start_type(string) fuw_start(string) fuw_start_unit(string) fuw_dur_type(string) fuw_dur(string) fuw_dur_unit(string) ow_start_type(string) ow_start(string) ow_start_unit(string) ow_dur_type(string) ow_dur(string) ow_dur_unit(string) date_format(string) carry_for_same_med consider_dose_change cma_to_apply(string) dont_med_chg_is_new_episode max_permissible_gap(string) max_permissible_gap_unit(string) sw_start_type(string) sw_start(string) sw_start_unit(string) sw_dur_type(string) sw_dur(string) sw_dur_unit(string) sw_step_dur_type(string) sw_step_dur(string) sw_step_unit(string) sw_number_steps(string) save_event_info carryover_within_ow carryover_into_ow keep_window_start_end_dates keep_events_outside_fuw keep_ev_int_for_all_events ev_int_col(string) gap_days_col(string) plot patients_to_plot(string) plot_type(string) plot_width(string) plot_height(string) plot_quality(string) plot_dpi(string) plot_duration(string) align_all_patients dont_align_first_ev_zero show_period_as_dates dont_show_legend legend_position(string) dont_show_ev_ints dont_plot_evs_displaced print_dose plot_dose dont_plot_cma plot_partial_cmas_as(string) bw_plot max_patients_to_plot(string) folder_to_use(string) dont_load_results rpath(string) rversion(string) verbose]
+
+{marker description}{...}
+{title:Description}
+{pstd}
+{cmd:adherer} allows the estimation and plotting (including interactively, in the default web browser) of adherence to medication.
+It does so by calling the default version of R and using the AdhereR and AdhereRViz packages installed there.
+Please make sure that R is correctly installed, that the default version is the one you want to use, and that AdhereR (and, if interactive plotting is needed, also AdhererViz) is/are correctly installed for this default version of R.
+(Alternatively, or in case the program fails to find R, you can use the {opt rpath} and {opt rversion} arguments to ask for a specific version of R.
+For more info (including on how to install/use this program) please see the R AdhereR package vignette on how to use it from Stata.
+This script was developed and tested in Windows 10 and Stata 13.1 MP, and there is no warranty that it might work on other systems and versions of Stata.
+This code is released under a GPLv3 license and is based on initial work by Maria Rubio-Valera (2018), and on ideas and code from Julian Reif's and David Molitor's RSCRIPT package (https://github.com/reifjulian/rscript) (v1.1) (the latter is released under a license compatible with GPLv3: https://www.gnu.org/licenses/license-list.html#GPLCompatibleLicenses; see "Expat License").
+(c) Dan Dediu (ddediu@gmail.com) 2022.
+
+
+{marker options}{...}
+{title:Options}
+
+Please note that, for simplicity, we use (string) throughout, even when the values must in fact be numers of from a finiste set of values.
+For more info please see the help and the vignettes of the R AdhereR package.
+
+{phang}{opt using/} use the dataset in memory (default) or a CSV file?
+
+{phang}{opt cma(string)} which CMA to compute; must be one of (case insensistive) CMA0 (can only be plotted), CMA1, CMA2, CMA3, CMA4, CMA5, CMA6, CMA7, CMA8, CMA9, CMA_per_episode, CMA_sliding_window, compute_event_int_gaps, compute_treatment_episodes and plot_interactive_cma
+
+{phang}{opt id_col(string)} required column name for all CMAs (this must exist in exactly the same form in the dataset/input CSV file) giving the patient IDs
+
+{phang}{opt ev_date_col(string)} required column name for all CMAs (this must exist in exactly the same form in the dataset/input CSV file) giving the event dates
+
+{phang}{opt ev_dur_col(string)} required column name for all CMAs (this must exist in exactly the same form in the dataset/input CSV file) giving the event durations
+
+{phang}{opt ev_dose_col(string)} column name needed for CMA5 to CMA9 only (this must exist in exactly the same form in the dataset/input CSV file) giving the doses
+
+{phang}{opt med_class_col(string)} column name needed for CMA5 to CMA9 only (this must exist in exactly the same form in the dataset/input CSV file) giving the medication casses
+
+{phang}{opt fuw_start_type(string)} follow-up window specification: start type (can be "numeric" (default), "character" or "date")
+
+{phang}{opt fuw_start(string)} follow-up window specification: the start value conforming to the previous specification
+
+{phang}{opt fuw_start_unit(string)} follow-up window specification: the unit (if "numeric"; can be "days" (default), "weeks", "months" or "years")
+
+{phang}{opt fuw_dur_type(string)} follow-up window specification: duration (see above for start)
+
+{phang}{opt fuw_dur(string)} follow-up window specification: duration (see above for start)
+
+{phang}{opt fuw_dur_unit(string)} follow-up window specification: duration (see above for start)
+
+{phang}{opt ow_start_type(string)} observation windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt ow_start(string)} observation windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt ow_start_unit(string)} observation windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt ow_dur_type(string)} observation windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt ow_dur(string)} observation windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt ow_dur_unit(string)} observation windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt date_format(string)} date format (defaults to "%m/%d/%Y")
+
+{phang}{opt carry_for_same_med} CMA5..CMA9: if present, carry only for the same medication
+
+{phang}{opt consider_dose_change} CMA5..CMA9: if present, a change in dosage is considered
+
+{phang}{opt cma_to_apply(string)} which simple CMA to apply (only for per episodes and sliding window); must be > CMA0
+
+{phang}{opt dont_med_chg_is_new_episode} if present, changing medication class does not start a new episode
+
+{phang}{opt max_permissible_gap(string)} the maximum persmissible gap for starting a new episode (given in the units defined below)
+
+{phang}{opt max_permissible_gap_unit(string)} the unit of the maximum permissible gap (above) can be one of "days", "weeks", "months", "years" or "percent"
+
+{phang}{opt sw_start_type(string)} sliding windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt sw_start(string)} sliding windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt sw_start_unit(string)} sliding windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt sw_dur_type(string)} sliding windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt sw_dur(string)} sliding windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt sw_dur_unit(string)} sliding windows spec: similar to the follow-up-window spec (see above)
+
+{phang}{opt sw_step_dur_type(string)} specification of sliding window steps either as duration between consecutive steps or as the number of steps
+
+{phang}{opt sw_step_dur_type(string)} specification of sliding window steps either as duration between consecutive steps or as the number of steps
+
+{phang}{opt sw_step_dur(string)} specification of sliding window steps either as duration between consecutive steps or as the number of steps
+
+{phang}{opt sw_step_unit(string)} specification of sliding window steps either as duration between consecutive steps or as the number of steps
+
+{phang}{opt sw_number_steps(string)} specification of sliding window steps either as duration between consecutive steps or as the number of steps
+
+{phang}{opt save_event_info} if present, also save the event info in the EVENTINFO.csv TAB-separated file
+
+{phang}{opt carryover_within_ow} advanced parameter: if present, there is carryover within the observation window
+
+{phang}{opt carryover_into_ow} advanced parameter: if present, there is carryover into the observation window
+
+{phang}{opt keep_window_start_end_dates} advanced parameter: if present, keep the window start and end dates
+
+{phang}{opt keep_events_outside_fuw} advanced parameter: if present, keep also the events outside the follow-up window
+
+{phang}{opt keep_ev_int_for_all_events} advanced parameter: if present, keep event interval info for all events
+
+{phang}{opt ev_int_col(string)} advanced parameter: name of the internal column used to store the event interval info (if absent, "event.interval")
+
+{phang}{opt gap_days_col(string)} advanced parameter: name of the internal column used to store the gap days info (if absent, "gap.days")
+
+{phang}{opt plot} if present, a plot is (also) generated
+
+{phang}{opt patients_to_plot(string)} the patient IDs to plot (if missing, all patients) given as "id1;id2; .. ;idn"
+
+{phang}{opt plot_type(string)} plot specification: type (can be "jpg", "png", "tiff", "eps" or "pdf")
+
+{phang}{opt plot_width(string)} plot specification: width (in inches)
+
+{phang}{opt plot_height(string)} plot specification: height (in inches)
+
+{phang}{opt plot_quality(string)} plot specification: quality
+
+{phang}{opt plot_dpi(string)} plot specification: DPI
+
+{phang}{opt plot_duration(string)} duration to plot in days (if missing, determined from the data)
+
+{phang}{opt align_all_patients} if present, align all patients
+
+{phang}{opt dont_align_first_ev_zero} if present, do not align the first event to 0
+
+{phang}{opt show_period_as_dates} if present, show period (x axis) as actual dates (defaults to days)
+
+{phang}{opt dont_show_legend} if present, don't show the legend (byt default, so show it)
+
+{phang}{opt legend_position(string)} if showing the legend, where? can be "bottom right" (default), "bottom left", "top right", "top left"
+
+{phang}{opt dont_show_ev_ints} if present, don't show the event intervals
+
+{phang}{opt dont_plot_evs_displaced} if present, don't show the event intervals displaced vertically
+
+{phang}{opt print_dose} if present, show the dose on the plot as numbers
+
+{phang}{opt plot_dose} if present, show the dose on the plot as line width
+
+{phang}{opt dont_plot_cma} if present, don't show the CMA estimates
+
+{phang}{opt plot_partial_cmas_as(string)} how to plot the partial CMAs (per events and sliding window): can be “stacked” (default), “overlapping” or “timeseries”
+
+{phang}{opt bw_plot} if present, generate a gray-scale plot
+
+{phang}{opt max_patients_to_plot(string)} how many patients to plot (maximum value); if missing, 100
+
+{phang}{opt folder_to_use(string)} if missing, we'll use STATA's temporary folder, but if given must be an existing folder (directoy) where we can read and write files
+
+{phang}{opt dont_load_results} by default, the estimated CMAs, event interval or episode data (if any) are loaded in STATA, otherwise no changes are made to the dataset and the results are left on disk
+
+{phang}{opt rpath(string)} advanced: force a specific R installed in the given path (otherwise try to use the default one in the system)
+
+{phang}{opt rversion(string)} advanced: force a specific R version (otherwise try to use the default one in the system)
+
+{phang}{opt verbose} if present, print all sorts of information, potentially useful for debugging purposes 
+
+
+{marker examples}{...}
+{title:Examples}
+{hline}
+{pstd}Setup: here we use the test dataset provided as a CSV file with the AdhereR package; make sure the [...] in the command below are replaced by the actual path to where the R AdhereR package is installed on your system (typically, on Windows 10, C:\Users\YOURUSERNAME\Documents\R\win-library\YOURRVERSION).
+
+{phang2}{cmd:. import delimited "[...]\AdhereR\inst\wrappers\stata\test-dataset.csv", varnames(1) delimiter(tab) clear}
+
+{phang2}{cmd:. describe}
+
+{pstd}Compute CMA1 for all patients and load the results in Sata.
+
+{phang2}{cmd:. adherer , verbose cma("CMA1") id_col("id") ev_date_col("date") ev_dur_col("duration")}
+
+{pstd}Compute and plot CMA1 for the first three patients, but do not load the results in Sata. We use the folder (directory) C:\Temp\for_adherer to exchange data with R, and this is where the results and the plot (as a JPEG file adherer-plot.jpg) are placed: please make sure that you first create this folder and that you have access to it. Also note that, as the previous example did overwrite the example dataset (with the resulting CMA), we need to reload it.
+
+{phang2}{cmd:. import delimited "[...]\AdhereR\inst\wrappers\stata\test-dataset.csv", varnames(1) delimiter(tab) clear}
+
+{phang2}{cmd:. adherer , verbose cma("CMA1") plot patients_to_plot("1;2;3") plot_width(12) align_all_patients id_col("id") ev_date_col("date") ev_dur_col("duration") folder_to_use("C:\Temp\for_adherer") dont_load_results}
+
+{pstd}Compute and plot CMA1 per sliding windows with duration 60 days and step 90 days.
+
+{phang2}{cmd:. adherer , verbose cma("CMA_sliding_window") cma_to_apply("CMA1") sw_dur(60) sw_step_dur(90) plot patients_to_plot("1;2;3") plot_width(12) align_all_patients id_col("id") ev_date_col("date") ev_dur_col("duration") ev_dose_col("perday") med_class_col("class") folder_to_use("C:\Temp\for_adherer") dont_load_results save_event_info}
+
+{pstd}Open the interactive plotting of the dataset in the default web browser (make sure te package AdhereRViz is also installed in R).
+
+{phang2}{cmd:. adherer , verbose cma("plot_interactive_cma") id_col("id") ev_date_col("date") ev_dur_col("duration") ev_dose_col("perday") med_class_col("class")}
+
+{hline}

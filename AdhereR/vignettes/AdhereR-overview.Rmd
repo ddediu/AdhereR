@@ -927,8 +927,9 @@ All these are detailed in a dedicated vignette *"Using `AdhereR` with various da
 ## Using `AdhereR` from other programming languages and platforms
 <a name="Section-calling-adherer-from-other"></a>
 
-`AdhereR` can be transparently used from other programming languages than `R` (such as `Python`) or platforms (such as `Stata`) by implementing a startdized interface defined for these purposes.
-A working implementation for `Python 3` is included in the package (and inteded also as a hands-on guide to further implementations) and is described in detailed in a dedicated vignette *"Calling AdhereR from Python3"*.
+`AdhereR` can be transparently used from other programming languages than `R` (such as `Python`) or platforms (such as `Stata`) by implementing a standardized interface defined for these purposes.
+A working implementation for `Python 3` is included in the package (and intended also as a hands-on guide to further implementations), as is a working program for `Stata` (version 13), which are described in detail in a dedicated vignette *"Calling AdhereR from Python3 and Stata"*.
+Like
 
 
 ## AdhereR is pipe (`%>%` or `|>`)-friendly

@@ -1,3 +1,9 @@
+# AdhereR 0.8.2
+  
+## New features
+
+  - wrapper for `Stata` (on `Windows`).
+  
 # AdhereR 0.8.1
   
 ## Bug fixes
@@ -24,7 +30,7 @@
   
   - `CMA_per_episode` and `CMA_sliding_window` can now return the mapping between events and episodes or sliding windows, if the parameter `return.mapping.events.episodes` or `return.mapping.events.sliding.window` (respectively) is set to `TRUE`; in this case, there is an extra component of the constructed object, called `mapping.episodes.to.events` or `mapping.windows.to.events` respectively, which give, for each event or sliding window, the row number (in the data) of the event(s) that participate in it.
   
-  - plotting a `CMA_per_episode` or `CMA_sliding_window` object with a `mapping.episodes.to.events` or `mapping.windows.to.events` component, respectively, can how which events belong to which episode or sliding window visually, if the parameter `print.episode.or.sliding.window` is set to `TRUE`.
+  - plotting a `CMA_per_episode` or `CMA_sliding_window` object with a `mapping.episodes.to.events` or `mapping.windows.to.events` component, respectively, can show which events belong to which episode or sliding window visually, if the parameter `print.episode.or.sliding.window` is set to `TRUE`.
 
 ## Bug fixes
 

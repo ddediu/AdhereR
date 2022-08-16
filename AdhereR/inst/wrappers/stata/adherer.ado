@@ -1,6 +1,6 @@
 * 	adherer: use R's AdhereR package from STATA
 *   Copyright (C) 2022  Dan Dediu (ddediu@gmail.com)
-*             based on work by Maria Valera (c) 2018
+*             based on initial work by María Rubio-Valera (c) 2018
 *             based on ideas and code from Julian Reif's and David Molitor's 
 *              `RSCRIPT` package (https://github.com/reifjulian/rscript) (v1.1)
 *               code from them is marked by [from rscript]...[end from rscript]
@@ -29,17 +29,18 @@ sysdir set PERSONAL "C:\Users\ddedi\Work\Misc\AdhereR\GitHub\AdhereR\AdhereR\ins
 
 * FOR DEBUGGING, run with the "verbose" parameter: adherer ,verbose
 * FOR DEBUGGING: load (or pass as param) the CSV file "C:\Users\ddedi\Work\Misc\AdhereR\tests\test-dataset.csv":
-* import delimited "C:\Users\ddedi\Work\Misc\AdhereR\tests\test-dataset.csv", varnames(1) delimiter(tab) clear
+* import delimited "C:\Users\ddedi\Work\Misc\AdhereR\GitHub\AdhereR\AdhereR\inst\wrappers\stata\test-dataset.csv", varnames(1) delimiter(tab) clear
 * adherer , verbose cma("CMA1") id_col("id") ev_date_col("date") ev_dur_col("duration")
 * adherer , verbose cma("CMA1") plot id_col("id") ev_date_col("date") ev_dur_col("duration") folder_to_use("C:\Temp\for_adherer")
 * adherer , verbose cma("CMA1") plot patients_to_plot("1;2;3") plot_width(12) align_all_patients id_col("id") ev_date_col("date") ev_dur_col("duration") folder_to_use("C:\Temp\for_adherer") dont_load_results
+* adherer , verbose cma("CMA_per_episode") cma_to_apply("CMA1") plot patients_to_plot("1;2;3") plot_width(12) align_all_patients id_col("id") ev_date_col("date") ev_dur_col("duration") ev_dose_col("perday") med_class_col("class") folder_to_use("C:\Temp\for_adherer") dont_load_results save_event_info
+* adherer , verbose cma("CMA_sliding_window") cma_to_apply("CMA1") sw_dur(60) sw_step_dur(90) plot patients_to_plot("1;2;3") plot_width(12) align_all_patients id_col("id") ev_date_col("date") ev_dur_col("duration") ev_dose_col("perday") med_class_col("class") folder_to_use("C:\Temp\for_adherer") dont_load_results save_event_info
+* adherer , verbose cma("compute_event_int_gaps") id_col("id") ev_date_col("date") ev_dur_col("duration")
+* adherer , verbose cma("compute_treatment_episodes") id_col("id") ev_date_col("date") ev_dur_col("duration") ev_dose_col("perday") med_class_col("class") 
+* adherer , verbose cma("plot_interactive_cma") id_col("id") ev_date_col("date") ev_dur_col("duration") ev_dose_col("perday") med_class_col("class") 
 
 * TODO:
-* - implement per episodes, sliding window, possibly compute_event_int_gaps and compute_treatment_episodes
-* - comment parameters and add checks
-* - add help
 * - try to import the plot --> doesn't seem to be any obvious way :(
-* - test everything!
 * - hide command window on shell invokation --> doesn't seem to be any obvious way :(
 
 * Make sure this program can de reloaded:
@@ -58,14 +59,20 @@ program adherer, rclass
 
 	* the parameters:
 	syntax [using/], /* use the dataset in memory (default) or a CSV file? */ ///
-	       cma(string) /* which CMA to compute; must be one of (case insensistive) CMA0 (can only be plotted), CMA1, CMA2, CMA3, CMA4, CMA5, CMA6, CMA7, CMA8, CMA9, CMA_per_episodeor CMA_sliding_window */ ///
+	       cma(string) /* which CMA to compute; must be one of (case insensistive) CMA0 (can only be plotted), CMA1, CMA2, CMA3, CMA4, CMA5, CMA6, CMA7, CMA8, CMA9, CMA_per_episode, CMA_sliding_window, compute_event_int_gaps, compute_treatment_episodes and  plot_interactive_cma */ ///
 		   id_col(string) ev_date_col(string) ev_dur_col(string) /* required column names for all CMAs (these must exist in exactly the same form in the dataset/input CSV file); patient ID, event date, and event duration */ ///
 		   [ ///
 		    ev_dose_col(string) med_class_col(string) /* column names only needed for CMAs 5 to 9; dose, and medication cass */ ///
 			fuw_start_type(string) fuw_start(string) fuw_start_unit(string) fuw_dur_type(string) fuw_dur(string) fuw_dur_unit(string) /* follow-up window specification: start type (can be "numeric" (default), "character" or "date"), the start value conforming to the previous specification, and the unit (if "numeric"; can be "days" (default), "weeks", "months" or "years"), duration is similar to start */ ///
-			ow_start_type(string) ow_start(string) ow_start_unit(string) ow_dur_type(string) ow_dur(string) ow_dur_unit(string) /* observation windows spec: similar to the follow-up-window spec (see above)*/ ///
-			date_format(string) /* dat format (defaults to "%m/%d/%Y") */ ///
-			carry_for_same_med(string) consider_dose_change(string) /* CMA5..CMA9: carry only for the same medication, and should a change in dosage be considered? */ ///
+			ow_start_type(string) ow_start(string) ow_start_unit(string) ow_dur_type(string) ow_dur(string) ow_dur_unit(string) /* observation windows spec: similar to the follow-up-window spec (see above) */ ///
+			date_format(string) /* date format (defaults to "%m/%d/%Y") */ ///
+			carry_for_same_med consider_dose_change /* CMA5..CMA9: carry only for the same medication, and should a change in dosage be considered? */ ///
+			cma_to_apply(string) /* which simple CMA to apply (only for per episodes and sliding window); must be > CMA0 */ ///
+			dont_med_chg_is_new_episode max_permissible_gap(string) max_permissible_gap_unit(string) /* params defining the episodes (the unit can be one of "days", "weeks", "months", "years" or "percent") */ ///
+			sw_start_type(string) sw_start(string) sw_start_unit(string) sw_dur_type(string) sw_dur(string) sw_dur_unit(string) /* sliding windows spec: similar to the follow-up-window spec (see above) */  ///
+			sw_step_dur_type(string) sw_step_dur(string) sw_step_unit(string) sw_number_steps(string) /* specification of sliding window steps either as duration between consecutive steps or as the number of steps */ ///
+			save_event_info /* also save the event info in the EVENTINFO.csv TAB-separated file? */ ///
+			carryover_within_ow carryover_into_ow keep_window_start_end_dates keep_events_outside_fuw keep_ev_int_for_all_events ev_int_col(string) gap_days_col(string) /* advanced params: see AdhereR's R help */ ///
 			plot /* if present, a plot is (also) generated */ ///
 			patients_to_plot(string) /* the patient IDs to plot (if missing, all patients) given as "id1;id2; .. ;idn" */ ///
 			plot_type(string) plot_width(string) plot_height(string) plot_quality(string) plot_dpi(string) /* plot specification: type (can be "jpg", "png", "tiff", "eps" or "pdf"), width and height (in inches), quality and dpi */ ///
@@ -186,7 +193,9 @@ program adherer, rclass
 	* 2. Check params:
 	if lower("`cma'") != "cma0"  & lower("`cma'") != "cma1"  & lower("`cma'") != "cma2"  & lower("`cma'") != "cma3"  & lower("`cma'") != "cma4"  & lower("`cma'") != "cma5"  & ///
 		 lower("`cma'") != "cma6"  & lower("`cma'") != "cma7"  & lower("`cma'") != "cma8"  & lower("`cma'") != "cma9"  & ///
-		  lower("`cma'") != "cma_per_episode"  & lower("`cma'") != "cma_sliding_window" {
+		  lower("`cma'") != "cma_per_episode"  & lower("`cma'") != "cma_sliding_window" & ///
+		  lower("`cma'") != "compute_event_int_gaps" & lower("`cma'") != "compute_treatment_episodes" & ///
+		  lower("`cma'") != "plot_interactive_cma" {
 		di as error "Unknown CMA function `cma' requested!"
 		exit 1
 	}
@@ -194,11 +203,26 @@ program adherer, rclass
 		di as error "CMA0 can only be used for plots: make sure the 'plot' argument is given!"
 		exit 1
 	}
+	if !mi("`plot'") & ///
+	    (lower("`cma'") != "cma0"  & lower("`cma'") != "cma1"  & lower("`cma'") != "cma2"  & lower("`cma'") != "cma3"  & lower("`cma'") != "cma4"  & lower("`cma'") != "cma5"  & ///
+		 lower("`cma'") != "cma6"  & lower("`cma'") != "cma7"  & lower("`cma'") != "cma8"  & lower("`cma'") != "cma9"  & ///
+		  lower("`cma'") != "cma_per_episode"  & lower("`cma'") != "cma_sliding_window") {
+		di as error "Only CMAs can be plotted!"
+		exit 1
+	}
 	if lower("`cma'") == "cma5" | lower("`cma'") == "cma6" | lower("`cma'") == "cma7" | lower("`cma'") == "cma8" | lower("`cma'") == "cma9" {
 		if mi("`ev_dose_col'") | mi("`med_class_col'") {
 			di as error "For CMA5 to CMA9, also 'ev_dose_col' and 'med_class_col' are required parameters!"
 			exit 1
 		}
+	}
+	if !mi("`cma_to_apply'") & (lower("`cma'") != "cma_per_episode"  & lower("`cma'") != "cma_sliding_window") {
+		di as error "Argument 'CMA_to_apply' makes sense only for 'cma_per_episode' and 'cma_sliding_window'!"
+		exit 1
+	}
+	if !mi("`cma_to_apply'") & lower("`CMA_to_apply'") == "cma0" {
+		di as error "Argument 'CMA_to_apply' cannot be CMA0!"
+		exit 1
 	}
 	if !mi("`fuw_start_type'") {
 		if lower("`fuw_start_type'") != "numeric" & lower("`fuw_start_type'") != "character" & lower("`fuw_start_type'") != "date" {
@@ -280,30 +304,24 @@ program adherer, rclass
 	if !mi("`ow_dur_unit'")  	  file write `filebf' `"observation.window.duration.unit = "`ow_dur_unit'""' _n
 	
 	* params for some CMAs:
-	if !mi("`carry_for_same_med'") {
-		if lower("`carry_for_same_med'") == "yes" {
-			file write `filebf' `"carry.only.for.same.medication = "TRUE""' _n
-		}
-		else if lower("`carry_for_same_med'") == "no" {
-			file write `filebf' `"carry.only.for.same.medication = "FALSE""' _n
-		}
-		else {
-			di as error "If given, 'carry_for_same_med' must be 'yes' or 'no'!"
-			exit 1
-		}
-	}
-	if !mi("`consider_dose_change'") {
-		if lower("`consider_dose_change'") == "yes" {
-			file write `filebf' `"consider.dosage.change = "TRUE""' _n
-		}
-		else if lower("`consider_dose_change'") == "no" {
-			file write `filebf' `"consider.dosage.change = "FALSE""' _n
-		}
-		else {
-			di as error "If given, 'consider_dose_change' must be 'yes' or 'no'!"
-			exit 1
-		}
-	}
+	if !mi("`carry_for_same_med'")   file write `filebf' `"carry.only.for.same.medication = "TRUE""' _n
+	if !mi("`consider_dose_change'") file write `filebf' `"consider.dosage.change = "TRUE""' _n
+	if !mi("`cma_to_apply'")         file write `filebf' `"CMA.to.apply = "`cma_to_apply'""' _n
+	*   per episodes:
+	if !mi("`dont_med_chg_is_new_episode'") file write `filebf' `"medication.change.means.new.treatment.episode = "FALSE""' _n
+	if !mi("`max_permissible_gap'")         file write `filebf' `"maximum.permissible.gap = "`max_permissible_gap'""' _n
+	if !mi("`max_permissible_gap_unit'")    file write `filebf' `"maximum.permissible.gap.unit = "`max_permissible_gap_unit'""' _n
+	*   sliding window:
+	if !mi("`sw_start_type'")    file write `filebf' `"sliding.window.start.type = "`sw_start_type'""' _n
+	if !mi("`sw_start'")         file write `filebf' `"sliding.window.start = "`sw_start'""' _n
+	if !mi("`sw_start_unit'")    file write `filebf' `"sliding.window.start.unit = "`sw_start_unit'""' _n
+	if !mi("`sw_dur_type'")      file write `filebf' `"sliding.window.duration.type = "`sw_dur_type'""' _n
+	if !mi("`sw_dur'")           file write `filebf' `"sliding.window.duration = "`sw_dur'""' _n
+	if !mi("`sw_dur_unit'")      file write `filebf' `"sliding.window.duration.unit = "`sw_dur_unit'""' _n
+	if !mi("`sw_step_dur_type'") file write `filebf' `"sliding.window.step.duration.type = "`sw_step_dur_type'""' _n
+	if !mi("`sw_step_dur'")      file write `filebf' `"sliding.window.step.duration = "`sw_step_dur'""' _n
+	if !mi("`sw_step_unit'")     file write `filebf' `"sliding.window.step.unit = "`sw_step_unit'""' _n
+	if !mi("`sw_number_steps'")  file write `filebf' `"sliding.window.no.steps = "`sw_number_steps'""' _n
 	
 	* date format:
 	if !mi("`date_format'") file write `filebf' `"date.format = "`date_format'""' _n
@@ -335,6 +353,16 @@ program adherer, rclass
 		if !mi("`bw_plot'")                  file write `filebf' `"plot.bw.plot = "TRUE""' _n
 		if !mi("`max_patients_to_plot'")     file write `filebf' `"plot.max.patients.to.plot = "`max_patients_to_plot'""' _n
 	}
+	
+	* advanced params:
+	if !mi("`save_event_info'")             file write `filebf' `"save.event.info = "TRUE""' _n
+	if !mi("`carryover_within_ow'")         file write `filebf' `"carryover.within.obs.window = "TRUE""' _n
+	if !mi("`carryover_into_ow'")           file write `filebf' `"carryover.into.obs.window = "TRUE""' _n
+	if !mi("`keep_window_start_end_dates'") file write `filebf' `"keep.window.start.end.dates = "TRUE""' _n
+	if !mi("`keep_events_outside_fuw'")     file write `filebf' `"remove.events.outside.followup.window = "FALSE""' _n
+	if !mi("`keep_ev_int_for_all_events'")  file write `filebf' `"keep.event.interval.for.all.events = "TRUE""' _n
+	if !mi("`ev_int_col'")                  file write `filebf' `"event.interval.colname = "`ev_int_col'""' _n
+	if !mi("`gap_days_col'")                file write `filebf' `"gap.days.colname = "`gap_days_col'""' _n
 	
 	* special parameters:
 	file write `filebf' `"NA.SYMBOL.NUMERIC = ".""' _n
@@ -438,27 +466,54 @@ program adherer, rclass
 	
 	
 	* 7. if so desired, import the results:
-	if mi("`dont_load_results'") {
+	if mi("`dont_load_results'") & lower("`cma'") != "plot_interactive_cma" {
 		* discard the previous dataset:
 		restore , not 
 		* load adherer's results:
 		if mi("`plot'") {
-			quiet import delimited using "`resdir'/CMA.csv", varnames(1) delimiter(tab) clear
+			if lower("`cma'") == "compute_event_int_gaps" {
+				quiet import delimited using "`resdir'/EVENTINFO.csv", varnames(1) delimiter(tab) clear
+			}
+			else if lower("`cma'") == "compute_treatment_episodes" {
+				quiet import delimited using "`resdir'/TREATMENTEPISODES.csv", varnames(1) delimiter(tab) clear
+			}
+			else {
+				quiet import delimited using "`resdir'/CMA.csv", varnames(1) delimiter(tab) clear
+			}
 		}
 		else {
 			quiet import delimited using "`resdir'/CMA-plotted.csv", varnames(1) delimiter(tab) clear
 		}
 		quiet ds
 		* let the user know:
-		display "Apprently, all went well: the estimated CMAs should have been loaded in STATA as a dataset with " _N " observations and columns: " r(varlist) " :"
+		if lower("`cma'") == "compute_event_int_gaps" {
+			display "Apprently, all went well: the gap days and event info data should have been loaded in STATA as a dataset with " _N " observations and columns: " r(varlist) " :"
+		}
+		else if lower("`cma'") == "compute_treatment_episodes" {
+			display "Apprently, all went well: the treatment episodes data should have been loaded in STATA as a dataset with " _N " observations and columns: " r(varlist) " :"
+		}
+		else {
+			display "Apprently, all went well: the estimated CMAs should have been loaded in STATA as a dataset with " _N " observations and columns: " r(varlist) " :"
+		}
 		describe
 	}
 	else {
 		* restore the previous dataset (should be done automatically...):
 		quiet restore
 		* let the user know that the data is on the disk:
-		if mi("`plot'") {
-			display `"Apprently, all went well: however, the estimated CMAs were not loaded in STATA but can be found on disk in the file "`resdir'/CMA.csv" (in fact, the folder "`resdir'" should contain the input data, the parameters and script used to invoke AdhereR in R and possibly other types of output (including any plots!), depending on what you aksed for)."'
+		if lower("`cma'") == "plot_interactive_cma" {
+			display `"The interactive plotting should have finished and there are no data to load (unless you explicitely saved some from the interactive interface)..."'
+		}
+		else if mi("`plot'") {
+			if lower("`cma'") == "compute_event_int_gaps" {
+				display `"Apprently, all went well: however, the estimated gap days and event info data were not loaded in STATA but can be found on disk in the file "`resdir'/EVENTINFO.csv" (in fact, the folder "`resdir'" should contain the input data, the parameters and script used to invoke AdhereR in R and possibly other types of output (including any plots!), depending on what you aksed for)."'
+			}
+			else if lower("`cma'") == "compute_treatment_episodes" {
+				display `"Apprently, all went well: however, the treatment episodes data were not loaded in STATA but can be found on disk in the file "`resdir'/TREATMENTEPISODES.csv" (in fact, the folder "`resdir'" should contain the input data, the parameters and script used to invoke AdhereR in R and possibly other types of output (including any plots!), depending on what you aksed for)."'
+			}
+			else {
+				display `"Apprently, all went well: however, the estimated CMAs were not loaded in STATA but can be found on disk in the file "`resdir'/CMA.csv" (in fact, the folder "`resdir'" should contain the input data, the parameters and script used to invoke AdhereR in R and possibly other types of output (including any plots!), depending on what you aksed for)."'
+			}
 		}
 		else {
 			display `"Apprently, all went well: however, the estimated CMAs were not loaded in STATA but can be found on disk in the file "`resdir'/CMA-plotted.csv" (in fact, the folder "`resdir'" should contain the input data, the parameters and script used to invoke AdhereR in R and possibly other types of output (including any plots!), depending on what you aksed for)."'

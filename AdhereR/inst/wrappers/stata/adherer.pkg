@@ -1,6 +1,7 @@
 v 1
 d adherer. Use the AdhereR R package from Stata.
 d Dan Dediu (ddediu@gmail.com)
+d based on initial work by María Rubio-Valera
 d based on code by David Molitor and Julian Reif
 
 f adherer.ado

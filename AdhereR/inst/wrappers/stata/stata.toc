@@ -1,4 +1,5 @@
 v 1
 d Dan Dediu (ddediu@gmail.com)
+d based on initial work by María Rubio-Valera
 d based on code by David Molitor and Julian Reif
 p adherer - Use the AdhereR R package from Stata.

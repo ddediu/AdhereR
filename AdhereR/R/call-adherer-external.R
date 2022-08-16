@@ -587,8 +587,9 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
     {
       # OK, plotting it too!
 
-      # Get the list of relevant parameters:
+      # Get the list of relevant parameters (ignore plot.show):
       plotting.params <- params.as.list[grep("^plot\\.", names(params.as.list))];
+      plotting.params <- plotting.params[ names(plotting.params) != "plot.show" ];
       names(plotting.params) <- substring(names(plotting.params), nchar("plot.")+1);
 
       # patients.to.plot has already been parsed:
@@ -700,9 +701,10 @@ callAdhereR <- function(shared.data.directory) # the directory where the shared 
 #' also include the wrapper's main file name.
 #' @return The full path to the requested wrapper or NULL if none exists.
 #' @export
-getCallerWrapperLocation <- function(callig.platform=c("python3")[1], full.path=FALSE)
+getCallerWrapperLocation <- function(callig.platform=c("python3", "stata")[1], full.path=FALSE)
 {
   switch(tolower(callig.platform),
          "python3" = file.path(system.file(package="AdhereR"), "wrappers", "python3", ifelse(full.path,"adherer.py","")),
+         "stata" = file.path(system.file(package="AdhereR"), "wrappers", "stata", ifelse(full.path,"adherer.ado","")),
          NULL);
 }
