@@ -685,7 +685,8 @@ CMA_polypharmacy <- function(data = data,
       CMA[intersect.end > .OBS.END.DATE, `:=` (intersect.end = .OBS.END.DATE,
                                                intersect.duration = as.numeric(.OBS.END.DATE-intersect.start))]
       # compute total duration of observation
-      CMA[,.obs.duration := as.numeric(.OBS.END.DATE-.OBS.START.DATE), by = c("PATIENT_ID")]
+      # CMA[,.obs.duration := as.numeric(.OBS.END.DATE-.OBS.START.DATE), by = c("PATIENT_ID")] #this gives false results if there are episodes not covered by any medication (currently not within the scope of the function, but important to consider for the computation of CMA_polypharmacy per episode)
+      CMA[,.obs.duration := as.numeric(sum(intersect.duration)), by = c("PATIENT_ID")]
       # CMA_ret <- switch(as.character(aggregation.method),
       #               "DPPR" = unique(CMA[,list(CMA = sum(intersect.duration*prop.med.groups.available)/.obs.duration), by = c(ID.colname)]),
       #               "any" = unique(CMA[prop.med.groups.available > 0,list(CMA = sum(intersect.duration)/.obs.duration), by = ID.colname]),
