@@ -25,7 +25,7 @@
 
 * FOR DEVELOPMENT ONLY: make STATA find this .ado file!
 * NORMALLY this .ado file should reside in the user's PERSONAL STATA folder...
-sysdir set PERSONAL "C:\Users\ddedi\Work\Misc\AdhereR\GitHub\AdhereR\AdhereR\inst\wrappers\stata"
+* sysdir set PERSONAL "C:\Users\ddedi\Work\Misc\AdhereR\GitHub\AdhereR\AdhereR\inst\wrappers\stata"
 
 * FOR DEBUGGING, run with the "verbose" parameter: adherer ,verbose
 * FOR DEBUGGING: load (or pass as param) the CSV file "C:\Users\ddedi\Work\Misc\AdhereR\tests\test-dataset.csv":
@@ -477,12 +477,21 @@ program adherer, rclass
 			else if lower("`cma'") == "compute_treatment_episodes" {
 				quiet import delimited using "`resdir'/TREATMENTEPISODES.csv", varnames(1) delimiter(tab) clear
 			}
+			else if lower("`cma'") == "cma0" {
+				* plotting CMA0 does not produce any results worth loading
+				clear
+			}
 			else {
 				quiet import delimited using "`resdir'/CMA.csv", varnames(1) delimiter(tab) clear
 			}
 		}
 		else {
-			quiet import delimited using "`resdir'/CMA-plotted.csv", varnames(1) delimiter(tab) clear
+			if lower("`cma'") != "cma0" {
+				quiet import delimited using "`resdir'/CMA-plotted.csv", varnames(1) delimiter(tab) clear
+			}
+			else {
+				clear
+			}
 		}
 		quiet ds
 		* let the user know:
@@ -492,10 +501,12 @@ program adherer, rclass
 		else if lower("`cma'") == "compute_treatment_episodes" {
 			display "Apprently, all went well: the treatment episodes data should have been loaded in STATA as a dataset with " _N " observations and columns: " r(varlist) " :"
 		}
-		else {
+		else if lower("`cma'") != "cma0" {
 			display "Apprently, all went well: the estimated CMAs should have been loaded in STATA as a dataset with " _N " observations and columns: " r(varlist) " :"
 		}
-		describe
+		if lower("`cma'") != "cma0" {
+			describe
+		}
 	}
 	else {
 		* restore the previous dataset (should be done automatically...):
