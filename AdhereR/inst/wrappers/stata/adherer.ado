@@ -207,8 +207,13 @@ program adherer, rclass
 	    (lower("`cma'") != "cma0"  & lower("`cma'") != "cma1"  & lower("`cma'") != "cma2"  & lower("`cma'") != "cma3"  & lower("`cma'") != "cma4"  & lower("`cma'") != "cma5"  & ///
 		 lower("`cma'") != "cma6"  & lower("`cma'") != "cma7"  & lower("`cma'") != "cma8"  & lower("`cma'") != "cma9"  & ///
 		  lower("`cma'") != "cma_per_episode"  & lower("`cma'") != "cma_sliding_window") {
-		di as error "Only CMAs can be plotted!"
-		exit 1
+		if lower("`cma'") == "plot_interactive_cma" {
+			di "Warning: the 'plot' argument is superfluous when doing an interactive plot!"
+		}
+		else {
+			di as error "Only CMAs can be plotted!"
+			exit 1
+		}
 	}
 	if lower("`cma'") == "cma5" | lower("`cma'") == "cma6" | lower("`cma'") == "cma7" | lower("`cma'") == "cma8" | lower("`cma'") == "cma9" {
 		if mi("`ev_dose_col'") | mi("`med_class_col'") {
@@ -327,7 +332,7 @@ program adherer, rclass
 	if !mi("`date_format'") file write `filebf' `"date.format = "`date_format'""' _n
 	
 	* plotting:
-	if !mi("`plot'") {
+	if !mi("`plot'") & lower("`cma'") != "plot_interactive_cma" {
 		* plotting requested!
 		file write `filebf' `"plot.show = "TRUE""' _n
 		
