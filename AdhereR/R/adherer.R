@@ -10109,12 +10109,12 @@ plot_interactive_cma <- function(...)
 #' group \emph{definitions} (e.g., "(CATEGORY_L2 == 'VITAMINS')").
 #' The definitions are \code{R} logical expressions using \emph{column names} and
 #' \emph{values} that appear in the dataset, as well as references to other
-#' medication groups using the construction \emph{"{NAME}"}.
+#' medication groups using the construction \emph{"\{NAME\}"}.
 #'
 #' In the above example, "CATEGORY_L2" is a column name in the \code{med.events.ATC}
 #' dataset, and 'VITAMINS' one of its possible values, and which selects all events
 #' that have prescribed ATC codes "A11" (aka "VITAMINS").
-#' Another example is "NotVita" defined as "(!{Vitamines})", which selects all
+#' Another example is "NotVita" defined as "(!\{Vitamines\})", which selects all
 #' events that do not have Vitamines prescribed.
 #'
 #' For more details, please see the acompanying vignette.
