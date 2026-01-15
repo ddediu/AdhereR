@@ -1,3 +1,11 @@
+# AdhereRViz 0.2.2
+
+## Maintenance
+
+  - fix CRAN check concerning person specification.
+  - updated copyright notes and dates throughout.
+
+
 # AdhereRViz 0.2.1
 
 In sync with `AdhereR` 0.8:

@@ -1,8 +1,9 @@
 ###############################################################################################
 #
 #    AdhereR: an R package for computing various estimates of medication adherence.
-#    Copyright (C) 2015-2018  Dan Dediu & Alexandra Dima
-#    Copyright (C) 2018-2019  Dan Dediu, Alexandra Dima & Samuel Allemann
+#    Copyright (C) 2015-2018  Dan Dediu & Alexandra L. Dima
+#    Copyright (C) 2018-2019  Dan Dediu, Alexandra L. Dima & Samuel Allemann
+#    Copyright (C) 2020-2026  Dan Dediu, Alexandra L. Dima
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -1958,37 +1959,40 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     return (NULL);
   }
   data.names <- names(data); # cache names(data) as it is used a lot
-  if( is.null(ID.colname) || is.na(ID.colname) ||                                           # avoid empty stuff
+  if( is.null(ID.colname) ||                                                                # avoid empty stuff
+      length(ID.colname) != 1 ||                                                            # make sure it's a single value
+      is.na(ID.colname) ||                                                                  # avoid empty stuff
       !(is.character(ID.colname) ||                                                         # it must be a character...
         (is.factor(ID.colname) && is.character(ID.colname <- as.character(ID.colname)))) || # ...or a factor (forced to character)
-      length(ID.colname) != 1 ||                                                            # make sure it's a single value
       !(ID.colname %in% data.names)                                                         # make sure it's a valid column name
       )
   {
     if( !suppress.warnings ) .report.ewms(paste0("The patient ID column \"",ID.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n"), "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( is.null(event.date.colname) || is.na(event.date.colname) ||                                                   # avoid empty stuff
+  if( is.null(event.date.colname) ||                                                                                # avoid empty stuff
+      length(event.date.colname) != 1 ||                                                                            # make sure it's a single value
+      is.na(event.date.colname) ||                                                                                  # avoid empty stuff
       !(is.character(event.date.colname) ||                                                                         # it must be a character...
         (is.factor(event.date.colname) && is.character(event.date.colname <- as.character(event.date.colname)))) || # ...or a factor (forced to character)
-      length(event.date.colname) != 1 ||                                                                            # make sure it's a single value
       !(event.date.colname %in% data.names)                                                                         # make sure it's a valid column name
       )
   {
     if( !suppress.warnings ) .report.ewms(paste0("The event date column \"",event.date.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n"), "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( is.null(event.duration.colname) || is.na(event.duration.colname) ||                                                       # avoid empty stuff
+  if( is.null(event.duration.colname) ||                                                                                        # avoid empty stuff
+      length(event.duration.colname) != 1 ||                                                                                    # make sure it's a single value
+      is.na(event.duration.colname) ||                                                                                          # avoid empty stuff
       !(is.character(event.duration.colname) ||                                                                                 # it must be a character...
         (is.factor(event.duration.colname) && is.character(event.duration.colname <- as.character(event.duration.colname)))) || # ...or a factor (forced to character)
-      length(event.duration.colname) != 1 ||                                                                                    # make sure it's a single value
       !(event.duration.colname %in% data.names)                                                                                 # make sure it's a valid column name
       )
   {
     if( !suppress.warnings ) .report.ewms(paste0("The event duration column \"",event.duration.colname,"\" cannot be empty, must be a single value, and must be present in the event data!\n"), "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( (!is.null(event.daily.dose.colname) && !is.na(event.daily.dose.colname)) &&                                                      # if actually given:
+  if( (!is.null(event.daily.dose.colname) && !all(is.na(event.daily.dose.colname))) &&                                                 # if actually given:
       (!(is.character(event.daily.dose.colname) ||                                                                                     # it must be a character...
          (is.factor(event.daily.dose.colname) && is.character(event.daily.dose.colname <- as.character(event.daily.dose.colname)))) || # ...or a factor (forced to character)
        length(event.daily.dose.colname) != 1 ||                                                                                        # make sure it's a single value
@@ -1998,7 +2002,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     if( !suppress.warnings ) .report.ewms(paste0("If given, the event daily dose column \"",event.daily.dose.colname,"\" must be a single value and must be present in the event data!\n"), "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( (!is.null(medication.class.colname) && !is.na(medication.class.colname)) &&                                                      # if actually given:
+  if( (!is.null(medication.class.colname) && !all(is.na(medication.class.colname))) &&                                                 # if actually given:
       (!(is.character(medication.class.colname) ||                                                                                     # it must be a character...
          (is.factor(medication.class.colname) && is.character(medication.class.colname <- as.character(medication.class.colname)))) || # ...or a factor (forced to character)
        length(medication.class.colname) != 1 ||                                                                                        # make sure it's a single value
@@ -2010,9 +2014,9 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
 
   # preconditions concerning carry-over:
-  if( !is.logical(carryover.within.obs.window)    || is.na(carryover.within.obs.window)    || length(carryover.within.obs.window) != 1    ||
-      !is.logical(carryover.into.obs.window)      || is.na(carryover.into.obs.window)      || length(carryover.into.obs.window) != 1      ||
-      !is.logical(carry.only.for.same.medication) || is.na(carry.only.for.same.medication) || length(carry.only.for.same.medication) != 1 )
+  if( length(carryover.within.obs.window) != 1    || !is.logical(carryover.within.obs.window)    || is.na(carryover.within.obs.window)    ||
+      length(carryover.into.obs.window) != 1      || !is.logical(carryover.into.obs.window)      || is.na(carryover.into.obs.window)      ||
+      length(carry.only.for.same.medication) != 1 || !is.logical(carry.only.for.same.medication) || is.na(carry.only.for.same.medication) )
   {
     if( !suppress.warnings ) .report.ewms("Carry over arguments must be single value logicals!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
@@ -2024,14 +2028,14 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
 
   # preconditions concerning dosage change:
-  if( !is.logical(consider.dosage.change) || is.na(consider.dosage.change) || length(consider.dosage.change) != 1 )
+  if(  length(consider.dosage.change) != 1 || !is.logical(consider.dosage.change) || is.na(consider.dosage.change) )
   {
     if( !suppress.warnings ) .report.ewms("Consider dosage change must be single value logical!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
 
   # preconditions concerning follow-up window (as all violations result in the same error, aggregate them in a single if):
-  if( (is.null(followup.window.start) || is.na(followup.window.start) || length(followup.window.start) != 1) ||                   # cannot be missing or have more than one values
+  if( (is.null(followup.window.start) || length(followup.window.start) != 1 || is.na(followup.window.start)) ||                   # cannot be missing or have more than one values
       (!inherits(followup.window.start,"Date") && !is.numeric(followup.window.start) &&                                           # not a Date or number:
           (!(is.character(followup.window.start) ||                                                                               # it must be a character...
              (is.factor(followup.window.start) && is.character(followup.window.start <- as.character(followup.window.start)))) || # ...or a factor (forced to character)
@@ -2041,14 +2045,14 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     return (NULL);
   }
   if( is.null(followup.window.start.unit) ||
-      (is.na(followup.window.start.unit) && !(is.factor(followup.window.start) || is.character(followup.window.start))) ||
+      (all(is.na(followup.window.start.unit)) && !(is.factor(followup.window.start) || is.character(followup.window.start))) ||
       length(followup.window.start.unit) != 1 ||
       ((is.factor(followup.window.start.unit) || is.character(followup.window.start.unit)) && !(followup.window.start.unit %in% c("days", "weeks", "months", "years"))) )
   {
     if( !suppress.warnings ) .report.ewms("The follow-up window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( is.numeric(followup.window.duration) && (followup.window.duration <= 0 || length(followup.window.duration) != 1) ||               # cannot be missing or have more than one values
+  if( is.numeric(followup.window.duration) && (length(followup.window.duration) != 1 || followup.window.duration <= 0) ||               # cannot be missing or have more than one values
       (!is.numeric(followup.window.duration) &&
        (!(is.character(followup.window.duration) ||                                                                                     # it must be a character...
           (is.factor(followup.window.duration) && is.character(followup.window.duration <- as.character(followup.window.duration)))) || # ...or a factor (forced to character)
@@ -2057,8 +2061,8 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     if( !suppress.warnings ) .report.ewms("The follow-up window duration must be a single value, either a positive number, or a string giving a column name in the data!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( is.null(followup.window.duration.unit) || is.na(followup.window.duration.unit) ||
-      length(followup.window.duration.unit) != 1 ||
+  if( is.null(followup.window.duration.unit) ||
+      length(followup.window.duration.unit) != 1 ||is.na(followup.window.duration.unit) ||
       !(followup.window.duration.unit %in% c("days", "weeks", "months", "years") ) )
   {
     if( !suppress.warnings ) .report.ewms("The follow-up window duration unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
@@ -2066,7 +2070,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
 
   # preconditions concerning observation window (as all violations result in the same error, aggregate them in a single if):
-  if( (is.null(observation.window.start) || is.na(observation.window.start) || length(observation.window.start) != 1) ||                   # cannot be missing or have more than one values
+  if( (is.null(observation.window.start) || length(observation.window.start) != 1) || is.na(observation.window.start) ||                   # cannot be missing or have more than one values
       (is.numeric(observation.window.start) && (observation.window.start < 0)) ||                                                          # if a number, must be a single positive one
       (!inherits(observation.window.start,"Date") && !is.numeric(observation.window.start) &&                                              # not a Date or number:
           (!(is.character(observation.window.start) ||                                                                                     # it must be a character...
@@ -2077,14 +2081,14 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
     return (NULL);
   }
   if( is.null(observation.window.start.unit) ||
-      (is.na(observation.window.start.unit) && !(is.factor(observation.window.start) || is.character(observation.window.start))) ||
+      (all(is.na(observation.window.start.unit)) && !(is.factor(observation.window.start) || is.character(observation.window.start))) ||
       length(observation.window.start.unit) != 1 ||
       ((is.factor(observation.window.start.unit) || is.character(observation.window.start.unit)) && !(observation.window.start.unit %in% c("days", "weeks", "months", "years"))) )
   {
     if( !suppress.warnings ) .report.ewms("The observation window start unit must be a single value, one of \"days\", \"weeks\", \"months\" or \"years\"!\n", "error", "compute.event.int.gaps", "AdhereR")
     return (NULL);
   }
-  if( is.numeric(observation.window.duration) && (observation.window.duration <= 0 || length(observation.window.duration) != 1) ||               # cannot be missing or have more than one values
+  if( is.numeric(observation.window.duration) && (length(observation.window.duration) != 1 || observation.window.duration <= 0) ||               # cannot be missing or have more than one values
       (!is.numeric(observation.window.duration) &&
        (!(is.character(observation.window.duration) ||                                                                                           # it must be a character...
           (is.factor(observation.window.duration) && is.character(observation.window.duration <- as.character(observation.window.duration)))) || # ...or a factor (forced to character)
@@ -2109,7 +2113,7 @@ compute.event.int.gaps <- function(data, # this is a per-event data.frame with c
   }
 
   # Check the date format (and save the conversion to Date() for later use):
-  if( is.na(date.format) || is.null(date.format) || length(date.format) != 1 || !is.character(date.format) )
+  if( is.null(date.format) || length(date.format) != 1 || is.na(date.format) || !is.character(date.format) )
   {
     if( !suppress.warnings ) .report.ewms(paste0("The date format must be a single string!\n"), "error", "compute.event.int.gaps", "AdhereR");
     return (NULL);

@@ -7,6 +7,8 @@ The adherer module interfaces with the R package AdhereR
 using a standard shell-and-files approach.
 
 @author: Dan Dediu, ddediu@gmail.com
+
+Copyright (C) 2018-2026  Dan Dediu
 """
 
 # Imports

@@ -680,7 +680,7 @@ plot(cmaE, align.all.patients=TRUE, print.dose.centered=TRUE,
 <a name="Section-interactive-plotting"></a>
 
 During the exploratory phases of data analysis, it is sometimes extremely useful to be able to plot interactively various views of the data using different parameter settings.
-We have implemented such interactive plotting of medication histories and (simple and iterative) CMA estimates within [`RStudio`](https://www.rstudio.com) and outside it (using [`Shiny`](https://shiny.rstudio.com/); this is the default as it very flexible and independent of running `AdhereR` within `RStudio`) through the `plot_interactive_cma()` function. 
+We have implemented such interactive plotting of medication histories and (simple and iterative) CMA estimates within [`RStudio`](https://posit.co/) and outside it (using [`Shiny`](https://shiny.posit.co/); this is the default as it very flexible and independent of running `AdhereR` within `RStudio`) through the `plot_interactive_cma()` function. 
 This function is generic and interactive, and can be given a large set of parameters (including the dataset on which to work) or it can interactively acquire these parameters directly from the user.
 
 Please note that this interactive plotting is actually implemented in a different package, `AdhereRViz` (which extends `AdhereR`); for more info, please see the vignette *AdhereR: Interactive plotting (and more) with Shiny* from package `AdhereRViz`.
@@ -713,7 +713,7 @@ However, the mechanism for defining such groups much be flexible enough to allow
 Therefore, we implemented this using a very flexible yet powerful and intuitive mechanism that can use any type of information associated to the actual events.
 
 To illustrate, we will use the data that comes with the package: `med.events.ATC` and `med.groups`.
-`med.events.ATC` is a `data.frame` with `r nrow(med.events.ATC)` events (one per row) for `r length(unique(med.events.ATC$PATIENT_ID))` patients, containing the patient's unique identifier (column `PATIENT_ID`), the event date (`DATE`) and duration (`DURATION`), and the medication's [ATC code](https://www.whocc.no/atc/structure_and_principles/) (column `CATEGORY`), further detailing its first two levels: level 1 (one letter giving the anatomical main group, e.g., "A" for "Alimentary tract and metabolism"; column `CATEGORY_L1`) and level 2 (the therapeutic subgroup, e.g., "A02" for "Drugs for acid related disorders"):
+`med.events.ATC` is a `data.frame` with `r nrow(med.events.ATC)` events (one per row) for `r length(unique(med.events.ATC$PATIENT_ID))` patients, containing the patient's unique identifier (column `PATIENT_ID`), the event date (`DATE`) and duration (`DURATION`), and the medication's [ATC code](https://atcddd.fhi.no/atc/structure_and_principles/) (column `CATEGORY`), further detailing its first two levels: level 1 (one letter giving the anatomical main group, e.g., "A" for "Alimentary tract and metabolism"; column `CATEGORY_L1`) and level 2 (the therapeutic subgroup, e.g., "A02" for "Drugs for acid related disorders"):
 
 ```{r, echo=FALSE}
 knitr::kable(head(med.events.ATC, n=5), row.names=FALSE,
@@ -919,7 +919,7 @@ Please note that if no medication groups are defined (the default), then *nothin
 ## Working with very large databases
 <a name="Section-working-with-databases"></a>
 
-`AdhereR` can use data stored in a variety of "classical" `RDBMS`'s (Relational Database Management Systems), such as [`MySQL`](https://www.mysql.com/) or [`SQLite`](https://www.sqlite.org/index.html), either through explicit [`SQL`](https://en.wikipedia.org/wiki/SQL) queries or transparently through [`dbplyr`](https://db.rstudio.com/dplyr/), or in other systems, such as the [`Apache Hadoop`](https://hadoop.apache.org/).
+`AdhereR` can use data stored in a variety of "classical" `RDBMS`'s (Relational Database Management Systems), such as [`MySQL`](https://www.mysql.com/) or [`SQLite`](https://www.sqlite.org/index.html), either through explicit [`SQL`](https://en.wikipedia.org/wiki/SQL) queries or transparently through [`dbplyr`](https://dbplyr.tidyverse.org/), or in other systems, such as the [`Apache Hadoop`](https://hadoop.apache.org/).
 Thus, `AdhereR` can access (very) large quantities of data stored in various formats and using different backends, and can process it ranging from single-threaded set-ups on a client machine to large heterogeneous distributed clusters (using, for example, various explicit parallel processing frameworks or `Hadoop`'s `MapReduce` framework).
 All these are detailed in a dedicated vignette *"Using `AdhereR` with various database technologies for processing very large datasets"*.
 
@@ -934,7 +934,7 @@ A working implementation for `Python 3` is included in the package (and inteded 
 ## AdhereR is pipe (`%>%` or `|>`)-friendly
 <a name="pipe-friendly"></a>
 
-The [pipe operator (`%>%`)](https://r4ds.had.co.nz/pipes.html) has been originally introduced in `R` by the [`magrittr` package](https://cran.r-project.org/package=magrittr/vignettes/magrittr.html) and is a central feature of the [Tidyverse](https://www.tidyverse.org/), and is since `R` 4.1 also available natively as `|>` [(but there are some subtle differences from `%>%`)](https://www.infoworld.com/article/3621369/use-the-new-r-pipe-built-into-r-41.html).
+The [pipe operator (`%>%`)](https://r4ds.had.co.nz/pipes.html) has been originally introduced in `R` by the [`magrittr` package](https://cran.r-project.org/package=magrittr/vignettes/magrittr.html) and is a central feature of the [Tidyverse](https://tidyverse.org/), and is since `R` 4.1 also available natively as `|>` [(but there are some subtle differences from `%>%`)](https://www.infoworld.com/article/2266573/use-the-new-r-pipe-built-into-r-41.html).
 `AdhereR` is compatible with pipe (because for all functions the first parameter encapsulates the "important" data, with the others providing various "tweaks"), so, code such as the following is fully functional:
 
 ```{r eval=FALSE}
@@ -1130,7 +1130,7 @@ In general, for "multicore" and "snow" with nodes on the local machine, do not u
 Also, memory might be of concern when parallelizing, as at least parts of `R`'s environment will be replicated across threads/processes; this, in turn, for large environments and systems low on RAM, might result in massive performance loss due to swapping (or even result in crashes).
 For more information on parallelism in `R` please see, for example, [CRAN Task View: High-Performance and Parallel Computing with R](https://CRAN.R-project.org/view=HighPerformanceComputing) and the various blogposts and books on the matter.
 
-Conceptually, we exploited various optimization techniques (see, for example, Hadley Wickham's [Advanced R](http://adv-r.had.co.nz/) and other blogposts on profiling and optimizing `R` code), but the two most important architectural decisions are to (a) extensively use [`data.table`](http://r-datatable.com/) and (b) to pre-allocate chunks of participants for parallel processing.
+Conceptually, we exploited various optimization techniques (see, for example, Hadley Wickham's [Advanced R](http://adv-r.had.co.nz/) and other blogposts on profiling and optimizing `R` code), but the two most important architectural decisions are to (a) extensively use [`data.table`](https://r-datatable.com/) and (b) to pre-allocate chunks of participants for parallel processing.
 The general framework is to define a "workhorse" function that can process a set of participants and returns one `data.frame` or `data.table` (or several, in which case they must be encapsulated in a `list()`), workhorse function that is transparently called for the whole dataset (if `parallel.backend` is "none"), or in parallel for subsets of the whole dataset of roughly 1/`parallel.threads` size (for "multicore" and "snow"), in the latter case the results being transparently recombined (even if multiple results are returned in a `list()`).
 Internally, the workhorse functions tend to make extensive use of the `data.table` "reference semantics" (the `:=` operator) to perform in-place changes and avoid unnecessary copying of objects, `key`s for fast indexing, search and selection, and the `by` grouping mechanism, allowing the application of a specialized function to each individual patient (or episode or sliding window, as needed).
 We decided to keep everything "pure `R`" (so there is so far no `C++` code) and the code is extensively commented and hopefully clear to understand, change and extend.
@@ -1152,7 +1152,7 @@ We have also aimed to facilitate replicability. Thus, summaries of functions inc
 
 <a name="Ref-Peterson2007"></a>Peterson A.M., Nau D.P., Cramer J.A., Benner J., Gwadry-Sridhar F., Nichol M. (2007) [A checklist for medication compliance and persistence studies using retrospective databases](https://pubmed.ncbi.nlm.nih.gov/17261111/). *Value in Health: Journal of the International Society for Pharmacoeconomics and Outcomes Research* **10**(1):3–12. [doi:10.1111/j.1524-4733.2006.00139.x](http://dx.doi.org/10.1111/j.1524-4733.2006.00139.x).
 
-<a name="Ref-SouvereinInPress"></a>Souverein PC, Koster ES, Colice G, van Ganse E, Chisholm A, Price D, et al. (*in press*) [Inhaled Corticosteroid Adherence Patterns in a Longitudinal Asthma Cohort.](https://www.sciencedirect.com/science/article/abs/pii/S2213219816304238) *J Allergy Clin Immunol Pract*. [doi:10.1016/j.jaip.2016.09.022](http://dx.doi.org/10.1016/j.jaip.2016.09.022).
+<a name="Ref-SouvereinInPress"></a>Souverein PC, Koster ES, Colice G, van Ganse E, Chisholm A, Price D, et al. (2017) Inhaled Corticosteroid Adherence Patterns in a Longitudinal Asthma Cohort. *J Allergy Clin Immunol Pract* **5**(2):448-456.e2. [doi:10.1016/j.jaip.2016.09.022](http://dx.doi.org/10.1016/j.jaip.2016.09.022).
 
 <a name="Ref-Vollmer2012"></a>Vollmer W.M., Xu M., Feldstein A., Smith D., Waterbury A., Rand C. (2012) [Comparison of pharmacy-based measures of medication adherence](https://pubmed.ncbi.nlm.nih.gov/22691240/). *BMC Health Services Research* **12**(1):155. [doi:10.1186/1472-6963-12-155](http://dx.doi.org/10.1186/1472-6963-12-155).
 

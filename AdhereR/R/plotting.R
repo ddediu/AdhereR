@@ -16,8 +16,9 @@
 #
 # This is part of AdhereR.
 #
-#    Copyright (C) 2015-2018  Dan Dediu & Alexandra Dima
-#    Copyright (C) 2018-2019  Dan Dediu, Alexandra Dima & Samuel Allemann
+#    Copyright (C) 2015-2018  Dan Dediu & Alexandra L. Dima
+#    Copyright (C) 2018-2019  Dan Dediu, Alexandra L. Dima & Samuel Allemann
+#    Copyright (C) 2020-2026  Dan Dediu, Alexandra L. Dima
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by

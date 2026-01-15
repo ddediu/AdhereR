@@ -655,7 +655,7 @@ Please chose the most appropriate one for your use-case, but whatever you do, **
 
 ### Use `dplyr` and `DBI` to transparently access the database
 
-This is based on the more extended discussion in https://db.rstudio.com/dplyr/ .
+This is based on the more extended discussion in https://dplyr.tidyverse.org/ .
 While using `SQL` for interacting with the database is very flexible and allows for fine-grained optimization, it requires a certain level of expertise and can be argued to create "chimeras" of `R` and `SQL` that might be more difficult to understand, debug and maintain.
 
 The `R` packages `dbplyr` and `DBI` offer an alternative way, where the `SQL` is mostly "hidden" behind a familiar `R` code.
@@ -720,7 +720,7 @@ DBI::dbDisconnect(db_dplyer);
 
 ## How about `SAS` and `Stata`
 
-If the dataset is relatively small, probably the easiest is to export it into a format that `R` can read (such as `CSV`); if this is not possible, then maybe one of the methods for importing their native formats in `R` may work (see, for example, https://www.statmethods.net/input/importingdata.html or https://cran.r-project.org/doc/manuals/r-devel/R-data.html#EpiInfo-Minitab-SAS-S_002dPLUS-SPSS-Stata-Systat ).
+If the dataset is relatively small, probably the easiest is to export it into a format that `R` can read (such as `CSV`); if this is not possible, then maybe one of the methods for importing their native formats in `R` may work (see, for example, https://www.datacamp.com/doc/r/importingdata or https://cran.r-project.org/doc/manuals/r-devel/R-data.html#EpiInfo-Minitab-SAS-S_002dPLUS-SPSS-Stata-Systat ).
 
 However, if the dataset is (very) large, then probably one should either:
 
@@ -730,8 +730,8 @@ However, if the dataset is (very) large, then probably one should either:
 
 ## Finally, let's look at `Hadoop` and `MapReduce`!
 
-[Apache `Hadoop`](https://hadoop.apache.org/) is a general framework for the distributed processing of large datasets using a simple programming paradigm (`MapReduce`; see, for example, https://wiki.apache.org/hadoop/ProjectDescription ).
-Given that `AdhereR` can compute adherence estimates for sets of at least one patient at a time, it is very easy to embed within the `MapReduce` framework using a variety of approaches (see, among others, the outlines  [here](https://blog.revolutionanalytics.com/2015/06/using-hadoop-with-r-it-depends.html) or [here]( https://www.dezyre.com/article/r-hadoop-a-perfect-match-for-big-data/292)).
+[Apache `Hadoop`](https://hadoop.apache.org/) is a general framework for the distributed processing of large datasets using a simple programming paradigm (`MapReduce`; see, for example, https://cwiki.apache.org/confluence/display/HADOOP2/ProjectDescription ).
+Given that `AdhereR` can compute adherence estimates for sets of at least one patient at a time, it is very easy to embed within the `MapReduce` framework using a variety of approaches (see, among others, the outline  [here](https://www.r-bloggers.com/2015/06/using-hadoop-with-r-it-depends/)).
 
 Just as an example, we will install here `Hadoop 3.0.3` on the `Ubuntu 18.04` machine and use it to compute `CMA9` on all the patients.
 
@@ -795,7 +795,7 @@ Output
 
 ### Installing `RHadoop` on `Ubuntu 18.04`  
 
-We are adapting here various guidelines for [`RedHat`](https://github.com/RevolutionAnalytics/RHadoop/wiki/Installing-RHadoop-on-RHEL) and [`macOS`](http://www.rdatamining.com/big-data/rhadoop).
+We are adapting here various guidelines for [`RedHat`](https://github.com/RevolutionAnalytics/RHadoop/wiki/Installing-RHadoop-on-RHEL) and [`macOS`](https://www.rdatamining.com/big-data/step-by-step-guide-to-setting-up-an-r-hadoop-system).
 All these happen in `R` (unless specified).
 
 #### Set the needed environment variables

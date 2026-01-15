@@ -803,6 +803,7 @@ getCMA.CMA_polypharmacy <- function(x, flatten.medication.groups=FALSE, medicati
   return (cma$CMA);
 }
 
+#' @export
 subsetCMA.CMA_polypharmacy <- function(cma, patients, suppress.warnings=FALSE)
 {
   if( inherits(patients, "factor") ) patients <- as.character(patients);

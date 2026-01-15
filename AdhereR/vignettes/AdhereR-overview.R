@@ -1,9 +1,9 @@
-## ---- echo=FALSE, message=FALSE, warning=FALSE, results='hide'----------------
+## ----echo=FALSE, message=FALSE, warning=FALSE, results='hide'-----------------
 # Various Rmarkdown output options:
 # center figures and reduce their file size:
 knitr::opts_chunk$set(fig.align = "center", dpi=100, dev="jpeg"); 
 
-## ---- echo=TRUE, results='asis'-----------------------------------------------
+## ----echo=TRUE, results='asis'------------------------------------------------
 # Load the AdhereR library:
 library(AdhereR);
 
@@ -12,7 +12,7 @@ ExamplePats <- med.events[med.events$PATIENT_ID %in% c(37, 76), ];
 # Display them as pretty markdown table:
 knitr::kable(ExamplePats, caption = "<a name=\"Table-1\"></a>**Table 1.** Medication events for two example patients");
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1\"></a>**Figure 1.** Medication histories - two example patients", fig.height=6, fig.width=8, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1\"></a>**Figure 1.** Medication histories - two example patients", fig.height=6, fig.width=8, out.width="100%"----
 # Create an object "cma0" of the most basic CMA type, "CMA0":
 cma0 <- CMA0(data=ExamplePats, # use the two selected patients
              ID.colname="PATIENT_ID", # the name of the column containing the IDs
@@ -28,13 +28,13 @@ cma0 <- CMA0(data=ExamplePats, # use the two selected patients
 plot(cma0, # the object to plot
      align.all.patients=TRUE); # align all patients for easier comparison
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1a\"></a>**Figure 1 (a).** Same plot as in **Figure 1**, but also showing the daily doses as numbers and as line thickness", fig.height=6, fig.width=8, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1a\"></a>**Figure 1 (a).** Same plot as in **Figure 1**, but also showing the daily doses as numbers and as line thickness", fig.height=6, fig.width=8, out.width="100%"----
 # Same plot as above but also showing the daily doses:
 plot(cma0, # the object to plot
      print.dose=TRUE, plot.dose=TRUE,
      align.all.patients=TRUE); # align all patients for easier comparison
 
-## ---- echo=TRUE, results='asis'-----------------------------------------------
+## ----echo=TRUE, results='asis'------------------------------------------------
 # Compute the treatment episodes for the two patients:
 TEs3<- compute.treatment.episodes(ExamplePats,
                                   ID.colname="PATIENT_ID",
@@ -56,7 +56,7 @@ TEs3<- compute.treatment.episodes(ExamplePats,
 knitr::kable(TEs3, 
              caption = "<a name=\"Table-2\"></a>**Table 2.** Example output `compute.treatment.episodes()` function");
 
-## ---- echo=TRUE, results='asis'-----------------------------------------------
+## ----echo=TRUE, results='asis'------------------------------------------------
 # Compute the treatment episodes for the two patients
 # but now a change in medication type does not start a new episode:
 TEs4<- compute.treatment.episodes(ExamplePats,
@@ -80,7 +80,7 @@ TEs4<- compute.treatment.episodes(ExamplePats,
 knitr::kable(TEs4, 
              caption = "<a name=\"Table-3\"></a>**Table 3.** Alternative scenario output `compute.treatment.episodes()` function");
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-2\"></a>**Figure 2.** Simple CMA 1", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-2\"></a>**Figure 2.** Simple CMA 1", fig.height=5, fig.width=7, out.width="100%"----
 # Create the CMA1 object with the given parameters:
 cma1 <- CMA1(data=ExamplePats,
              ID.colname="PATIENT_ID",
@@ -104,7 +104,7 @@ plot(cma1,
      patients.to.plot=c("76"), # plot only patient 76 
      legend.x=520); # place the legend in a nice way
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-3\"></a>**Figure 3.** Simple CMA 2", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-3\"></a>**Figure 3.** Simple CMA 2", fig.height=5, fig.width=7, out.width="100%"----
 cma2 <- CMA2(data=ExamplePats, # we're estimating CMA2 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -116,7 +116,7 @@ plot(cma2,
      patients.to.plot=c("76"),  
      show.legend=FALSE); # don't show legend to avoid clutter (see above)
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-4\"></a>**Figure 4.** Simple CMA 3", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-4\"></a>**Figure 4.** Simple CMA 3", fig.height=5, fig.width=7, out.width="100%"----
 cma3 <- CMA3(data=ExamplePats, # we're estimating CMA3 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -126,7 +126,7 @@ cma3 <- CMA3(data=ExamplePats, # we're estimating CMA3 now!
              date.format="%m/%d/%Y");
 plot(cma3, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5.** Simple CMA 4", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-5\"></a>**Figure 5.** Simple CMA 4", fig.height=5, fig.width=7, out.width="100%"----
 cma4 <- CMA4(data=ExamplePats, # we're estimating CMA4 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -136,7 +136,7 @@ cma4 <- CMA4(data=ExamplePats, # we're estimating CMA4 now!
              date.format="%m/%d/%Y");
 plot(cma4,patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6.** Simple CMA 5", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-6\"></a>**Figure 6.** Simple CMA 5", fig.height=5, fig.width=7, out.width="100%"----
 cma5 <- CMA5(data=ExamplePats, # we're estimating CMA5 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -150,7 +150,7 @@ cma5 <- CMA5(data=ExamplePats, # we're estimating CMA5 now!
              date.format="%m/%d/%Y");
 plot(cma5,patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-7\"></a>**Figure 7.** Simple CMA 6", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-7\"></a>**Figure 7.** Simple CMA 6", fig.height=5, fig.width=7, out.width="100%"----
 cma6 <- CMA6(data=ExamplePats, # we're estimating CMA6 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -164,14 +164,14 @@ cma6 <- CMA6(data=ExamplePats, # we're estimating CMA6 now!
              date.format="%m/%d/%Y");
 plot(cma6,patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1a\"></a>**Figure 7 (a).** Same plot as in **Figure 7**, but also showing the daily doses as numbers and as line thickness", fig.height=6, fig.width=8, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-1a\"></a>**Figure 7 (a).** Same plot as in **Figure 7**, but also showing the daily doses as numbers and as line thickness", fig.height=6, fig.width=8, out.width="100%"----
 # Same plot as above but also showing the daily doses:
 plot(cma6, # the object to plot
      patients.to.plot=c("76"), # plot only patient 76 
      print.dose=TRUE, plot.dose=TRUE,
      legend.x=520); # place the legend in a nice way
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-8\"></a>**Figure 8.** Simple CMA 7", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-8\"></a>**Figure 8.** Simple CMA 7", fig.height=5, fig.width=7, out.width="100%"----
 cma7 <- CMA7(data=ExamplePats, # we're estimating CMA7 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -185,7 +185,7 @@ cma7 <- CMA7(data=ExamplePats, # we're estimating CMA7 now!
              date.format="%m/%d/%Y");
 plot(cma7, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-9\"></a>**Figure 9.** Simple CMA 8", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-9\"></a>**Figure 9.** Simple CMA 8", fig.height=5, fig.width=7, out.width="100%"----
 cma8 <- CMA8(data=ExamplePats, # we're estimating CMA8 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -201,7 +201,7 @@ plot(cma8, patients.to.plot=c("76"), show.legend=FALSE);
 # The value for patient 76, rounded at 2 digits
 round(cma8$CMA[cma8$CMA$PATIENT_ID== 76, 2]*100, 2);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-10\"></a>**Figure 10.** Simple CMA 9", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-10\"></a>**Figure 10.** Simple CMA 9", fig.height=5, fig.width=7, out.width="100%"----
 cma9 <- CMA9(data=ExamplePats, # we're estimating CMA9 now!
              ID.colname="PATIENT_ID",
              event.date.colname="DATE",
@@ -215,7 +215,7 @@ cma9 <- CMA9(data=ExamplePats, # we're estimating CMA9 now!
              date.format="%m/%d/%Y");
 plot(cma9, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%", warning=FALSE----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-11\"></a>**Figure 11.** CMA 9 per episode", fig.height=5, fig.width=7, out.width="100%", warning=FALSE----
 cmaE <- CMA_per_episode(CMA="CMA9", # apply the simple CMA9 to each treatment episode
                         data=ExamplePats,
                         ID.colname="PATIENT_ID",
@@ -250,7 +250,7 @@ round(cmaE$CMA[cmaE$CMA$PATIENT_ID== 76, 7]*100, 2);
 # Plot:
 plot(cmaE, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-12\"></a>**Figure 12.** Sliding window CMA 9", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-12\"></a>**Figure 12.** Sliding window CMA 9", fig.height=5, fig.width=7, out.width="100%"----
 cmaW <- CMA_sliding_window(CMA.to.apply="CMA9", # apply the simple CMA9 to each sliding window
                            data=ExamplePats,
                            ID.colname="PATIENT_ID",
@@ -282,7 +282,7 @@ round(cmaW$CMA[cmaW$CMA$PATIENT_ID== 76, 5]*100, 2);
 # Plot:
 plot(cmaW, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-13\"></a>**Figure 13.** Sliding window CMA 9", fig.height=5, fig.width=7, out.width="100%"----
+## ----echo=FALSE, fig.show='hold', fig.cap = "<a name=\"Figure-13\"></a>**Figure 13.** Sliding window CMA 9", fig.height=5, fig.width=7, out.width="100%"----
 cmaW1 <- CMA_sliding_window(CMA.to.apply="CMA9",
                            data=ExamplePats,
                            ID.colname="PATIENT_ID",
@@ -307,7 +307,7 @@ cmaW1 <- CMA_sliding_window(CMA.to.apply="CMA9",
 # Plot:
 plot(cmaW1, patients.to.plot=c("76"), show.legend=FALSE);
 
-## ---- echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** Per episodes with CMA 1, showing which events belong to which episode: for events, the number(s) between '[]' represent the event they belong to, while for an event, the number between '[]' is what the events use as its identifier. (e.g., the 3rd even from the left for patient 1 has a '[2]', meaning that it belongs to event '2', which is identified as such with a '[2]' immediately after is estimated CMA of '136%'). Please note that the same plot for CMA9 would be quite different, as the rules for which events are considered differ (e.g., the last events of the episodes would be included).", fig.height=7, fig.width=7, out.width="100%"----
+## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-14\"></a>**Figure 14.** Per episodes with CMA 1, showing which events belong to which episode: for events, the number(s) between '[]' represent the event they belong to, while for an event, the number between '[]' is what the events use as its identifier. (e.g., the 3rd even from the left for patient 1 has a '[2]', meaning that it belongs to event '2', which is identified as such with a '[2]' immediately after is estimated CMA of '136%'). Please note that the same plot for CMA9 would be quite different, as the rules for which events are considered differ (e.g., the last events of the episodes would be included).", fig.height=7, fig.width=7, out.width="100%"----
 cmaE <- CMA_per_episode(CMA="CMA1",
                         data=med.events[med.events$PATIENT_ID %in% 1:2,],
                         ID.colname="PATIENT_ID",
@@ -326,71 +326,71 @@ getEventsToEpisodesMapping(cmaE); # get the mapping (here, print it)
 plot(cmaE, align.all.patients=TRUE, print.dose.centered=TRUE, 
      print.episode.or.sliding.window=TRUE); # show the mapping visually
 
-## ---- echo=FALSE--------------------------------------------------------------
+## ----echo=FALSE---------------------------------------------------------------
 knitr::kable(head(med.events.ATC, n=5), row.names=FALSE,
              caption="First 5 lines of the `med.events.ATC` dataset.");
 
-## ---- eval=FALSE--------------------------------------------------------------
-#  event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
-#                                             presc.data = durcomp.prescribing,
-#                                             special.periods.data = durcomp.hospitalisation,
-#                                             ID.colname = "ID",
-#                                             presc.date.colname = "DATE.PRESC",
-#                                             disp.date.colname = "DATE.DISP",
-#                                             medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
-#                                             total.dose.colname = "TOTAL.DOSE",
-#                                             presc.daily.dose.colname = "DAILY.DOSE",
-#                                             presc.duration.colname = "PRESC.DURATION",
-#                                             visit.colname = "VISIT",
-#                                             split.on.dosage.change = TRUE,
-#                                             force.init.presc = TRUE,
-#                                             force.presc.renew = TRUE,
-#                                             trt.interruption = "continue",
-#                                             special.periods.method = "continue",
-#                                             date.format = "%Y-%m-%d",
-#                                             suppress.warnings = FALSE,
-#                                             return.data.table = FALSE);
-#  med.events.ATC <- event_durations$event_durations[ !is.na(event_durations$event_durations$DURATION) &
-#                                                       event_durations$event_durations$DURATION > 0,
-#                                           c("ID", "DISP.START", "DURATION", "DAILY.DOSE", "ATC.CODE")];
-#  names(med.events.ATC) <- c("PATIENT_ID", "DATE", "DURATION", "PERDAY", "CATEGORY");
-#  # Groups from the ATC codes:
-#  sort(unique(med.events.ATC$CATEGORY)); # all the ATC codes in the data
-#  # Level 1:
-#  med.events.ATC$CATEGORY_L1 <- vapply(substr(med.events.ATC$CATEGORY,1,1), switch, character(1),
-#                                       "A"="ALIMENTARY TRACT AND METABOLISM",
-#                                       "B"="BLOOD AND BLOOD FORMING ORGANS",
-#                                       "J"="ANTIINFECTIVES FOR SYSTEMIC USE",
-#                                       "R"="RESPIRATORY SYSTEM",
-#                                       "OTHER");
-#  # Level 2:
-#  med.events.ATC$CATEGORY_L2 <- vapply(substr(med.events.ATC$CATEGORY,1,3), switch, character(1),
-#                                       "A02"="DRUGS FOR ACID RELATED DISORDERS",
-#                                       "A05"="BILE AND LIVER THERAPY",
-#                                       "A09"="DIGESTIVES, INCL. ENZYMES",
-#                                       "A10"="DRUGS USED IN DIABETES",
-#                                       "A11"="VITAMINS",
-#                                       "A12"="MINERAL SUPPLEMENTS",
-#                                       "B02"="ANTIHEMORRHAGICS",
-#                                       "J01"="ANTIBACTERIALS FOR SYSTEMIC USE",
-#                                       "J02"="ANTIMYCOTICS FOR SYSTEMIC USE",
-#                                       "R03"="DRUGS FOR OBSTRUCTIVE AIRWAY DISEASES",
-#                                       "R05"="COUGH AND COLD PREPARATIONS",
-#                                       "OTHER");
+## ----eval=FALSE---------------------------------------------------------------
+# event_durations <- compute_event_durations(disp.data = durcomp.dispensing,
+#                                            presc.data = durcomp.prescribing,
+#                                            special.periods.data = durcomp.hospitalisation,
+#                                            ID.colname = "ID",
+#                                            presc.date.colname = "DATE.PRESC",
+#                                            disp.date.colname = "DATE.DISP",
+#                                            medication.class.colnames = c("ATC.CODE", "UNIT", "FORM"),
+#                                            total.dose.colname = "TOTAL.DOSE",
+#                                            presc.daily.dose.colname = "DAILY.DOSE",
+#                                            presc.duration.colname = "PRESC.DURATION",
+#                                            visit.colname = "VISIT",
+#                                            split.on.dosage.change = TRUE,
+#                                            force.init.presc = TRUE,
+#                                            force.presc.renew = TRUE,
+#                                            trt.interruption = "continue",
+#                                            special.periods.method = "continue",
+#                                            date.format = "%Y-%m-%d",
+#                                            suppress.warnings = FALSE,
+#                                            return.data.table = FALSE);
+# med.events.ATC <- event_durations$event_durations[ !is.na(event_durations$event_durations$DURATION) &
+#                                                      event_durations$event_durations$DURATION > 0,
+#                                          c("ID", "DISP.START", "DURATION", "DAILY.DOSE", "ATC.CODE")];
+# names(med.events.ATC) <- c("PATIENT_ID", "DATE", "DURATION", "PERDAY", "CATEGORY");
+# # Groups from the ATC codes:
+# sort(unique(med.events.ATC$CATEGORY)); # all the ATC codes in the data
+# # Level 1:
+# med.events.ATC$CATEGORY_L1 <- vapply(substr(med.events.ATC$CATEGORY,1,1), switch, character(1),
+#                                      "A"="ALIMENTARY TRACT AND METABOLISM",
+#                                      "B"="BLOOD AND BLOOD FORMING ORGANS",
+#                                      "J"="ANTIINFECTIVES FOR SYSTEMIC USE",
+#                                      "R"="RESPIRATORY SYSTEM",
+#                                      "OTHER");
+# # Level 2:
+# med.events.ATC$CATEGORY_L2 <- vapply(substr(med.events.ATC$CATEGORY,1,3), switch, character(1),
+#                                      "A02"="DRUGS FOR ACID RELATED DISORDERS",
+#                                      "A05"="BILE AND LIVER THERAPY",
+#                                      "A09"="DIGESTIVES, INCL. ENZYMES",
+#                                      "A10"="DRUGS USED IN DIABETES",
+#                                      "A11"="VITAMINS",
+#                                      "A12"="MINERAL SUPPLEMENTS",
+#                                      "B02"="ANTIHEMORRHAGICS",
+#                                      "J01"="ANTIBACTERIALS FOR SYSTEMIC USE",
+#                                      "J02"="ANTIMYCOTICS FOR SYSTEMIC USE",
+#                                      "R03"="DRUGS FOR OBSTRUCTIVE AIRWAY DISEASES",
+#                                      "R05"="COUGH AND COLD PREPARATIONS",
+#                                      "OTHER");
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  med.groups <- c("Vitamins"  = "(CATEGORY_L2 == 'VITAMINS')",
-#                  "VitaResp"  = "({Vitamins} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')",
-#                  "VitaShort" = "({Vitamins} & DURATION <= 30)",
-#                  "VitELow"   = "(CATEGORY == 'A11HA03' & PERDAY <= 500)",
-#                  "VitaComb"  = "({VitaShort} | {VitELow})",
-#                  "NotVita"   = "(!{Vitamins})");
+# med.groups <- c("Vitamins"  = "(CATEGORY_L2 == 'VITAMINS')",
+#                 "VitaResp"  = "({Vitamins} | CATEGORY_L1 == 'RESPIRATORY SYSTEM')",
+#                 "VitaShort" = "({Vitamins} & DURATION <= 30)",
+#                 "VitELow"   = "(CATEGORY == 'A11HA03' & PERDAY <= 500)",
+#                 "VitaComb"  = "({VitaShort} | {VitELow})",
+#                 "NotVita"   = "(!{Vitamins})");
 
-## ---- echo=FALSE--------------------------------------------------------------
+## ----echo=FALSE---------------------------------------------------------------
 knitr::kable(head(med.events.ATC[med.events.ATC$CATEGORY_L2 == 'VITAMINS',], n=5), row.names=FALSE,
              caption="First 5 events in `med.events.ATC` corresponding to the *Vitamins* medication group.");
 
-## ---- echo=FALSE--------------------------------------------------------------
+## ----echo=FALSE---------------------------------------------------------------
 knitr::kable(head(med.events.ATC[med.events.ATC$CATEGORY_L2 == 'VITAMINS' | med.events.ATC$CATEGORY_L1 == 'RESPIRATORY SYSTEM',], n=5), row.names=FALSE,
              caption="First 5 events in `med.events.ATC` corresponding to the *VitaResp* medication group.");
 
@@ -427,19 +427,19 @@ plot(cma1_mg,
      show.legend=FALSE);
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  cma0_types <- CMA0(data=med.events.ATC,
-#                     ID.colname="PATIENT_ID",
-#                     event.date.colname="DATE",
-#                     event.duration.colname="DURATION",
-#                     event.daily.dose.colname="PERDAY",
-#                     medication.class.colname="CATEGORY",
-#                     medication.groups="CATEGORY_L1",
-#                     #flatten.medication.groups=TRUE,
-#                     #followup.window.start.per.medication.group=TRUE,
-#                     followup.window.start=0,
-#                     observation.window.start=0,
-#                     observation.window.duration=365,
-#                     date.format="%m/%d/%Y");
+# cma0_types <- CMA0(data=med.events.ATC,
+#                    ID.colname="PATIENT_ID",
+#                    event.date.colname="DATE",
+#                    event.duration.colname="DURATION",
+#                    event.daily.dose.colname="PERDAY",
+#                    medication.class.colname="CATEGORY",
+#                    medication.groups="CATEGORY_L1",
+#                    #flatten.medication.groups=TRUE,
+#                    #followup.window.start.per.medication.group=TRUE,
+#                    followup.window.start=0,
+#                    observation.window.start=0,
+#                    observation.window.duration=365,
+#                    date.format="%m/%d/%Y");
 
 ## ----echo=FALSE---------------------------------------------------------------
 tmp <- sort(unique(med.events.ATC$CATEGORY_L1));
@@ -448,40 +448,40 @@ cat(paste0("c(",
            ");"));
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  library(dplyr);
-#  
-#  # Compute, then get the CMA, change it and print it:
-#  x <- med.events %>%                      # use med.events
-#    filter(PATIENT_ID %in% c(1,2,3)) %>%   # first 3 patients
-#    CMA9(ID.colname="PATIENT_ID",          # compute CMA9
-#         event.date.colname="DATE",
-#         event.duration.colname="DURATION",
-#         event.daily.dose.colname="PERDAY",
-#         medication.class.colname="CATEGORY",
-#         followup.window.start=230,
-#         followup.window.duration=705,
-#         observation.window.start=41,
-#         observation.window.duration=100,
-#         date.format="%m/%d/%Y") %>%
-#    getCMA() %>% # get the CMA estimates
-#    mutate(CMA=sprintf("%.1f%%",100*CMA)); # make them percents
-#  print(x); # print it
-#  
-#  # Plot some CMAs:
-#  med.events %>% # use med.events
-#    filter(PATIENT_ID %in% c(1,2,3)) %>%             # first 3 patients
-#    CMA_sliding_window(CMA.to.apply="CMA7",          # sliding windows CMA7
-#                       ID.colname="PATIENT_ID",
-#                       event.date.colname="DATE",
-#                       event.duration.colname="DURATION",
-#                       event.daily.dose.colname="PERDAY",
-#                       medication.class.colname="CATEGORY",
-#                       followup.window.start=230,
-#                       followup.window.duration=705,
-#                       observation.window.start=41,
-#                       observation.window.duration=100,
-#                       date.format="%m/%d/%Y") %>%
-#    plot(align.all.patients=TRUE, show.legend=TRUE); # plot it
+# library(dplyr);
+# 
+# # Compute, then get the CMA, change it and print it:
+# x <- med.events %>%                      # use med.events
+#   filter(PATIENT_ID %in% c(1,2,3)) %>%   # first 3 patients
+#   CMA9(ID.colname="PATIENT_ID",          # compute CMA9
+#        event.date.colname="DATE",
+#        event.duration.colname="DURATION",
+#        event.daily.dose.colname="PERDAY",
+#        medication.class.colname="CATEGORY",
+#        followup.window.start=230,
+#        followup.window.duration=705,
+#        observation.window.start=41,
+#        observation.window.duration=100,
+#        date.format="%m/%d/%Y") %>%
+#   getCMA() %>% # get the CMA estimates
+#   mutate(CMA=sprintf("%.1f%%",100*CMA)); # make them percents
+# print(x); # print it
+# 
+# # Plot some CMAs:
+# med.events %>% # use med.events
+#   filter(PATIENT_ID %in% c(1,2,3)) %>%             # first 3 patients
+#   CMA_sliding_window(CMA.to.apply="CMA7",          # sliding windows CMA7
+#                      ID.colname="PATIENT_ID",
+#                      event.date.colname="DATE",
+#                      event.duration.colname="DURATION",
+#                      event.daily.dose.colname="PERDAY",
+#                      medication.class.colname="CATEGORY",
+#                      followup.window.start=230,
+#                      followup.window.duration=705,
+#                      observation.window.start=41,
+#                      observation.window.duration=100,
+#                      date.format="%m/%d/%Y") %>%
+#   plot(align.all.patients=TRUE, show.legend=TRUE); # plot it
 
 ## ----echo=TRUE, fig.show='hold', fig.cap = "<a name=\"Figure-16\"></a>**Figure 16.** Modifying an `AdhereR` plot is easy using the `get.plotted.events()` function.", fig.height=8, fig.width=8, out.width="100%"----
 # Plot CMA7 for patients 5 and 8:
@@ -524,22 +524,22 @@ text((pevs$.X.FUW.START[1] + pevs$.X.FUW.END[1])/2, # X center of patient 5's FU
      "Change with care!!!", srt=45, cex=1.5, col="darkred")
 
 ## ----eval=FALSE---------------------------------------------------------------
-#  cmaW3 <- CMA_sliding_window(CMA="CMA1",
-#                              data=med.events,
-#                              ID.colname="PATIENT_ID",
-#                              event.date.colname="DATE",
-#                              event.duration.colname="DURATION",
-#                              event.daily.dose.colname="PERDAY",
-#                              medication.class.colname="CATEGORY",
-#                              carry.only.for.same.medication=FALSE,
-#                              consider.dosage.change=FALSE,
-#                              sliding.window.duration=30,
-#                              sliding.window.step.duration=30,
-#                              parallel.backend="snow", # make clear we want to use snow
-#                              parallel.threads=c(rep(
-#                                list(list(host="user@workhorse", # host (and user)
-#                                          rscript="/usr/local/bin/Rscript", # Rscript location
-#                                          snowlib="/usr/local/lib64/R/library/") # snow package location
-#                                     ),
-#                                2))) # two remote threads
+# cmaW3 <- CMA_sliding_window(CMA="CMA1",
+#                             data=med.events,
+#                             ID.colname="PATIENT_ID",
+#                             event.date.colname="DATE",
+#                             event.duration.colname="DURATION",
+#                             event.daily.dose.colname="PERDAY",
+#                             medication.class.colname="CATEGORY",
+#                             carry.only.for.same.medication=FALSE,
+#                             consider.dosage.change=FALSE,
+#                             sliding.window.duration=30,
+#                             sliding.window.step.duration=30,
+#                             parallel.backend="snow", # make clear we want to use snow
+#                             parallel.threads=c(rep(
+#                               list(list(host="user@workhorse", # host (and user)
+#                                         rscript="/usr/local/bin/Rscript", # Rscript location
+#                                         snowlib="/usr/local/lib64/R/library/") # snow package location
+#                                    ),
+#                               2))) # two remote threads
 

@@ -34,6 +34,7 @@ CMA_polypharmacy(
     "snow(NWS)")[1],
   parallel.threads = "auto",
   suppress.warnings = FALSE,
+  suppress.special.argument.checks = TRUE,
   ...
 )
 }
@@ -45,9 +46,8 @@ dosage (the actual column names are defined in the
 following four parameters).}
 
 \item{medication.groups}{A \emph{string} with the name of the column containing the medication
-groups, or a *list of vectors* with medication class names (from \code{medication.class.colname})
- belonging to the same treatment groupf multiple medication classes should belong to the same
- treatment group, they can be differentiated here (important to investigate treatment switches)}
+groups. If multiple medication classes should belong to the same treatment group, they can be
+differentiated here (important to investigate treatment switches)}
 
 \item{CMA.to.apply}{A \emph{string} giving the name of the CMA function (1 to
 9) that will be computed for each treatment group.}
@@ -157,6 +157,10 @@ threads, or a more complex specification of the SNOW cluster nodes for
 
 \item{suppress.warnings}{\emph{Logical}, if \code{TRUE} don't show any
 warnings.}
+
+\item{suppress.special.argument.checks}{\emph{Logical} parameter for internal
+use; if \code{FALSE} (default) check if the important columns in the \code{data}
+have some of the reserved names, if \code{TRUE} this check is not performed.}
 
 \item{...}{other possible parameters}
 }

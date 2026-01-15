@@ -1,3 +1,11 @@
+# AdhereR 0.8.2
+  
+## Maintenance
+
+  - fix various CRAN checks, including the "lost braces" NOTE identified and fixed by @GeraldineGomez, and the person specification.
+  - update code to work on new versions of R and packages (e.g., multi-valued logical tests, date objects...).
+  - updated copyright notes and dates throughout.
+
 # AdhereR 0.8.1
   
 ## Bug fixes
@@ -212,4 +220,4 @@ Full details are available in the new `calling-AdhereR-from-python3` vignette.
 
 This is the initial release. Please see ReadMe.md and the accompanying paper for details:
 
-> [Dima AL, Dediu D (2017). Computation of adherence to medication and visualization of medication histories in R with AdhereR: Towards transparent and reproducible use of electronic healthcare data. *PLoS ONE*, **12**(4): e0174426. doi:10.1371/journal.pone.0174426](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0174426)
+> [Dima AL, Dediu D (2017). Computation of adherence to medication and visualization of medication histories in R with AdhereR: Towards transparent and reproducible use of electronic healthcare data. *PLoS ONE*, **12**(4): e0174426. doi:10.1371/journal.pone.0174426](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0174426)

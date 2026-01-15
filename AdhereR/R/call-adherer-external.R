@@ -2,7 +2,7 @@
 #
 #    This allows AdhereR to be called from outside R using a generic `shell` +
 #    shared files mechanism.
-#    Copyright (C) 2015-2018  Dan Dediu & Alexandra Dima
+#    Copyright (C) 2015-2026  Dan Dediu & Alexandra Dima
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
