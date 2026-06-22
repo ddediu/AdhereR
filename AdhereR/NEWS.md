@@ -1,3 +1,9 @@
+# AdhereR 0.8.3
+  
+## Bugfix
+
+  - fixed GitHub issue #206 (reported by @SebastianKN1998) where the `dosage.change.means.new.treatment.episode` parameter of `compute.treatment.episodes()` did not have any effect.
+
 # AdhereR 0.8.2
   
 ## Maintenance

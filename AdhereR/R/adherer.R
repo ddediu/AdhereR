@@ -2912,6 +2912,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       event.duration.column   <- data4ID[,get(event.duration.colname)];
       gap.days.column         <- data4ID[,get(gap.days.colname)];
       if( !is.na(medication.class.colname) ) medication.class.column <- data4ID[,get(medication.class.colname)];
+      if( !is.na(event.daily.dose.colname) ) event.daily.dose.column <- data4ID[,get(event.daily.dose.colname)];
       event.id.column         <- data4ID$.EVENT.UNIQUE.ID;
       MAX.PERMISSIBLE.GAP     <- switch(as.numeric(maximum.permissible.gap.as.percent)+1,
                                         rep(maximum.permissible.gap,n.events), # FALSE: maximum.permissible.gap is fixed in days
@@ -2927,7 +2928,7 @@ compute.treatment.episodes <- function( data, # this is a per-event data.frame w
       if( dosage.change.means.new.treatment.episode && n.events > 1 )
       {
         # If dosage change triggers a new episode and there is more than one event, consider these changes as well:
-        s <- (s | c(event.daily.dose.colname[1:(n.events-1)] != event.daily.dose.colname[2:n.events], TRUE));
+        s <- (s | c(event.daily.dose.column[1:(n.events-1)] != event.daily.dose.column[2:n.events], TRUE));
       }
       s <- which(s); s.len <- length(s);
 
