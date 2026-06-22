@@ -916,7 +916,7 @@ The machines are called `workhorse1` and `workhorse2`, have differen hardware co
 These two machines are connected to the same WiFi router (but they could be on different networks or even across the Internet).
 The "master" is the same `macOS` laptop used before, connected to the same WiFi router (not a requirement).
 
-As pre-requisites, the worker machines should allow [`SSH`](https://ubuntu.com/server/docs/service-openssh) access (for easiness, we use here *passwordless SSH access* from the "master"; see for example [here](http://www.linuxproblem.org/art_9.html) for this setup) and should have the `snow` package installed in `R`.
+As pre-requisites, the worker machines should allow [`SSH`](https://linuxconfig.org/linux-setup-ssh) access (for easiness, we use here *passwordless SSH access* from the "master"; see for example [here](http://www.linuxproblem.org/art_9.html) for this setup) and should have the `snow` package installed in `R`.
 Let's assume that the username allowing `ssh` into the workers is `user`, so that
 ``` bash
 laptop:~> ssh user@workhorse1
